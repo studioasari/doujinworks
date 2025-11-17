@@ -79,70 +79,24 @@ export default function PortfolioPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 20px' }}>
+        <div className="container">
           {/* ヘッダー */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '40px'
-          }}>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1A1A1A'
-            }}>
-              ポートフォリオ
-            </h1>
-            <Link
-              href="/portfolio/upload"
-              style={{
-                display: 'inline-block',
-                padding: '12px 24px',
-                backgroundColor: '#1A1A1A',
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
+          <div className="flex-between mb-40">
+            <h1 className="page-title">ポートフォリオ</h1>
+            <Link href="/portfolio/upload" className="btn-primary">
               + 作品をアップロード
             </Link>
           </div>
 
           {/* フィルター */}
-          <div style={{
-            marginBottom: '32px',
-            padding: '20px 24px',
-            border: '1px solid #E5E5E5',
-            borderRadius: '8px'
-          }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              color: '#6B6B6B',
-              marginBottom: '12px'
-            }}>
+          <div className="filter-box">
+            <label className="text-small text-gray mb-12" style={{ display: 'block' }}>
               カテゴリで絞り込み
             </label>
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
+            <div className="filter-buttons">
               <button
                 onClick={() => setCategoryFilter('all')}
-                style={{
-                  padding: '8px 20px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '20px',
-                  backgroundColor: categoryFilter === 'all' ? '#1A1A1A' : '#FFFFFF',
-                  color: categoryFilter === 'all' ? '#FFFFFF' : '#1A1A1A',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
+                className={`filter-button ${categoryFilter === 'all' ? 'active' : ''}`}
               >
                 すべて
               </button>
@@ -150,16 +104,7 @@ export default function PortfolioPage() {
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  style={{
-                    padding: '8px 20px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '20px',
-                    backgroundColor: categoryFilter === cat ? '#1A1A1A' : '#FFFFFF',
-                    color: categoryFilter === cat ? '#FFFFFF' : '#1A1A1A',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
+                  className={`filter-button ${categoryFilter === cat ? 'active' : ''}`}
                 >
                   {getCategoryLabel(cat)}
                 </button>
@@ -169,141 +114,57 @@ export default function PortfolioPage() {
 
           {/* ローディング */}
           {loading && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="loading-state">
               読み込み中...
             </div>
           )}
 
           {/* 作品一覧 */}
           {!loading && items.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state">
               作品が見つかりませんでした
             </div>
           )}
 
           {!loading && items.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '24px'
-            }}>
+            <div className="grid-creators">
               {items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/portfolio/${item.id}`}
-                  style={{
-                    display: 'block',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)'
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                >
+                <Link key={item.id} href={`/portfolio/${item.id}`} className="portfolio-card">
                   {/* 画像 */}
-                  <div style={{
-                    width: '100%',
-                    paddingTop: '100%',
-                    position: 'relative',
-                    backgroundColor: '#F9F9F9'
-                  }}>
+                  <div className="portfolio-card-image">
                     <img
                       src={item.thumbnail_url || item.image_url}
                       alt={item.title}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
                     />
                   </div>
 
                   {/* 情報 */}
-                  <div style={{ padding: '16px' }}>
+                  <div className="portfolio-card-content">
                     {/* カテゴリ */}
                     {item.category && (
-                      <div style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        border: '1px solid #E5E5E5',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        color: '#6B6B6B',
-                        marginBottom: '8px'
-                      }}>
+                      <span className="badge badge-category mb-8" style={{ display: 'inline-block' }}>
                         {getCategoryLabel(item.category)}
-                      </div>
+                      </span>
                     )}
 
                     {/* タイトル */}
-                    <h3 style={{
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      color: '#1A1A1A',
-                      marginBottom: '8px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
+                    <h3 className="card-subtitle text-ellipsis mb-8">
                       {item.title}
                     </h3>
 
                     {/* クリエイター情報 */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <div style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        backgroundColor: '#E5E5E5',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        color: '#6B6B6B'
-                      }}>
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      <div className="avatar avatar-small">
                         {item.profiles?.avatar_url ? (
                           <img
                             src={item.profiles.avatar_url}
                             alt={item.profiles.display_name || ''}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              borderRadius: '50%',
-                              objectFit: 'cover'
-                            }}
                           />
                         ) : (
                           item.profiles?.display_name?.charAt(0) || '?'
                         )}
                       </div>
-                      <span style={{
-                        fontSize: '14px',
-                        color: '#6B6B6B'
-                      }}>
+                      <span className="text-small text-gray">
                         {item.profiles?.display_name || '名前未設定'}
                       </span>
                     </div>

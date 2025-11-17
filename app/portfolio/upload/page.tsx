@@ -143,35 +143,20 @@ export default function UploadPortfolioPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            color: '#1A1A1A',
-            marginBottom: '40px'
-          }}>
+        <div className="container-narrow">
+          <h1 className="page-title mb-40">
             作品をアップロード
           </h1>
 
-          <form onSubmit={handleSubmit} style={{
-            border: '1px solid #E5E5E5',
-            borderRadius: '8px',
-            padding: '40px'
-          }}>
+          <form onSubmit={handleSubmit} className="card-no-hover p-40">
             {/* 画像アップロード */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                作品画像 <span style={{ color: '#FF4444' }}>*</span>
+            <div className="mb-32">
+              <label className="form-label">
+                作品画像 <span className="form-required">*</span>
               </label>
               
               {imagePreview ? (
-                <div style={{ marginBottom: '16px' }}>
+                <div className="mb-16">
                   <img
                     src={imagePreview}
                     alt="プレビュー"
@@ -192,10 +177,10 @@ export default function UploadPortfolioPage() {
                   marginBottom: '16px',
                   backgroundColor: '#F9F9F9'
                 }}>
-                  <p style={{ color: '#6B6B6B', marginBottom: '8px' }}>
+                  <p className="text-gray mb-8">
                     画像をドラッグ&ドロップ または クリックして選択
                   </p>
-                  <p style={{ fontSize: '12px', color: '#9E9E9E' }}>
+                  <p className="text-tiny" style={{ color: '#9E9E9E' }}>
                     JPG, PNG, GIF (最大5MB)
                   </p>
                 </div>
@@ -205,26 +190,15 @@ export default function UploadPortfolioPage() {
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
+                className="input-field"
+                style={{ fontSize: '14px' }}
               />
             </div>
 
             {/* タイトル */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                タイトル <span style={{ color: '#FF4444' }}>*</span>
+            <div className="mb-24">
+              <label className="form-label">
+                タイトル <span className="form-required">*</span>
               </label>
               <input
                 type="text"
@@ -232,40 +206,17 @@ export default function UploadPortfolioPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="作品のタイトル"
                 required
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A'
-                }}
+                className="input-field"
               />
             </div>
 
             {/* カテゴリ */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                カテゴリ
-              </label>
+            <div className="mb-24">
+              <label className="form-label">カテゴリ</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A',
-                  backgroundColor: '#FFFFFF'
-                }}
+                className="select-field"
               >
                 <option value="">選択してください</option>
                 <option value="illustration">イラスト</option>
@@ -281,94 +232,45 @@ export default function UploadPortfolioPage() {
             </div>
 
             {/* 説明 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                説明
-              </label>
+            <div className="mb-24">
+              <label className="form-label">説明</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="作品の説明を入力してください"
                 rows={6}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A',
-                  fontFamily: 'inherit',
-                  resize: 'vertical'
-                }}
+                className="textarea-field"
               />
             </div>
 
             {/* タグ */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                タグ
-              </label>
+            <div className="mb-24">
+              <label className="form-label">タグ</label>
               <input
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A'
-                }}
+                className="input-field"
               />
             </div>
 
             {/* 外部URL */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                外部リンク
-              </label>
+            <div className="mb-24">
+              <label className="form-label">外部リンク</label>
               <input
                 type="url"
                 value={externalUrl}
                 onChange={(e) => setExternalUrl(e.target.value)}
                 placeholder="https://pixiv.net/..."
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A'
-                }}
+                className="input-field"
               />
             </div>
 
             {/* 公開設定 */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'flex',
+            <div className="mb-32">
+              <label className="flex gap-8" style={{
                 alignItems: 'center',
-                gap: '8px',
                 cursor: 'pointer'
               }}>
                 <input
@@ -381,51 +283,26 @@ export default function UploadPortfolioPage() {
                     cursor: 'pointer'
                   }}
                 />
-                <span style={{
-                  fontSize: '14px',
-                  color: '#1A1A1A'
-                }}>
+                <span className="text-small">
                   この作品を公開する
                 </span>
               </label>
             </div>
 
             {/* ボタン */}
-            <div style={{
-              display: 'flex',
-              gap: '16px',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 onClick={() => router.back()}
                 disabled={uploading}
-                style={{
-                  padding: '12px 24px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#1A1A1A',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: uploading ? 'not-allowed' : 'pointer'
-                }}
+                className="btn-secondary"
               >
                 キャンセル
               </button>
               <button
                 type="submit"
                 disabled={uploading}
-                style={{
-                  padding: '12px 24px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: uploading ? '#6B6B6B' : '#1A1A1A',
-                  color: '#FFFFFF',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: uploading ? 'not-allowed' : 'pointer'
-                }}
+                className="btn-primary"
               >
                 {uploading ? 'アップロード中...' : 'アップロード'}
               </button>

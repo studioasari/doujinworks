@@ -142,78 +142,31 @@ export default function RequestsPage() {
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
           {/* ヘッダー */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '40px'
-          }}>
-            <h1 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1A1A1A'
-            }}>
-              依頼一覧
-            </h1>
-            <Link
-              href="/requests/create"
-              style={{
-                display: 'inline-block',
-                padding: '12px 24px',
-                backgroundColor: '#1A1A1A',
-                color: '#FFFFFF',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}
-            >
+          <div className="flex-between mb-40">
+            <h1 className="page-title">依頼一覧</h1>
+            <Link href="/requests/create" className="btn-primary">
               + 新規依頼を作成
             </Link>
           </div>
 
           {/* フィルター */}
-          <div style={{
-            marginBottom: '32px',
-            padding: '24px',
-            border: '1px solid #E5E5E5',
-            borderRadius: '8px'
-          }}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                color: '#6B6B6B',
-                marginBottom: '8px'
-              }}>
+          <div className="filter-box">
+            <div className="mb-24">
+              <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
                 表示する依頼
               </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="flex gap-12">
                 <button
                   onClick={() => setFilter('all')}
-                  style={{
-                    padding: '8px 20px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '4px',
-                    backgroundColor: filter === 'all' ? '#1A1A1A' : '#FFFFFF',
-                    color: filter === 'all' ? '#FFFFFF' : '#1A1A1A',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
+                  className={`filter-button ${filter === 'all' ? 'active' : ''}`}
+                  style={{ borderRadius: '4px' }}
                 >
                   すべて
                 </button>
                 <button
                   onClick={() => setFilter('my')}
-                  style={{
-                    padding: '8px 20px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '4px',
-                    backgroundColor: filter === 'my' ? '#1A1A1A' : '#FFFFFF',
-                    color: filter === 'my' ? '#FFFFFF' : '#1A1A1A',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
+                  className={`filter-button ${filter === 'my' ? 'active' : ''}`}
+                  style={{ borderRadius: '4px' }}
                 >
                   自分の依頼
                 </button>
@@ -221,25 +174,14 @@ export default function RequestsPage() {
             </div>
 
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                color: '#6B6B6B',
-                marginBottom: '8px'
-              }}>
+              <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
                 カテゴリで絞り込み
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#1A1A1A'
-                }}
+                className="select-field"
+                style={{ width: 'auto', minWidth: '200px' }}
               >
                 <option value="all">すべて</option>
                 <option value="illustration">イラスト</option>
@@ -256,56 +198,29 @@ export default function RequestsPage() {
 
           {/* ローディング */}
           {loading && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="loading-state">
               読み込み中...
             </div>
           )}
 
           {/* 依頼一覧 */}
           {!loading && requests.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state">
               依頼が見つかりませんでした
             </div>
           )}
 
           {!loading && requests.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="flex flex-col gap-20">
               {requests.map((request) => (
                 <Link
                   key={request.id}
                   href={`/requests/${request.id}`}
-                  style={{
-                    display: 'block',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    padding: '24px',
-                    textDecoration: 'none',
-                    transition: 'border-color 0.2s',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1A1A1A'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#E5E5E5'
-                  }}
+                  className="card p-24"
                 >
                   {/* ステータスとカテゴリ */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    marginBottom: '12px'
-                  }}>
-                    <span style={{
-                      display: 'inline-block',
+                  <div className="flex gap-8 mb-12">
+                    <span className={`badge-status ${request.status}`} style={{
                       padding: '4px 12px',
                       borderRadius: '4px',
                       fontSize: '12px',
@@ -316,50 +231,24 @@ export default function RequestsPage() {
                       {getStatusLabel(request.status)}
                     </span>
                     {request.category && (
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        border: '1px solid #E5E5E5',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        color: '#6B6B6B'
-                      }}>
+                      <span className="badge badge-category">
                         {getCategoryLabel(request.category)}
                       </span>
                     )}
                   </div>
 
                   {/* タイトル */}
-                  <h2 style={{
-                    fontSize: '20px',
-                    fontWeight: 'bold',
-                    color: '#1A1A1A',
-                    marginBottom: '8px'
-                  }}>
+                  <h2 className="card-title mb-8">
                     {request.title}
                   </h2>
 
                   {/* 説明 */}
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#6B6B6B',
-                    lineHeight: '1.6',
-                    marginBottom: '16px',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
+                  <p className="text-small text-gray text-clamp-2 mb-16" style={{ lineHeight: '1.6' }}>
                     {request.description}
                   </p>
 
                   {/* 詳細情報 */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '24px',
-                    fontSize: '14px',
-                    color: '#6B6B6B'
-                  }}>
+                  <div className="flex gap-24 text-small text-gray">
                     {(request.budget_min || request.budget_max) && (
                       <div>
                         <strong>予算:</strong> {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円

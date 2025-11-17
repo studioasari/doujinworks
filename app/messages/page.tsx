@@ -147,69 +147,43 @@ export default function MessagesPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            color: '#1A1A1A',
-            marginBottom: '40px'
-          }}>
+        <div className="container-narrow">
+          <h1 className="page-title mb-40">
             メッセージ
           </h1>
 
           {loading && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="loading-state">
               読み込み中...
             </div>
           )}
 
           {!loading && chatRooms.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px'
-            }}>
-              <p style={{ color: '#6B6B6B', marginBottom: '24px' }}>
+            <div className="empty-state">
+              <p className="text-gray mb-24">
                 メッセージがありません
               </p>
-              <Link
-                href="/creators"
-                style={{
-                  display: 'inline-block',
-                  padding: '12px 24px',
-                  backgroundColor: '#1A1A1A',
-                  color: '#FFFFFF',
-                  textDecoration: 'none',
-                  borderRadius: '4px'
-                }}
-              >
+              <Link href="/creators" className="btn-primary">
                 クリエイターを探す
               </Link>
             </div>
           )}
 
           {!loading && chatRooms.length > 0 && (
-            <div style={{
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}>
+            <div className="card-no-hover" style={{ overflow: 'hidden' }}>
               {chatRooms.map((room, index) => (
                 <Link
                   key={room.id}
                   href={`/messages/${room.id}`}
+                  className="flex gap-16"
                   style={{
-                    display: 'flex',
                     alignItems: 'center',
-                    gap: '16px',
                     padding: '20px',
                     textDecoration: 'none',
                     borderBottom: index < chatRooms.length - 1 ? '1px solid #E5E5E5' : 'none',
                     backgroundColor: room.unread_count > 0 ? '#F9F9F9' : '#FFFFFF',
-                    transition: 'background-color 0.2s'
+                    transition: 'background-color 0.2s',
+                    display: 'flex'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#F5F5F5'
@@ -230,7 +204,8 @@ export default function MessagesPage() {
                     justifyContent: 'center',
                     fontSize: '24px',
                     color: '#6B6B6B',
-                    position: 'relative'
+                    position: 'relative',
+                    overflow: 'hidden'
                   }}>
                     {room.other_user.avatar_url ? (
                       <img
@@ -239,7 +214,6 @@ export default function MessagesPage() {
                         style={{
                           width: '100%',
                           height: '100%',
-                          borderRadius: '50%',
                           objectFit: 'cover'
                         }}
                       />
@@ -270,32 +244,17 @@ export default function MessagesPage() {
 
                   {/* メッセージ情報 */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'baseline',
-                      marginBottom: '4px'
-                    }}>
-                      <h3 style={{
-                        fontSize: '16px',
-                        fontWeight: room.unread_count > 0 ? 'bold' : '600',
-                        color: '#1A1A1A'
+                    <div className="flex-between mb-8" style={{ alignItems: 'baseline' }}>
+                      <h3 className="card-subtitle" style={{
+                        fontWeight: room.unread_count > 0 ? 'bold' : '600'
                       }}>
                         {room.other_user.display_name || '名前未設定'}
                       </h3>
-                      <span style={{
-                        fontSize: '12px',
-                        color: '#6B6B6B'
-                      }}>
+                      <span className="text-tiny text-gray">
                         {room.last_message && formatDate(room.last_message.created_at)}
                       </span>
                     </div>
-                    <p style={{
-                      fontSize: '14px',
-                      color: '#6B6B6B',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                    <p className="text-small text-gray text-ellipsis" style={{
                       fontWeight: room.unread_count > 0 ? '600' : 'normal'
                     }}>
                       {room.last_message?.content || 'メッセージがありません'}

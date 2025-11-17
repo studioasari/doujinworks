@@ -82,31 +82,16 @@ export default function CreateRequestPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
-            color: '#1A1A1A',
-            marginBottom: '40px'
-          }}>
+        <div className="container-narrow">
+          <h1 className="page-title mb-40">
             新規依頼を作成
           </h1>
 
-          <form onSubmit={handleSubmit} style={{
-            border: '1px solid #E5E5E5',
-            borderRadius: '8px',
-            padding: '40px'
-          }}>
+          <form onSubmit={handleSubmit} className="card-no-hover p-40">
             {/* タイトル */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                タイトル <span style={{ color: '#FF4444' }}>*</span>
+            <div className="mb-24">
+              <label className="form-label">
+                タイトル <span className="form-required">*</span>
               </label>
               <input
                 type="text"
@@ -114,40 +99,17 @@ export default function CreateRequestPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="例: イラスト制作の依頼"
                 required
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A'
-                }}
+                className="input-field"
               />
             </div>
 
             {/* カテゴリ */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                カテゴリ
-              </label>
+            <div className="mb-24">
+              <label className="form-label">カテゴリ</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A',
-                  backgroundColor: '#FFFFFF'
-                }}
+                className="select-field"
               >
                 <option value="">選択してください</option>
                 <option value="illustration">イラスト</option>
@@ -162,15 +124,9 @@ export default function CreateRequestPage() {
             </div>
 
             {/* 説明 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                依頼内容 <span style={{ color: '#FF4444' }}>*</span>
+            <div className="mb-24">
+              <label className="form-label">
+                依頼内容 <span className="form-required">*</span>
               </label>
               <textarea
                 value={description}
@@ -178,31 +134,14 @@ export default function CreateRequestPage() {
                 placeholder="依頼内容を詳しく記載してください"
                 required
                 rows={8}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A',
-                  fontFamily: 'inherit',
-                  resize: 'vertical'
-                }}
+                className="textarea-field"
               />
             </div>
 
             {/* 予算 */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                予算
-              </label>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <div className="mb-24">
+              <label className="form-label">予算</label>
+              <div className="flex gap-16" style={{ alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
                   <input
                     type="number"
@@ -210,17 +149,10 @@ export default function CreateRequestPage() {
                     onChange={(e) => setBudgetMin(e.target.value)}
                     placeholder="最低金額"
                     min="0"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #E5E5E5',
-                      borderRadius: '4px',
-                      fontSize: '16px',
-                      color: '#1A1A1A'
-                    }}
+                    className="input-field"
                   />
                 </div>
-                <span style={{ color: '#6B6B6B' }}>〜</span>
+                <span className="text-gray">〜</span>
                 <div style={{ flex: 1 }}>
                   <input
                     type="number"
@@ -228,82 +160,38 @@ export default function CreateRequestPage() {
                     onChange={(e) => setBudgetMax(e.target.value)}
                     placeholder="最高金額"
                     min="0"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #E5E5E5',
-                      borderRadius: '4px',
-                      fontSize: '16px',
-                      color: '#1A1A1A'
-                    }}
+                    className="input-field"
                   />
                 </div>
-                <span style={{ color: '#6B6B6B' }}>円</span>
+                <span className="text-gray">円</span>
               </div>
             </div>
 
             {/* 納期 */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                希望納期
-              </label>
+            <div className="mb-32">
+              <label className="form-label">希望納期</label>
               <input
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                  color: '#1A1A1A'
-                }}
+                className="input-field"
               />
             </div>
 
             {/* ボタン */}
-            <div style={{
-              display: 'flex',
-              gap: '16px',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
               <button
                 type="button"
                 onClick={() => router.back()}
                 disabled={submitting}
-                style={{
-                  padding: '12px 24px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#1A1A1A',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: submitting ? 'not-allowed' : 'pointer'
-                }}
+                className="btn-secondary"
               >
                 キャンセル
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                style={{
-                  padding: '12px 24px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: submitting ? '#6B6B6B' : '#1A1A1A',
-                  color: '#FFFFFF',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: submitting ? 'not-allowed' : 'pointer'
-                }}
+                className="btn-primary"
               >
                 {submitting ? '作成中...' : '依頼を作成'}
               </button>

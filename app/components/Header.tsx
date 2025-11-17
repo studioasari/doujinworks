@@ -61,15 +61,20 @@ export default function Header() {
       top: 0,
       zIndex: 100
     }}>
-      <Link href="/" style={{ textDecoration: 'none' }}>
-        <h2 style={{ 
-          fontSize: '20px', 
-          fontWeight: '700',
-          color: '#1A1A1A',
-          letterSpacing: '-0.5px'
-        }}>
-          同人ワークス
-        </h2>
+      {/* ロゴ */}
+      <Link href="/" style={{ 
+        textDecoration: 'none',
+        display: 'flex',
+        alignItems: 'center'
+      }}>
+        <img 
+          src="/logotype.png" 
+          alt="同人ワークス" 
+          style={{ 
+            height: '20px',
+            display: 'block'
+          }} 
+        />
       </Link>
       
       <nav style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
@@ -133,8 +138,8 @@ export default function Header() {
               }}></span> */}
             </button>
 
-            {/* プロフィールアイコン */}
-            <Link href="/profile" style={{
+            {/* プロフィールアイコン → ダッシュボードへ */}
+            <Link href="/dashboard" style={{
               display: 'flex',
               alignItems: 'center',
               textDecoration: 'none'

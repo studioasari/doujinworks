@@ -125,11 +125,7 @@ export default function PortfolioDetailPage() {
       <>
         <Header />
         <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: '#6B6B6B'
-          }}>
+          <div className="loading-state">
             読み込み中...
           </div>
         </div>
@@ -143,25 +139,12 @@ export default function PortfolioDetailPage() {
       <>
         <Header />
         <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px'
-            }}>
-              <p style={{ color: '#6B6B6B', marginBottom: '24px' }}>
+          <div className="container-narrow">
+            <div className="empty-state">
+              <p className="text-gray mb-24">
                 作品が見つかりませんでした
               </p>
-              <Link
-                href="/portfolio"
-                style={{
-                  display: 'inline-block',
-                  padding: '12px 24px',
-                  backgroundColor: '#1A1A1A',
-                  color: '#FFFFFF',
-                  textDecoration: 'none',
-                  borderRadius: '4px'
-                }}
-              >
+              <Link href="/portfolio" className="btn-primary">
                 ポートフォリオに戻る
               </Link>
             </div>
@@ -182,13 +165,12 @@ export default function PortfolioDetailPage() {
           {/* 戻るボタン */}
           <Link
             href="/portfolio"
+            className="text-small text-gray"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              color: '#6B6B6B',
               textDecoration: 'none',
-              fontSize: '14px',
               marginBottom: '32px'
             }}
           >
@@ -203,9 +185,7 @@ export default function PortfolioDetailPage() {
           }}>
             {/* 左側: 画像 */}
             <div style={{ flex: '1 1 600px', minWidth: '300px' }}>
-              <div style={{
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
+              <div className="card-no-hover" style={{
                 overflow: 'hidden',
                 backgroundColor: '#F9F9F9'
               }}>
@@ -225,75 +205,43 @@ export default function PortfolioDetailPage() {
             <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
               {/* カテゴリ */}
               {item.category && (
-                <div style={{
+                <span className="badge badge-category mb-16" style={{
                   display: 'inline-block',
                   padding: '6px 16px',
-                  border: '1px solid #E5E5E5',
                   borderRadius: '16px',
-                  fontSize: '14px',
-                  color: '#6B6B6B',
-                  marginBottom: '16px'
+                  fontSize: '14px'
                 }}>
                   {getCategoryLabel(item.category)}
-                </div>
+                </span>
               )}
 
               {/* タイトル */}
-              <h1 style={{
-                fontSize: '28px',
-                fontWeight: 'bold',
-                color: '#1A1A1A',
-                marginBottom: '24px',
-                lineHeight: '1.4'
-              }}>
+              <h1 className="section-title mb-24" style={{ lineHeight: '1.4' }}>
                 {item.title}
               </h1>
 
               {/* クリエイター情報 */}
-              <div style={{
-                display: 'flex',
+              <div className="flex gap-12 mb-32" style={{
                 alignItems: 'center',
-                gap: '12px',
-                marginBottom: '32px',
                 paddingBottom: '24px',
                 borderBottom: '1px solid #E5E5E5'
               }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E5E5E5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  color: '#6B6B6B'
-                }}>
+                <div className="avatar avatar-medium">
                   {item.profiles?.avatar_url ? (
                     <img
                       src={item.profiles.avatar_url}
                       alt={item.profiles.display_name || ''}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '50%',
-                        objectFit: 'cover'
-                      }}
                     />
                   ) : (
                     item.profiles?.display_name?.charAt(0) || '?'
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: '12px', color: '#6B6B6B' }}>クリエイター</div>
+                  <div className="text-tiny text-gray">クリエイター</div>
                   <Link
                     href={`/creators/${item.profiles?.id}`}
-                    style={{
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: '#1A1A1A',
-                      textDecoration: 'none'
-                    }}
+                    className="card-subtitle"
+                    style={{ textDecoration: 'none' }}
                   >
                     {item.profiles?.display_name || '名前未設定'}
                   </Link>
@@ -302,18 +250,9 @@ export default function PortfolioDetailPage() {
 
               {/* 説明 */}
               {item.description && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h2 style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#1A1A1A',
-                    marginBottom: '8px'
-                  }}>
-                    説明
-                  </h2>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#1A1A1A',
+                <div className="mb-24">
+                  <h2 className="form-label">説明</h2>
+                  <p className="text-small" style={{
                     lineHeight: '1.8',
                     whiteSpace: 'pre-wrap'
                   }}>
@@ -324,29 +263,15 @@ export default function PortfolioDetailPage() {
 
               {/* タグ */}
               {item.tags && item.tags.length > 0 && (
-                <div style={{ marginBottom: '24px' }}>
-                  <h2 style={{
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#1A1A1A',
-                    marginBottom: '8px'
-                  }}>
-                    タグ
-                  </h2>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="mb-24">
+                  <h2 className="form-label">タグ</h2>
+                  <div className="flex gap-8" style={{ flexWrap: 'wrap' }}>
                     {item.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        style={{
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          backgroundColor: '#F9F9F9',
-                          border: '1px solid #E5E5E5',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          color: '#6B6B6B'
-                        }}
-                      >
+                      <span key={index} className="badge" style={{
+                        backgroundColor: '#F9F9F9',
+                        border: '1px solid #E5E5E5',
+                        color: '#6B6B6B'
+                      }}>
                         {tag}
                       </span>
                     ))}
@@ -355,30 +280,14 @@ export default function PortfolioDetailPage() {
               )}
 
               {/* 詳細情報 */}
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#F9F9F9',
-                borderRadius: '8px',
-                marginBottom: '24px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '14px',
-                  color: '#6B6B6B',
-                  marginBottom: '8px'
-                }}>
+              <div className="info-box mb-24">
+                <div className="info-row">
                   <span>投稿日</span>
-                  <span style={{ color: '#1A1A1A' }}>{formatDate(item.created_at)}</span>
+                  <span className="info-row-value">{formatDate(item.created_at)}</span>
                 </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '14px',
-                  color: '#6B6B6B'
-                }}>
+                <div className="info-row">
                   <span>閲覧数</span>
-                  <span style={{ color: '#1A1A1A' }}>{item.view_count || 0}</span>
+                  <span className="info-row-value">{item.view_count || 0}</span>
                 </div>
               </div>
 
@@ -388,18 +297,11 @@ export default function PortfolioDetailPage() {
                   href={item.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="btn-secondary mb-16"
                   style={{
                     display: 'block',
-                    padding: '12px 24px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '4px',
-                    backgroundColor: '#FFFFFF',
-                    color: '#1A1A1A',
                     textAlign: 'center',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    marginBottom: '16px'
+                    textDecoration: 'none'
                   }}
                 >
                   外部サイトで見る ↗
@@ -408,20 +310,7 @@ export default function PortfolioDetailPage() {
 
               {/* 所有者のみのアクション */}
               {isOwner && (
-                <button
-                  onClick={handleDelete}
-                  style={{
-                    width: '100%',
-                    padding: '12px 24px',
-                    border: '1px solid #F44336',
-                    borderRadius: '4px',
-                    backgroundColor: '#FFFFFF',
-                    color: '#F44336',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
+                <button onClick={handleDelete} className="btn-danger" style={{ width: '100%' }}>
                   作品を削除
                 </button>
               )}

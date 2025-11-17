@@ -201,11 +201,7 @@ export default function RequestDetailPage() {
       <>
         <Header />
         <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: '#6B6B6B'
-          }}>
+          <div className="loading-state">
             読み込み中...
           </div>
         </div>
@@ -219,25 +215,12 @@ export default function RequestDetailPage() {
       <>
         <Header />
         <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px'
-            }}>
-              <p style={{ color: '#6B6B6B', marginBottom: '24px' }}>
+          <div className="container-narrow">
+            <div className="empty-state">
+              <p className="text-gray mb-24">
                 依頼が見つかりませんでした
               </p>
-              <Link
-                href="/requests"
-                style={{
-                  display: 'inline-block',
-                  padding: '12px 24px',
-                  backgroundColor: '#1A1A1A',
-                  color: '#FFFFFF',
-                  textDecoration: 'none',
-                  borderRadius: '4px'
-                }}
-              >
+              <Link href="/requests" className="btn-primary">
                 依頼一覧に戻る
               </Link>
             </div>
@@ -256,17 +239,16 @@ export default function RequestDetailPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
+        <div className="container-narrow">
           {/* 戻るボタン */}
           <Link
             href="/requests"
+            className="text-small text-gray"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              color: '#6B6B6B',
               textDecoration: 'none',
-              fontSize: '14px',
               marginBottom: '32px'
             }}
           >
@@ -274,18 +256,9 @@ export default function RequestDetailPage() {
           </Link>
 
           {/* 依頼詳細 */}
-          <div style={{
-            border: '1px solid #E5E5E5',
-            borderRadius: '8px',
-            padding: '40px',
-            marginBottom: '24px'
-          }}>
+          <div className="card-no-hover p-40 mb-24">
             {/* ステータスとカテゴリ */}
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              marginBottom: '20px'
-            }}>
+            <div className="flex gap-8 mb-24">
               <span style={{
                 display: 'inline-block',
                 padding: '6px 16px',
@@ -298,13 +271,9 @@ export default function RequestDetailPage() {
                 {getStatusLabel(request.status)}
               </span>
               {request.category && (
-                <span style={{
-                  display: 'inline-block',
+                <span className="badge badge-category" style={{
                   padding: '6px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  color: '#6B6B6B'
+                  fontSize: '14px'
                 }}>
                   {getCategoryLabel(request.category)}
                 </span>
@@ -312,60 +281,32 @@ export default function RequestDetailPage() {
             </div>
 
             {/* タイトル */}
-            <h1 style={{
-              fontSize: '28px',
-              fontWeight: 'bold',
-              color: '#1A1A1A',
-              marginBottom: '24px'
-            }}>
+            <h1 className="section-title mb-24">
               {request.title}
             </h1>
 
             {/* 依頼者情報 */}
-            <div style={{
-              display: 'flex',
+            <div className="flex gap-12 mb-32" style={{
               alignItems: 'center',
-              gap: '12px',
-              marginBottom: '32px',
               paddingBottom: '24px',
               borderBottom: '1px solid #E5E5E5'
             }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: '#E5E5E5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                color: '#6B6B6B'
-              }}>
+              <div className="avatar avatar-medium">
                 {request.profiles?.avatar_url ? (
                   <img
                     src={request.profiles.avatar_url}
                     alt={request.profiles.display_name || ''}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '50%',
-                      objectFit: 'cover'
-                    }}
                   />
                 ) : (
                   request.profiles?.display_name?.charAt(0) || '?'
                 )}
               </div>
               <div>
-                <div style={{ fontSize: '12px', color: '#6B6B6B' }}>依頼者</div>
+                <div className="text-tiny text-gray">依頼者</div>
                 <Link
                   href={`/creators/${request.profiles?.id}`}
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: '#1A1A1A',
-                    textDecoration: 'none'
-                  }}
+                  className="card-subtitle"
+                  style={{ textDecoration: 'none' }}
                 >
                   {request.profiles?.display_name || '名前未設定'}
                 </Link>
@@ -373,18 +314,11 @@ export default function RequestDetailPage() {
             </div>
 
             {/* 依頼内容 */}
-            <div style={{ marginBottom: '32px' }}>
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: 'bold',
-                color: '#1A1A1A',
-                marginBottom: '12px'
-              }}>
+            <div className="mb-32">
+              <h2 className="card-title mb-12">
                 依頼内容
               </h2>
-              <p style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
+              <p className="text-small" style={{
                 lineHeight: '1.8',
                 whiteSpace: 'pre-wrap'
               }}>
@@ -403,23 +337,23 @@ export default function RequestDetailPage() {
             }}>
               {(request.budget_min || request.budget_max) && (
                 <div>
-                  <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>予算</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A' }}>
+                  <div className="text-tiny text-gray mb-8" style={{ marginBottom: '4px' }}>予算</div>
+                  <div className="card-subtitle">
                     {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円
                   </div>
                 </div>
               )}
               {request.deadline && (
                 <div>
-                  <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>希望納期</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A' }}>
+                  <div className="text-tiny text-gray mb-8" style={{ marginBottom: '4px' }}>希望納期</div>
+                  <div className="card-subtitle">
                     {formatDate(request.deadline)}
                   </div>
                 </div>
               )}
               <div>
-                <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '4px' }}>投稿日</div>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A' }}>
+                <div className="text-tiny text-gray mb-8" style={{ marginBottom: '4px' }}>投稿日</div>
+                <div className="card-subtitle">
                   {formatDate(request.created_at)}
                 </div>
               </div>
@@ -427,21 +361,12 @@ export default function RequestDetailPage() {
           </div>
 
           {/* アクションボタン */}
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
+          <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
             {isClient && request.status === 'open' && (
               <button
                 onClick={handleCancel}
                 disabled={processing}
-                style={{
-                  padding: '12px 24px',
-                  border: '1px solid #F44336',
-                  borderRadius: '4px',
-                  backgroundColor: '#FFFFFF',
-                  color: '#F44336',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: processing ? 'not-allowed' : 'pointer'
-                }}
+                className="btn-danger"
               >
                 依頼をキャンセル
               </button>
@@ -452,32 +377,14 @@ export default function RequestDetailPage() {
                 <button
                   onClick={handleReject}
                   disabled={processing}
-                  style={{
-                    padding: '12px 24px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '4px',
-                    backgroundColor: '#FFFFFF',
-                    color: '#1A1A1A',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: processing ? 'not-allowed' : 'pointer'
-                  }}
+                  className="btn-secondary"
                 >
                   辞退する
                 </button>
                 <button
                   onClick={handleAccept}
                   disabled={processing}
-                  style={{
-                    padding: '12px 24px',
-                    border: 'none',
-                    borderRadius: '4px',
-                    backgroundColor: processing ? '#6B6B6B' : '#1A1A1A',
-                    color: '#FFFFFF',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: processing ? 'not-allowed' : 'pointer'
-                  }}
+                  className="btn-primary"
                 >
                   {processing ? '処理中...' : '依頼を受ける'}
                 </button>

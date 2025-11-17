@@ -185,66 +185,48 @@ export default function ChatRoomPage() {
         <div style={{
           borderBottom: '1px solid #E5E5E5',
           padding: '16px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
           backgroundColor: '#FFFFFF',
           position: 'sticky',
           top: 0,
           zIndex: 10
         }}>
-          <Link
-            href="/messages"
-            style={{
-              color: '#6B6B6B',
-              textDecoration: 'none',
-              fontSize: '24px'
-            }}
-          >
-            ←
-          </Link>
+          <div className="flex gap-16" style={{ alignItems: 'center' }}>
+            <Link
+              href="/messages"
+              className="text-gray"
+              style={{
+                textDecoration: 'none',
+                fontSize: '24px'
+              }}
+            >
+              ←
+            </Link>
 
-          {otherUser && (
-            <>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                backgroundColor: '#E5E5E5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '18px',
-                color: '#6B6B6B'
-              }}>
-                {otherUser.avatar_url ? (
-                  <img
-                    src={otherUser.avatar_url}
-                    alt={otherUser.display_name || ''}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '50%',
-                      objectFit: 'cover'
-                    }}
-                  />
-                ) : (
-                  otherUser.display_name?.charAt(0) || '?'
-                )}
-              </div>
-              <Link
-                href={`/creators/${otherUser.id}`}
-                style={{
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: '#1A1A1A',
-                  textDecoration: 'none'
-                }}
-              >
-                {otherUser.display_name || '名前未設定'}
-              </Link>
-            </>
-          )}
+            {otherUser && (
+              <>
+                <div className="avatar avatar-medium">
+                  {otherUser.avatar_url ? (
+                    <img
+                      src={otherUser.avatar_url}
+                      alt={otherUser.display_name || ''}
+                    />
+                  ) : (
+                    otherUser.display_name?.charAt(0) || '?'
+                  )}
+                </div>
+                <Link
+                  href={`/creators/${otherUser.id}`}
+                  className="card-title"
+                  style={{
+                    textDecoration: 'none',
+                    fontSize: '18px'
+                  }}
+                >
+                  {otherUser.display_name || '名前未設定'}
+                </Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* メッセージエリア */}
@@ -255,21 +237,13 @@ export default function ChatRoomPage() {
           backgroundColor: '#F9F9F9'
         }}>
           {loading && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="loading-state" style={{ padding: '40px 20px' }}>
               読み込み中...
             </div>
           )}
 
           {!loading && messages.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state" style={{ padding: '40px 20px' }}>
               メッセージがありません
             </div>
           )}
@@ -285,11 +259,11 @@ export default function ChatRoomPage() {
                 {showDate && (
                   <div style={{
                     textAlign: 'center',
-                    margin: '20px 0',
-                    fontSize: '12px',
-                    color: '#6B6B6B'
+                    margin: '20px 0'
                   }}>
-                    {formatDate(message.created_at)}
+                    <span className="text-tiny text-gray">
+                      {formatDate(message.created_at)}
+                    </span>
                   </div>
                 )}
 
@@ -314,11 +288,7 @@ export default function ChatRoomPage() {
                     }}>
                       {message.content}
                     </div>
-                    <span style={{
-                      fontSize: '11px',
-                      color: '#6B6B6B',
-                      marginTop: '4px'
-                    }}>
+                    <span className="text-tiny text-gray" style={{ marginTop: '4px' }}>
                       {formatTime(message.created_at)}
                     </span>
                   </div>
@@ -335,9 +305,7 @@ export default function ChatRoomPage() {
           padding: '16px 20px',
           backgroundColor: '#FFFFFF'
         }}>
-          <div style={{
-            display: 'flex',
-            gap: '12px',
+          <div className="flex gap-12" style={{
             maxWidth: '1200px',
             margin: '0 auto'
           }}>
@@ -353,13 +321,10 @@ export default function ChatRoomPage() {
               }}
               placeholder="メッセージを入力..."
               disabled={sending}
+              className="input-field"
               style={{
                 flex: 1,
-                padding: '12px 16px',
-                border: '1px solid #E5E5E5',
-                borderRadius: '24px',
-                fontSize: '16px',
-                outline: 'none'
+                borderRadius: '24px'
               }}
             />
             <button

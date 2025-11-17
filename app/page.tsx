@@ -119,89 +119,26 @@ export default function Home() {
 
   function PortfolioCard({ item }: { item: PortfolioItem }) {
     return (
-      <Link
-        href={`/portfolio/${item.id}`}
-        style={{
-          display: 'block',
-          border: '1px solid #E5E5E5',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          textDecoration: 'none',
-          transition: 'all 0.3s ease',
-          position: 'relative'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#1A1A1A'
-          e.currentTarget.style.boxShadow = '0 0 0 2px #1A1A1A'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#E5E5E5'
-          e.currentTarget.style.boxShadow = 'none'
-        }}
-      >
-        <div style={{
-          width: '100%',
-          paddingTop: '100%',
-          position: 'relative',
-          backgroundColor: '#F9F9F9'
-        }}>
+      <Link href={`/portfolio/${item.id}`} className="portfolio-card">
+        <div className="portfolio-card-image">
           <img
             src={item.thumbnail_url || item.image_url}
             alt={item.title}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
           />
         </div>
-        <div style={{ padding: '16px' }}>
-          <h3 style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: '#1A1A1A',
-            marginBottom: '8px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
+        <div className="portfolio-card-content">
+          <h3 className="card-subtitle text-ellipsis mb-8">
             {item.title}
           </h3>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: '#E5E5E5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              color: '#6B6B6B',
-              overflow: 'hidden'
-            }}>
+          <div className="flex gap-8" style={{ alignItems: 'center' }}>
+            <div className="avatar avatar-small">
               {item.profiles?.avatar_url ? (
-                <img
-                  src={item.profiles.avatar_url}
-                  alt=""
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                  }}
-                />
+                <img src={item.profiles.avatar_url} alt="" />
               ) : (
                 item.profiles?.display_name?.charAt(0) || '?'
               )}
             </div>
-            <span style={{ fontSize: '14px', color: '#6B6B6B' }}>
+            <span className="text-small text-gray">
               {item.profiles?.display_name || '名前未設定'}
             </span>
           </div>
@@ -248,12 +185,7 @@ export default function Home() {
             マッチングプラットフォーム
           </p>
           
-          <div style={{ 
-            display: 'flex', 
-            gap: '16px',
-            justifyContent: 'center',
-            flexWrap: 'wrap'
-          }}>
+          <div className="flex gap-16" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
               href="/portfolio"
               style={{
@@ -291,11 +223,7 @@ export default function Home() {
         </section>
 
         {/* 統計情報 */}
-        <section style={{
-          padding: '60px 40px',
-          backgroundColor: '#FFFFFF',
-          borderBottom: '1px solid #E5E5E5'
-        }}>
+        <section className="section section-white" style={{ borderBottom: '1px solid #E5E5E5' }}>
           <div style={{
             maxWidth: '1200px',
             margin: '0 auto',
@@ -313,10 +241,7 @@ export default function Home() {
               }}>
                 {stats.creators}
               </div>
-              <div style={{
-                fontSize: '16px',
-                color: '#6B6B6B'
-              }}>
+              <div className="text-gray" style={{ fontSize: '16px' }}>
                 登録クリエイター
               </div>
             </div>
@@ -330,10 +255,7 @@ export default function Home() {
               }}>
                 {stats.requests}
               </div>
-              <div style={{
-                fontSize: '16px',
-                color: '#6B6B6B'
-              }}>
+              <div className="text-gray" style={{ fontSize: '16px' }}>
                 募集中の依頼
               </div>
             </div>
@@ -341,50 +263,25 @@ export default function Home() {
         </section>
 
         {/* 新着作品 */}
-        <section style={{
-          padding: '80px 40px',
-          backgroundColor: '#FFFFFF'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '40px'
-          }}>
-            <h2 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1A1A1A'
+        <section className="section section-white">
+          <div className="flex-between mb-40">
+            <h2 className="page-title">新着作品</h2>
+            <Link href="/portfolio" style={{
+              fontSize: '16px',
+              color: '#1A1A1A',
+              textDecoration: 'none',
+              fontWeight: '600'
             }}>
-              新着作品
-            </h2>
-            <Link
-              href="/portfolio"
-              style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
-                textDecoration: 'none',
-                fontWeight: '600'
-              }}
-            >
               すべて見る
             </Link>
           </div>
 
           {newPortfolioItems.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state">
               まだ作品が投稿されていません
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '20px'
-            }}>
+            <div className="grid-portfolio">
               {newPortfolioItems.map((item) => (
                 <PortfolioCard key={item.id} item={item} />
               ))}
@@ -393,50 +290,25 @@ export default function Home() {
         </section>
 
         {/* 人気作品 */}
-        <section style={{
-          padding: '80px 40px',
-          backgroundColor: '#FAFAFA'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '40px'
-          }}>
-            <h2 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1A1A1A'
+        <section className="section section-gray">
+          <div className="flex-between mb-40">
+            <h2 className="page-title">人気作品</h2>
+            <Link href="/portfolio" style={{
+              fontSize: '16px',
+              color: '#1A1A1A',
+              textDecoration: 'none',
+              fontWeight: '600'
             }}>
-              人気作品
-            </h2>
-            <Link
-              href="/portfolio"
-              style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
-                textDecoration: 'none',
-                fontWeight: '600'
-              }}
-            >
               すべて見る
             </Link>
           </div>
 
           {popularPortfolioItems.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state">
               まだ作品が投稿されていません
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '20px'
-            }}>
+            <div className="grid-portfolio">
               {popularPortfolioItems.map((item) => (
                 <PortfolioCard key={item.id} item={item} />
               ))}
@@ -445,122 +317,46 @@ export default function Home() {
         </section>
 
         {/* 新着依頼 */}
-        <section style={{
-          padding: '80px 40px',
-          backgroundColor: '#FFFFFF'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '40px'
-          }}>
-            <h2 style={{
-              fontSize: '32px',
-              fontWeight: 'bold',
-              color: '#1A1A1A'
+        <section className="section section-white">
+          <div className="flex-between mb-40">
+            <h2 className="page-title">新着依頼</h2>
+            <Link href="/requests" style={{
+              fontSize: '16px',
+              color: '#1A1A1A',
+              textDecoration: 'none',
+              fontWeight: '600'
             }}>
-              新着依頼
-            </h2>
-            <Link
-              href="/requests"
-              style={{
-                fontSize: '16px',
-                color: '#1A1A1A',
-                textDecoration: 'none',
-                fontWeight: '600'
-              }}
-            >
               すべて見る
             </Link>
           </div>
 
           {requests.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              color: '#6B6B6B'
-            }}>
+            <div className="empty-state">
               現在募集中の依頼はありません
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '24px'
-            }}>
+            <div className="grid-requests">
               {requests.map((request) => (
                 <Link
                   key={request.id}
                   href={`/requests/${request.id}`}
-                  style={{
-                    display: 'block',
-                    padding: '24px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    backgroundColor: '#FFFFFF',
-                    textDecoration: 'none',
-                    transition: 'all 0.3s ease',
-                    height: '100%',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#1A1A1A'
-                    e.currentTarget.style.boxShadow = '0 0 0 2px #1A1A1A'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#E5E5E5'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
+                  className="card"
+                  style={{ padding: '24px', height: '100%' }}
                 >
                   {request.category && (
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '4px 12px',
-                      border: '1px solid #E5E5E5',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      color: '#6B6B6B',
-                      marginBottom: '12px'
-                    }}>
+                    <span className="badge badge-category mb-12" style={{ display: 'inline-block' }}>
                       {getCategoryLabel(request.category)}
                     </span>
                   )}
-                  <h3 style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: '#1A1A1A',
-                    marginBottom: '12px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <h3 className="card-title text-ellipsis mb-12">
                     {request.title}
                   </h3>
-                  <p style={{
-                    fontSize: '14px',
-                    color: '#6B6B6B',
-                    lineHeight: '1.6',
-                    marginBottom: '16px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical'
-                  }}>
+                  <p className="text-small text-gray text-clamp-2 mb-16" style={{ lineHeight: '1.6' }}>
                     {request.description}
                   </p>
                   {(request.budget_min || request.budget_max) && (
-                    <div style={{
-                      padding: '12px',
-                      backgroundColor: '#F9F9F9',
-                      borderRadius: '4px'
-                    }}>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#6B6B6B',
-                        marginBottom: '4px'
-                      }}>
+                    <div className="info-box">
+                      <div className="text-tiny text-gray mb-8" style={{ marginBottom: '4px' }}>
                         予算
                       </div>
                       <div style={{
