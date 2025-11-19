@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 
 type UserType = 'casual' | 'business'
@@ -39,10 +39,6 @@ export default function SignupCompletePage() {
   const [user, setUser] = useState<any>(null)
   
   const router = useRouter()
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     checkUser()

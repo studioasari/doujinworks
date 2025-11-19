@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -11,11 +11,6 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   // ログイン処理
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,13 +35,19 @@ export default function LoginPage() {
         }
 
         // auth.users からメールアドレスを取得
-        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(profile.user_id)
-        
-        if (userError || !user?.email) {
+        const { data: authData, error: authError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('id', profile.user_id)
+          .single()
+
+        if (authError) {
           throw new Error('ユーザー情報の取得に失敗しました')
         }
 
-        loginEmail = user.email
+        // user_idからauth.usersのemailを取得する方法が必要
+        // 一旦、エラーメッセージで対応
+        throw new Error('ユーザーIDでのログインは現在準備中です。メールアドレスをご使用ください。')
       }
 
       // メールアドレスでログイン
