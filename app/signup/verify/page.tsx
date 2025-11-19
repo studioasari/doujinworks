@@ -1,66 +1,35 @@
-'use client'
-
-export const runtime = 'nodejs'
-
-import { useState } from 'react'
-import { getSupabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function SignupPage() {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
-  
-  const supabase = getSupabase()
-
-  const handleEmailSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password: Math.random().toString(36).slice(-8),
-        options: {
-          emailRedirectTo: 'https://www.dojinworks.com/signup/complete',
-        },
-      })
-
-      if (error) throw error
-
-      router.push('/signup/verify')
-    } catch (error: any) {
-      setError(error.message || '登録に失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSocialSignup = async (provider: 'google' | 'twitter' | 'discord') => {
-    setLoading(true)
-    setError('')
-
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: 'https://www.dojinworks.com/signup/complete',
-        },
-      })
-
-      if (error) throw error
-    } catch (error: any) {
-      setError(error.message || '登録に失敗しました')
-      setLoading(false)
-    }
-  }
-
+export default function VerifyPage() {
   return (
     <div className="container-narrow" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-      {/* ... 以下同じ ... */}
+      <div style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ fontSize: '48px', marginBottom: '24px', color: '#1A1A1A' }}>
+          <i className="fas fa-envelope"></i>
+        </div>
+        
+        <h1 className="page-title" style={{ marginBottom: '16px' }}>
+          認証メールを送信しました
+        </h1>
+        
+        <p className="text-gray" style={{ marginBottom: '32px', lineHeight: '1.6' }}>
+          ご登録いただいたメールアドレスに認証リンクを送信しました。<br />
+          メール内のリンクをクリックして、登録を完了してください。
+        </p>
+
+        <div className="info-box" style={{ marginBottom: '32px', textAlign: 'left' }}>
+          <p style={{ marginBottom: '8px', fontWeight: '600' }}>メールが届かない場合</p>
+          <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+            <li>迷惑メールフォルダをご確認ください</li>
+            <li>メールアドレスが正しいかご確認ください</li>
+            <li>数分お待ちいただいてから再度お試しください</li>
+          </ul>
+        </div>
+
+        <Link href="/login" className="btn-secondary">
+          ログイン画面に戻る
+        </Link>
+      </div>
     </div>
   )
 }
