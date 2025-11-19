@@ -21,7 +21,7 @@ export default function SignupPage() {
         email,
         password: Math.random().toString(36).slice(-8), // 一時パスワード
         options: {
-          emailRedirectTo: `${window.location.origin}/signup/complete`,
+          emailRedirectTo: `https://www.dojinworks.com/signup/complete`,
         },
       })
 
