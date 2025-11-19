@@ -5,7 +5,6 @@ import { supabase } from '../../../utils/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../components/Header'
-import Footer from '../../components/Footer'
 
 type Message = {
   id: string
@@ -20,13 +19,29 @@ type OtherUser = {
   avatar_url: string | null
 }
 
+type ChatRoom = {
+  id: string
+  updated_at: string
+  other_user: {
+    id: string
+    display_name: string | null
+    avatar_url: string | null
+  }
+  last_message: {
+    content: string
+    created_at: string
+  } | null
+  unread_count: number
+}
+
 export default function ChatRoomPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const params = useParams()
@@ -37,12 +52,19 @@ export default function ChatRoomPage() {
   }, [])
 
   useEffect(() => {
-    if (currentUserId && roomId) {
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+  }, [currentProfileId])
+
+  useEffect(() => {
+    if (currentProfileId && roomId) {
       fetchMessages()
+      fetchOtherUser(currentProfileId)
       subscribeToMessages()
       updateLastReadAt()
     }
-  }, [currentUserId, roomId])
+  }, [currentProfileId, roomId])
 
   useEffect(() => {
     scrollToBottom()
@@ -52,18 +74,93 @@ export default function ChatRoomPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.push('/login')
-    } else {
-      setCurrentUserId(user.id)
-      fetchOtherUser(user.id)
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profile) {
+      setCurrentProfileId(profile.id)
     }
   }
 
-  async function fetchOtherUser(userId: string) {
+  async function fetchChatRooms(profileId: string) {
+    const { data: participations, error: participationsError } = await supabase
+      .from('chat_room_participants')
+      .select('chat_room_id, last_read_at')
+      .eq('user_id', profileId)
+
+    if (participationsError || !participations || participations.length === 0) {
+      return
+    }
+
+    const roomIds = participations.map(p => p.chat_room_id)
+    const roomsData: ChatRoom[] = []
+
+    for (const participation of participations) {
+      const roomIdTemp = participation.chat_room_id
+
+      const { data: otherParticipants } = await supabase
+        .from('chat_room_participants')
+        .select('user_id, profiles!chat_room_participants_user_id_fkey(id, display_name, avatar_url)')
+        .eq('chat_room_id', roomIdTemp)
+        .neq('user_id', profileId)
+
+      const { data: lastMessage } = await supabase
+        .from('messages')
+        .select('content, created_at')
+        .eq('chat_room_id', roomIdTemp)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      const { count: unreadCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('chat_room_id', roomIdTemp)
+        .neq('sender_id', profileId)
+        .gt('created_at', participation.last_read_at || '1970-01-01')
+
+      const { data: roomData } = await supabase
+        .from('chat_rooms')
+        .select('updated_at')
+        .eq('id', roomIdTemp)
+        .single()
+
+      if (otherParticipants && otherParticipants.length > 0) {
+        const otherUserData = otherParticipants[0].profiles as any
+
+        roomsData.push({
+          id: roomIdTemp,
+          updated_at: roomData?.updated_at || '',
+          other_user: {
+            id: otherUserData.id,
+            display_name: otherUserData.display_name,
+            avatar_url: otherUserData.avatar_url
+          },
+          last_message: lastMessage || null,
+          unread_count: unreadCount || 0
+        })
+      }
+    }
+
+    roomsData.sort((a, b) => 
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )
+
+    setChatRooms(roomsData)
+  }
+
+  async function fetchOtherUser(profileId: string) {
     const { data } = await supabase
       .from('chat_room_participants')
-      .select('user_id, profiles(id, display_name, avatar_url)')
+      .select('user_id, profiles!chat_room_participants_user_id_fkey(id, display_name, avatar_url)')
       .eq('chat_room_id', roomId)
-      .neq('user_id', userId)
+      .neq('user_id', profileId)
       .single()
 
     if (data) {
@@ -94,6 +191,46 @@ export default function ChatRoomPage() {
     setLoading(false)
   }
 
+async function sendMessage() {
+  if (!newMessage.trim() || sending) return
+
+  setSending(true)
+
+  const messageData = {
+    chat_room_id: roomId,
+    sender_id: currentProfileId,
+    content: newMessage.trim()
+  }
+
+  const { data, error } = await supabase
+    .from('messages')
+    .insert(messageData)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('メッセージ送信エラー:', error)
+    alert('メッセージの送信に失敗しました')
+  } else {
+    // 自分のメッセージを即座に追加（リアルタイム購読を待たない）
+    setMessages(prev => [...prev, data as Message])
+    setNewMessage('')
+    
+    // chat_roomsのupdated_atを更新
+    await supabase
+      .from('chat_rooms')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', roomId)
+    
+    // メッセージ一覧を更新
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+  }
+
+  setSending(false)
+}
+
   function subscribeToMessages() {
     const channel = supabase
       .channel(`chat_room_${roomId}`)
@@ -106,8 +243,24 @@ export default function ChatRoomPage() {
           filter: `chat_room_id=eq.${roomId}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message])
-          updateLastReadAt()
+          const newMsg = payload.new as Message
+          
+          // 自分のメッセージは既に追加済みなので、他人のメッセージのみ追加
+          if (newMsg.sender_id !== currentProfileId) {
+            setMessages(prev => {
+              // 重複チェック
+              if (prev.find(m => m.id === newMsg.id)) {
+                return prev
+              }
+              return [...prev, newMsg]
+            })
+            updateLastReadAt()
+          }
+          
+          // メッセージ一覧を更新
+          if (currentProfileId) {
+            fetchChatRooms(currentProfileId)
+          }
         }
       )
       .subscribe()
@@ -122,30 +275,7 @@ export default function ChatRoomPage() {
       .from('chat_room_participants')
       .update({ last_read_at: new Date().toISOString() })
       .eq('chat_room_id', roomId)
-      .eq('user_id', currentUserId)
-  }
-
-  async function sendMessage() {
-    if (!newMessage.trim() || sending) return
-
-    setSending(true)
-
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        chat_room_id: roomId,
-        sender_id: currentUserId,
-        content: newMessage.trim()
-      })
-
-    if (error) {
-      console.error('メッセージ送信エラー:', error)
-      alert('メッセージの送信に失敗しました')
-    } else {
-      setNewMessage('')
-    }
-
-    setSending(false)
+      .eq('user_id', currentProfileId)
   }
 
   function scrollToBottom() {
@@ -172,43 +302,192 @@ export default function ChatRoomPage() {
     }
   }
 
+  function formatMessageTime(dateString: string) {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) {
+      return `${days}日前`
+    } else if (hours > 0) {
+      return `${hours}時間前`
+    } else {
+      return '今'
+    }
+  }
+
   return (
     <>
       <Header />
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
         height: 'calc(100vh - 80px)',
         backgroundColor: '#FFFFFF'
       }}>
-        {/* ヘッダー */}
-        <div style={{
-          borderBottom: '1px solid #E5E5E5',
-          padding: '16px 20px',
+        {/* 左サイドバー: メッセージ一覧 */}
+        <aside style={{
+          width: '320px',
+          borderRight: '1px solid #E5E5E5',
           backgroundColor: '#FFFFFF',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10
+          overflowY: 'auto',
+          flexShrink: 0
         }}>
-          <div className="flex gap-16" style={{ alignItems: 'center' }}>
-            <Link
-              href="/messages"
-              className="text-gray"
-              style={{
-                textDecoration: 'none',
-                fontSize: '24px'
-              }}
-            >
-              ←
-            </Link>
+          <div style={{
+            padding: '20px',
+            borderBottom: '1px solid #E5E5E5',
+            position: 'sticky',
+            top: 0,
+            backgroundColor: '#FFFFFF',
+            zIndex: 10
+          }}>
+            <h2 className="card-title">メッセージ</h2>
+          </div>
 
+          {chatRooms.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px 20px' }}>
+              <p className="text-gray text-small">メッセージがありません</p>
+            </div>
+          ) : (
+            <div>
+              {chatRooms.map((room) => (
+                <Link
+                  key={room.id}
+                  href={`/messages/${room.id}`}
+                  className="flex gap-12"
+                  style={{
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    textDecoration: 'none',
+                    borderBottom: '1px solid #E5E5E5',
+                    backgroundColor: room.id === roomId ? '#F9F9F9' : '#FFFFFF',
+                    transition: 'background-color 0.2s',
+                    display: 'flex'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (room.id !== roomId) {
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = room.id === roomId ? '#F9F9F9' : '#FFFFFF'
+                  }}
+                >
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#E5E5E5',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    color: '#6B6B6B',
+                    position: 'relative'
+                    // overflow: hidden を削除
+                  }}>
+                    {room.other_user.avatar_url ? (
+                      <img
+                        src={room.other_user.avatar_url}
+                        alt={room.other_user.display_name || ''}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: '50%'  // ← これを追加
+                        }}
+                      />
+                    ) : (
+                      room.other_user.display_name?.charAt(0) || '?'
+                    )}
+                    {room.unread_count > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-4px',
+                        right: '-4px',
+                        backgroundColor: '#FF4444',
+                        color: '#FFFFFF',
+                        borderRadius: '12px',
+                        minWidth: '20px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        padding: '0 6px',
+                        zIndex: 10
+                      }}>
+                        {room.unread_count}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="flex-between mb-4" style={{ alignItems: 'baseline' }}>
+                      <h3 className="text-small" style={{
+                        fontWeight: room.unread_count > 0 ? 'bold' : '600',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {room.other_user.display_name || '名前未設定'}
+                      </h3>
+                      <span className="text-tiny text-gray" style={{ flexShrink: 0, marginLeft: '8px' }}>
+                        {room.last_message && formatMessageTime(room.last_message.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-small text-gray text-ellipsis" style={{
+                      fontWeight: room.unread_count > 0 ? '600' : 'normal'
+                    }}>
+                      {room.last_message?.content || 'メッセージがありません'}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </aside>
+
+        {/* 右側: チャットエリア */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#FFFFFF'
+        }}>
+          {/* ヘッダー */}
+          <div style={{
+            borderBottom: '1px solid #E5E5E5',
+            padding: '16px 20px',
+            backgroundColor: '#FFFFFF'
+          }}>
             {otherUser && (
-              <>
-                <div className="avatar avatar-medium">
+              <div className="flex gap-16" style={{ alignItems: 'center' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#E5E5E5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  color: '#6B6B6B',
+                  overflow: 'hidden',
+                  flexShrink: 0
+                }}>
                   {otherUser.avatar_url ? (
                     <img
                       src={otherUser.avatar_url}
                       alt={otherUser.display_name || ''}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
                     />
                   ) : (
                     otherUser.display_name?.charAt(0) || '?'
@@ -224,129 +503,120 @@ export default function ChatRoomPage() {
                 >
                   {otherUser.display_name || '名前未設定'}
                 </Link>
-              </>
+              </div>
             )}
           </div>
-        </div>
 
-        {/* メッセージエリア */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          backgroundColor: '#F9F9F9'
-        }}>
-          {loading && (
-            <div className="loading-state" style={{ padding: '40px 20px' }}>
-              読み込み中...
-            </div>
-          )}
+          {/* メッセージエリア */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            backgroundColor: '#F9F9F9'
+          }}>
+            {loading && (
+              <div className="loading-state" style={{ padding: '40px 20px' }}>
+                読み込み中...
+              </div>
+            )}
 
-          {!loading && messages.length === 0 && (
-            <div className="empty-state" style={{ padding: '40px 20px' }}>
-              メッセージがありません
-            </div>
-          )}
+            {!loading && messages.length === 0 && (
+              <div className="empty-state" style={{ padding: '40px 20px' }}>
+                メッセージがありません
+              </div>
+            )}
 
-          {!loading && messages.map((message, index) => {
-            const isCurrentUser = message.sender_id === currentUserId
-            const showDate = index === 0 || 
-              new Date(messages[index - 1].created_at).toDateString() !== 
-              new Date(message.created_at).toDateString()
+            {!loading && messages.map((message, index) => {
+              const isCurrentUser = message.sender_id === currentProfileId
+              const showDate = index === 0 || 
+                new Date(messages[index - 1].created_at).toDateString() !== 
+                new Date(message.created_at).toDateString()
 
-            return (
-              <div key={message.id}>
-                {showDate && (
+              return (
+                <div key={message.id}>
+                  {showDate && (
+                    <div style={{
+                      textAlign: 'center',
+                      margin: '20px 0'
+                    }}>
+                      <span className="text-tiny text-gray">
+                        {formatDate(message.created_at)}
+                      </span>
+                    </div>
+                  )}
+
                   <div style={{
-                    textAlign: 'center',
-                    margin: '20px 0'
-                  }}>
-                    <span className="text-tiny text-gray">
-                      {formatDate(message.created_at)}
-                    </span>
-                  </div>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
-                  marginBottom: '12px'
-                }}>
-                  <div style={{
-                    maxWidth: '70%',
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: isCurrentUser ? 'flex-end' : 'flex-start'
+                    justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
+                    marginBottom: '12px'
                   }}>
                     <div style={{
-                      backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
-                      color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
-                      padding: '12px 16px',
-                      borderRadius: '16px',
-                      wordBreak: 'break-word',
-                      border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
+                      maxWidth: '70%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isCurrentUser ? 'flex-end' : 'flex-start'
                     }}>
-                      {message.content}
+                      <div style={{
+                        backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
+                        color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
+                        padding: '12px 16px',
+                        borderRadius: '16px',
+                        wordBreak: 'break-word',
+                        border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
+                      }}>
+                        {message.content}
+                      </div>
+                      <span className="text-tiny text-gray" style={{ marginTop: '4px' }}>
+                        {formatTime(message.created_at)}
+                      </span>
                     </div>
-                    <span className="text-tiny text-gray" style={{ marginTop: '4px' }}>
-                      {formatTime(message.created_at)}
-                    </span>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-          <div ref={messagesEndRef} />
-        </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </div>
 
-        {/* 入力エリア */}
-        <div style={{
-          borderTop: '1px solid #E5E5E5',
-          padding: '16px 20px',
-          backgroundColor: '#FFFFFF'
-        }}>
-          <div className="flex gap-12" style={{
-            maxWidth: '1200px',
-            margin: '0 auto'
+          {/* 入力エリア */}
+          <div style={{
+            borderTop: '1px solid #E5E5E5',
+            padding: '16px 20px',
+            backgroundColor: '#FFFFFF'
           }}>
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder="メッセージを入力..."
-              disabled={sending}
-              className="input-field"
-              style={{
-                flex: 1,
-                borderRadius: '24px'
-              }}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || sending}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: !newMessage.trim() || sending ? '#E5E5E5' : '#1A1A1A',
-                color: !newMessage.trim() || sending ? '#6B6B6B' : '#FFFFFF',
-                border: 'none',
-                borderRadius: '24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: !newMessage.trim() || sending ? 'not-allowed' : 'pointer'
-              }}
-            >
-              送信
-            </button>
+            <div className="flex gap-12">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
+                placeholder="メッセージを入力..."
+                disabled={sending}
+                className="input-field"
+                style={{
+                  flex: 1,
+                  borderRadius: '24px'
+                }}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() || sending}
+                className="btn-primary"
+                style={{
+                  borderRadius: '24px',
+                  opacity: !newMessage.trim() || sending ? 0.5 : 1
+                }}
+              >
+                送信
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      <Footer />
     </>
   )
 }

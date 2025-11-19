@@ -2,33 +2,42 @@ import { supabase } from '@/utils/supabase'
 
 /**
  * 2人のユーザー間のチャットルームを取得または作成する
- * @param currentUserId 現在のユーザーID
- * @param otherUserId 相手のユーザーID
+ * @param currentProfileId 現在のユーザーのプロフィールID (profiles.id)
+ * @param otherProfileId 相手のユーザーのプロフィールID (profiles.id)
  * @returns チャットルームID
  */
 export async function getOrCreateChatRoom(
-  currentUserId: string,
-  otherUserId: string
+  currentProfileId: string,
+  otherProfileId: string
 ): Promise<string | null> {
   try {
     // 既存のチャットルームを検索
-    const { data: existingParticipations } = await supabase
+    const { data: existingParticipations, error: existingError } = await supabase
       .from('chat_room_participants')
       .select('chat_room_id')
-      .eq('user_id', currentUserId)
+      .eq('user_id', currentProfileId)
+
+    if (existingError) {
+      console.error('チャットルーム検索エラー:', existingError)
+      return null
+    }
 
     if (existingParticipations && existingParticipations.length > 0) {
       const roomIds = existingParticipations.map(p => p.chat_room_id)
 
       // これらのルームで相手も参加しているものを探す
-      const { data: otherUserRooms } = await supabase
+      const { data: otherUserRooms, error: otherError } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id')
-        .eq('user_id', otherUserId)
+        .eq('user_id', otherProfileId)
         .in('chat_room_id', roomIds)
 
+      if (otherError) {
+        console.error('相手の参加ルーム検索エラー:', otherError)
+        return null
+      }
+
       if (otherUserRooms && otherUserRooms.length > 0) {
-        // 既存のチャットルームが見つかった
         return otherUserRooms[0].chat_room_id
       }
     }
@@ -49,8 +58,8 @@ export async function getOrCreateChatRoom(
     const { error: participantsError } = await supabase
       .from('chat_room_participants')
       .insert([
-        { chat_room_id: newRoom.id, user_id: currentUserId },
-        { chat_room_id: newRoom.id, user_id: otherUserId }
+        { chat_room_id: newRoom.id, user_id: currentProfileId },
+        { chat_room_id: newRoom.id, user_id: otherProfileId }
       ])
 
     if (participantsError) {

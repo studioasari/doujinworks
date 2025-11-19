@@ -507,7 +507,7 @@ button {
 }
 
 .info-row:not(:last-child) {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .info-row-value {
@@ -645,4 +645,15 @@ button {
 .upload-area.uploading {
   pointer-events: none;
   opacity: 0.6;
+}
+
+/* ========================================
+   レスポンシブ対応
+   ======================================== */
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
 }

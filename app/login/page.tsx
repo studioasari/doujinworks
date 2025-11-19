@@ -1,32 +1,62 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/utils/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [emailOrUsername, setEmailOrUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [isLogin, setIsLogin] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
   // ログイン処理
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
     setError('')
     
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      let loginEmail = emailOrUsername
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
+      // @ が含まれていない場合、ユーザーIDとして扱う
+      if (!emailOrUsername.includes('@')) {
+        // ユーザーIDからメールアドレスを取得
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('username', emailOrUsername.toLowerCase())
+          .single()
+
+        if (profileError || !profile) {
+          throw new Error('ユーザーIDが見つかりません')
+        }
+
+        // auth.users からメールアドレスを取得
+        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(profile.user_id)
+        
+        if (userError || !user?.email) {
+          throw new Error('ユーザー情報の取得に失敗しました')
+        }
+
+        loginEmail = user.email
+      }
+
+      // メールアドレスでログイン
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password,
+      })
+
+      if (signInError) throw signInError
+
       // ログイン成功後、プロフィールがあるかチェック
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -37,41 +67,37 @@ export default function LoginPage() {
           .eq('user_id', user.id)
           .single()
         
-        // プロフィールがなければ設定画面へ
-        if (!profile) {
-          router.push('/profile')
+        // プロフィールがなければ登録完了画面へ
+        if (!profile || !profile.username) {
+          router.push('/signup/complete')
         } else {
-          router.push('/')
+          router.push('/dashboard')
         }
       }
+    } catch (error: any) {
+      setError(error.message || 'ログインに失敗しました')
+    } finally {
+      setLoading(false)
     }
   }
 
-  // 新規登録処理
-  const handleSignup = async () => {
+  // ソーシャルログイン
+  const handleSocialLogin = async (provider: 'google' | 'twitter' | 'discord') => {
     setLoading(true)
     setError('')
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
 
-    if (error) {
-      setError(error.message)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/signup/complete`,
+        },
+      })
+
+      if (error) throw error
+    } catch (error: any) {
+      setError(error.message || 'ログインに失敗しました')
       setLoading(false)
-    } else {
-      // 新規登録後、プロフィール設定へ
-      router.push('/profile')
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (isLogin) {
-      handleLogin()
-    } else {
-      handleSignup()
     }
   }
 
@@ -111,7 +137,7 @@ export default function LoginPage() {
           textAlign: 'center',
           letterSpacing: '-0.7px'
         }}>
-          {isLogin ? 'ログイン' : '新規登録'}
+          ログイン
         </h1>
         
         <p style={{ 
@@ -123,7 +149,7 @@ export default function LoginPage() {
           アカウントにアクセス
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
@@ -132,12 +158,12 @@ export default function LoginPage() {
               fontSize: '14px',
               fontWeight: '600'
             }}>
-              メールアドレス
+              メールアドレスまたはユーザーID
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
               required
               style={{
                 width: '100%',
@@ -150,7 +176,7 @@ export default function LoginPage() {
                 outline: 'none',
                 transition: 'border-color 0.2s'
               }}
-              placeholder="example@email.com"
+              placeholder="example@email.com または username"
             />
           </div>
 
@@ -217,29 +243,97 @@ export default function LoginPage() {
               transition: 'background-color 0.2s'
             }}
           >
-            {loading ? '処理中...' : isLogin ? 'ログイン' : '新規登録'}
+            {loading ? '処理中...' : 'ログイン'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin)
-              setError('')
-            }}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: 'transparent',
-              color: '#6B6B6B',
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            {isLogin ? 'アカウントをお持ちでない方' : 'すでにアカウントをお持ちの方'}
-          </button>
+          <div style={{ textAlign: 'center', margin: '24px 0' }}>
+            <span style={{ color: '#6B6B6B', fontSize: '14px' }}>または</span>
+          </div>
+
+          {/* ソーシャルログインボタン */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('google')}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#FFFFFF',
+                color: '#1A1A1A',
+                border: '1px solid #E5E5E5',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fab fa-google"></i>
+              Googleでログイン
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('twitter')}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#FFFFFF',
+                color: '#1A1A1A',
+                border: '1px solid #E5E5E5',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fab fa-twitter"></i>
+              Twitterでログイン
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('discord')}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#FFFFFF',
+                color: '#1A1A1A',
+                border: '1px solid #E5E5E5',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <i className="fab fa-discord"></i>
+              Discordでログイン
+            </button>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ color: '#6B6B6B', fontSize: '14px' }}>アカウントをお持ちでない方は </span>
+            <Link href="/signup" style={{ color: '#1A1A1A', fontSize: '14px', textDecoration: 'underline' }}>
+              新規登録
+            </Link>
+          </div>
         </form>
       </div>
     </div>

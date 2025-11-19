@@ -14,6 +14,10 @@ type Creator = {
   display_name: string | null
   bio: string | null
   avatar_url: string | null
+  header_url: string | null
+  twitter_url: string | null
+  pixiv_url: string | null
+  website_url: string | null
   role: string
   created_at: string
 }
@@ -30,26 +34,39 @@ export default function CreatorDetailPage() {
   const [creator, setCreator] = useState<Creator | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const router = useRouter()
   const params = useParams()
   const creatorId = params.id as string
 
   useEffect(() => {
-    checkAuth()
-    if (creatorId) {
-      fetchCreator()
-      fetchPortfolio()
+    async function initialize() {
+      await checkAuth()
+      if (creatorId) {
+        await fetchCreator()
+        await fetchPortfolio()
+      }
     }
+    initialize()
   }, [creatorId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.push('/login')
-    } else {
-      setCurrentUser(user)
+      return
+    }
+
+    // auth.users.id から profiles.id を取得
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profile) {
+      setCurrentProfileId(profile.id)
     }
   }
 
@@ -79,7 +96,6 @@ export default function CreatorDetailPage() {
       .eq('creator_id', creatorId)
       .eq('is_public', true)
       .order('created_at', { ascending: false })
-      .limit(6)
 
     if (error) {
       console.error('ポートフォリオ取得エラー:', error)
@@ -89,11 +105,12 @@ export default function CreatorDetailPage() {
   }
 
   async function handleSendMessage() {
-    if (!currentUser || !creator) return
+    if (!currentProfileId || !creator) return
 
     setSendingMessage(true)
 
-    const roomId = await getOrCreateChatRoom(currentUser.id, creator.id)
+    // profiles.id を渡す（auth.users.id ではない）
+    const roomId = await getOrCreateChatRoom(currentProfileId, creator.id)
 
     if (roomId) {
       router.push(`/messages/${roomId}`)
@@ -119,8 +136,7 @@ export default function CreatorDetailPage() {
     return category ? categories[category] || category : '未設定'
   }
 
-  // 自分のプロフィールかどうか判定
-  const isOwnProfile = currentUser && creator && currentUser.id === creator.user_id
+  const isOwnProfile = currentProfileId && creator && currentProfileId === creator.id
 
   if (loading) {
     return (
@@ -161,186 +177,203 @@ export default function CreatorDetailPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow">
-          {/* 戻るボタン */}
-          <Link
-            href="/creators"
-            className="text-small text-gray"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              textDecoration: 'none',
-              marginBottom: '32px'
-            }}
-          >
-            ← クリエイター一覧に戻る
-          </Link>
-
-          {/* プロフィールカード */}
-          <div className="card-no-hover p-40 mb-32">
-            {/* アバターと基本情報 */}
+        <div style={{
+          width: '100%',
+          height: '240px',
+          backgroundColor: '#F5F5F5',
+          position: 'relative',
+          overflow: 'hidden',
+          borderBottom: '1px solid #E5E5E5'
+        }}>
+          {creator.header_url ? (
+            <img
+              src={creator.header_url}
+              alt="ヘッダー画像"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          ) : (
             <div style={{
+              width: '100%',
+              height: '100%',
               display: 'flex',
-              alignItems: 'flex-start',
-              gap: '32px',
-              marginBottom: '32px',
-              flexWrap: 'wrap'
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6B6B6B',
+              fontSize: '48px'
             }}>
-              {/* アバター */}
-              <div style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                backgroundColor: '#E5E5E5',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                color: '#6B6B6B',
-                overflow: 'hidden'
-              }}>
-                {creator.avatar_url ? (
-                  <img
-                    src={creator.avatar_url}
-                    alt={creator.display_name || ''}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
-                ) : (
-                  creator.display_name?.charAt(0) || '?'
-                )}
-              </div>
+              <i className="fas fa-image"></i>
+            </div>
+          )}
+        </div>
 
-              {/* 名前と役割 */}
-              <div style={{ flex: 1, minWidth: '250px' }}>
-                <h1 className="section-title mb-12">
+        <div className="container" style={{ padding: '40px 20px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '320px 1fr',
+            gap: '32px',
+            alignItems: 'start'
+          }}>
+            <aside>
+              <div className="card-no-hover p-24">
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  backgroundColor: '#F5F5F5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '48px',
+                  color: '#6B6B6B',
+                  overflow: 'hidden',
+                  margin: '0 auto 20px',
+                  border: '1px solid #E5E5E5'
+                }}>
+                  {creator.avatar_url ? (
+                    <img
+                      src={creator.avatar_url}
+                      alt={creator.display_name || ''}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  ) : (
+                    <i className="fas fa-user"></i>
+                  )}
+                </div>
+
+                <h1 className="card-title mb-12" style={{ textAlign: 'center' }}>
                   {creator.display_name || '名前未設定'}
                 </h1>
 
-                {/* 役割バッジ */}
-                <span className="badge badge-category mb-24" style={{
-                  display: 'inline-block',
-                  padding: '6px 16px',
-                  fontSize: '14px'
-                }}>
-                  {creator.role === 'creator' && 'クリエイター'}
-                  {creator.role === 'client' && 'クライアント'}
-                  {creator.role === 'both' && 'クリエイター・クライアント'}
-                </span>
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <span className="badge badge-category" style={{
+                    padding: '6px 16px',
+                    fontSize: '13px'
+                  }}>
+                    {creator.role === 'creator' && 'クリエイター'}
+                    {creator.role === 'client' && '依頼者'}
+                    {creator.role === 'both' && 'クリエイター・依頼者'}
+                  </span>
+                </div>
 
-                {/* アクションボタン */}
-                <div className="flex gap-12" style={{ flexWrap: 'wrap' }}>
-                  {/* メッセージボタン（他人のプロフィールの場合） */}
+                <div className="info-box mb-24">
+                  <div className="info-row">
+                    <span className="text-gray">作品数</span>
+                    <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {portfolioItems.length}点
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="text-gray">登録日</span>
+                    <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {new Date(creator.created_at).toLocaleDateString('ja-JP', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mb-24">
+                  <h2 className="text-small mb-8" style={{ fontWeight: '600' }}>
+                    自己紹介
+                  </h2>
+                  <p className="text-small" style={{
+                    lineHeight: '1.7',
+                    whiteSpace: 'pre-wrap',
+                    color: '#6B6B6B'
+                  }}>
+                    {creator.bio || '自己紹介が登録されていません'}
+                  </p>
+                </div>
+
+                {(creator.twitter_url || creator.pixiv_url || creator.website_url) && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '24px' }}>
+                    {creator.twitter_url && (
+                      <a href={creator.twitter_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '16px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                        <i className="fab fa-twitter"></i>
+                      </a>
+                    )}
+                    {creator.pixiv_url && (
+                      <a href={creator.pixiv_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '16px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                        <i className="fas fa-palette"></i>
+                      </a>
+                    )}
+                    {creator.website_url && (
+                      <a href={creator.website_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '16px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                        <i className="fas fa-link"></i>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-12">
                   {!isOwnProfile && (
                     <button
                       onClick={handleSendMessage}
                       disabled={sendingMessage}
                       className="btn-primary"
+                      style={{ width: '100%' }}
                     >
                       {sendingMessage ? '処理中...' : 'メッセージを送る'}
                     </button>
                   )}
 
-                  {/* プロフィール編集ボタン（自分のプロフィールの場合） */}
                   {isOwnProfile && (
-                    <Link href="/profile" className="btn-secondary">
+                    <Link href="/profile" className="btn-secondary" style={{ width: '100%', textAlign: 'center', lineHeight: '48px' }}>
                       プロフィールを編集
                     </Link>
                   )}
                 </div>
               </div>
-            </div>
+            </aside>
 
-            {/* 統計情報 */}
-            <div className="info-box mb-32">
-              <div className="info-row">
-                <span className="text-gray">作品数</span>
-                <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                  {portfolioItems.length}点
-                </span>
-              </div>
-              <div className="info-row">
-                <span className="text-gray">登録日</span>
-                <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                  {new Date(creator.created_at).toLocaleDateString('ja-JP', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-            </div>
-
-            {/* 自己紹介 */}
-            <div>
-              <h2 className="card-title mb-12">
-                自己紹介
-              </h2>
-              <p className="text-small" style={{
-                lineHeight: '1.8',
-                whiteSpace: 'pre-wrap',
-                color: '#6B6B6B'
-              }}>
-                {creator.bio || '自己紹介が登録されていません'}
-              </p>
-            </div>
-          </div>
-
-          {/* ポートフォリオセクション */}
-          <div className="card-no-hover p-40">
-            <div className="flex-between mb-24">
-              <h2 className="card-title">
+            <main>
+              <h2 className="section-title mb-32">
                 ポートフォリオ
               </h2>
-              {portfolioItems.length > 0 && (
-                <Link href="/portfolio" className="text-small text-gray">
-                  すべて見る
-                </Link>
+
+              {portfolioItems.length === 0 ? (
+                <div className="empty-state" style={{ padding: '60px 20px' }}>
+                  <p className="text-gray">
+                    まだ作品が登録されていません
+                  </p>
+                </div>
+              ) : (
+                <div className="grid-portfolio">
+                  {portfolioItems.map((item) => (
+                    <Link key={item.id} href={`/portfolio/${item.id}`} className="portfolio-card">
+                      <div className="portfolio-card-image">
+                        <img
+                          src={item.thumbnail_url || item.image_url}
+                          alt={item.title}
+                        />
+                      </div>
+
+                      <div className="portfolio-card-content">
+                        {item.category && (
+                          <span className="badge badge-category mb-8" style={{ display: 'inline-block' }}>
+                            {getCategoryLabel(item.category)}
+                          </span>
+                        )}
+
+                        <h3 className="text-small text-ellipsis" style={{ fontWeight: '600' }}>
+                          {item.title}
+                        </h3>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               )}
-            </div>
-
-            {/* ポートフォリオ一覧 */}
-            {portfolioItems.length === 0 ? (
-              <div className="empty-state" style={{ padding: '40px 20px' }}>
-                <p className="text-small text-gray">
-                  まだ作品が登録されていません
-                </p>
-              </div>
-            ) : (
-              <div className="grid-portfolio">
-                {portfolioItems.map((item) => (
-                  <Link key={item.id} href={`/portfolio/${item.id}`} className="portfolio-card">
-                    {/* 画像 */}
-                    <div className="portfolio-card-image">
-                      <img
-                        src={item.thumbnail_url || item.image_url}
-                        alt={item.title}
-                      />
-                    </div>
-
-                    {/* 情報 */}
-                    <div className="portfolio-card-content">
-                      {/* カテゴリ */}
-                      {item.category && (
-                        <span className="badge badge-category mb-8" style={{ display: 'inline-block' }}>
-                          {getCategoryLabel(item.category)}
-                        </span>
-                      )}
-
-                      {/* タイトル */}
-                      <h3 className="card-subtitle text-ellipsis">
-                        {item.title}
-                      </h3>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
+            </main>
           </div>
         </div>
       </div>

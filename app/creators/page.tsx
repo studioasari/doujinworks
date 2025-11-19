@@ -147,63 +147,91 @@ export default function CreatorsPage() {
           {!loading && filteredCreators.length > 0 && (
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '24px'
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '16px'
             }}>
               {filteredCreators.map((creator) => (
                 <Link
                   key={creator.id}
                   href={`/creators/${creator.id}`}
-                  className="card p-24"
+                  className="card"
+                  style={{ padding: 0, overflow: 'hidden' }}
                 >
-                  {/* アバター */}
+                  {/* カード上部 - アバターエリア */}
                   <div style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    backgroundColor: '#E5E5E5',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '32px',
-                    color: '#6B6B6B',
-                    overflow: 'hidden'
+                    backgroundColor: '#FAFAFA',
+                    padding: '20px 16px 16px',
+                    textAlign: 'center',
+                    borderBottom: '1px solid #E5E5E5'
                   }}>
-                    {creator.avatar_url ? (
-                      <img
-                        src={creator.avatar_url}
-                        alt={creator.display_name || ''}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      creator.display_name?.charAt(0) || '?'
-                    )}
+                    {/* アバター */}
+                    <div style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '50%',
+                      backgroundColor: '#E5E5E5',
+                      margin: '0 auto 10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '28px',
+                      color: '#6B6B6B',
+                      overflow: 'hidden',
+                      border: '2px solid #FFFFFF'
+                    }}>
+                      {creator.avatar_url ? (
+                        <img
+                          src={creator.avatar_url}
+                          alt={creator.display_name || ''}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        creator.display_name?.charAt(0) || '?'
+                      )}
+                    </div>
+
+                    {/* 表示名 */}
+                    <h2 style={{ 
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#1A1A1A',
+                      marginBottom: '8px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {creator.display_name || '名前未設定'}
+                    </h2>
+
+                    {/* 役割バッジ */}
+                    <span className="badge badge-category" style={{
+                      fontSize: '10px',
+                      padding: '3px 8px'
+                    }}>
+                      {creator.role === 'creator' && 'クリエイター'}
+                      {creator.role === 'client' && '依頼者'}
+                      {creator.role === 'both' && 'クリエイター・依頼者'}
+                    </span>
                   </div>
 
-                  {/* 表示名 */}
-                  <h2 className="card-title mb-8">
-                    {creator.display_name || '名前未設定'}
-                  </h2>
-
-                  {/* 役割バッジ */}
-                  <span className="badge badge-category mb-12" style={{ display: 'inline-block' }}>
-                    {creator.role === 'creator' && 'クリエイター'}
-                    {creator.role === 'client' && 'クライアント'}
-                    {creator.role === 'both' && 'クリエイター・クライアント'}
-                  </span>
-
-                  {/* 自己紹介 */}
-                  <p className="text-small text-gray text-clamp-2" style={{ 
-                    lineHeight: '1.6',
-                    WebkitLineClamp: 3
-                  }}>
-                    {creator.bio || '自己紹介が登録されていません'}
-                  </p>
+                  {/* カード下部 - 自己紹介エリア */}
+                  <div style={{ padding: '12px' }}>
+                    <p style={{ 
+                      fontSize: '12px',
+                      color: '#6B6B6B',
+                      lineHeight: '1.5',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {creator.bio || '自己紹介が登録されていません'}
+                    </p>
+                  </div>
                 </Link>
               ))}
             </div>

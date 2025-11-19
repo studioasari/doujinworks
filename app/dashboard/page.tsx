@@ -13,6 +13,10 @@ type Profile = {
   display_name: string | null
   bio: string | null
   avatar_url: string | null
+  header_url: string | null
+  twitter_url: string | null
+  pixiv_url: string | null
+  website_url: string | null
   role: string
   is_creator: boolean
   is_client: boolean
@@ -86,7 +90,6 @@ export default function DashboardPage() {
   }
 
   async function loadPortfolio(userId: string) {
-    // まずプロフィールIDを取得
     const { data: profileData } = await supabase
       .from('profiles')
       .select('id')
@@ -108,7 +111,6 @@ export default function DashboardPage() {
 
   async function loadChatRooms(userId: string) {
     try {
-      // まずプロフィールIDを取得
       const { data: profileData } = await supabase
         .from('profiles')
         .select('id')
@@ -120,7 +122,6 @@ export default function DashboardPage() {
         return
       }
 
-      // 自分が参加しているチャットルームIDを取得
       const { data: participantData } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id')
@@ -133,7 +134,6 @@ export default function DashboardPage() {
 
       const roomIds = participantData.map(p => p.chat_room_id)
 
-      // チャットルームの詳細を取得
       const { data, error } = await supabase
         .from('chat_rooms')
         .select(`
@@ -154,7 +154,6 @@ export default function DashboardPage() {
         return
       }
 
-      // 安全に型変換
       if (data) {
         setChatRooms(data as any)
       } else {
@@ -167,7 +166,6 @@ export default function DashboardPage() {
   }
 
   async function loadStats(userId: string) {
-    // プロフィールIDを取得
     const { data: profileData } = await supabase
       .from('profiles')
       .select('id')
@@ -176,14 +174,12 @@ export default function DashboardPage() {
 
     if (!profileData) return
 
-    // 作品数
     const { count: portfolioCount } = await supabase
       .from('portfolio_items')
       .select('*', { count: 'exact', head: true })
       .eq('creator_id', profileData.id)
       .eq('is_public', true)
 
-    // 依頼数（受けた依頼 + 出した依頼）
     const { count: receivedCount } = await supabase
       .from('requests')
       .select('*', { count: 'exact', head: true })
@@ -196,7 +192,6 @@ export default function DashboardPage() {
 
     const requestCount = (receivedCount || 0) + (sentCount || 0)
 
-    // メッセージ数（チャットルーム数）
     const { count: messageCount } = await supabase
       .from('chat_room_participants')
       .select('*', { count: 'exact', head: true })
@@ -246,7 +241,6 @@ export default function DashboardPage() {
         backgroundColor: '#FFFFFF',
         display: 'flex'
       }}>
-        {/* サイドバー */}
         <aside style={{
           width: '240px',
           borderRight: '1px solid #E5E5E5',
@@ -254,7 +248,6 @@ export default function DashboardPage() {
           flexShrink: 0
         }}>
           <nav style={{ padding: '0 20px' }}>
-            {/* 概要（現在のページ） */}
             <div style={{
               padding: '12px 20px',
               marginBottom: '4px',
@@ -267,7 +260,6 @@ export default function DashboardPage() {
               概要
             </div>
 
-            {/* プロフィール編集 */}
             <Link 
               href="/profile"
               style={{
@@ -290,7 +282,6 @@ export default function DashboardPage() {
               プロフィール編集
             </Link>
 
-            {/* 作品管理 */}
             <Link 
               href="/portfolio"
               style={{
@@ -313,7 +304,6 @@ export default function DashboardPage() {
               作品管理
             </Link>
 
-            {/* 依頼管理 */}
             <Link 
               href="/requests"
               style={{
@@ -338,34 +328,67 @@ export default function DashboardPage() {
           </nav>
         </aside>
 
-        {/* メインコンテンツ */}
         <main style={{ flex: 1, padding: '40px' }}>
           <h1 className="page-title mb-40">ダッシュボード</h1>
 
-          {/* プロフィール + 統計情報 */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
             gap: '24px',
             marginBottom: '40px'
           }}>
-            {/* プロフィール概要 */}
-            <div className="card-no-hover p-24">
-              <h2 className="card-title mb-16">プロフィール</h2>
-              <div className="flex gap-16" style={{ alignItems: 'center', marginBottom: '20px' }}>
-                {/* アバター */}
+            <div className="card-no-hover" style={{ overflow: 'hidden', padding: 0 }}>
+              <div style={{
+                width: '100%',
+                height: '160px',
+                backgroundColor: '#F5F5F5',
+                position: 'relative',
+                overflow: 'hidden',
+                borderBottom: '1px solid #E5E5E5'
+              }}>
+                {profile?.header_url ? (
+                  <img
+                    src={profile.header_url}
+                    alt="ヘッダー画像"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#6B6B6B',
+                    fontSize: '48px'
+                  }}>
+                    <i className="fas fa-image"></i>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ padding: '0 24px 24px 24px', position: 'relative' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '100px',
+                  height: '100px',
                   borderRadius: '50%',
-                  backgroundColor: '#E5E5E5',
+                  backgroundColor: '#FFFFFF',
+                  border: '4px solid #FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '28px',
+                  fontSize: '40px',
                   color: '#6B6B6B',
                   overflow: 'hidden',
-                  flexShrink: 0
+                  marginTop: '-50px',
+                  marginBottom: '16px',
+                  boxShadow: '0 0 0 1px #E5E5E5',
+                  position: 'relative',
+                  zIndex: 1
                 }}>
                   {profile?.avatar_url ? (
                     <img
@@ -378,55 +401,162 @@ export default function DashboardPage() {
                       }}
                     />
                   ) : (
-                    profile?.display_name?.charAt(0) || '?'
+                    <i className="fas fa-user"></i>
                   )}
                 </div>
 
-                {/* 名前と役割 */}
-                <div style={{ flex: 1 }}>
-                  <div className="card-subtitle mb-8">
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginBottom: '12px'
+                }}>
+                  <h2 className="card-title" style={{ marginBottom: 0 }}>
                     {profile?.display_name || '名前未設定'}
-                  </div>
+                  </h2>
+                  
+                  {(profile?.twitter_url || profile?.pixiv_url || profile?.website_url) && (
+                    <div className="flex gap-8">
+                      {profile.twitter_url && (
+                        <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '14px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                          <i className="fab fa-twitter"></i>
+                        </a>
+                      )}
+                      {profile.pixiv_url && (
+                        <a href={profile.pixiv_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '14px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                          <i className="fas fa-palette"></i>
+                        </a>
+                      )}
+                      {profile.website_url && (
+                        <a href={profile.website_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', border: '1px solid #E5E5E5', borderRadius: '50%', fontSize: '14px', color: '#6B6B6B', textDecoration: 'none', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#1A1A1A' }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E5E5'; e.currentTarget.style.color = '#6B6B6B' }}>
+                          <i className="fas fa-link"></i>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
                   <span className="badge badge-category">
                     {profile?.role === 'creator' && 'クリエイター'}
                     {profile?.role === 'client' && 'クライアント'}
-                    {profile?.role === 'both' && 'クリエイター・クライアント'}
+                    {profile?.role === 'both' && 'クリエイター・依頼者'}
                   </span>
                 </div>
-              </div>
 
-              <Link href={`/creators/${profile?.id}`} className="btn-secondary" style={{ width: '100%' }}>
-                プロフィールを見る
-              </Link>
+                <div className="info-box mb-32">
+                  <div className="info-row">
+                    <span className="text-gray">作品数</span>
+                    <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {stats.portfolioCount}点
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="text-gray">依頼数</span>
+                    <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {stats.requestCount}件
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="text-gray">メッセージ</span>
+                    <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {stats.messageCount}件
+                    </span>
+                  </div>
+                </div>
+
+                <Link href={`/creators/${profile?.id}`} className="btn-secondary" style={{ width: '100%' }}>
+                  プロフィールを見る
+                </Link>
+              </div>
             </div>
 
-            {/* 統計情報 */}
             <div className="card-no-hover p-24">
-              <h2 className="card-title mb-16">統計情報</h2>
-              <div className="info-box">
-                <div className="info-row">
-                  <span className="text-gray">作品数</span>
-                  <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                    {stats.portfolioCount}点
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="text-gray">依頼数</span>
-                  <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                    {stats.requestCount}件
-                  </span>
-                </div>
-                <div className="info-row">
-                  <span className="text-gray">メッセージ</span>
-                  <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                    {stats.messageCount}件
-                  </span>
-                </div>
+              <div className="flex-between mb-24">
+                <h2 className="card-title">最近のメッセージ</h2>
+                {chatRooms.length > 0 && (
+                  <Link href="/messages" className="text-small text-gray">
+                    すべて見る
+                  </Link>
+                )}
               </div>
+
+              {chatRooms.length === 0 ? (
+                <div className="empty-state" style={{ padding: '40px 20px' }}>
+                  <p className="text-small text-gray">
+                    メッセージはまだありません
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {chatRooms.map((room) => {
+                    const otherParticipant = room.chat_room_participants
+                      ?.find((p) => p.profiles && p.profiles.id !== profile?.id)
+                      ?.profiles
+                    const lastMessage = room.messages?.[0]
+
+                    return (
+                      <Link
+                        key={room.id}
+                        href={`/messages/${room.id}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px',
+                          border: '1px solid #E5E5E5',
+                          borderRadius: '8px',
+                          textDecoration: 'none',
+                          transition: 'border-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#1A1A1A'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#E5E5E5'
+                        }}
+                      >
+                        <div className="avatar avatar-medium">
+                          {otherParticipant?.avatar_url ? (
+                            <img
+                              src={otherParticipant.avatar_url}
+                              alt={otherParticipant.display_name || ''}
+                            />
+                          ) : (
+                            <i className="fas fa-user"></i>
+                          )}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="text-small" style={{ 
+                            fontWeight: '600', 
+                            color: '#1A1A1A',
+                            marginBottom: '4px'
+                          }}>
+                            {otherParticipant?.display_name || '名前未設定'}
+                          </div>
+                          <div className="text-small text-gray text-ellipsis">
+                            {lastMessage?.content || 'メッセージなし'}
+                          </div>
+                        </div>
+
+                        <div className="text-tiny text-gray" style={{ flexShrink: 0 }}>
+                          {lastMessage?.created_at ? 
+                            new Date(lastMessage.created_at).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric'
+                            })
+                            : ''
+                          }
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* あなたの作品 */}
           <div className="card-no-hover p-24 mb-40">
             <div className="flex-between mb-24">
               <h2 className="card-title">あなたの作品</h2>
@@ -472,94 +602,6 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* 最近のメッセージ */}
-          <div className="card-no-hover p-24">
-            <div className="flex-between mb-24">
-              <h2 className="card-title">最近のメッセージ</h2>
-              {chatRooms.length > 0 && (
-                <Link href="/messages" className="text-small text-gray">
-                  すべて見る
-                </Link>
-              )}
-            </div>
-
-            {chatRooms.length === 0 ? (
-              <div className="empty-state" style={{ padding: '40px 20px' }}>
-                <p className="text-small text-gray">
-                  メッセージはまだありません
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {chatRooms.map((room) => {
-                  const otherParticipant = room.chat_room_participants
-                    ?.find((p) => p.profiles && p.profiles.id !== profile?.id)
-                    ?.profiles
-                  const lastMessage = room.messages?.[0]
-
-                  return (
-                    <Link
-                      key={room.id}
-                      href={`/messages/${room.id}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        border: '1px solid #E5E5E5',
-                        borderRadius: '8px',
-                        textDecoration: 'none',
-                        transition: 'border-color 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#1A1A1A'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#E5E5E5'
-                      }}
-                    >
-                      {/* アバター */}
-                      <div className="avatar avatar-medium">
-                        {otherParticipant?.avatar_url ? (
-                          <img
-                            src={otherParticipant.avatar_url}
-                            alt={otherParticipant.display_name || ''}
-                          />
-                        ) : (
-                          otherParticipant?.display_name?.charAt(0) || '?'
-                        )}
-                      </div>
-
-                      {/* メッセージ情報 */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="text-small" style={{ 
-                          fontWeight: '600', 
-                          color: '#1A1A1A',
-                          marginBottom: '4px'
-                        }}>
-                          {otherParticipant?.display_name || '名前未設定'}
-                        </div>
-                        <div className="text-small text-gray text-ellipsis">
-                          {lastMessage?.content || 'メッセージなし'}
-                        </div>
-                      </div>
-
-                      {/* 日時 */}
-                      <div className="text-tiny text-gray" style={{ flexShrink: 0 }}>
-                        {lastMessage?.created_at ? 
-                          new Date(lastMessage.created_at).toLocaleDateString('ja-JP', {
-                            month: 'short',
-                            day: 'numeric'
-                          })
-                          : ''
-                        }
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </div>
         </main>
       </div>
       <Footer />

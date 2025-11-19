@@ -127,7 +127,11 @@ export default function PortfolioPage() {
           )}
 
           {!loading && items.length > 0 && (
-            <div className="grid-creators">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '16px'
+            }}>
               {items.map((item) => (
                 <Link key={item.id} href={`/portfolio/${item.id}`} className="portfolio-card">
                   {/* 画像 */}
@@ -139,32 +143,67 @@ export default function PortfolioPage() {
                   </div>
 
                   {/* 情報 */}
-                  <div className="portfolio-card-content">
+                  <div style={{ padding: '12px' }}>
                     {/* カテゴリ */}
                     {item.category && (
-                      <span className="badge badge-category mb-8" style={{ display: 'inline-block' }}>
+                      <span className="badge badge-category mb-8" style={{ 
+                        display: 'inline-block',
+                        fontSize: '10px',
+                        padding: '3px 8px'
+                      }}>
                         {getCategoryLabel(item.category)}
                       </span>
                     )}
 
                     {/* タイトル */}
-                    <h3 className="card-subtitle text-ellipsis mb-8">
+                    <h3 style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#1A1A1A',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      marginBottom: '8px'
+                    }}>
                       {item.title}
                     </h3>
 
                     {/* クリエイター情報 */}
                     <div className="flex gap-8" style={{ alignItems: 'center' }}>
-                      <div className="avatar avatar-small">
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        backgroundColor: '#E5E5E5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '10px',
+                        color: '#6B6B6B',
+                        overflow: 'hidden',
+                        flexShrink: 0
+                      }}>
                         {item.profiles?.avatar_url ? (
                           <img
                             src={item.profiles.avatar_url}
                             alt={item.profiles.display_name || ''}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
                           />
                         ) : (
                           item.profiles?.display_name?.charAt(0) || '?'
                         )}
                       </div>
-                      <span className="text-small text-gray">
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#6B6B6B',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
                         {item.profiles?.display_name || '名前未設定'}
                       </span>
                     </div>
