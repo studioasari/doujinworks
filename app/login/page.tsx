@@ -182,15 +182,33 @@ export default function LoginPage() {
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px',
-              color: '#1A1A1A',
-              fontSize: '14px',
-              fontWeight: '600'
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '8px' 
             }}>
-              パスワード
-            </label>
+              <label style={{ 
+                color: '#1A1A1A',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}>
+                パスワード
+              </label>
+              <Link 
+                href="/reset-password" 
+                style={{ 
+                  color: '#6B6B6B', 
+                  fontSize: '13px',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#1A1A1A'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#6B6B6B'}
+              >
+                パスワードを忘れた
+              </Link>
+            </div>
             <input
               type="password"
               value={password}
