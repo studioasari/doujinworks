@@ -17,16 +17,31 @@ export default function SignupPage() {
     setError('')
 
     try {
+      // ランダムな仮パスワードを生成（ユーザーには見せない）
+      const tempPassword = crypto.randomUUID()
+      
       const { error } = await supabase.auth.signUp({
         email,
-        // password: Math.random().toString(36).slice(-8),
-        password: 'TemporaryPassword123!',
+        password: tempPassword,
         options: {
           emailRedirectTo: 'https://www.dojinworks.com/signup/complete',
+          data: {
+            registration_step: 'email_confirmed', // 登録ステップを記録
+          }
         },
       })
 
-      if (error) throw error
+      if (error) {
+        // 既に登録済みの場合のエラーハンドリング
+        if (error.message.includes('User already registered')) {
+          setError(
+            'このメールアドレスは既に登録されています。\n' +
+            'ログインページからログインするか、パスワードを忘れた場合はパスワードリセットをご利用ください。'
+          )
+          return
+        }
+        throw error
+      }
 
       router.push('/signup/verify')
     } catch (error: any) {

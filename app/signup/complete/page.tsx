@@ -46,12 +46,29 @@ export default function SignupCompletePage() {
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
+    
     if (!user) {
+      // ユーザーが未ログインの場合、サインアップページへ
       router.push('/signup')
       return
     }
+    
     setUser(user)
     
+    // 既にプロフィールが完成している場合、ダッシュボードへリダイレクト
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (profile && profile.username) {
+      // プロフィール完成済み → ダッシュボードへ
+      router.push('/dashboard')
+      return
+    }
+    
+    // プロフィール未完成 → このページで登録続行
     // ソーシャルログインの場合、メタデータから名前を取得
     if (user.user_metadata?.full_name) {
       setDisplayName(user.user_metadata.full_name)
@@ -116,7 +133,7 @@ export default function SignupCompletePage() {
         throw new Error('パスワードは6文字以上で入力してください')
       }
 
-      // パスワード更新
+      // パスワード更新（仮パスワードを上書き）
       const { error: passwordError } = await supabase.auth.updateUser({
         password,
       })
@@ -299,7 +316,11 @@ export default function SignupCompletePage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="6文字以上"
               required
+              minLength={6}
             />
+            <div className="text-small text-gray" style={{ marginTop: '8px' }}>
+              ログインに使用するパスワードを設定してください
+            </div>
           </div>
 
           <div style={{ marginBottom: '32px' }}>
@@ -313,6 +334,7 @@ export default function SignupCompletePage() {
               onChange={(e) => setPasswordConfirm(e.target.value)}
               placeholder="もう一度入力"
               required
+              minLength={6}
             />
           </div>
 
