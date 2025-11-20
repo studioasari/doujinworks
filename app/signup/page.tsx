@@ -19,7 +19,8 @@ export default function SignupPage() {
     try {
       const { error } = await supabase.auth.signUp({
         email,
-        password: Math.random().toString(36).slice(-8),
+        // password: Math.random().toString(36).slice(-8),
+        password: 'TemporaryPassword123!',
         options: {
           emailRedirectTo: 'https://www.dojinworks.com/signup/complete',
         },
