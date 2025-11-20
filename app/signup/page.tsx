@@ -43,7 +43,8 @@ export default function SignupPage() {
         throw error
       }
 
-      router.push('/signup/verify')
+      // メールアドレスをURLパラメータとして渡す
+      router.push(`/signup/verify?email=${encodeURIComponent(email)}`)
     } catch (error: any) {
       setError(error.message || '登録に失敗しました')
     } finally {
