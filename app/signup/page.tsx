@@ -18,7 +18,7 @@ export default function SignupPage() {
 
     try {
       // ランダムな仮パスワードを生成（ユーザーには見せない）
-      const tempPassword = crypto.randomUUID()
+      const tempPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36)
       
       const { error } = await supabase.auth.signUp({
         email,

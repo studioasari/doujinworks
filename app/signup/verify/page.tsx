@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-export default function VerifyPage() {
+function VerifyContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
   
@@ -35,7 +35,7 @@ export default function VerifyPage() {
 
     try {
       // ランダムな仮パスワードを生成
-      const tempPassword = crypto.randomUUID()
+      const tempPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36)
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -147,5 +147,17 @@ export default function VerifyPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="container-narrow" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
+        <div style={{ textAlign: 'center' }}>読み込み中...</div>
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   )
 }
