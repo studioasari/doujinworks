@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
 import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
 
 export default function ProfilePage() {
@@ -230,32 +228,26 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '60vh',
-            color: '#6B6B6B'
-          }}>
-            読み込み中...
-          </div>
+      <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          color: '#6B6B6B'
+        }}>
+          読み込み中...
         </div>
-        <Footer />
-      </>
+      </div>
     )
   }
 
   return (
-    <>
-      <Header />
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#FAFAFA',
-        display: 'flex'
-      }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#FAFAFA',
+      display: 'flex'
+    }}>
         {/* サイドバー */}
         <aside style={{
           width: '240px',
@@ -853,7 +845,5 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
-      <Footer />
-    </>
-  )
-}
+    )
+  }
