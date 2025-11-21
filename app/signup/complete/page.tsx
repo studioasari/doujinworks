@@ -5,7 +5,6 @@ import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 
 type UserType = 'casual' | 'business'
-type Role = 'creator' | 'client' | 'both'
 
 export default function SignupCompletePage() {
   const [userType, setUserType] = useState<UserType | null>(null)
@@ -13,7 +12,10 @@ export default function SignupCompletePage() {
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [role, setRole] = useState<Role>('both')
+  
+  // ビジネス利用の場合の選択項目
+  const [canReceiveWork, setCanReceiveWork] = useState(false)
+  const [canRequestWork, setCanRequestWork] = useState(false)
   
   // ビジネス利用の追加情報
   const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual')
@@ -133,6 +135,11 @@ export default function SignupCompletePage() {
         throw new Error('パスワードは6文字以上で入力してください')
       }
 
+      // ビジネス利用の場合、少なくとも1つ選択必須
+      if (userType === 'business' && !canReceiveWork && !canRequestWork) {
+        throw new Error('仕事を受けるか依頼するか、少なくとも1つ選択してください')
+      }
+
       // パスワード更新（仮パスワードを上書き）
       const { error: passwordError } = await supabase.auth.updateUser({
         password,
@@ -145,9 +152,9 @@ export default function SignupCompletePage() {
         user_id: user.id,
         username: username.toLowerCase(),
         display_name: displayName,
-        role,
-        is_creator: role === 'creator' || role === 'both',
-        is_client: role === 'client' || role === 'both',
+        account_type: userType,
+        can_receive_work: userType === 'business' ? canReceiveWork : false,
+        can_request_work: userType === 'business' ? canRequestWork : false,
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -198,7 +205,12 @@ export default function SignupCompletePage() {
   }
 
   if (!user) {
-    return <div className="container" style={{ padding: '80px 40px' }}>読み込み中...</div>
+    return (
+      <div className="container" style={{ padding: '80px 40px', textAlign: 'center' }}>
+        <i className="fas fa-spinner fa-spin" style={{ fontSize: '32px', color: '#6B6B6B' }}></i>
+        <div style={{ marginTop: '16px' }} className="text-gray">読み込み中...</div>
+      </div>
+    )
   }
 
   // Step 1: 利用方法選択
@@ -210,32 +222,44 @@ export default function SignupCompletePage() {
             利用方法を選択
           </h1>
           <p className="text-gray" style={{ marginBottom: '40px', textAlign: 'center' }}>
-            同人ワークスをどのように利用しますか？
+            同人ワークスをどのように利用しますか?
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <button
               onClick={() => setUserType('casual')}
-              className="radio-card"
-              style={{ padding: '24px', textAlign: 'left' }}
+              className="card"
+              style={{ 
+                padding: '24px', 
+                textAlign: 'left',
+                border: '2px solid #E5E5E5',
+                transition: 'all 0.2s'
+              }}
             >
-              <div style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
-                一般利用
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <i className="fas fa-palette" style={{ fontSize: '24px', marginRight: '12px', color: '#1A1A1A' }}></i>
+                <span style={{ fontSize: '20px', fontWeight: '600' }}>一般利用</span>
               </div>
-              <div className="text-gray">
+              <div className="text-gray" style={{ fontSize: '14px' }}>
                 趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
               </div>
             </button>
 
             <button
               onClick={() => setUserType('business')}
-              className="radio-card"
-              style={{ padding: '24px', textAlign: 'left' }}
+              className="card"
+              style={{ 
+                padding: '24px', 
+                textAlign: 'left',
+                border: '2px solid #E5E5E5',
+                transition: 'all 0.2s'
+              }}
             >
-              <div style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>
-                ビジネス利用
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                <i className="fas fa-briefcase" style={{ fontSize: '24px', marginRight: '12px', color: '#1A1A1A' }}></i>
+                <span style={{ fontSize: '20px', fontWeight: '600' }}>ビジネス利用</span>
               </div>
-              <div className="text-gray">
+              <div className="text-gray" style={{ fontSize: '14px' }}>
                 仕事の受発注、報酬の受け取りなどビジネスとして利用する
               </div>
             </button>
@@ -255,7 +279,7 @@ export default function SignupCompletePage() {
 
         <form onSubmit={handleSubmit}>
           {/* 共通項目 */}
-          <div style={{ marginBottom: '32px' }}>
+          <div className="mb-32">
             <label className="form-label">
               ユーザーID <span className="form-required">必須</span>
             </label>
@@ -275,23 +299,28 @@ export default function SignupCompletePage() {
             {username && (
               <div style={{ marginTop: '8px' }}>
                 {usernameCheck.checking && (
-                  <span className="text-small text-gray">確認中...</span>
+                  <span className="text-small text-gray">
+                    <i className="fas fa-spinner fa-spin" style={{ marginRight: '4px' }}></i>
+                    確認中...
+                  </span>
                 )}
                 {!usernameCheck.checking && usernameCheck.available === true && (
                   <span className="text-small" style={{ color: '#4CAF50' }}>
-                    ✓ 利用可能です
+                    <i className="fas fa-check-circle" style={{ marginRight: '4px' }}></i>
+                    利用可能です
                   </span>
                 )}
                 {!usernameCheck.checking && usernameCheck.available === false && (
                   <span className="text-small" style={{ color: '#F44336' }}>
-                    ✗ {usernameCheck.error}
+                    <i className="fas fa-times-circle" style={{ marginRight: '4px' }}></i>
+                    {usernameCheck.error}
                   </span>
                 )}
               </div>
             )}
           </div>
 
-          <div style={{ marginBottom: '32px' }}>
+          <div className="mb-32">
             <label className="form-label">
               表示名 <span className="form-required">必須</span>
             </label>
@@ -305,7 +334,7 @@ export default function SignupCompletePage() {
             />
           </div>
 
-          <div style={{ marginBottom: '32px' }}>
+          <div className="mb-32">
             <label className="form-label">
               パスワード <span className="form-required">必須</span>
             </label>
@@ -323,7 +352,7 @@ export default function SignupCompletePage() {
             </div>
           </div>
 
-          <div style={{ marginBottom: '32px' }}>
+          <div className="mb-32">
             <label className="form-label">
               パスワード（確認） <span className="form-required">必須</span>
             </label>
@@ -338,34 +367,91 @@ export default function SignupCompletePage() {
             />
           </div>
 
-          <div style={{ marginBottom: '32px' }}>
-            <label className="form-label">
-              主な利用方法 <span className="form-required">必須</span>
-            </label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setRole('creator')}
-                className={role === 'creator' ? 'filter-button active' : 'filter-button'}
-              >
-                クリエイター
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('client')}
-                className={role === 'client' ? 'filter-button active' : 'filter-button'}
-              >
-                依頼者
-              </button>
-              <button
-                type="button"
-                onClick={() => setRole('both')}
-                className={role === 'both' ? 'filter-button active' : 'filter-button'}
-              >
-                両方
-              </button>
+          {/* ビジネス利用の場合のみ表示 */}
+          {userType === 'business' && (
+            <div className="mb-32">
+              <label className="form-label">
+                何をしたいですか? <span className="form-required">必須</span>
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label 
+                  className="radio-card" 
+                  style={{ 
+                    padding: '16px',
+                    cursor: 'pointer',
+                    border: canReceiveWork ? '2px solid #1A1A1A' : '2px solid #E5E5E5',
+                    backgroundColor: canReceiveWork ? '#FAFAFA' : '#FFFFFF'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <input
+                      type="checkbox"
+                      checked={canReceiveWork}
+                      onChange={(e) => setCanReceiveWork(e.target.checked)}
+                      style={{ 
+                        marginRight: '12px',
+                        marginTop: '2px',
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#1A1A1A'
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                        <i className="fas fa-user-check" style={{ marginRight: '8px', color: '#1A1A1A' }}></i>
+                        仕事を受ける
+                      </div>
+                      <div className="text-small text-gray">
+                        クリエイターとして案件を受注します
+                      </div>
+                    </div>
+                  </div>
+                </label>
+
+                <label 
+                  className="radio-card" 
+                  style={{ 
+                    padding: '16px',
+                    cursor: 'pointer',
+                    border: canRequestWork ? '2px solid #1A1A1A' : '2px solid #E5E5E5',
+                    backgroundColor: canRequestWork ? '#FAFAFA' : '#FFFFFF'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <input
+                      type="checkbox"
+                      checked={canRequestWork}
+                      onChange={(e) => setCanRequestWork(e.target.checked)}
+                      style={{ 
+                        marginRight: '12px',
+                        marginTop: '2px',
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#1A1A1A'
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                        <i className="fas fa-handshake" style={{ marginRight: '8px', color: '#1A1A1A' }}></i>
+                        仕事を依頼する
+                      </div>
+                      <div className="text-small text-gray">
+                        クライアントとしてクリエイターに依頼します
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {!canReceiveWork && !canRequestWork && (
+                <div className="text-small" style={{ color: '#F44336', marginTop: '8px' }}>
+                  <i className="fas fa-exclamation-circle" style={{ marginRight: '4px' }}></i>
+                  少なくとも1つ選択してください
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           {/* ビジネス利用の追加情報 */}
           {userType === 'business' && (
@@ -376,11 +462,12 @@ export default function SignupCompletePage() {
                 marginTop: '32px',
                 marginBottom: '32px' 
               }}>
-                <h2 className="section-title" style={{ marginBottom: '24px' }}>
+                <h2 className="section-title" style={{ marginBottom: '24px', fontSize: '24px' }}>
+                  <i className="fas fa-file-invoice" style={{ marginRight: '12px', color: '#1A1A1A' }}></i>
                   ビジネス情報
                 </h2>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     個人/法人 <span className="form-required">必須</span>
                   </label>
@@ -389,20 +476,24 @@ export default function SignupCompletePage() {
                       type="button"
                       onClick={() => setAccountType('individual')}
                       className={accountType === 'individual' ? 'filter-button active' : 'filter-button'}
+                      style={{ padding: '10px 24px' }}
                     >
+                      <i className="fas fa-user" style={{ marginRight: '6px' }}></i>
                       個人
                     </button>
                     <button
                       type="button"
                       onClick={() => setAccountType('corporate')}
                       className={accountType === 'corporate' ? 'filter-button active' : 'filter-button'}
+                      style={{ padding: '10px 24px' }}
                     >
+                      <i className="fas fa-building" style={{ marginRight: '6px' }}></i>
                       法人
                     </button>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     氏名 <span className="form-required">必須</span>
                   </label>
@@ -416,7 +507,7 @@ export default function SignupCompletePage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     氏名（かな） <span className="form-required">必須</span>
                   </label>
@@ -432,7 +523,7 @@ export default function SignupCompletePage() {
 
                 {accountType === 'individual' && (
                   <>
-                    <div style={{ marginBottom: '32px' }}>
+                    <div className="mb-32">
                       <label className="form-label">生年月日</label>
                       <input
                         type="date"
@@ -442,7 +533,7 @@ export default function SignupCompletePage() {
                       />
                     </div>
 
-                    <div style={{ marginBottom: '32px' }}>
+                    <div className="mb-32">
                       <label className="form-label">性別</label>
                       <select
                         className="select-field"
@@ -460,7 +551,7 @@ export default function SignupCompletePage() {
                 )}
 
                 {accountType === 'corporate' && (
-                  <div style={{ marginBottom: '32px' }}>
+                  <div className="mb-32">
                     <label className="form-label">
                       会社名 <span className="form-required">必須</span>
                     </label>
@@ -475,7 +566,7 @@ export default function SignupCompletePage() {
                   </div>
                 )}
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     電話番号 <span className="form-required">必須</span>
                   </label>
@@ -489,7 +580,7 @@ export default function SignupCompletePage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     郵便番号 <span className="form-required">必須</span>
                   </label>
@@ -503,7 +594,7 @@ export default function SignupCompletePage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     都道府県 <span className="form-required">必須</span>
                   </label>
@@ -564,7 +655,7 @@ export default function SignupCompletePage() {
                   </select>
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">
                     住所（番地まで） <span className="form-required">必須</span>
                   </label>
@@ -578,7 +669,7 @@ export default function SignupCompletePage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
+                <div className="mb-32">
                   <label className="form-label">住所（建物名など）</label>
                   <input
                     type="text"
@@ -593,14 +684,18 @@ export default function SignupCompletePage() {
           )}
 
           {error && (
-            <div className="info-box" style={{ 
+            <div style={{ 
               marginBottom: '24px', 
-              padding: '12px', 
-              backgroundColor: '#FEE', 
-              color: '#C33',
-              border: '1px solid #FCC'
+              padding: '16px', 
+              backgroundColor: '#FFF5F5', 
+              color: '#F44336',
+              border: '1px solid #FFCDD2',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center'
             }}>
-              {error}
+              <i className="fas fa-exclamation-triangle" style={{ marginRight: '12px', fontSize: '18px' }}></i>
+              <span>{error}</span>
             </div>
           )}
 
@@ -611,6 +706,7 @@ export default function SignupCompletePage() {
               className="btn-secondary"
               style={{ flex: 1 }}
             >
+              <i className="fas fa-arrow-left" style={{ marginRight: '8px' }}></i>
               戻る
             </button>
             <button
@@ -619,7 +715,17 @@ export default function SignupCompletePage() {
               disabled={loading || !usernameCheck.available}
               style={{ flex: 2 }}
             >
-              {loading ? '登録中...' : '登録完了'}
+              {loading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                  登録中...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-check" style={{ marginRight: '8px' }}></i>
+                  登録完了
+                </>
+              )}
             </button>
           </div>
         </form>
