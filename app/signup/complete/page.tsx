@@ -13,10 +13,6 @@ export default function SignupCompletePage() {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   
-  // ビジネス利用の場合の選択項目
-  const [canReceiveWork, setCanReceiveWork] = useState(false)
-  const [canRequestWork, setCanRequestWork] = useState(false)
-  
   // ビジネス利用の追加情報
   const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual')
   const [fullName, setFullName] = useState('')
@@ -135,11 +131,6 @@ export default function SignupCompletePage() {
         throw new Error('パスワードは6文字以上で入力してください')
       }
 
-      // ビジネス利用の場合、少なくとも1つ選択必須
-      if (userType === 'business' && !canReceiveWork && !canRequestWork) {
-        throw new Error('仕事を受けるか依頼するか、少なくとも1つ選択してください')
-      }
-
       // パスワード更新（仮パスワードを上書き）
       const { error: passwordError } = await supabase.auth.updateUser({
         password,
@@ -153,8 +144,8 @@ export default function SignupCompletePage() {
         username: username.toLowerCase(),
         display_name: displayName,
         account_type: userType,
-        can_receive_work: userType === 'business' ? canReceiveWork : false,
-        can_request_work: userType === 'business' ? canRequestWork : false,
+        can_receive_work: userType === 'business' ? true : false,
+        can_request_work: userType === 'business' ? true : false,
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -366,92 +357,6 @@ export default function SignupCompletePage() {
               minLength={6}
             />
           </div>
-
-          {/* ビジネス利用の場合のみ表示 */}
-          {userType === 'business' && (
-            <div className="mb-32">
-              <label className="form-label">
-                何をしたいですか? <span className="form-required">必須</span>
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label 
-                  className="radio-card" 
-                  style={{ 
-                    padding: '16px',
-                    cursor: 'pointer',
-                    border: canReceiveWork ? '2px solid #1A1A1A' : '2px solid #E5E5E5',
-                    backgroundColor: canReceiveWork ? '#FAFAFA' : '#FFFFFF'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <input
-                      type="checkbox"
-                      checked={canReceiveWork}
-                      onChange={(e) => setCanReceiveWork(e.target.checked)}
-                      style={{ 
-                        marginRight: '12px',
-                        marginTop: '2px',
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                        accentColor: '#1A1A1A'
-                      }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                        <i className="fas fa-user-check" style={{ marginRight: '8px', color: '#1A1A1A' }}></i>
-                        仕事を受ける
-                      </div>
-                      <div className="text-small text-gray">
-                        クリエイターとして案件を受注します
-                      </div>
-                    </div>
-                  </div>
-                </label>
-
-                <label 
-                  className="radio-card" 
-                  style={{ 
-                    padding: '16px',
-                    cursor: 'pointer',
-                    border: canRequestWork ? '2px solid #1A1A1A' : '2px solid #E5E5E5',
-                    backgroundColor: canRequestWork ? '#FAFAFA' : '#FFFFFF'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <input
-                      type="checkbox"
-                      checked={canRequestWork}
-                      onChange={(e) => setCanRequestWork(e.target.checked)}
-                      style={{ 
-                        marginRight: '12px',
-                        marginTop: '2px',
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                        accentColor: '#1A1A1A'
-                      }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                        <i className="fas fa-handshake" style={{ marginRight: '8px', color: '#1A1A1A' }}></i>
-                        仕事を依頼する
-                      </div>
-                      <div className="text-small text-gray">
-                        クライアントとしてクリエイターに依頼します
-                      </div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-              {!canReceiveWork && !canRequestWork && (
-                <div className="text-small" style={{ color: '#F44336', marginTop: '8px' }}>
-                  <i className="fas fa-exclamation-circle" style={{ marginRight: '4px' }}></i>
-                  少なくとも1つ選択してください
-                </div>
-              )}
-            </div>
-          )}
 
           {/* ビジネス利用の追加情報 */}
           {userType === 'business' && (
