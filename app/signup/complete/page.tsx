@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
 import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
 
 export default function ProfilePage() {
