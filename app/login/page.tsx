@@ -123,7 +123,7 @@ export default function LoginPage() {
           textAlign: 'center',
           fontSize: '24px'
         }}>
-          同人ワークスにログイン
+          ログイン
         </h2>
 
         <form onSubmit={handleLogin}>
@@ -136,7 +136,7 @@ export default function LoginPage() {
               className="input-field"
               value={emailOrUsername}
               onChange={(e) => setEmailOrUsername(e.target.value)}
-              placeholder="example@email.com または username"
+              placeholder="メール or ユーザーID"
               required
             />
           </div>
@@ -164,7 +164,7 @@ export default function LoginPage() {
               className="input-field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="6文字以上"
+              placeholder=""
               required
               minLength={6}
             />

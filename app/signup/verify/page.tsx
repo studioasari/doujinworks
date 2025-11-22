@@ -60,20 +60,53 @@ function VerifyContent() {
   }
 
   return (
-    <div className="container-narrow" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-      <div style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '24px', color: '#1A1A1A' }}>
+    <div style={{ 
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      padding: '40px 20px'
+    }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '500px',
+        border: '1px solid #E5E5E5',
+        borderRadius: '8px',
+        padding: '40px',
+        backgroundColor: '#FFFFFF',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          backgroundColor: '#FAFAFA',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 24px',
+          fontSize: '32px',
+          color: '#1A1A1A'
+        }}>
           <i className="fas fa-envelope"></i>
         </div>
         
-        <h1 className="page-title" style={{ marginBottom: '16px' }}>
+        <h2 className="page-title" style={{ 
+          marginBottom: '16px',
+          fontSize: '24px'
+        }}>
           認証メールを送信しました
-        </h1>
+        </h2>
         
-        <p className="text-gray" style={{ marginBottom: '32px', lineHeight: '1.6' }}>
+        <p style={{ 
+          marginBottom: '32px',
+          fontSize: '14px',
+          color: '#6B6B6B',
+          lineHeight: '1.6'
+        }}>
           {email ? (
             <>
-              <strong>{email}</strong> に認証リンクを送信しました。<br />
+              <strong style={{ color: '#1A1A1A' }}>{email}</strong> に認証リンクを送信しました。<br />
             </>
           ) : (
             <>ご登録いただいたメールアドレスに認証リンクを送信しました。<br /></>
@@ -83,7 +116,7 @@ function VerifyContent() {
 
         {message && (
           <div style={{
-            padding: '12px 16px',
+            padding: '12px',
             backgroundColor: '#F0FDF4',
             border: '1px solid #86EFAC',
             borderRadius: '8px',
@@ -96,22 +129,34 @@ function VerifyContent() {
         )}
 
         {error && (
-          <div style={{
-            padding: '12px 16px',
-            backgroundColor: '#FFF5F5',
-            border: '1px solid #FECACA',
-            borderRadius: '8px',
-            marginBottom: '24px',
-            color: '#7F1D1D',
+          <div className="info-box" style={{ 
+            marginBottom: '24px', 
+            padding: '12px', 
+            backgroundColor: '#FEE', 
+            color: '#C33',
+            border: '1px solid #FCC',
             fontSize: '14px'
           }}>
             {error}
           </div>
         )}
 
-        <div className="info-box" style={{ marginBottom: '24px', textAlign: 'left' }}>
-          <p style={{ marginBottom: '8px', fontWeight: '600' }}>メールが届かない場合</p>
-          <ul style={{ marginLeft: '20px', lineHeight: '1.8' }}>
+        <div style={{ 
+          marginBottom: '24px',
+          padding: '16px',
+          backgroundColor: '#FAFAFA',
+          borderRadius: '8px',
+          textAlign: 'left'
+        }}>
+          <p style={{ marginBottom: '12px', fontWeight: '600', fontSize: '14px', color: '#1A1A1A' }}>
+            メールが届かない場合
+          </p>
+          <ul style={{ 
+            marginLeft: '20px', 
+            fontSize: '14px',
+            color: '#6B6B6B',
+            lineHeight: '1.8'
+          }}>
             <li>迷惑メールフォルダをご確認ください</li>
             <li>メールアドレスが正しいかご確認ください</li>
             <li>数分お待ちいただいてから再度お試しください</li>
@@ -123,14 +168,14 @@ function VerifyContent() {
             <button
               onClick={handleResend}
               disabled={loading || countdown > 0}
-              className="text-small"
               style={{
                 background: 'none',
                 border: 'none',
                 color: (loading || countdown > 0) ? '#6B6B6B' : '#1A1A1A',
                 textDecoration: 'underline',
                 cursor: (loading || countdown > 0) ? 'not-allowed' : 'pointer',
-                padding: 0
+                padding: 0,
+                fontSize: '14px'
               }}
             >
               {countdown > 0 
@@ -142,7 +187,19 @@ function VerifyContent() {
           </div>
         )}
 
-        <Link href="/login" className="btn-secondary">
+        {/* グレーの線 */}
+        <div style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: '#E5E5E5',
+          margin: '32px 0'
+        }}></div>
+
+        <Link href="/login" className="btn-primary" style={{
+          display: 'inline-block',
+          width: '100%',
+          textAlign: 'center'
+        }}>
           ログイン画面に戻る
         </Link>
       </div>
@@ -153,8 +210,14 @@ function VerifyContent() {
 export default function VerifyPage() {
   return (
     <Suspense fallback={
-      <div className="container-narrow" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-        <div style={{ textAlign: 'center' }}>読み込み中...</div>
+      <div style={{ 
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        padding: '40px 20px'
+      }}>
+        <div style={{ textAlign: 'center', color: '#6B6B6B' }}>読み込み中...</div>
       </div>
     }>
       <VerifyContent />

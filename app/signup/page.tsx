@@ -140,7 +140,7 @@ export default function SignupPage() {
               lineHeight: 1.8,
               marginBottom: '24px'
             }}>
-              同人ワークスは、創作をする人、それを応援する人、ものづくりが好きなみんなのための街のような場所。
+              同人ワークスは、創作する人も、それを楽しむ人も、“好き”を気軽に持ち寄れる街のような場所です。   
             </p>
             <p style={{
               fontSize: '18px',
@@ -148,14 +148,14 @@ export default function SignupPage() {
               lineHeight: 1.8,
               marginBottom: '24px'
             }}>
-              好みのクリエイターやコンテンツを見つけたり、自分のつくりたいものをつくったりして楽しめます。
+              好みのクリエイターや作品に出会ったり、自分の表現を発信したりして楽しめます。
             </p>
             <p style={{
               fontSize: '18px',
               color: '#6B6B6B',
               lineHeight: 1.8
             }}>
-              いっしょに、創作の輪を広げていきましょう。
+              ここでのつながりが、あなたの創作や活動をもっと広げるきっかけになりますように。
             </p>
           </div>
 
