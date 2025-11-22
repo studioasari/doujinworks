@@ -1,41 +1,45 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
 
-export default function ProfilePage() {
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [uploadingHeader, setUploadingHeader] = useState(false)
-  const [draggingAvatar, setDraggingAvatar] = useState(false)
-  const [draggingHeader, setDraggingHeader] = useState(false)
-  const [user, setUser] = useState<any>(null)
+type UserType = 'casual' | 'business'
+type Step = 'userType' | 'basicInfo' | 'businessInfo'
+
+export default function SignupCompletePage() {
+  const [step, setStep] = useState<Step>('userType')
+  const [userType, setUserType] = useState<UserType | null>(null)
   
   // 基本情報
+  const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [bio, setBio] = useState('')
-  const [role, setRole] = useState('both')
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   
-  // 画像
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [headerUrl, setHeaderUrl] = useState<string | null>(null)
-  const [headerPreview, setHeaderPreview] = useState<string | null>(null)
+  // ビジネス利用の追加情報
+  const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual')
+  const [fullName, setFullName] = useState('')
+  const [fullNameKana, setFullNameKana] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [gender, setGender] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [prefecture, setPrefecture] = useState('')
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
   
-  // SNSリンク
-  const [twitterUrl, setTwitterUrl] = useState('')
-  const [pixivUrl, setPixivUrl] = useState('')
-  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [usernameCheck, setUsernameCheck] = useState<{
+    checking: boolean
+    available: boolean | null
+    error: string
+  }>({ checking: false, available: null, error: '' })
   
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [user, setUser] = useState<any>(null)
   
-  const avatarInputRef = useRef<HTMLInputElement>(null)
-  const headerInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -46,483 +50,352 @@ export default function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      router.push('/login')
+      router.push('/signup')
       return
     }
-
+    
     setUser(user)
-
+    
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', user.id)
       .single()
-
-    if (profile) {
-      setDisplayName(profile.display_name || '')
-      setBio(profile.bio || '')
-      setRole(profile.role || 'both')
-      setAvatarUrl(profile.avatar_url || null)
-      setAvatarPreview(profile.avatar_url || null)
-      setHeaderUrl(profile.header_url || null)
-      setHeaderPreview(profile.header_url || null)
-      setTwitterUrl(profile.twitter_url || '')
-      setPixivUrl(profile.pixiv_url || '')
-      setWebsiteUrl(profile.website_url || '')
+    
+    if (profile && profile.username) {
+      router.push('/dashboard')
+      return
     }
-
-    setLoading(false)
+    
+    if (user.user_metadata?.full_name) {
+      setDisplayName(user.user_metadata.full_name)
+    }
+    if (user.user_metadata?.user_name) {
+      setUsername(user.user_metadata.user_name.toLowerCase())
+    }
   }
 
-  const processImageFile = async (
-    file: File,
-    uploadFunc: (userId: string, file: File) => Promise<string>,
-    setUploading: (val: boolean) => void,
-    setUrl: (url: string) => void,
-    setPreview: (url: string | null) => void,
-    oldUrl: string | null,
-    bucketName: 'avatars' | 'headers',
-    successMsg: string
-  ) => {
-    const maxSize = bucketName === 'avatars' ? 5 : 10
-    const validation = validateImageFile(file, maxSize)
-    if (!validation.valid) {
-      setError(validation.error || '')
+  useEffect(() => {
+    if (!username) {
+      setUsernameCheck({ checking: false, available: null, error: '' })
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setPreview(e.target?.result as string)
-    }
-    reader.readAsDataURL(file)
+    const timer = setTimeout(async () => {
+      setUsernameCheck({ checking: true, available: null, error: '' })
 
-    setUploading(true)
+      try {
+        const res = await fetch('/api/check-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username }),
+        })
+
+        const data = await res.json()
+
+        setUsernameCheck({
+          checking: false,
+          available: data.available,
+          error: data.error || '',
+        })
+      } catch (error) {
+        setUsernameCheck({
+          checking: false,
+          available: false,
+          error: 'エラーが発生しました',
+        })
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [username])
+
+  const handleNext = () => {
+    if (step === 'userType' && userType) {
+      setStep('basicInfo')
+    } else if (step === 'basicInfo' && userType === 'business') {
+      setStep('businessInfo')
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     setError('')
 
     try {
-      if (oldUrl) {
-        await deleteImage(oldUrl, bucketName)
+      if (!usernameCheck.available) {
+        throw new Error('ユーザーIDをご確認ください')
       }
 
-      const newUrl = await uploadFunc(user.id, file)
-      setUrl(newUrl)
-      setSuccess(successMsg)
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || `${successMsg}に失敗しました`)
-      setPreview(oldUrl)
+      if (password !== passwordConfirm) {
+        throw new Error('パスワードが一致しません')
+      }
+
+      if (password.length < 6) {
+        throw new Error('パスワードは6文字以上で入力してください')
+      }
+
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password,
+      })
+
+      if (passwordError) throw passwordError
+
+      const profileData: any = {
+        user_id: user.id,
+        username: username.toLowerCase(),
+        display_name: displayName,
+        account_type: userType,
+        can_receive_work: userType === 'business' ? true : false,
+        can_request_work: userType === 'business' ? true : false,
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .upsert(profileData, { onConflict: 'user_id' })
+        .select()
+        .single()
+
+      if (profileError) throw profileError
+
+      if (userType === 'business') {
+        const businessData: any = {
+          profile_id: profile.id,
+          account_type: accountType,
+          full_name: fullName,
+          full_name_kana: fullNameKana,
+          phone,
+          postal_code: postalCode,
+          prefecture,
+          address1,
+        }
+
+        if (address2) businessData.address2 = address2
+        if (accountType === 'individual') {
+          if (birthDate) businessData.birth_date = birthDate
+          if (gender) businessData.gender = gender
+        }
+        if (accountType === 'corporate' && companyName) {
+          businessData.company_name = companyName
+        }
+
+        const { error: businessError } = await supabase
+          .from('business_profiles')
+          .upsert(businessData, { onConflict: 'profile_id' })
+
+        if (businessError) throw businessError
+      }
+
+      router.push('/dashboard')
+    } catch (error: any) {
+      setError(error.message || '登録に失敗しました')
     } finally {
-      setUploading(false)
+      setLoading(false)
     }
   }
 
-  const handleAvatarDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDraggingAvatar(false)
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      processImageFile(file, uploadAvatar, setUploadingAvatar, setAvatarUrl, setAvatarPreview, avatarUrl, 'avatars', 'アイコン画像をアップロードしました')
-    }
-  }
-
-  const handleAvatarClick = () => avatarInputRef.current?.click()
-
-  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      processImageFile(file, uploadAvatar, setUploadingAvatar, setAvatarUrl, setAvatarPreview, avatarUrl, 'avatars', 'アイコン画像をアップロードしました')
-    }
-  }
-
-  const handleHeaderDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDraggingHeader(false)
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      processImageFile(file, uploadHeader, setUploadingHeader, setHeaderUrl, setHeaderPreview, headerUrl, 'headers', 'ヘッダー画像をアップロードしました')
-    }
-  }
-
-  const handleHeaderClick = () => headerInputRef.current?.click()
-
-  const handleHeaderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      processImageFile(file, uploadHeader, setUploadingHeader, setHeaderUrl, setHeaderPreview, headerUrl, 'headers', 'ヘッダー画像をアップロードしました')
-    }
-  }
-
-  const handleAvatarRemove = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!avatarUrl) return
-    setUploadingAvatar(true)
-    setError('')
-    try {
-      await deleteImage(avatarUrl, 'avatars')
-      setAvatarUrl(null)
-      setAvatarPreview(null)
-      setSuccess('アイコン画像を削除しました')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'アイコン画像の削除に失敗しました')
-    } finally {
-      setUploadingAvatar(false)
-    }
-  }
-
-  const handleHeaderRemove = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!headerUrl) return
-    setUploadingHeader(true)
-    setError('')
-    try {
-      await deleteImage(headerUrl, 'headers')
-      setHeaderUrl(null)
-      setHeaderPreview(null)
-      setSuccess('ヘッダー画像を削除しました')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'ヘッダー画像の削除に失敗しました')
-    } finally {
-      setUploadingHeader(false)
-    }
-  }
-
-  const handleSave = async () => {
-    if (!user) return
-    setSaving(true)
-    setError('')
-    setSuccess('')
-
-    const isCreator = role === 'creator' || role === 'both'
-    const isClient = role === 'client' || role === 'both'
-
-    const profileData = {
-      user_id: user.id,
-      display_name: displayName,
-      bio: bio,
-      role: role,
-      is_creator: isCreator,
-      is_client: isClient,
-      avatar_url: avatarUrl,
-      header_url: headerUrl,
-      twitter_url: twitterUrl,
-      pixiv_url: pixivUrl,
-      website_url: websiteUrl,
-    }
-
-    const { error } = await supabase
-      .from('profiles')
-      .upsert(profileData, { onConflict: 'user_id' })
-
-    if (error) {
-      setError(error.message)
-      setSaving(false)
-    } else {
-      setSuccess('プロフィールを保存しました')
-      setSaving(false)
-      setTimeout(() => router.push('/dashboard'), 1500)
-    }
-  }
-
-  if (loading) {
+  if (!user) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
-        <div style={{ 
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          color: '#6B6B6B'
-        }}>
-          読み込み中...
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FAFAFA',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: '#6B7280' }}>読み込み中...</div>
+      </div>
+    )
+  }
+
+  // ステップインジケーター
+  const StepIndicator = () => {
+    const steps = userType === 'business' 
+      ? ['利用方法', '基本情報', 'ビジネス情報']
+      : ['利用方法', '基本情報']
+    
+    const currentStepIndex = 
+      step === 'userType' ? 0 :
+      step === 'basicInfo' ? 1 :
+      2
+
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '12px',
+        marginBottom: '48px'
+      }}>
+        {steps.map((label, index) => (
+          <div key={index} style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              backgroundColor: index <= currentStepIndex ? '#1A1A1A' : '#E5E7EB',
+              color: index <= currentStepIndex ? '#FFFFFF' : '#9CA3AF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {index + 1}
+            </div>
+            <span style={{ 
+              fontSize: '14px',
+              color: index <= currentStepIndex ? '#1A1A1A' : '#9CA3AF',
+              fontWeight: index === currentStepIndex ? '600' : '400'
+            }}>
+              {label}
+            </span>
+            {index < steps.length - 1 && (
+              <div style={{
+                width: '40px',
+                height: '2px',
+                backgroundColor: index < currentStepIndex ? '#1A1A1A' : '#E5E7EB',
+                marginLeft: '8px'
+              }} />
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Step 1: 利用方法選択
+  if (step === 'userType') {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FAFAFA',
+        padding: '48px 20px'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <StepIndicator />
+          
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700',
+            marginBottom: '12px',
+            textAlign: 'center',
+            color: '#1A1A1A'
+          }}>
+            利用方法を選択
+          </h1>
+          <p style={{ 
+            textAlign: 'center',
+            color: '#6B7280',
+            marginBottom: '40px',
+            fontSize: '14px'
+          }}>
+            同人ワークスをどのように利用しますか？
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <button
+              onClick={() => {
+                setUserType('casual')
+                setStep('basicInfo')
+              }}
+              style={{
+                padding: '24px',
+                textAlign: 'left',
+                backgroundColor: '#FFFFFF',
+                border: '2px solid #E5E7EB',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            >
+              <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>
+                一般利用
+              </div>
+              <div style={{ fontSize: '14px', color: '#6B7280' }}>
+                趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setUserType('business')
+                setStep('basicInfo')
+              }}
+              style={{
+                padding: '24px',
+                textAlign: 'left',
+                backgroundColor: '#FFFFFF',
+                border: '2px solid #E5E7EB',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            >
+              <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>
+                ビジネス利用
+              </div>
+              <div style={{ fontSize: '14px', color: '#6B7280' }}>
+                仕事の受発注、報酬の受け取りなどビジネスとして利用する
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#FAFAFA',
-      display: 'flex'
-    }}>
-        {/* サイドバー */}
-        <aside style={{
-          width: '240px',
-          backgroundColor: '#FFFFFF',
-          borderRight: '1px solid #E5E5E5',
-          padding: '32px 0',
-          flexShrink: 0
-        }}>
-          <nav style={{ padding: '0 16px' }}>
-            <Link 
-              href="/dashboard"
-              style={{
-                display: 'block',
-                padding: '10px 16px',
-                marginBottom: '2px',
-                color: '#6B6B6B',
-                borderRadius: '6px',
-                fontSize: '14px',
-                textDecoration: 'none',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              概要
-            </Link>
+  // Step 2: 基本情報入力
+  if (step === 'basicInfo') {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FAFAFA',
+        padding: '48px 20px'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <StepIndicator />
+          
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700',
+            marginBottom: '12px',
+            textAlign: 'center',
+            color: '#1A1A1A'
+          }}>
+            基本情報の入力
+          </h1>
+          <p style={{ 
+            textAlign: 'center',
+            color: '#6B7280',
+            marginBottom: '40px',
+            fontSize: '14px'
+          }}>
+            アカウント情報を設定してください
+          </p>
 
-            <div style={{
-              padding: '10px 16px',
-              marginBottom: '2px',
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '600'
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '32px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              if (userType === 'business') {
+                setStep('businessInfo')
+              } else {
+                handleSubmit(e)
+              }
             }}>
-              プロフィール編集
-            </div>
-
-            <Link 
-              href="/portfolio"
-              style={{
-                display: 'block',
-                padding: '10px 16px',
-                marginBottom: '2px',
-                color: '#6B6B6B',
-                borderRadius: '6px',
-                fontSize: '14px',
-                textDecoration: 'none',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              作品管理
-            </Link>
-
-            <Link 
-              href="/requests"
-              style={{
-                display: 'block',
-                padding: '10px 16px',
-                marginBottom: '2px',
-                color: '#6B6B6B',
-                borderRadius: '6px',
-                fontSize: '14px',
-                textDecoration: 'none',
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-              依頼管理
-            </Link>
-          </nav>
-        </aside>
-
-        {/* メインコンテンツ */}
-        <main style={{ flex: 1, padding: '48px 32px', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-            <h1 style={{ 
-              fontSize: '28px', 
-              fontWeight: '700',
-              marginBottom: '32px',
-              color: '#1A1A1A'
-            }}>
-              プロフィール編集
-            </h1>
-
-            <div style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '8px',
-              padding: '32px',
-              border: '1px solid #E5E5E5'
-            }}>
-              
-              {/* ヘッダー画像 */}
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1A1A1A',
-                  marginBottom: '12px'
-                }}>
-                  ヘッダー画像
-                </label>
-                
-                <div
-                  style={{
-                    width: '100%',
-                    height: '180px',
-                    borderRadius: '8px',
-                    border: draggingHeader ? '2px solid #1A1A1A' : '2px dashed #D1D5DB',
-                    backgroundColor: headerPreview ? 'transparent' : '#F9FAFB',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.2s'
-                  }}
-                  onClick={handleHeaderClick}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDraggingHeader(true)
-                  }}
-                  onDragLeave={() => setDraggingHeader(false)}
-                  onDrop={handleHeaderDrop}
-                >
-                  {headerPreview ? (
-                    <img src={headerPreview} alt="ヘッダー画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      color: '#9CA3AF'
-                    }}>
-                      <i className="fas fa-image" style={{ fontSize: '32px', marginBottom: '8px' }}></i>
-                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#6B7280' }}>
-                        クリックまたはドラッグしてアップロード
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '4px' }}>
-                        推奨: 1500×500px / 最大10MB
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <input
-                  ref={headerInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleHeaderSelect}
-                  style={{ display: 'none' }}
-                />
-
-                {headerUrl && (
-                  <button
-                    type="button"
-                    onClick={handleHeaderRemove}
-                    disabled={uploadingHeader}
-                    style={{
-                      marginTop: '8px',
-                      padding: '6px 12px',
-                      fontSize: '13px',
-                      color: '#DC2626',
-                      backgroundColor: 'transparent',
-                      border: '1px solid #FCA5A5',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    削除
-                  </button>
-                )}
-              </div>
-
-              {/* アイコン画像 */}
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1A1A1A',
-                  marginBottom: '12px'
-                }}>
-                  アイコン画像
-                </label>
-                
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div
-                    style={{
-                      width: '100px',
-                      height: '100px',
-                      borderRadius: '50%',
-                      border: draggingAvatar ? '2px solid #1A1A1A' : '2px dashed #D1D5DB',
-                      backgroundColor: avatarPreview ? 'transparent' : '#F9FAFB',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      transition: 'all 0.2s'
-                    }}
-                    onClick={handleAvatarClick}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      setDraggingAvatar(true)
-                    }}
-                    onDragLeave={() => setDraggingAvatar(false)}
-                    onDrop={handleAvatarDrop}
-                  >
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="アイコン画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%',
-                        color: '#9CA3AF',
-                        fontSize: '32px'
-                      }}>
-                        <i className="fas fa-user"></i>
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ flex: 1 }}>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      onChange={handleAvatarSelect}
-                      style={{ display: 'none' }}
-                    />
-                    
-                    <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>
-                      クリックまたはドラッグしてアップロード
-                    </div>
-                    
-                    <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '12px' }}>
-                      推奨: 400×400px / 最大5MB
-                    </div>
-
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAvatarRemove}
-                        disabled={uploadingAvatar}
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '13px',
-                          color: '#DC2626',
-                          backgroundColor: 'transparent',
-                          border: '1px solid #FCA5A5',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        削除
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* 表示名 */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block',
@@ -531,29 +404,74 @@ export default function ProfilePage() {
                   color: '#1A1A1A',
                   marginBottom: '8px'
                 }}>
-                  表示名
+                  ユーザーID <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  placeholder="asari_studio"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.15s'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>
+                  4〜20文字 / 英字で始まる / 英数字とアンダースコア（_）のみ
+                </div>
+                {username && (
+                  <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                    {usernameCheck.checking && (
+                      <span style={{ color: '#6B7280' }}>確認中...</span>
+                    )}
+                    {!usernameCheck.checking && usernameCheck.available === true && (
+                      <span style={{ color: '#10B981' }}>✓ 利用可能です</span>
+                    )}
+                    {!usernameCheck.checking && usernameCheck.available === false && (
+                      <span style={{ color: '#EF4444' }}>✗ {usernameCheck.error}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  表示名 <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="スタジオアサリ"
                   required
-                  placeholder="例: 山田太郎"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
                     border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    transition: 'border-color 0.15s',
-                    outline: 'none'
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.15s'
                   }}
                   onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
                   onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                 />
               </div>
 
-              {/* 自己紹介 */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block',
@@ -562,218 +480,67 @@ export default function ProfilePage() {
                   color: '#1A1A1A',
                   marginBottom: '8px'
                 }}>
-                  自己紹介
+                  パスワード <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={4}
-                  placeholder="あなたについて教えてください"
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="6文字以上"
+                  required
+                  minLength={6}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
                     border: '1px solid #D1D5DB',
-                    borderRadius: '6px',
-                    resize: 'vertical',
-                    transition: 'border-color 0.15s',
+                    borderRadius: '8px',
                     outline: 'none',
-                    fontFamily: 'inherit'
+                    transition: 'border-color 0.15s'
                   }}
                   onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
                   onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                 />
               </div>
 
-              {/* SNSリンク */}
               <div style={{ marginBottom: '32px' }}>
                 <label style={{ 
                   display: 'block',
                   fontSize: '14px',
                   fontWeight: '600',
                   color: '#1A1A1A',
-                  marginBottom: '12px'
+                  marginBottom: '8px'
                 }}>
-                  SNSリンク
+                  パスワード（確認） <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
-                    Twitter (X)
-                  </label>
-                  <input
-                    type="url"
-                    value={twitterUrl}
-                    onChange={(e) => setTwitterUrl(e.target.value)}
-                    placeholder="https://twitter.com/username"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D1D5DB',
-                      borderRadius: '6px',
-                      transition: 'border-color 0.15s',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
-                    Pixiv
-                  </label>
-                  <input
-                    type="url"
-                    value={pixivUrl}
-                    onChange={(e) => setPixivUrl(e.target.value)}
-                    placeholder="https://www.pixiv.net/users/12345"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D1D5DB',
-                      borderRadius: '6px',
-                      transition: 'border-color 0.15s',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
-                    ウェブサイト
-                  </label>
-                  <input
-                    type="url"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D1D5DB',
-                      borderRadius: '6px',
-                      transition: 'border-color 0.15s',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                  />
-                </div>
+                <input
+                  type="password"
+                  value={passwordConfirm}
+                  onChange={(e) => setPasswordConfirm(e.target.value)}
+                  placeholder="もう一度入力"
+                  required
+                  minLength={6}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    transition: 'border-color 0.15s'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
               </div>
 
-              {/* 利用目的 */}
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1A1A1A',
-                  marginBottom: '12px'
-                }}>
-                  利用目的
-                </label>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '14px 16px',
-                    border: role === 'creator' ? '2px solid #1A1A1A' : '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: role === 'creator' ? '#F9FAFB' : '#FFFFFF',
-                    transition: 'all 0.15s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="creator"
-                      checked={role === 'creator'}
-                      onChange={(e) => setRole(e.target.value)}
-                      style={{ marginRight: '12px', accentColor: '#1A1A1A', cursor: 'pointer' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', fontSize: '14px' }}>
-                        クリエイター
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                        作品を作って依頼を受ける
-                      </div>
-                    </div>
-                  </label>
-
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '14px 16px',
-                    border: role === 'client' ? '2px solid #1A1A1A' : '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: role === 'client' ? '#F9FAFB' : '#FFFFFF',
-                    transition: 'all 0.15s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="client"
-                      checked={role === 'client'}
-                      onChange={(e) => setRole(e.target.value)}
-                      style={{ marginRight: '12px', accentColor: '#1A1A1A', cursor: 'pointer' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', fontSize: '14px' }}>
-                        クライアント（依頼者）
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                        クリエイターに依頼する
-                      </div>
-                    </div>
-                  </label>
-
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '14px 16px',
-                    border: role === 'both' ? '2px solid #1A1A1A' : '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: role === 'both' ? '#F9FAFB' : '#FFFFFF',
-                    transition: 'all 0.15s'
-                  }}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="both"
-                      checked={role === 'both'}
-                      onChange={(e) => setRole(e.target.value)}
-                      style={{ marginRight: '12px', accentColor: '#1A1A1A', cursor: 'pointer' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', fontSize: '14px' }}>
-                        両方
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                        作品を作ることも依頼することもある
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* エラー・成功メッセージ */}
               {error && (
                 <div style={{
                   padding: '12px 16px',
                   backgroundColor: '#FEF2F2',
                   border: '1px solid #FECACA',
                   borderRadius: '8px',
-                  marginBottom: '20px',
+                  marginBottom: '24px',
                   color: '#DC2626',
                   fontSize: '14px'
                 }}>
@@ -781,69 +548,493 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {success && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
-                  color: '#16A34A',
-                  fontSize: '14px'
-                }}>
-                  {success}
-                </div>
-              )}
-
-              {/* ボタン */}
-              <div style={{ display: 'flex', gap: '12px', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  onClick={handleSave}
-                  disabled={saving}
+                  type="button"
+                  onClick={() => setStep('userType')}
                   style={{
                     flex: 1,
-                    padding: '12px 24px',
+                    padding: '12px',
                     fontSize: '14px',
                     fontWeight: '600',
-                    color: '#FFFFFF',
-                    backgroundColor: saving ? '#9CA3AF' : '#1A1A1A',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                  onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = '#374151')}
-                  onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = '#1A1A1A')}
-                >
-                  {saving ? '保存中...' : '変更を保存'}
-                </button>
-                <Link
-                  href="/dashboard"
-                  style={{
-                    flex: 1,
-                    padding: '12px 24px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#1A1A1A',
+                    color: '#6B7280',
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #D1D5DB',
                     borderRadius: '8px',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
-                  キャンセル
-                </Link>
+                  戻る
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !usernameCheck.available}
+                  style={{
+                    flex: 2,
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: (loading || !usernameCheck.available) ? '#9CA3AF' : '#1A1A1A',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: (loading || !usernameCheck.available) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading && usernameCheck.available) {
+                      e.currentTarget.style.backgroundColor = '#374151'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading && usernameCheck.available) {
+                      e.currentTarget.style.backgroundColor = '#1A1A1A'
+                    }
+                  }}
+                >
+                  {loading ? '処理中...' : (userType === 'business' ? '次へ' : '登録完了')}
+                </button>
               </div>
-            </div>
+            </form>
           </div>
-        </main>
+        </div>
       </div>
     )
   }
+
+  // Step 3: ビジネス情報入力
+  return (
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#FAFAFA',
+      padding: '48px 20px'
+    }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <StepIndicator />
+        
+        <h1 style={{ 
+          fontSize: '28px', 
+          fontWeight: '700',
+          marginBottom: '12px',
+          textAlign: 'center',
+          color: '#1A1A1A'
+        }}>
+          ビジネス情報の入力
+        </h1>
+        <p style={{ 
+          textAlign: 'center',
+          color: '#6B7280',
+          marginBottom: '40px',
+          fontSize: '14px'
+        }}>
+          取引に必要な情報を入力してください
+        </p>
+
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '12px',
+          padding: '32px',
+          border: '1px solid #E5E7EB'
+        }}>
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '12px'
+              }}>
+                個人/法人 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAccountType('individual')}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: accountType === 'individual' ? '#FFFFFF' : '#6B7280',
+                    backgroundColor: accountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
+                    border: `1px solid ${accountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  個人
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountType('corporate')}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: accountType === 'corporate' ? '#FFFFFF' : '#6B7280',
+                    backgroundColor: accountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
+                    border: `1px solid ${accountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  法人
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                氏名 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="山田 太郎"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                氏名（かな） <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={fullNameKana}
+                onChange={(e) => setFullNameKana(e.target.value)}
+                placeholder="やまだ たろう"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            {accountType === 'corporate' && (
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  会社名 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="株式会社○○"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                電話番号 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="09012345678"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                郵便番号 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                placeholder="1234567"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                都道府県 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <select
+                value={prefecture}
+                onChange={(e) => setPrefecture(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  backgroundColor: '#FFFFFF',
+                  cursor: 'pointer'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              >
+                <option value="">選択してください</option>
+                <option value="北海道">北海道</option>
+                <option value="青森県">青森県</option>
+                <option value="岩手県">岩手県</option>
+                <option value="宮城県">宮城県</option>
+                <option value="秋田県">秋田県</option>
+                <option value="山形県">山形県</option>
+                <option value="福島県">福島県</option>
+                <option value="茨城県">茨城県</option>
+                <option value="栃木県">栃木県</option>
+                <option value="群馬県">群馬県</option>
+                <option value="埼玉県">埼玉県</option>
+                <option value="千葉県">千葉県</option>
+                <option value="東京都">東京都</option>
+                <option value="神奈川県">神奈川県</option>
+                <option value="新潟県">新潟県</option>
+                <option value="富山県">富山県</option>
+                <option value="石川県">石川県</option>
+                <option value="福井県">福井県</option>
+                <option value="山梨県">山梨県</option>
+                <option value="長野県">長野県</option>
+                <option value="岐阜県">岐阜県</option>
+                <option value="静岡県">静岡県</option>
+                <option value="愛知県">愛知県</option>
+                <option value="三重県">三重県</option>
+                <option value="滋賀県">滋賀県</option>
+                <option value="京都府">京都府</option>
+                <option value="大阪府">大阪府</option>
+                <option value="兵庫県">兵庫県</option>
+                <option value="奈良県">奈良県</option>
+                <option value="和歌山県">和歌山県</option>
+                <option value="鳥取県">鳥取県</option>
+                <option value="島根県">島根県</option>
+                <option value="岡山県">岡山県</option>
+                <option value="広島県">広島県</option>
+                <option value="山口県">山口県</option>
+                <option value="徳島県">徳島県</option>
+                <option value="香川県">香川県</option>
+                <option value="愛媛県">愛媛県</option>
+                <option value="高知県">高知県</option>
+                <option value="福岡県">福岡県</option>
+                <option value="佐賀県">佐賀県</option>
+                <option value="長崎県">長崎県</option>
+                <option value="熊本県">熊本県</option>
+                <option value="大分県">大分県</option>
+                <option value="宮崎県">宮崎県</option>
+                <option value="鹿児島県">鹿児島県</option>
+                <option value="沖縄県">沖縄県</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                住所（番地まで） <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={address1}
+                onChange={(e) => setAddress1(e.target.value)}
+                placeholder="○○市○○町1-2-3"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{ 
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#1A1A1A',
+                marginBottom: '8px'
+              }}>
+                住所（建物名など）
+              </label>
+              <input
+                type="text"
+                value={address2}
+                onChange={(e) => setAddress2(e.target.value)}
+                placeholder="○○マンション101号室"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            {error && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                color: '#DC2626',
+                fontSize: '14px'
+              }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setStep('basicInfo')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6B7280',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+              >
+                戻る
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  flex: 2,
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  backgroundColor: loading ? '#9CA3AF' : '#1A1A1A',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = '#374151'
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.backgroundColor = '#1A1A1A'
+                }}
+              >
+                {loading ? '登録中...' : '登録完了'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
