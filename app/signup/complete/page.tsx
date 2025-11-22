@@ -222,7 +222,7 @@ export default function SignupCompletePage() {
     )
   }
 
-  // ステップインジケーター（noteスタイル・レスポンシブ対応）
+  // ステップインジケーター（改善版）
   const StepIndicator = () => {
     const steps = userType === 'business' 
       ? [
@@ -245,169 +245,130 @@ export default function SignupCompletePage() {
 
     return (
       <>
-        {/* デスクトップ版 */}
-        <div className="desktop-steps">
+        <div className="step-indicator">
           {steps.map((stepItem, index) => (
-            <div key={index} className="step-item">
-              <div className="step-content">
-                <div className={`step-circle ${index <= currentStepIndex ? 'active' : ''}`}>
+            <div key={index} className="step-wrapper">
+              <div className="step-item">
+                <div className={`step-number ${index <= currentStepIndex ? 'active' : ''}`}>
                   {stepItem.number}
                 </div>
-                <span className={`step-label ${index <= currentStepIndex ? 'active' : ''}`}>
+                <span className={`step-text ${index <= currentStepIndex ? 'active' : ''}`}>
                   {stepItem.label}
                 </span>
               </div>
-              {index < steps.length - 1 && <div className="step-line" />}
-            </div>
-          ))}
-        </div>
-
-        {/* モバイル版 */}
-        <div className="mobile-steps">
-          {steps.map((stepItem, index) => (
-            <div key={index} className="mobile-step-item">
-              <div className="mobile-step-content">
-                <div className={`mobile-step-circle ${index <= currentStepIndex ? 'active' : ''}`}>
-                  {stepItem.number}
-                </div>
-                <span className={`mobile-step-label ${index <= currentStepIndex ? 'active' : ''}`}>
-                  {stepItem.label}
-                </span>
-              </div>
-              {index < steps.length - 1 && <div className="mobile-step-line" />}
+              {index < steps.length - 1 && (
+                <div className={`step-connector ${index < currentStepIndex ? 'active' : ''}`} />
+              )}
             </div>
           ))}
         </div>
 
         <style jsx>{`
-          .desktop-steps {
-            display: none;
+          .step-indicator {
+            display: flex;
             justify-content: center;
             align-items: center;
-            gap: 32px;
             margin-bottom: 48px;
+            padding: 0 20px;
+          }
+
+          .step-wrapper {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            max-width: 200px;
           }
 
           .step-item {
             display: flex;
             align-items: center;
-            gap: 32px;
-          }
-
-          .step-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             gap: 8px;
-          }
-
-          .step-circle {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: #E5E7EB;
-            color: #9CA3AF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 600;
-          }
-
-          .step-circle.active {
-            background-color: #1A1A1A;
-            color: #FFFFFF;
-          }
-
-          .step-label {
-            font-size: 12px;
-            color: #9CA3AF;
-            font-weight: 400;
             white-space: nowrap;
           }
 
-          .step-label.active {
-            color: #1A1A1A;
-          }
-
-          .step-line {
-            width: 40px;
-            height: 1px;
-            background-color: #E5E7EB;
-          }
-
-          .mobile-steps {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 32px;
-          }
-
-          .mobile-step-item {
-            display: flex;
-            align-items: center;
-          }
-
-          .mobile-step-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 0 8px;
-          }
-
-          .mobile-step-circle {
-            width: 28px;
-            height: 28px;
+          .step-number {
+            min-width: 24px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            background-color: #F3F4F6;
-            color: #D1D5DB;
+            background-color: #E5E7EB;
+            color: #9CA3AF;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 12px;
             font-weight: 600;
+            flex-shrink: 0;
           }
 
-          .mobile-step-circle.active {
+          .step-number.active {
             background-color: #1A1A1A;
             color: #FFFFFF;
           }
 
-          .mobile-step-label {
-            font-size: 10px;
-            color: #D1D5DB;
+          .step-text {
+            font-size: 13px;
+            color: #9CA3AF;
             font-weight: 400;
-            text-align: center;
-            max-width: 60px;
-            line-height: 1.2;
           }
 
-          .mobile-step-label.active {
+          .step-text.active {
             color: #1A1A1A;
+            font-weight: 500;
           }
 
-          .mobile-step-line {
-            width: 20px;
+          .step-connector {
+            flex: 1;
             height: 1px;
             background-color: #E5E7EB;
-            margin-top: -18px;
+            margin: 0 12px;
+            min-width: 20px;
           }
 
-          @media (min-width: 640px) {
-            .mobile-steps {
+          .step-connector.active {
+            background-color: #1A1A1A;
+          }
+
+          @media (max-width: 640px) {
+            .step-indicator {
+              margin-bottom: 32px;
+              padding: 0 10px;
+            }
+
+            .step-wrapper {
+              max-width: none;
+            }
+
+            .step-number {
+              min-width: 20px;
+              width: 20px;
+              height: 20px;
+              font-size: 11px;
+            }
+
+            .step-text {
+              font-size: 11px;
+            }
+
+            .step-connector {
+              margin: 0 6px;
+              min-width: 12px;
+            }
+          }
+
+          @media (max-width: 400px) {
+            .step-text {
               display: none;
             }
-            .desktop-steps {
-              display: flex;
+
+            .step-connector {
+              margin: 0 8px;
             }
           }
         `}</style>
       </>
     )
   }
-
-  // 残りのコードは前回と同じなので省略...
-  // Step 1〜4は前回のコードをそのまま使用してください
 
   // Step 1: 利用方法選択
   if (step === 'userType') {
@@ -930,7 +891,11 @@ export default function SignupCompletePage() {
                 <input
                   type="text"
                   value={fullNameKana}
-                  onChange={(e) => setFullNameKana(e.target.value)}
+                  onChange={(e) => {
+                    // ひらがなのみ許可
+                    const hiraganaOnly = e.target.value.replace(/[^\u3040-\u309F\s]/g, '')
+                    setFullNameKana(hiraganaOnly)
+                  }}
                   placeholder="やまだ たろう"
                   required
                   style={{
@@ -990,9 +955,14 @@ export default function SignupCompletePage() {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    // 数字のみ許可
+                    const numbersOnly = e.target.value.replace(/[^0-9]/g, '')
+                    setPhone(numbersOnly)
+                  }}
                   placeholder="09012345678"
                   required
+                  maxLength={11}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -1019,9 +989,14 @@ export default function SignupCompletePage() {
                 <input
                   type="text"
                   value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value)}
+                  onChange={(e) => {
+                    // 数字のみ許可
+                    const numbersOnly = e.target.value.replace(/[^0-9]/g, '')
+                    setPostalCode(numbersOnly)
+                  }}
                   placeholder="1234567"
                   required
+                  maxLength={7}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
