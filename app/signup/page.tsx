@@ -17,33 +17,45 @@ export default function SignupPage() {
     setError('')
 
     try {
-      // ランダムな仮パスワードを生成（ユーザーには見せない）
+      // メールアドレスが既に登録されているかチェック
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single()
+
+      // より確実な方法：signUpを試してエラーをキャッチ
       const tempPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36)
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password: tempPassword,
         options: {
           emailRedirectTo: 'https://www.dojinworks.com/signup/complete',
           data: {
-            registration_step: 'email_confirmed', // 登録ステップを記録
+            registration_step: 'email_confirmed',
           }
         },
       })
 
       if (error) {
-        // 既に登録済みの場合のエラーハンドリング
-        if (error.message.includes('User already registered')) {
-          setError(
-            'このメールアドレスは既に登録されています。\n' +
-            'ログインページからログインするか、パスワードを忘れた場合はパスワードリセットをご利用ください。'
-          )
+        // Supabaseのエラーメッセージをチェック
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already been registered')) {
+          setError('このメールアドレスは既に登録されています。')
           return
         }
         throw error
       }
 
-      // メールアドレスをURLパラメータとして渡す
+      // signUpが成功したが、ユーザーが既に存在する場合
+      // (メール確認がOFFの開発環境では data.user が null になる)
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError('このメールアドレスは既に登録されています。')
+        return
+      }
+
+      // 新規登録成功
       router.push(`/signup/verify?email=${encodeURIComponent(email)}`)
     } catch (error: any) {
       setError(error.message || '登録に失敗しました')
@@ -187,6 +199,17 @@ export default function SignupPage() {
                     fontSize: '14px'
                   }}>
                     {error}
+                    {error.includes('既に登録されています') && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Link href="/login" style={{ 
+                          color: '#C33', 
+                          textDecoration: 'underline',
+                          fontWeight: 'bold'
+                        }}>
+                          ログインページはこちら
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
 
