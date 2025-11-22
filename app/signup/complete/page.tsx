@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 
 type UserType = 'casual' | 'business'
-type Step = 'userType' | 'basicInfo' | 'businessInfo'
+type Step = 'userType' | 'basicInfo' | 'businessInfo' | 'confirm'
 
 export default function SignupCompletePage() {
   const [step, setStep] = useState<Step>('userType')
@@ -16,6 +16,8 @@ export default function SignupCompletePage() {
   const [displayName, setDisplayName] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   
   // ビジネス利用の追加情報
   const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual')
@@ -110,16 +112,7 @@ export default function SignupCompletePage() {
     return () => clearTimeout(timer)
   }, [username])
 
-  const handleNext = () => {
-    if (step === 'userType' && userType) {
-      setStep('basicInfo')
-    } else if (step === 'basicInfo' && userType === 'business') {
-      setStep('businessInfo')
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setLoading(true)
     setError('')
 
@@ -212,54 +205,38 @@ export default function SignupCompletePage() {
   // ステップインジケーター
   const StepIndicator = () => {
     const steps = userType === 'business' 
-      ? ['利用方法', '基本情報', 'ビジネス情報']
-      : ['利用方法', '基本情報']
+      ? ['利用方法', '基本情報', 'ビジネス情報', '確認']
+      : ['利用方法', '基本情報', '確認']
     
     const currentStepIndex = 
       step === 'userType' ? 0 :
       step === 'basicInfo' ? 1 :
-      2
+      step === 'businessInfo' ? 2 :
+      userType === 'business' ? 3 : 2
 
     return (
       <div style={{ 
         display: 'flex', 
         justifyContent: 'center', 
-        gap: '12px',
+        alignItems: 'center',
+        gap: '8px',
         marginBottom: '48px'
       }}>
         {steps.map((label, index) => (
-          <div key={index} style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: '8px'
-          }}>
+          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              backgroundColor: index <= currentStepIndex ? '#1A1A1A' : '#E5E7EB',
-              color: index <= currentStepIndex ? '#FFFFFF' : '#9CA3AF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {index + 1}
-            </div>
-            <span style={{ 
-              fontSize: '14px',
+              fontSize: '13px',
               color: index <= currentStepIndex ? '#1A1A1A' : '#9CA3AF',
               fontWeight: index === currentStepIndex ? '600' : '400'
             }}>
               {label}
-            </span>
+            </div>
             {index < steps.length - 1 && (
               <div style={{
-                width: '40px',
-                height: '2px',
-                backgroundColor: index < currentStepIndex ? '#1A1A1A' : '#E5E7EB',
-                marginLeft: '8px'
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: '#D1D5DB'
               }} />
             )}
           </div>
@@ -294,7 +271,7 @@ export default function SignupCompletePage() {
             marginBottom: '40px',
             fontSize: '14px'
           }}>
-            同人ワークスをどのように利用しますか？
+            同人ワークスをどのように利用しますか?
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -361,6 +338,7 @@ export default function SignupCompletePage() {
         backgroundColor: '#FAFAFA',
         padding: '48px 20px'
       }}>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <StepIndicator />
           
@@ -393,7 +371,7 @@ export default function SignupCompletePage() {
               if (userType === 'business') {
                 setStep('businessInfo')
               } else {
-                handleSubmit(e)
+                setStep('confirm')
               }
             }}>
               <div style={{ marginBottom: '24px' }}>
@@ -425,7 +403,7 @@ export default function SignupCompletePage() {
                   onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                 />
                 <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>
-                  4〜20文字 / 英字で始まる / 英数字とアンダースコア（_）のみ
+                  4〜20文字 / 英字で始まる / 英数字とアンダースコア(_)のみ
                 </div>
                 {username && (
                   <div style={{ marginTop: '8px', fontSize: '13px' }}>
@@ -482,25 +460,44 @@ export default function SignupCompletePage() {
                 }}>
                   パスワード <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="6文字以上"
-                  required
-                  minLength={6}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'border-color 0.15s'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="6文字以上"
+                    required
+                    minLength={6}
+                    style={{
+                      width: '100%',
+                      padding: '10px 40px 10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'border-color 0.15s'
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#6B7280',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <i className={showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                  </button>
+                </div>
               </div>
 
               <div style={{ marginBottom: '32px' }}>
@@ -511,27 +508,46 @@ export default function SignupCompletePage() {
                   color: '#1A1A1A',
                   marginBottom: '8px'
                 }}>
-                  パスワード（確認） <span style={{ color: '#EF4444' }}>*</span>
+                  パスワード(確認) <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="password"
-                  value={passwordConfirm}
-                  onChange={(e) => setPasswordConfirm(e.target.value)}
-                  placeholder="もう一度入力"
-                  required
-                  minLength={6}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'border-color 0.15s'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPasswordConfirm ? 'text' : 'password'}
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    placeholder="もう一度入力"
+                    required
+                    minLength={6}
+                    style={{
+                      width: '100%',
+                      padding: '10px 40px 10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'border-color 0.15s'
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#6B7280',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <i className={showPasswordConfirm ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -573,7 +589,7 @@ export default function SignupCompletePage() {
                   type="submit"
                   disabled={loading || !usernameCheck.available}
                   style={{
-                    flex: 2,
+                    flex: 1,
                     padding: '12px',
                     fontSize: '14px',
                     fontWeight: '600',
@@ -595,7 +611,7 @@ export default function SignupCompletePage() {
                     }
                   }}
                 >
-                  {loading ? '処理中...' : (userType === 'business' ? '次へ' : '登録完了')}
+                  {loading ? '処理中...' : '次へ'}
                 </button>
               </div>
             </form>
@@ -606,149 +622,94 @@ export default function SignupCompletePage() {
   }
 
   // Step 3: ビジネス情報入力
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#FAFAFA',
-      padding: '48px 20px'
-    }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <StepIndicator />
-        
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: '700',
-          marginBottom: '12px',
-          textAlign: 'center',
-          color: '#1A1A1A'
-        }}>
-          ビジネス情報の入力
-        </h1>
-        <p style={{ 
-          textAlign: 'center',
-          color: '#6B7280',
-          marginBottom: '40px',
-          fontSize: '14px'
-        }}>
-          取引に必要な情報を入力してください
-        </p>
+  if (step === 'businessInfo') {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FAFAFA',
+        padding: '48px 20px'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <StepIndicator />
+          
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700',
+            marginBottom: '12px',
+            textAlign: 'center',
+            color: '#1A1A1A'
+          }}>
+            ビジネス情報の入力
+          </h1>
+          <p style={{ 
+            textAlign: 'center',
+            color: '#6B7280',
+            marginBottom: '40px',
+            fontSize: '14px'
+          }}>
+            取引に必要な情報を入力してください
+          </p>
 
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          padding: '32px',
-          border: '1px solid #E5E7EB'
-        }}>
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '12px'
-              }}>
-                個人/法人 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setAccountType('individual')}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: accountType === 'individual' ? '#FFFFFF' : '#6B7280',
-                    backgroundColor: accountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
-                    border: `1px solid ${accountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  個人
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccountType('corporate')}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: accountType === 'corporate' ? '#FFFFFF' : '#6B7280',
-                    backgroundColor: accountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
-                    border: `1px solid ${accountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  法人
-                </button>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '32px',
+            border: '1px solid #E5E7EB'
+          }}>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              setStep('confirm')
+            }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '12px'
+                }}>
+                  個人/法人 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('individual')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: accountType === 'individual' ? '#FFFFFF' : '#6B7280',
+                      backgroundColor: accountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
+                      border: `1px solid ${accountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    個人
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('corporate')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: accountType === 'corporate' ? '#FFFFFF' : '#6B7280',
+                      backgroundColor: accountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
+                      border: `1px solid ${accountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    法人
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                氏名 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="山田 太郎"
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                氏名（かな） <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={fullNameKana}
-                onChange={(e) => setFullNameKana(e.target.value)}
-                placeholder="やまだ たろう"
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
-            </div>
-
-            {accountType === 'corporate' && (
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block',
@@ -757,13 +718,13 @@ export default function SignupCompletePage() {
                   color: '#1A1A1A',
                   marginBottom: '8px'
                 }}>
-                  会社名 <span style={{ color: '#EF4444' }}>*</span>
+                  氏名 <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <input
                   type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="株式会社○○"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="山田 太郎"
                   required
                   style={{
                     width: '100%',
@@ -777,200 +738,431 @@ export default function SignupCompletePage() {
                   onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                 />
               </div>
-            )}
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                電話番号 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="09012345678"
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
                   fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
-            </div>
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  氏名(かな) <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={fullNameKana}
+                  onChange={(e) => setFullNameKana(e.target.value)}
+                  placeholder="やまだ たろう"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                郵便番号 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="1234567"
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
+              {accountType === 'corporate' && (
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ 
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1A1A1A',
+                    marginBottom: '8px'
+                  }}>
+                    会社名 <span style={{ color: '#EF4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="株式会社○○"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
                   fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
-            </div>
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  電話番号 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="09012345678"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                都道府県 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <select
-                value={prefecture}
-                onChange={(e) => setPrefecture(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
                   fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none',
-                  backgroundColor: '#FFFFFF',
-                  cursor: 'pointer'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              >
-                <option value="">選択してください</option>
-                <option value="北海道">北海道</option>
-                <option value="青森県">青森県</option>
-                <option value="岩手県">岩手県</option>
-                <option value="宮城県">宮城県</option>
-                <option value="秋田県">秋田県</option>
-                <option value="山形県">山形県</option>
-                <option value="福島県">福島県</option>
-                <option value="茨城県">茨城県</option>
-                <option value="栃木県">栃木県</option>
-                <option value="群馬県">群馬県</option>
-                <option value="埼玉県">埼玉県</option>
-                <option value="千葉県">千葉県</option>
-                <option value="東京都">東京都</option>
-                <option value="神奈川県">神奈川県</option>
-                <option value="新潟県">新潟県</option>
-                <option value="富山県">富山県</option>
-                <option value="石川県">石川県</option>
-                <option value="福井県">福井県</option>
-                <option value="山梨県">山梨県</option>
-                <option value="長野県">長野県</option>
-                <option value="岐阜県">岐阜県</option>
-                <option value="静岡県">静岡県</option>
-                <option value="愛知県">愛知県</option>
-                <option value="三重県">三重県</option>
-                <option value="滋賀県">滋賀県</option>
-                <option value="京都府">京都府</option>
-                <option value="大阪府">大阪府</option>
-                <option value="兵庫県">兵庫県</option>
-                <option value="奈良県">奈良県</option>
-                <option value="和歌山県">和歌山県</option>
-                <option value="鳥取県">鳥取県</option>
-                <option value="島根県">島根県</option>
-                <option value="岡山県">岡山県</option>
-                <option value="広島県">広島県</option>
-                <option value="山口県">山口県</option>
-                <option value="徳島県">徳島県</option>
-                <option value="香川県">香川県</option>
-                <option value="愛媛県">愛媛県</option>
-                <option value="高知県">高知県</option>
-                <option value="福岡県">福岡県</option>
-                <option value="佐賀県">佐賀県</option>
-                <option value="長崎県">長崎県</option>
-                <option value="熊本県">熊本県</option>
-                <option value="大分県">大分県</option>
-                <option value="宮崎県">宮崎県</option>
-                <option value="鹿児島県">鹿児島県</option>
-                <option value="沖縄県">沖縄県</option>
-              </select>
-            </div>
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  郵便番号 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="1234567"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                住所（番地まで） <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={address1}
-                onChange={(e) => setAddress1(e.target.value)}
-                placeholder="○○市○○町1-2-3"
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
                   fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
-            </div>
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  都道府県 <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <select
+                  value={prefecture}
+                  onChange={(e) => setPrefecture(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    cursor: 'pointer'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                >
+                  <option value="">選択してください</option>
+                  <option value="北海道">北海道</option>
+                  <option value="青森県">青森県</option>
+                  <option value="岩手県">岩手県</option>
+                  <option value="宮城県">宮城県</option>
+                  <option value="秋田県">秋田県</option>
+                  <option value="山形県">山形県</option>
+                  <option value="福島県">福島県</option>
+                  <option value="茨城県">茨城県</option>
+                  <option value="栃木県">栃木県</option>
+                  <option value="群馬県">群馬県</option>
+                  <option value="埼玉県">埼玉県</option>
+                  <option value="千葉県">千葉県</option>
+                  <option value="東京都">東京都</option>
+                  <option value="神奈川県">神奈川県</option>
+                  <option value="新潟県">新潟県</option>
+                  <option value="富山県">富山県</option>
+                  <option value="石川県">石川県</option>
+                  <option value="福井県">福井県</option>
+                  <option value="山梨県">山梨県</option>
+                  <option value="長野県">長野県</option>
+                  <option value="岐阜県">岐阜県</option>
+                  <option value="静岡県">静岡県</option>
+                  <option value="愛知県">愛知県</option>
+                  <option value="三重県">三重県</option>
+                  <option value="滋賀県">滋賀県</option>
+                  <option value="京都府">京都府</option>
+                  <option value="大阪府">大阪府</option>
+                  <option value="兵庫県">兵庫県</option>
+                  <option value="奈良県">奈良県</option>
+                  <option value="和歌山県">和歌山県</option>
+                  <option value="鳥取県">鳥取県</option>
+                  <option value="島根県">島根県</option>
+                  <option value="岡山県">岡山県</option>
+                  <option value="広島県">広島県</option>
+                  <option value="山口県">山口県</option>
+                  <option value="徳島県">徳島県</option>
+                  <option value="香川県">香川県</option>
+                  <option value="愛媛県">愛媛県</option>
+                  <option value="高知県">高知県</option>
+                  <option value="福岡県">福岡県</option>
+                  <option value="佐賀県">佐賀県</option>
+                  <option value="長崎県">長崎県</option>
+                  <option value="熊本県">熊本県</option>
+                  <option value="大分県">大分県</option>
+                  <option value="宮崎県">宮崎県</option>
+                  <option value="鹿児島県">鹿児島県</option>
+                  <option value="沖縄県">沖縄県</option>
+                </select>
+              </div>
 
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  住所(番地まで) <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={address1}
+                  onChange={(e) => setAddress1(e.target.value)}
+                  placeholder="○○市○○町1-2-3"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
+
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{ 
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1A1A1A',
+                  marginBottom: '8px'
+                }}>
+                  住所(建物名など)
+                </label>
+                <input
+                  type="text"
+                  value={address2}
+                  onChange={(e) => setAddress2(e.target.value)}
+                  placeholder="○○マンション101号室"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    outline: 'none'
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                />
+              </div>
+
+              {error && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: '8px',
+                  marginBottom: '24px',
+                  color: '#DC2626',
+                  fontSize: '14px'
+                }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setStep('basicInfo')}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6B7280',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  戻る
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: loading ? '#9CA3AF' : '#1A1A1A',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loading) e.currentTarget.style.backgroundColor = '#374151'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!loading) e.currentTarget.style.backgroundColor = '#1A1A1A'
+                  }}
+                >
+                  {loading ? '処理中...' : '次へ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Step 4: 確認ページ (一般利用は Step 3)
+  if (step === 'confirm') {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FAFAFA',
+        padding: '48px 20px'
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <StepIndicator />
+          
+          <h1 style={{ 
+            fontSize: '28px', 
+            fontWeight: '700',
+            marginBottom: '12px',
+            textAlign: 'center',
+            color: '#1A1A1A'
+          }}>
+            入力内容の確認
+          </h1>
+          <p style={{ 
+            textAlign: 'center',
+            color: '#6B7280',
+            marginBottom: '40px',
+            fontSize: '14px'
+          }}>
+            内容をご確認の上、登録を完了してください
+          </p>
+
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '32px',
+            border: '1px solid #E5E7EB'
+          }}>
+            
+            {/* 基本情報 */}
             <div style={{ marginBottom: '32px' }}>
-              <label style={{ 
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1A1A1A',
-                marginBottom: '8px'
-              }}>
-                住所（建物名など）
-              </label>
-              <input
-                type="text"
-                value={address2}
-                onChange={(e) => setAddress2(e.target.value)}
-                placeholder="○○マンション101号室"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  outline: 'none'
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-              />
+              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#1A1A1A' }}>
+                基本情報
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                  <span style={{ fontSize: '14px', color: '#6B7280' }}>利用方法</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>
+                    {userType === 'casual' ? '一般利用' : 'ビジネス利用'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                  <span style={{ fontSize: '14px', color: '#6B7280' }}>ユーザーID</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{username}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                  <span style={{ fontSize: '14px', color: '#6B7280' }}>表示名</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{displayName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0' }}>
+                  <span style={{ fontSize: '14px', color: '#6B7280' }}>パスワード</span>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>●●●●●●●●</span>
+                </div>
+              </div>
             </div>
+
+            {/* ビジネス情報 */}
+            {userType === 'business' && (
+              <div style={{ marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#1A1A1A' }}>
+                  ビジネス情報
+                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>個人/法人</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>
+                      {accountType === 'individual' ? '個人' : '法人'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>氏名</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{fullName}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>氏名(かな)</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{fullNameKana}</span>
+                  </div>
+                  {accountType === 'corporate' && companyName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                      <span style={{ fontSize: '14px', color: '#6B7280' }}>会社名</span>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{companyName}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>電話番号</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{phone}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
+                    <span style={{ fontSize: '14px', color: '#6B7280' }}>住所</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A', textAlign: 'right' }}>
+                      〒{postalCode}<br />
+                      {prefecture}{address1}{address2 && ` ${address2}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div style={{
@@ -989,7 +1181,7 @@ export default function SignupCompletePage() {
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 type="button"
-                onClick={() => setStep('basicInfo')}
+                onClick={() => setStep(userType === 'business' ? 'businessInfo' : 'basicInfo')}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -1008,10 +1200,10 @@ export default function SignupCompletePage() {
                 戻る
               </button>
               <button
-                type="submit"
+                onClick={handleSubmit}
                 disabled={loading}
                 style={{
-                  flex: 2,
+                  flex: 1,
                   padding: '12px',
                   fontSize: '14px',
                   fontWeight: '600',
@@ -1032,9 +1224,9 @@ export default function SignupCompletePage() {
                 {loading ? '登録中...' : '登録完了'}
               </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 }
