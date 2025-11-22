@@ -282,15 +282,16 @@ export default function SignupCompletePage() {
 
   // ステップインジケーター
   const StepIndicator = () => {
-    const steps = userType === 'business' 
-      ? ['利用方法', '基本情報', 'ビジネス情報', '確認']
-      : ['利用方法', '基本情報', '確認']
+    // 利用方法選択画面 or 一般利用の場合は非表示
+    if (step === 'userType' || userType === 'casual') {
+      return null
+    }
+
+    const steps = ['基本情報', 'ビジネス情報', '確認']
     
     const currentStepIndex = 
-      step === 'userType' ? 0 :
-      step === 'basicInfo' ? 1 :
-      step === 'businessInfo' ? 2 :
-      userType === 'business' ? 3 : 2
+      step === 'basicInfo' ? 0 :
+      step === 'businessInfo' ? 1 : 2
 
     const currentStep = currentStepIndex + 1
     const totalSteps = steps.length
@@ -840,7 +841,7 @@ export default function SignupCompletePage() {
                     }
                   }}
                 >
-                  次へ
+                  {userType === 'business' ? '次へ' : '内容確認'}
                 </button>
               </div>
             </form>
@@ -1320,7 +1321,7 @@ export default function SignupCompletePage() {
                     }
                   }}
                 >
-                  次へ
+                  内容確認
                 </button>
               </div>
             </form>
