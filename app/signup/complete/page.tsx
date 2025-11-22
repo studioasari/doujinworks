@@ -222,7 +222,7 @@ export default function SignupCompletePage() {
     )
   }
 
-  // ステップインジケーター
+  // ステップインジケーター（noteスタイル・レスポンシブ対応）
   const StepIndicator = () => {
     const steps = userType === 'business' 
       ? [
@@ -244,68 +244,170 @@ export default function SignupCompletePage() {
       userType === 'business' ? 3 : 2
 
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        gap: '24px',
-        marginBottom: '48px',
-        padding: '0 20px'
-      }}>
-        {steps.map((stepItem, index) => (
-          <div key={index} style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: '24px',
-            flex: 1,
-            maxWidth: '200px'
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '8px',
-              flex: 1
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                backgroundColor: index <= currentStepIndex ? '#1A1A1A' : '#E5E7EB',
-                color: index <= currentStepIndex ? '#FFFFFF' : '#9CA3AF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                fontWeight: '600',
-                transition: 'all 0.2s'
-              }}>
-                {stepItem.number}
+      <>
+        {/* デスクトップ版 */}
+        <div className="desktop-steps">
+          {steps.map((stepItem, index) => (
+            <div key={index} className="step-item">
+              <div className="step-content">
+                <div className={`step-circle ${index <= currentStepIndex ? 'active' : ''}`}>
+                  {stepItem.number}
+                </div>
+                <span className={`step-label ${index <= currentStepIndex ? 'active' : ''}`}>
+                  {stepItem.label}
+                </span>
               </div>
-              <span style={{ 
-                fontSize: '13px',
-                color: index <= currentStepIndex ? '#1A1A1A' : '#9CA3AF',
-                fontWeight: index === currentStepIndex ? '600' : '400',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}>
-                {stepItem.label}
-              </span>
+              {index < steps.length - 1 && <div className="step-line" />}
             </div>
-            {index < steps.length - 1 && (
-              <div style={{
-                flex: 1,
-                height: '2px',
-                backgroundColor: index < currentStepIndex ? '#1A1A1A' : '#E5E7EB',
-                transition: 'all 0.2s',
-                marginTop: '-24px'
-              }} />
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+
+        {/* モバイル版 */}
+        <div className="mobile-steps">
+          {steps.map((stepItem, index) => (
+            <div key={index} className="mobile-step-item">
+              <div className="mobile-step-content">
+                <div className={`mobile-step-circle ${index <= currentStepIndex ? 'active' : ''}`}>
+                  {stepItem.number}
+                </div>
+                <span className={`mobile-step-label ${index <= currentStepIndex ? 'active' : ''}`}>
+                  {stepItem.label}
+                </span>
+              </div>
+              {index < steps.length - 1 && <div className="mobile-step-line" />}
+            </div>
+          ))}
+        </div>
+
+        <style jsx>{`
+          .desktop-steps {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 48px;
+          }
+
+          .step-item {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+          }
+
+          .step-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #E5E7EB;
+            color: #9CA3AF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+          }
+
+          .step-circle.active {
+            background-color: #1A1A1A;
+            color: #FFFFFF;
+          }
+
+          .step-label {
+            font-size: 12px;
+            color: #9CA3AF;
+            font-weight: 400;
+            white-space: nowrap;
+          }
+
+          .step-label.active {
+            color: #1A1A1A;
+          }
+
+          .step-line {
+            width: 40px;
+            height: 1px;
+            background-color: #E5E7EB;
+          }
+
+          .mobile-steps {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+          }
+
+          .mobile-step-item {
+            display: flex;
+            align-items: center;
+          }
+
+          .mobile-step-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 0 8px;
+          }
+
+          .mobile-step-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #F3F4F6;
+            color: #D1D5DB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+          }
+
+          .mobile-step-circle.active {
+            background-color: #1A1A1A;
+            color: #FFFFFF;
+          }
+
+          .mobile-step-label {
+            font-size: 10px;
+            color: #D1D5DB;
+            font-weight: 400;
+            text-align: center;
+            max-width: 60px;
+            line-height: 1.2;
+          }
+
+          .mobile-step-label.active {
+            color: #1A1A1A;
+          }
+
+          .mobile-step-line {
+            width: 20px;
+            height: 1px;
+            background-color: #E5E7EB;
+            margin-top: -18px;
+          }
+
+          @media (min-width: 640px) {
+            .mobile-steps {
+              display: none;
+            }
+            .desktop-steps {
+              display: flex;
+            }
+          }
+        `}</style>
+      </>
     )
   }
+
+  // 残りのコードは前回と同じなので省略...
+  // Step 1〜4は前回のコードをそのまま使用してください
 
   // Step 1: 利用方法選択
   if (step === 'userType') {
@@ -697,7 +799,7 @@ export default function SignupCompletePage() {
     )
   }
 
-  // Step 3: ビジネス情報入力
+// Step 3: ビジネス情報入力
   if (step === 'businessInfo') {
     return (
       <div style={{ 
