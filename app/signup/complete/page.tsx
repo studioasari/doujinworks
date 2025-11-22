@@ -32,6 +32,11 @@ export default function SignupCompletePage() {
   const [address1, setAddress1] = useState('')
   const [address2, setAddress2] = useState('')
   
+  // バリデーションエラー
+  const [fullNameKanaError, setFullNameKanaError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
+  const [postalCodeError, setPostalCodeError] = useState('')
+  
   const [usernameCheck, setUsernameCheck] = useState<{
     checking: boolean
     available: boolean | null
@@ -112,6 +117,49 @@ export default function SignupCompletePage() {
     return () => clearTimeout(timer)
   }, [username])
 
+  // バリデーション関数
+  const validateFullNameKana = (value: string) => {
+    if (!value) {
+      setFullNameKanaError('')
+      return true
+    }
+    const hiraganaRegex = /^[\u3040-\u309F\s]*$/
+    if (!hiraganaRegex.test(value)) {
+      setFullNameKanaError('ひらがなで入力してください')
+      return false
+    }
+    setFullNameKanaError('')
+    return true
+  }
+
+  const validatePhone = (value: string) => {
+    if (!value) {
+      setPhoneError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPhoneError('数字のみで入力してください')
+      return false
+    }
+    setPhoneError('')
+    return true
+  }
+
+  const validatePostalCode = (value: string) => {
+    if (!value) {
+      setPostalCodeError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPostalCodeError('数字のみで入力してください')
+      return false
+    }
+    setPostalCodeError('')
+    return true
+  }
+
   // 基本情報の入力チェック
   const isBasicInfoComplete = () => {
     return username && 
@@ -125,7 +173,16 @@ export default function SignupCompletePage() {
 
   // ビジネス情報の入力チェック
   const isBusinessInfoComplete = () => {
-    const basicComplete = fullName && fullNameKana && phone && postalCode && prefecture && address1
+    const basicComplete = fullName && 
+                         fullNameKana && 
+                         phone && 
+                         postalCode && 
+                         prefecture && 
+                         address1 &&
+                         !fullNameKanaError &&
+                         !phoneError &&
+                         !postalCodeError
+    
     if (accountType === 'corporate') {
       return basicComplete && companyName
     }
@@ -222,7 +279,7 @@ export default function SignupCompletePage() {
     )
   }
 
-  // ステップインジケーター（改善版）
+  // ステップインジケーター（修正版）
   const StepIndicator = () => {
     const steps = userType === 'business' 
       ? [
@@ -247,7 +304,7 @@ export default function SignupCompletePage() {
       <>
         <div className="step-indicator">
           {steps.map((stepItem, index) => (
-            <div key={index} className="step-wrapper">
+            <div key={index} className="step-group">
               <div className="step-item">
                 <div className={`step-number ${index <= currentStepIndex ? 'active' : ''}`}>
                   {stepItem.number}
@@ -257,7 +314,7 @@ export default function SignupCompletePage() {
                 </span>
               </div>
               {index < steps.length - 1 && (
-                <div className={`step-connector ${index < currentStepIndex ? 'active' : ''}`} />
+                <div className={`step-line ${index < currentStepIndex ? 'active' : ''}`} />
               )}
             </div>
           ))}
@@ -272,11 +329,9 @@ export default function SignupCompletePage() {
             padding: 0 20px;
           }
 
-          .step-wrapper {
+          .step-group {
             display: flex;
             align-items: center;
-            flex: 1;
-            max-width: 200px;
           }
 
           .step-item {
@@ -317,15 +372,14 @@ export default function SignupCompletePage() {
             font-weight: 500;
           }
 
-          .step-connector {
-            flex: 1;
+          .step-line {
+            width: 60px;
             height: 1px;
             background-color: #E5E7EB;
-            margin: 0 12px;
-            min-width: 20px;
+            margin: 0 16px;
           }
 
-          .step-connector.active {
+          .step-line.active {
             background-color: #1A1A1A;
           }
 
@@ -333,10 +387,6 @@ export default function SignupCompletePage() {
             .step-indicator {
               margin-bottom: 32px;
               padding: 0 10px;
-            }
-
-            .step-wrapper {
-              max-width: none;
             }
 
             .step-number {
@@ -350,9 +400,9 @@ export default function SignupCompletePage() {
               font-size: 11px;
             }
 
-            .step-connector {
-              margin: 0 6px;
-              min-width: 12px;
+            .step-line {
+              width: 30px;
+              margin: 0 8px;
             }
           }
 
@@ -361,8 +411,9 @@ export default function SignupCompletePage() {
               display: none;
             }
 
-            .step-connector {
-              margin: 0 8px;
+            .step-line {
+              width: 24px;
+              margin: 0 6px;
             }
           }
         `}</style>
@@ -370,7 +421,9 @@ export default function SignupCompletePage() {
     )
   }
 
-  // Step 1: 利用方法選択
+
+
+// Step 1: 利用方法選択
   if (step === 'userType') {
     return (
       <div style={{ 
@@ -760,7 +813,7 @@ export default function SignupCompletePage() {
     )
   }
 
-// Step 3: ビジネス情報入力
+  // Step 3: ビジネス情報入力
   if (step === 'businessInfo') {
     return (
       <div style={{ 
@@ -892,9 +945,8 @@ export default function SignupCompletePage() {
                   type="text"
                   value={fullNameKana}
                   onChange={(e) => {
-                    // ひらがなのみ許可
-                    const hiraganaOnly = e.target.value.replace(/[^\u3040-\u309F\s]/g, '')
-                    setFullNameKana(hiraganaOnly)
+                    setFullNameKana(e.target.value)
+                    validateFullNameKana(e.target.value)
                   }}
                   placeholder="やまだ たろう"
                   required
@@ -902,13 +954,22 @@ export default function SignupCompletePage() {
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
-                    border: '1px solid #D1D5DB',
+                    border: `1px solid ${fullNameKanaError ? '#EF4444' : '#D1D5DB'}`,
                     borderRadius: '8px',
                     outline: 'none'
                   }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  onFocus={(e) => {
+                    if (!fullNameKanaError) e.currentTarget.style.borderColor = '#1A1A1A'
+                  }}
+                  onBlur={(e) => {
+                    if (!fullNameKanaError) e.currentTarget.style.borderColor = '#D1D5DB'
+                  }}
                 />
+                {fullNameKanaError && (
+                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#EF4444' }}>
+                    {fullNameKanaError}
+                  </div>
+                )}
               </div>
 
               {accountType === 'corporate' && (
@@ -956,9 +1017,8 @@ export default function SignupCompletePage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => {
-                    // 数字のみ許可
-                    const numbersOnly = e.target.value.replace(/[^0-9]/g, '')
-                    setPhone(numbersOnly)
+                    setPhone(e.target.value)
+                    validatePhone(e.target.value)
                   }}
                   placeholder="09012345678"
                   required
@@ -967,13 +1027,22 @@ export default function SignupCompletePage() {
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
-                    border: '1px solid #D1D5DB',
+                    border: `1px solid ${phoneError ? '#EF4444' : '#D1D5DB'}`,
                     borderRadius: '8px',
                     outline: 'none'
                   }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  onFocus={(e) => {
+                    if (!phoneError) e.currentTarget.style.borderColor = '#1A1A1A'
+                  }}
+                  onBlur={(e) => {
+                    if (!phoneError) e.currentTarget.style.borderColor = '#D1D5DB'
+                  }}
                 />
+                {phoneError && (
+                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#EF4444' }}>
+                    {phoneError}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '24px' }}>
@@ -990,9 +1059,8 @@ export default function SignupCompletePage() {
                   type="text"
                   value={postalCode}
                   onChange={(e) => {
-                    // 数字のみ許可
-                    const numbersOnly = e.target.value.replace(/[^0-9]/g, '')
-                    setPostalCode(numbersOnly)
+                    setPostalCode(e.target.value)
+                    validatePostalCode(e.target.value)
                   }}
                   placeholder="1234567"
                   required
@@ -1001,13 +1069,22 @@ export default function SignupCompletePage() {
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
-                    border: '1px solid #D1D5DB',
+                    border: `1px solid ${postalCodeError ? '#EF4444' : '#D1D5DB'}`,
                     borderRadius: '8px',
                     outline: 'none'
                   }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  onFocus={(e) => {
+                    if (!postalCodeError) e.currentTarget.style.borderColor = '#1A1A1A'
+                  }}
+                  onBlur={(e) => {
+                    if (!postalCodeError) e.currentTarget.style.borderColor = '#D1D5DB'
+                  }}
                 />
+                {postalCodeError && (
+                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#EF4444' }}>
+                    {postalCodeError}
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '24px' }}>
