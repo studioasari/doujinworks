@@ -72,88 +72,223 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="container-narrow" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-      <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-        <h1 className="page-title" style={{ marginBottom: '40px', textAlign: 'center' }}>
-          新規登録
-        </h1>
+    <>
+      <style jsx>{`
+        .signup-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          padding: 40px 20px;
+        }
+        
+        .signup-wrapper {
+          display: flex;
+          width: 100%;
+          max-width: 1200px;
+          align-items: center;
+          gap: 60px;
+        }
+        
+        .welcome-text {
+          flex: 1;
+        }
+        
+        .form-wrapper {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        @media (max-width: 1024px) {
+          .welcome-text {
+            display: none;
+          }
+        }
+      `}</style>
 
-        <form onSubmit={handleEmailSignup} style={{ marginBottom: '24px' }}>
-          <div style={{ marginBottom: '24px' }}>
-            <label className="form-label">メールアドレス</label>
-            <input
-              type="email"
-              className="input-field"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
-              required
-            />
+      <div className="signup-container">
+        <div className="signup-wrapper">
+          {/* 左側：説明文（画面幅1024px以上で表示） */}
+          <div className="welcome-text">
+            <h1 style={{
+              fontSize: '48px',
+              fontWeight: 'bold',
+              color: '#1A1A1A',
+              marginBottom: '32px',
+              lineHeight: 1.3,
+              whiteSpace: 'nowrap'
+            }}>
+              同人ワークスへようこそ！
+            </h1>
+            <p style={{
+              fontSize: '18px',
+              color: '#6B6B6B',
+              lineHeight: 1.8,
+              marginBottom: '24px'
+            }}>
+              同人ワークスは、創作をする人、それを応援する人、ものづくりが好きなみんなのための街のような場所。
+            </p>
+            <p style={{
+              fontSize: '18px',
+              color: '#6B6B6B',
+              lineHeight: 1.8,
+              marginBottom: '24px'
+            }}>
+              好みのクリエイターやコンテンツを見つけたり、自分のつくりたいものをつくったりして楽しめます。
+            </p>
+            <p style={{
+              fontSize: '18px',
+              color: '#6B6B6B',
+              lineHeight: 1.8
+            }}>
+              いっしょに、創作の輪を広げていきましょう。
+            </p>
           </div>
 
-          {error && (
-            <div className="info-box" style={{ 
-              marginBottom: '24px', 
-              padding: '12px', 
-              backgroundColor: '#FEE', 
-              color: '#C33',
-              border: '1px solid #FCC'
+          {/* 右側：サインアップフォーム */}
+          <div className="form-wrapper">
+            <div style={{ 
+              width: '100%', 
+              maxWidth: '400px',
+              border: '1px solid #E5E5E5',
+              borderRadius: '8px',
+              padding: '40px',
+              backgroundColor: '#FFFFFF'
             }}>
-              {error}
+              <h2 className="page-title" style={{ 
+                marginBottom: '40px', 
+                textAlign: 'center',
+                fontSize: '24px'
+              }}>
+                同人ワークスに会員登録
+              </h2>
+
+              <form onSubmit={handleEmailSignup} style={{ marginBottom: '32px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <input
+                    type="email"
+                    className="input-field"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="メールアドレス"
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="info-box" style={{ 
+                    marginBottom: '16px', 
+                    padding: '12px', 
+                    backgroundColor: '#FEE', 
+                    color: '#C33',
+                    border: '1px solid #FCC',
+                    fontSize: '14px'
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                  style={{ 
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <i className="fas fa-envelope" style={{ color: '#FFFFFF' }}></i>
+                  メールで登録
+                </button>
+              </form>
+
+              {/* グレーの線 */}
+              <div style={{
+                width: '100%',
+                height: '1px',
+                backgroundColor: '#E5E5E5',
+                margin: '32px 0'
+              }}></div>
+
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '12px',
+                marginBottom: '32px'
+              }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => handleSocialSignup('google')}
+                  disabled={loading}
+                  style={{ 
+                    width: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '8px' 
+                  }}
+                >
+                  <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
+                  Googleで登録
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => handleSocialSignup('twitter')}
+                  disabled={loading}
+                  style={{ 
+                    width: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '8px' 
+                  }}
+                >
+                  <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
+                  Twitterで登録
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => handleSocialSignup('discord')}
+                  disabled={loading}
+                  style={{ 
+                    width: '100%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '8px' 
+                  }}
+                >
+                  <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
+                  Discordで登録
+                </button>
+              </div>
+
+              {/* グレーの線 */}
+              <div style={{
+                width: '100%',
+                height: '1px',
+                backgroundColor: '#E5E5E5',
+                margin: '32px 0'
+              }}></div>
+
+              <div style={{ textAlign: 'center' }}>
+                <Link href="/login" style={{ 
+                  color: '#1A1A1A', 
+                  textDecoration: 'underline',
+                  fontSize: '14px'
+                }}>
+                  ログインはこちら
+                </Link>
+              </div>
             </div>
-          )}
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={loading}
-            style={{ width: '100%' }}
-          >
-            {loading ? '送信中...' : '認証メールを送信'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <span className="text-gray">または</span>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <button
-            className="btn-secondary"
-            onClick={() => handleSocialSignup('google')}
-            disabled={loading}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-          >
-            <i className="fab fa-google"></i>
-            Googleで登録
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => handleSocialSignup('twitter')}
-            disabled={loading}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-          >
-            <i className="fab fa-twitter"></i>
-            Twitterで登録
-          </button>
-          <button
-            className="btn-secondary"
-            onClick={() => handleSocialSignup('discord')}
-            disabled={loading}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-          >
-            <i className="fab fa-discord"></i>
-            Discordで登録
-          </button>
-        </div>
-
-        <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <span className="text-gray">既にアカウントをお持ちですか？ </span>
-          <Link href="/login" style={{ color: '#1A1A1A', textDecoration: 'underline' }}>
-            ログイン
-          </Link>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

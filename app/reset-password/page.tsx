@@ -25,7 +25,7 @@ export default function ResetPasswordPage() {
 
       setSuccess(true)
     } catch (error: any) {
-      setError(error.message || 'パスワードリセットメールの送信に失敗しました')
+      setError(error.message || 'メールの送信に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -33,57 +33,59 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div style={{
+      <div style={{ 
         display: 'flex',
-        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
         padding: '40px 20px'
       }}>
-        <Link href="/" style={{ 
-          marginBottom: '40px',
-          fontSize: '20px',
-          fontWeight: '700',
-          color: '#1A1A1A',
-          letterSpacing: '-0.5px'
-        }}>
-          同人ワークス
-        </Link>
-
-        <div className="card-no-hover" style={{
-          padding: '48px',
-          width: '100%',
-          maxWidth: '420px',
+        <div style={{ 
+          width: '100%', 
+          maxWidth: '400px',
+          border: '1px solid #E5E5E5',
+          borderRadius: '8px',
+          padding: '40px',
+          backgroundColor: '#FFFFFF',
           textAlign: 'center'
         }}>
           <div style={{
-            width: '48px',
-            height: '48px',
+            width: '64px',
+            height: '64px',
             borderRadius: '50%',
             backgroundColor: '#F0FDF4',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 24px',
-            fontSize: '24px'
+            fontSize: '32px',
+            color: '#22C55E'
           }}>
             ✓
           </div>
 
-          <h1 className="card-title" style={{ marginBottom: '12px' }}>
+          <h2 className="page-title" style={{ 
+            marginBottom: '16px',
+            fontSize: '24px'
+          }}>
             メールを送信しました
-          </h1>
+          </h2>
 
-          <p className="text-small text-gray" style={{ 
+          <p style={{ 
             marginBottom: '32px',
+            fontSize: '14px',
+            color: '#6B6B6B',
             lineHeight: '1.6'
           }}>
-            <strong>{email}</strong> にパスワードリセット用のリンクを送信しました。<br />
+            <strong style={{ color: '#1A1A1A' }}>{email}</strong> にパスワード再設定用のリンクを送信しました。<br />
             メールをご確認ください。
           </p>
 
-          <Link href="/login" className="btn-primary" style={{ display: 'inline-block' }}>
+          <Link href="/login" className="btn-primary" style={{ 
+            display: 'inline-block',
+            width: '100%',
+            textAlign: 'center'
+          }}>
             ログインページに戻る
           </Link>
         </div>
@@ -92,70 +94,50 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{
+    <div style={{ 
       display: 'flex',
-      flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
       padding: '40px 20px'
     }}>
-      <Link href="/" style={{ 
-        marginBottom: '40px',
-        fontSize: '20px',
-        fontWeight: '700',
-        color: '#1A1A1A',
-        letterSpacing: '-0.5px'
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '400px',
+        border: '1px solid #E5E5E5',
+        borderRadius: '8px',
+        padding: '40px',
+        backgroundColor: '#FFFFFF'
       }}>
-        同人ワークス
-      </Link>
-
-      <div className="card-no-hover" style={{
-        padding: '48px',
-        width: '100%',
-        maxWidth: '420px'
-      }}>
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: '700', 
-          marginBottom: '8px',
-          color: '#1A1A1A',
+        <h2 className="page-title" style={{ 
+          marginBottom: '40px', 
           textAlign: 'center',
-          letterSpacing: '-0.7px'
+          fontSize: '24px'
         }}>
-          パスワードをリセット
-        </h1>
-        
-        <p className="text-small text-gray" style={{ 
-          textAlign: 'center', 
-          marginBottom: '32px'
-        }}>
-          登録されたメールアドレスを入力してください
-        </p>
+          パスワードを再設定
+        </h2>
 
         <form onSubmit={handleResetPassword}>
-          <div className="mb-24">
+          <div style={{ marginBottom: '16px' }}>
             <label className="form-label">メールアドレス</label>
             <input
               type="email"
               className="input-field"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               placeholder="example@email.com"
+              required
             />
           </div>
 
           {error && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: '#FFF5F5',
-              border: '1px solid #FECACA',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              color: '#7F1D1D',
-              fontSize: '14px',
-              lineHeight: '1.5'
+            <div className="info-box" style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: '#FEE', 
+              color: '#C33',
+              border: '1px solid #FCC',
+              fontSize: '14px'
             }}>
               {error}
             </div>
@@ -165,17 +147,31 @@ export default function ResetPasswordPage() {
             type="submit"
             className="btn-primary"
             disabled={loading}
-            style={{ width: '100%', marginBottom: '16px' }}
+            style={{ 
+              width: '100%'
+            }}
           >
-            {loading ? '送信中...' : 'リセットメールを送信'}
+            {loading ? '送信中...' : '再設定メールを送信'}
           </button>
-
-          <div style={{ textAlign: 'center' }}>
-            <Link href="/login" className="text-small text-gray" style={{ textDecoration: 'none' }}>
-              ← ログインページに戻る
-            </Link>
-          </div>
         </form>
+
+        {/* グレーの線 */}
+        <div style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: '#E5E5E5',
+          margin: '32px 0'
+        }}></div>
+
+        <div style={{ textAlign: 'center' }}>
+          <Link href="/login" style={{ 
+            color: '#1A1A1A', 
+            textDecoration: 'underline',
+            fontSize: '14px'
+          }}>
+            ログインページに戻る
+          </Link>
+        </div>
       </div>
     </div>
   )

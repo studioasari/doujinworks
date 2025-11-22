@@ -103,81 +103,41 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
+    <div style={{ 
       display: 'flex',
-      flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#FFFFFF',
       padding: '40px 20px'
     }}>
-      <Link href="/" style={{ 
-        marginBottom: '40px',
-        fontSize: '20px',
-        fontWeight: '700',
-        color: '#1A1A1A',
-        letterSpacing: '-0.5px'
-      }}>
-        同人ワークス
-      </Link>
-
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        padding: '48px',
-        borderRadius: '12px',
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '400px',
         border: '1px solid #E5E5E5',
-        width: '100%',
-        maxWidth: '420px'
+        borderRadius: '8px',
+        padding: '40px',
+        backgroundColor: '#FFFFFF'
       }}>
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: '700', 
-          marginBottom: '8px',
-          color: '#1A1A1A',
+        <h2 className="page-title" style={{ 
+          marginBottom: '40px', 
           textAlign: 'center',
-          letterSpacing: '-0.7px'
+          fontSize: '24px'
         }}>
-          ログイン
-        </h1>
-        
-        <p style={{ 
-          textAlign: 'center', 
-          color: '#6B6B6B', 
-          marginBottom: '32px',
-          fontSize: '14px'
-        }}>
-          アカウントにアクセス
-        </p>
+          同人ワークスにログイン
+        </h2>
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px',
-              color: '#1A1A1A',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
+            <label className="form-label">
               メールアドレスまたはユーザーID
             </label>
             <input
               type="text"
+              className="input-field"
               value={emailOrUsername}
               onChange={(e) => setEmailOrUsername(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                color: '#1A1A1A',
-                fontSize: '15px',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
               placeholder="example@email.com または username"
+              required
             />
           </div>
 
@@ -188,58 +148,36 @@ export default function LoginPage() {
               alignItems: 'center', 
               marginBottom: '8px' 
             }}>
-              <label style={{ 
-                color: '#1A1A1A',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>
                 パスワード
               </label>
-              <Link 
-                href="/reset-password" 
-                style={{ 
-                  color: '#6B6B6B', 
-                  fontSize: '13px',
-                  textDecoration: 'none',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#1A1A1A'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#6B6B6B'}
-              >
+              <Link href="/reset-password" style={{ 
+                color: '#6B6B6B', 
+                fontSize: '13px',
+                textDecoration: 'none'
+              }}>
                 パスワードを忘れた
               </Link>
             </div>
             <input
               type="password"
+              className="input-field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="6文字以上"
               required
               minLength={6}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                color: '#1A1A1A',
-                fontSize: '15px',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-              placeholder="6文字以上"
             />
           </div>
 
           {error && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: '#FFF5F5',
-              border: '1px solid #FECACA',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              color: '#7F1D1D',
-              fontSize: '14px',
-              lineHeight: '1.5'
+            <div className="info-box" style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: '#FEE', 
+              color: '#C33',
+              border: '1px solid #FCC',
+              fontSize: '14px'
             }}>
               {error}
             </div>
@@ -247,113 +185,94 @@ export default function LoginPage() {
 
           <button
             type="submit"
+            className="btn-primary"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: loading ? '#E5E5E5' : '#1A1A1A',
-              color: loading ? '#6B6B6B' : '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '15px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginBottom: '16px',
-              transition: 'background-color 0.2s'
+            style={{ 
+              width: '100%'
             }}
           >
             {loading ? '処理中...' : 'ログイン'}
           </button>
-
-          <div style={{ textAlign: 'center', margin: '24px 0' }}>
-            <span style={{ color: '#6B6B6B', fontSize: '14px' }}>または</span>
-          </div>
-
-          {/* ソーシャルログインボタン */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('google')}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#FFFFFF',
-                color: '#1A1A1A',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fab fa-google"></i>
-              Googleでログイン
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('twitter')}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#FFFFFF',
-                color: '#1A1A1A',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fab fa-twitter"></i>
-              Twitterでログイン
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('discord')}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#FFFFFF',
-                color: '#1A1A1A',
-                border: '1px solid #E5E5E5',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <i className="fab fa-discord"></i>
-              Discordでログイン
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ color: '#6B6B6B', fontSize: '14px' }}>アカウントをお持ちでない方は </span>
-            <Link href="/signup" style={{ color: '#1A1A1A', fontSize: '14px', textDecoration: 'underline' }}>
-              新規登録
-            </Link>
-          </div>
         </form>
+
+        {/* グレーの線 */}
+        <div style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: '#E5E5E5',
+          margin: '32px 0'
+        }}></div>
+
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '12px',
+          marginBottom: '32px'
+        }}>
+          <button
+            className="btn-secondary"
+            onClick={() => handleSocialLogin('google')}
+            disabled={loading}
+            style={{ 
+              width: '100%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px' 
+            }}
+          >
+            <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
+            Googleでログイン
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={() => handleSocialLogin('twitter')}
+            disabled={loading}
+            style={{ 
+              width: '100%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px' 
+            }}
+          >
+            <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
+            Twitterでログイン
+          </button>
+          <button
+            className="btn-secondary"
+            onClick={() => handleSocialLogin('discord')}
+            disabled={loading}
+            style={{ 
+              width: '100%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px' 
+            }}
+          >
+            <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
+            Discordでログイン
+          </button>
+        </div>
+
+        {/* グレーの線 */}
+        <div style={{
+          width: '100%',
+          height: '1px',
+          backgroundColor: '#E5E5E5',
+          margin: '32px 0'
+        }}></div>
+
+        <div style={{ textAlign: 'center' }}>
+          <Link href="/signup" style={{ 
+            color: '#1A1A1A', 
+            textDecoration: 'underline',
+            fontSize: '14px'
+          }}>
+            新規登録はこちら
+          </Link>
+        </div>
       </div>
     </div>
   )

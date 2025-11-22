@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('')
@@ -22,7 +21,7 @@ export default function UpdatePasswordPage() {
     if (session) {
       setIsValidSession(true)
     } else {
-      setError('セッションが無効です。パスワードリセットメールから再度アクセスしてください。')
+      setError('セッションが無効です。パスワード再設定メールから再度アクセスしてください。')
     }
   }
 
@@ -64,84 +63,64 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div style={{
+    <div style={{ 
       display: 'flex',
-      flexDirection: 'column',
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
       padding: '40px 20px'
     }}>
-      <Link href="/" style={{ 
-        marginBottom: '40px',
-        fontSize: '20px',
-        fontWeight: '700',
-        color: '#1A1A1A',
-        letterSpacing: '-0.5px'
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '400px',
+        border: '1px solid #E5E5E5',
+        borderRadius: '8px',
+        padding: '40px',
+        backgroundColor: '#FFFFFF'
       }}>
-        同人ワークス
-      </Link>
-
-      <div className="card-no-hover" style={{
-        padding: '48px',
-        width: '100%',
-        maxWidth: '420px'
-      }}>
-        <h1 style={{ 
-          fontSize: '28px', 
-          fontWeight: '700', 
-          marginBottom: '8px',
-          color: '#1A1A1A',
+        <h2 className="page-title" style={{ 
+          marginBottom: '40px', 
           textAlign: 'center',
-          letterSpacing: '-0.7px'
+          fontSize: '24px'
         }}>
-          新しいパスワード
-        </h1>
-        
-        <p className="text-small text-gray" style={{ 
-          textAlign: 'center', 
-          marginBottom: '32px'
-        }}>
-          新しいパスワードを入力してください
-        </p>
+          新しいパスワードを設定
+        </h2>
 
         <form onSubmit={handleUpdatePassword}>
-          <div className="mb-24">
+          <div style={{ marginBottom: '16px' }}>
             <label className="form-label">新しいパスワード</label>
             <input
               type="password"
               className="input-field"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="6文字以上"
               required
               minLength={6}
-              placeholder="6文字以上"
             />
           </div>
 
-          <div className="mb-24">
+          <div style={{ marginBottom: '16px' }}>
             <label className="form-label">パスワード（確認）</label>
             <input
               type="password"
               className="input-field"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
+              placeholder="もう一度入力"
               required
               minLength={6}
-              placeholder="もう一度入力"
             />
           </div>
 
           {error && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: '#FFF5F5',
-              border: '1px solid #FECACA',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              color: '#7F1D1D',
-              fontSize: '14px',
-              lineHeight: '1.5'
+            <div className="info-box" style={{ 
+              marginBottom: '16px', 
+              padding: '12px', 
+              backgroundColor: '#FEE', 
+              color: '#C33',
+              border: '1px solid #FCC',
+              fontSize: '14px'
             }}>
               {error}
             </div>
@@ -151,7 +130,9 @@ export default function UpdatePasswordPage() {
             type="submit"
             className="btn-primary"
             disabled={loading || !isValidSession}
-            style={{ width: '100%' }}
+            style={{ 
+              width: '100%'
+            }}
           >
             {loading ? '更新中...' : 'パスワードを更新'}
           </button>
