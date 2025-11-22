@@ -112,6 +112,26 @@ export default function SignupCompletePage() {
     return () => clearTimeout(timer)
   }, [username])
 
+  // 基本情報の入力チェック
+  const isBasicInfoComplete = () => {
+    return username && 
+           displayName && 
+           password && 
+           passwordConfirm && 
+           password.length >= 6 && 
+           passwordConfirm.length >= 6 &&
+           usernameCheck.available === true
+  }
+
+  // ビジネス情報の入力チェック
+  const isBusinessInfoComplete = () => {
+    const basicComplete = fullName && fullNameKana && phone && postalCode && prefecture && address1
+    if (accountType === 'corporate') {
+      return basicComplete && companyName
+    }
+    return basicComplete
+  }
+
   const handleSubmit = async () => {
     setLoading(true)
     setError('')
@@ -205,8 +225,17 @@ export default function SignupCompletePage() {
   // ステップインジケーター
   const StepIndicator = () => {
     const steps = userType === 'business' 
-      ? ['利用方法', '基本情報', 'ビジネス情報', '確認']
-      : ['利用方法', '基本情報', '確認']
+      ? [
+          { number: 1, label: '利用方法' },
+          { number: 2, label: '基本情報' },
+          { number: 3, label: 'ビジネス情報' },
+          { number: 4, label: '確認' }
+        ]
+      : [
+          { number: 1, label: '利用方法' },
+          { number: 2, label: '基本情報' },
+          { number: 3, label: '確認' }
+        ]
     
     const currentStepIndex = 
       step === 'userType' ? 0 :
@@ -219,24 +248,57 @@ export default function SignupCompletePage() {
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center',
-        gap: '8px',
-        marginBottom: '48px'
+        gap: '24px',
+        marginBottom: '48px',
+        padding: '0 20px'
       }}>
-        {steps.map((label, index) => (
-          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {steps.map((stepItem, index) => (
+          <div key={index} style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: '24px',
+            flex: 1,
+            maxWidth: '200px'
+          }}>
             <div style={{
-              fontSize: '13px',
-              color: index <= currentStepIndex ? '#1A1A1A' : '#9CA3AF',
-              fontWeight: index === currentStepIndex ? '600' : '400'
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1
             }}>
-              {label}
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: index <= currentStepIndex ? '#1A1A1A' : '#E5E7EB',
+                color: index <= currentStepIndex ? '#FFFFFF' : '#9CA3AF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}>
+                {stepItem.number}
+              </div>
+              <span style={{ 
+                fontSize: '13px',
+                color: index <= currentStepIndex ? '#1A1A1A' : '#9CA3AF',
+                fontWeight: index === currentStepIndex ? '600' : '400',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
+              }}>
+                {stepItem.label}
+              </span>
             </div>
             {index < steps.length - 1 && (
               <div style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: '#D1D5DB'
+                flex: 1,
+                height: '2px',
+                backgroundColor: index < currentStepIndex ? '#1A1A1A' : '#E5E7EB',
+                transition: 'all 0.2s',
+                marginTop: '-24px'
               }} />
             )}
           </div>
@@ -470,7 +532,8 @@ export default function SignupCompletePage() {
                     minLength={6}
                     style={{
                       width: '100%',
-                      padding: '10px 40px 10px 12px',
+                      padding: '10px 12px',
+                      paddingRight: '40px',
                       fontSize: '14px',
                       border: '1px solid #D1D5DB',
                       borderRadius: '8px',
@@ -491,9 +554,15 @@ export default function SignupCompletePage() {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      color: '#6B7280',
-                      fontSize: '16px'
+                      color: '#D1D5DB',
+                      fontSize: '14px',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#9CA3AF'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#D1D5DB'}
                   >
                     <i className={showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                   </button>
@@ -520,7 +589,8 @@ export default function SignupCompletePage() {
                     minLength={6}
                     style={{
                       width: '100%',
-                      padding: '10px 40px 10px 12px',
+                      padding: '10px 12px',
+                      paddingRight: '40px',
                       fontSize: '14px',
                       border: '1px solid #D1D5DB',
                       borderRadius: '8px',
@@ -541,9 +611,15 @@ export default function SignupCompletePage() {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      color: '#6B7280',
-                      fontSize: '16px'
+                      color: '#D1D5DB',
+                      fontSize: '14px',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#9CA3AF'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#D1D5DB'}
                   >
                     <i className={showPasswordConfirm ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                   </button>
@@ -587,31 +663,31 @@ export default function SignupCompletePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !usernameCheck.available}
+                  disabled={!isBasicInfoComplete()}
                   style={{
                     flex: 1,
                     padding: '12px',
                     fontSize: '14px',
                     fontWeight: '600',
                     color: '#FFFFFF',
-                    backgroundColor: (loading || !usernameCheck.available) ? '#9CA3AF' : '#1A1A1A',
+                    backgroundColor: isBasicInfoComplete() ? '#1A1A1A' : '#9CA3AF',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: (loading || !usernameCheck.available) ? 'not-allowed' : 'pointer',
+                    cursor: isBasicInfoComplete() ? 'pointer' : 'not-allowed',
                     transition: 'all 0.15s'
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading && usernameCheck.available) {
+                    if (isBasicInfoComplete()) {
                       e.currentTarget.style.backgroundColor = '#374151'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!loading && usernameCheck.available) {
+                    if (isBasicInfoComplete()) {
                       e.currentTarget.style.backgroundColor = '#1A1A1A'
                     }
                   }}
                 >
-                  {loading ? '処理中...' : '次へ'}
+                  次へ
                 </button>
               </div>
             </form>
@@ -1029,27 +1105,31 @@ export default function SignupCompletePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={!isBusinessInfoComplete()}
                   style={{
                     flex: 1,
                     padding: '12px',
                     fontSize: '14px',
                     fontWeight: '600',
                     color: '#FFFFFF',
-                    backgroundColor: loading ? '#9CA3AF' : '#1A1A1A',
+                    backgroundColor: isBusinessInfoComplete() ? '#1A1A1A' : '#9CA3AF',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: isBusinessInfoComplete() ? 'pointer' : 'not-allowed',
                     transition: 'all 0.15s'
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#374151'
+                    if (isBusinessInfoComplete()) {
+                      e.currentTarget.style.backgroundColor = '#374151'
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!loading) e.currentTarget.style.backgroundColor = '#1A1A1A'
+                    if (isBusinessInfoComplete()) {
+                      e.currentTarget.style.backgroundColor = '#1A1A1A'
+                    }
                   }}
                 >
-                  {loading ? '処理中...' : '次へ'}
+                  次へ
                 </button>
               </div>
             </form>
