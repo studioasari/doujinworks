@@ -280,20 +280,11 @@ export default function SignupCompletePage() {
     )
   }
 
-  // ステップインジケーター（修正版）
+  // ステップインジケーター
   const StepIndicator = () => {
     const steps = userType === 'business' 
-      ? [
-          { number: 1, label: '利用方法' },
-          { number: 2, label: '基本情報' },
-          { number: 3, label: 'ビジネス情報' },
-          { number: 4, label: '確認' }
-        ]
-      : [
-          { number: 1, label: '利用方法' },
-          { number: 2, label: '基本情報' },
-          { number: 3, label: '確認' }
-        ]
+      ? ['利用方法', '基本情報', 'ビジネス情報', '確認']
+      : ['利用方法', '基本情報', '確認']
     
     const currentStepIndex = 
       step === 'userType' ? 0 :
@@ -301,17 +292,21 @@ export default function SignupCompletePage() {
       step === 'businessInfo' ? 2 :
       userType === 'business' ? 3 : 2
 
+    const currentStep = currentStepIndex + 1
+    const totalSteps = steps.length
+
     return (
       <>
-        <div className="step-indicator">
-          {steps.map((stepItem, index) => (
+        {/* PC版：ドット型インジケーター */}
+        <div className="desktop-indicator">
+          {steps.map((label, index) => (
             <div key={index} className="step-group">
               <div className="step-item">
                 <div className={`step-number ${index <= currentStepIndex ? 'active' : ''}`}>
-                  {stepItem.number}
+                  {index < currentStepIndex ? '✓' : index + 1}
                 </div>
                 <span className={`step-text ${index <= currentStepIndex ? 'active' : ''}`}>
-                  {stepItem.label}
+                  {label}
                 </span>
               </div>
               {index < steps.length - 1 && (
@@ -321,13 +316,31 @@ export default function SignupCompletePage() {
           ))}
         </div>
 
+        {/* スマホ版：プログレスバー */}
+        <div className="mobile-indicator">
+          <div className="progress-info">
+            <span className="current-step-label">{steps[currentStepIndex]}</span>
+            <span className="step-counter">{currentStep}/{totalSteps}</span>
+          </div>
+          <div className="progress-bar-container">
+            <div 
+              className="progress-bar-fill" 
+              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+            />
+          </div>
+        </div>
+
         <style jsx>{`
-          .step-indicator {
+          .desktop-indicator {
             display: flex;
             justify-content: center;
             align-items: center;
             margin-bottom: 48px;
             padding: 0 20px;
+          }
+
+          .mobile-indicator {
+            display: none;
           }
 
           .step-group {
@@ -343,16 +356,16 @@ export default function SignupCompletePage() {
           }
 
           .step-number {
-            min-width: 24px;
-            width: 24px;
-            height: 24px;
+            min-width: 28px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background-color: #E5E7EB;
             color: #9CA3AF;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
             flex-shrink: 0;
           }
@@ -374,8 +387,8 @@ export default function SignupCompletePage() {
           }
 
           .step-line {
-            width: 60px;
-            height: 1px;
+            width: 50px;
+            height: 2px;
             background-color: #E5E7EB;
             margin: 0 16px;
           }
@@ -385,44 +398,54 @@ export default function SignupCompletePage() {
           }
 
           @media (max-width: 640px) {
-            .step-indicator {
-              margin-bottom: 32px;
-              padding: 0 10px;
-            }
-
-            .step-number {
-              min-width: 20px;
-              width: 20px;
-              height: 20px;
-              font-size: 11px;
-            }
-
-            .step-text {
-              font-size: 11px;
-            }
-
-            .step-line {
-              width: 30px;
-              margin: 0 8px;
-            }
-          }
-
-          @media (max-width: 400px) {
-            .step-text {
+            .desktop-indicator {
               display: none;
             }
 
-            .step-line {
-              width: 24px;
-              margin: 0 6px;
+            .mobile-indicator {
+              display: block;
+              margin-bottom: 32px;
+              padding: 0 20px;
+            }
+
+            .progress-info {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 8px;
+            }
+
+            .current-step-label {
+              font-size: 14px;
+              font-weight: 600;
+              color: #1A1A1A;
+            }
+
+            .step-counter {
+              font-size: 12px;
+              font-weight: 500;
+              color: #6B7280;
+            }
+
+            .progress-bar-container {
+              width: 100%;
+              height: 4px;
+              background-color: #E5E7EB;
+              border-radius: 2px;
+              overflow: hidden;
+            }
+
+            .progress-bar-fill {
+              height: 100%;
+              background-color: #1A1A1A;
+              border-radius: 2px;
+              transition: width 0.3s ease;
             }
           }
         `}</style>
       </>
     )
   }
-
-
 
 // Step 1: 利用方法選択
   if (step === 'userType') {
