@@ -168,6 +168,7 @@ export default function SignupCompletePage() {
            passwordConfirm && 
            password.length >= 6 && 
            passwordConfirm.length >= 6 &&
+           password === passwordConfirm &&
            usernameCheck.available === true
   }
 
@@ -708,13 +709,21 @@ export default function SignupCompletePage() {
                       padding: '10px 12px',
                       paddingRight: '40px',
                       fontSize: '14px',
-                      border: '1px solid #D1D5DB',
+                      border: `1px solid ${passwordConfirm && password !== passwordConfirm ? '#EF4444' : '#D1D5DB'}`,
                       borderRadius: '8px',
                       outline: 'none',
                       transition: 'border-color 0.15s'
                     }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                    onFocus={(e) => {
+                      if (!(passwordConfirm && password !== passwordConfirm)) {
+                        e.currentTarget.style.borderColor = '#1A1A1A'
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (!(passwordConfirm && password !== passwordConfirm)) {
+                        e.currentTarget.style.borderColor = '#D1D5DB'
+                      }
+                    }}
                   />
                   <button
                     type="button"
@@ -740,6 +749,11 @@ export default function SignupCompletePage() {
                     <i className={showPasswordConfirm ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
                   </button>
                 </div>
+                {passwordConfirm && password !== passwordConfirm && (
+                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#EF4444' }}>
+                    パスワードが一致しません
+                  </div>
+                )}
               </div>
 
               {error && (
