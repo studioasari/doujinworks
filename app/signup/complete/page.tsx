@@ -606,7 +606,7 @@ export default function SignupCompletePage() {
                   onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
                 />
                 <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>
-                  4〜20文字 / 英字で始まる / 英数字とアンダースコア(_)のみ
+                  4〜20文字 / 英数字とアンダースコア(_)のみ
                 </div>
                 {username && (
                   <div style={{ marginTop: '8px', fontSize: '13px' }}>
@@ -705,7 +705,7 @@ export default function SignupCompletePage() {
                     onMouseEnter={(e) => e.currentTarget.style.color = '#9CA3AF'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#D1D5DB'}
                   >
-                    <i className={showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                    <i className={showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
                   </button>
                 </div>
               </div>
@@ -770,7 +770,7 @@ export default function SignupCompletePage() {
                     onMouseEnter={(e) => e.currentTarget.style.color = '#9CA3AF'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#D1D5DB'}
                   >
-                    <i className={showPasswordConfirm ? 'fas fa-eye-slash' : 'fas fa-eye'}></i>
+                    <i className={showPasswordConfirm ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
                   </button>
                 </div>
                 {passwordConfirm && password !== passwordConfirm && (

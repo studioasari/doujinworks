@@ -37,18 +37,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 3. 形式チェック（英字始まり、英数字+アンダースコアのみ）
-    const usernameRegex = /^[a-z][a-z0-9_]*$/
+    // 3. 形式チェック（英数字+アンダースコアのみ）
+    const usernameRegex = /^[a-z0-9_]+$/
     if (!usernameRegex.test(cleanUsername)) {
-      if (!/^[a-z]/.test(cleanUsername)) {
-        return NextResponse.json({ 
-          available: false, 
-          error: '英字で始めてください' 
-        })
-      }
       return NextResponse.json({ 
         available: false, 
-        error: '使用できない文字が含まれています' 
+        error: '英数字とアンダースコア(_)のみ使用できます' 
       })
     }
 
