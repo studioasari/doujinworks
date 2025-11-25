@@ -23,31 +23,20 @@ export default function LoginPage() {
 
       // @ が含まれていない場合、ユーザーIDとして扱う
       if (!emailOrUsername.includes('@')) {
-        // ユーザーIDからメールアドレスを取得
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .eq('username', emailOrUsername.toLowerCase())
-          .single()
+        // APIを呼び出してユーザーIDからメールアドレスを取得
+        const res = await fetch('/api/get-email-by-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: emailOrUsername }),
+        })
 
-        if (profileError || !profile) {
-          throw new Error('ユーザーIDが見つかりません')
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.error || 'ユーザーIDが見つかりません')
         }
 
-        // auth.users からメールアドレスを取得
-        const { data: authData, error: authError } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .eq('id', profile.user_id)
-          .single()
-
-        if (authError) {
-          throw new Error('ユーザー情報の取得に失敗しました')
-        }
-
-        // user_idからauth.usersのemailを取得する方法が必要
-        // 一旦、エラーメッセージで対応
-        throw new Error('ユーザーIDでのログインは現在準備中です。メールアドレスをご使用ください。')
+        loginEmail = data.email
       }
 
       // メールアドレスでログイン
@@ -56,7 +45,13 @@ export default function LoginPage() {
         password,
       })
 
-      if (signInError) throw signInError
+      if (signInError) {
+        // エラーメッセージを日本語化
+        if (signInError.message.includes('Invalid login credentials')) {
+          throw new Error('メールアドレスまたはパスワードが正しくありません')
+        }
+        throw signInError
+      }
 
       // ログイン成功後、プロフィールがあるかチェック
       const { data: { user } } = await supabase.auth.getUser()
@@ -110,6 +105,7 @@ export default function LoginPage() {
       minHeight: '100vh',
       padding: '40px 20px'
     }}>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <div style={{ 
         width: '100%', 
         maxWidth: '400px',
@@ -191,7 +187,7 @@ export default function LoginPage() {
               width: '100%'
             }}
           >
-            {loading ? '処理中...' : 'ログイン'}
+            {loading ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
 
