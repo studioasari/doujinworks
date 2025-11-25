@@ -20,8 +20,10 @@ type BusinessProfile = {
   id: string
   profile_id: string
   account_type: string | null
-  full_name: string | null
-  full_name_kana: string | null
+  last_name: string | null
+  first_name: string | null
+  last_name_kana: string | null
+  first_name_kana: string | null
   company_name: string | null
   phone: string | null
   postal_code: string | null
@@ -39,10 +41,12 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null)
   
-  // ビジネス情報
+  // ビジネス情報（姓名分離）
   const [businessAccountType, setBusinessAccountType] = useState<'individual' | 'corporate'>('individual')
-  const [fullName, setFullName] = useState('')
-  const [fullNameKana, setFullNameKana] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastNameKana, setLastNameKana] = useState('')
+  const [firstNameKana, setFirstNameKana] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [phone, setPhone] = useState('')
   const [postalCode, setPostalCode] = useState('')
@@ -53,7 +57,8 @@ export default function SettingsPage() {
   const [gender, setGender] = useState('')
   
   // バリデーションエラー
-  const [fullNameKanaError, setFullNameKanaError] = useState('')
+  const [lastNameKanaError, setLastNameKanaError] = useState('')
+  const [firstNameKanaError, setFirstNameKanaError] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [postalCodeError, setPostalCodeError] = useState('')
   
@@ -96,8 +101,10 @@ export default function SettingsPage() {
       if (businessData) {
         setBusinessProfile(businessData)
         setBusinessAccountType(businessData.account_type || 'individual')
-        setFullName(businessData.full_name || '')
-        setFullNameKana(businessData.full_name_kana || '')
+        setLastName(businessData.last_name || '')
+        setFirstName(businessData.first_name || '')
+        setLastNameKana(businessData.last_name_kana || '')
+        setFirstNameKana(businessData.first_name_kana || '')
         setCompanyName(businessData.company_name || '')
         setPhone(businessData.phone || '')
         setPostalCode(businessData.postal_code || '')
@@ -113,17 +120,17 @@ export default function SettingsPage() {
   }
 
   // バリデーション関数
-  const validateFullNameKana = (value: string) => {
+  const validateKana = (value: string, setError: (error: string) => void) => {
     if (!value) {
-      setFullNameKanaError('')
+      setError('')
       return true
     }
     const hiraganaRegex = /^[\u3040-\u309F\s]*$/
     if (!hiraganaRegex.test(value)) {
-      setFullNameKanaError('ひらがなで入力してください')
+      setError('ひらがなで入力してください')
       return false
     }
-    setFullNameKanaError('')
+    setError('')
     return true
   }
 
@@ -157,13 +164,16 @@ export default function SettingsPage() {
 
   // 入力チェック
   const isBusinessInfoComplete = () => {
-    const basicComplete = fullName && 
-                         fullNameKana && 
+    const basicComplete = lastName && 
+                         firstName &&
+                         lastNameKana && 
+                         firstNameKana &&
                          phone && 
                          postalCode && 
                          prefecture && 
                          address1 &&
-                         !fullNameKanaError &&
+                         !lastNameKanaError &&
+                         !firstNameKanaError &&
                          !phoneError &&
                          !postalCodeError
     
@@ -184,8 +194,10 @@ export default function SettingsPage() {
     const businessData: any = {
       profile_id: profile.id,
       account_type: businessAccountType,
-      full_name: fullName,
-      full_name_kana: fullNameKana,
+      last_name: lastName,
+      first_name: firstName,
+      last_name_kana: lastNameKana,
+      first_name_kana: firstNameKana,
       phone,
       postal_code: postalCode,
       prefecture,
@@ -327,45 +339,84 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* 氏名 */}
+              {/* 氏名（横並び） */}
               <div className="mb-24">
                 <label className="form-label">
                   氏名 <span className="form-required">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="山田 太郎"
-                  required
-                  className="input-field"
-                />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="姓"
+                    required
+                    className="input-field"
+                    style={{ flex: 1 }}
+                  />
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="名"
+                    required
+                    className="input-field"
+                    style={{ flex: 1 }}
+                  />
+                </div>
               </div>
 
-              {/* 氏名(かな) */}
+              {/* 氏名かな（横並び） */}
               <div className="mb-24">
                 <label className="form-label">
                   氏名(かな) <span className="form-required">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={fullNameKana}
-                  onChange={(e) => {
-                    setFullNameKana(e.target.value)
-                    validateFullNameKana(e.target.value)
-                  }}
-                  placeholder="やまだ たろう"
-                  required
-                  className="input-field"
-                  style={{
-                    borderColor: fullNameKanaError ? '#EF4444' : undefined
-                  }}
-                />
-                {fullNameKanaError && (
-                  <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
-                    {fullNameKanaError}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={lastNameKana}
+                      onChange={(e) => {
+                        setLastNameKana(e.target.value)
+                        validateKana(e.target.value, setLastNameKanaError)
+                      }}
+                      placeholder="せい"
+                      required
+                      className="input-field"
+                      style={{
+                        width: '100%',
+                        borderColor: lastNameKanaError ? '#EF4444' : undefined
+                      }}
+                    />
+                    {lastNameKanaError && (
+                      <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
+                        {lastNameKanaError}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={firstNameKana}
+                      onChange={(e) => {
+                        setFirstNameKana(e.target.value)
+                        validateKana(e.target.value, setFirstNameKanaError)
+                      }}
+                      placeholder="めい"
+                      required
+                      className="input-field"
+                      style={{
+                        width: '100%',
+                        borderColor: firstNameKanaError ? '#EF4444' : undefined
+                      }}
+                    />
+                    {firstNameKanaError && (
+                      <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
+                        {firstNameKanaError}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* 会社名（法人のみ） */}
@@ -572,7 +623,7 @@ export default function SettingsPage() {
                 <Link
                   href="/dashboard"
                   className="btn-secondary"
-                  style={{ flex: 1, textAlign: 'center', lineHeight: '48px' }}
+                  style={{ flex: 1, textAlign: 'center' }}
                 >
                   キャンセル
                 </Link>
