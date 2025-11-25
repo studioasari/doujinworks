@@ -19,10 +19,12 @@ export default function SignupCompletePage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   
-  // ビジネス利用の追加情報
+  // ビジネス利用の追加情報（姓名分離）
   const [accountType, setAccountType] = useState<'individual' | 'corporate'>('individual')
-  const [fullName, setFullName] = useState('')
-  const [fullNameKana, setFullNameKana] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastNameKana, setLastNameKana] = useState('')
+  const [firstNameKana, setFirstNameKana] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [gender, setGender] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -33,7 +35,8 @@ export default function SignupCompletePage() {
   const [address2, setAddress2] = useState('')
   
   // バリデーションエラー
-  const [fullNameKanaError, setFullNameKanaError] = useState('')
+  const [lastNameKanaError, setLastNameKanaError] = useState('')
+  const [firstNameKanaError, setFirstNameKanaError] = useState('')
   const [phoneError, setPhoneError] = useState('')
   const [postalCodeError, setPostalCodeError] = useState('')
   
@@ -118,17 +121,17 @@ export default function SignupCompletePage() {
   }, [username])
 
   // バリデーション関数
-  const validateFullNameKana = (value: string) => {
+  const validateKana = (value: string, setError: (error: string) => void) => {
     if (!value) {
-      setFullNameKanaError('')
+      setError('')
       return true
     }
     const hiraganaRegex = /^[\u3040-\u309F\s]*$/
     if (!hiraganaRegex.test(value)) {
-      setFullNameKanaError('ひらがなで入力してください')
+      setError('ひらがなで入力してください')
       return false
     }
-    setFullNameKanaError('')
+    setError('')
     return true
   }
 
@@ -174,13 +177,16 @@ export default function SignupCompletePage() {
 
   // ビジネス情報の入力チェック
   const isBusinessInfoComplete = () => {
-    const basicComplete = fullName && 
-                         fullNameKana && 
+    const basicComplete = lastName && 
+                         firstName &&
+                         lastNameKana && 
+                         firstNameKana &&
                          phone && 
                          postalCode && 
                          prefecture && 
                          address1 &&
-                         !fullNameKanaError &&
+                         !lastNameKanaError &&
+                         !firstNameKanaError &&
                          !phoneError &&
                          !postalCodeError
     
@@ -234,8 +240,10 @@ export default function SignupCompletePage() {
         const businessData: any = {
           profile_id: profile.id,
           account_type: accountType,
-          full_name: fullName,
-          full_name_kana: fullNameKana,
+          last_name: lastName,
+          first_name: firstName,
+          last_name_kana: lastNameKana,
+          first_name_kana: firstNameKana,
           phone,
           postal_code: postalCode,
           prefecture,
@@ -282,7 +290,6 @@ export default function SignupCompletePage() {
 
   // ステップインジケーター
   const StepIndicator = () => {
-    // 利用方法選択画面 or 一般利用の場合は非表示
     if (step === 'userType' || userType === 'casual') {
       return null
     }
@@ -298,7 +305,6 @@ export default function SignupCompletePage() {
 
     return (
       <>
-        {/* PC版：ドット型インジケーター */}
         <div className="desktop-indicator">
           {steps.map((label, index) => (
             <div key={index} className="step-group">
@@ -317,7 +323,6 @@ export default function SignupCompletePage() {
           ))}
         </div>
 
-        {/* スマホ版：プログレスバー */}
         <div className="mobile-indicator">
           <div className="progress-info">
             <span className="current-step-label">{steps[currentStepIndex]}</span>
@@ -448,7 +453,7 @@ export default function SignupCompletePage() {
     )
   }
 
-// Step 1: 利用方法選択
+  // Step 1: 利用方法選択
   if (step === 'userType') {
     return (
       <div style={{ 
@@ -940,6 +945,7 @@ export default function SignupCompletePage() {
                 </div>
               </div>
 
+              {/* 姓名（横並び） */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block',
@@ -950,25 +956,45 @@ export default function SignupCompletePage() {
                 }}>
                   氏名 <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="山田 太郎"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
-                />
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="姓"
+                    required
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  />
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="名"
+                    required
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D1D5DB'}
+                  />
+                </div>
               </div>
 
+              {/* 姓名かな（横並び） */}
               <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block',
@@ -979,35 +1005,70 @@ export default function SignupCompletePage() {
                 }}>
                   氏名(かな) <span style={{ color: '#EF4444' }}>*</span>
                 </label>
-                <input
-                  type="text"
-                  value={fullNameKana}
-                  onChange={(e) => {
-                    setFullNameKana(e.target.value)
-                    validateFullNameKana(e.target.value)
-                  }}
-                  placeholder="やまだ たろう"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: `1px solid ${fullNameKanaError ? '#EF4444' : '#D1D5DB'}`,
-                    borderRadius: '8px',
-                    outline: 'none'
-                  }}
-                  onFocus={(e) => {
-                    if (!fullNameKanaError) e.currentTarget.style.borderColor = '#1A1A1A'
-                  }}
-                  onBlur={(e) => {
-                    if (!fullNameKanaError) e.currentTarget.style.borderColor = '#D1D5DB'
-                  }}
-                />
-                {fullNameKanaError && (
-                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#EF4444' }}>
-                    {fullNameKanaError}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={lastNameKana}
+                      onChange={(e) => {
+                        setLastNameKana(e.target.value)
+                        validateKana(e.target.value, setLastNameKanaError)
+                      }}
+                      placeholder="せい"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        fontSize: '14px',
+                        border: `1px solid ${lastNameKanaError ? '#EF4444' : '#D1D5DB'}`,
+                        borderRadius: '8px',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        if (!lastNameKanaError) e.currentTarget.style.borderColor = '#1A1A1A'
+                      }}
+                      onBlur={(e) => {
+                        if (!lastNameKanaError) e.currentTarget.style.borderColor = '#D1D5DB'
+                      }}
+                    />
+                    {lastNameKanaError && (
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                        {lastNameKanaError}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={firstNameKana}
+                      onChange={(e) => {
+                        setFirstNameKana(e.target.value)
+                        validateKana(e.target.value, setFirstNameKanaError)
+                      }}
+                      placeholder="めい"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        fontSize: '14px',
+                        border: `1px solid ${firstNameKanaError ? '#EF4444' : '#D1D5DB'}`,
+                        borderRadius: '8px',
+                        outline: 'none'
+                      }}
+                      onFocus={(e) => {
+                        if (!firstNameKanaError) e.currentTarget.style.borderColor = '#1A1A1A'
+                      }}
+                      onBlur={(e) => {
+                        if (!firstNameKanaError) e.currentTarget.style.borderColor = '#D1D5DB'
+                      }}
+                    />
+                    {firstNameKanaError && (
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                        {firstNameKanaError}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {accountType === 'corporate' && (
@@ -1331,7 +1392,7 @@ export default function SignupCompletePage() {
     )
   }
 
-  // Step 4: 確認ページ (一般利用は Step 3)
+  // Step 4: 確認ページ
   if (step === 'confirm') {
     return (
       <div style={{ 
@@ -1409,11 +1470,11 @@ export default function SignupCompletePage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
                     <span style={{ fontSize: '14px', color: '#6B7280' }}>氏名</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{fullName}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{lastName} {firstName}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
                     <span style={{ fontSize: '14px', color: '#6B7280' }}>氏名(かな)</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{fullNameKana}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{lastNameKana} {firstNameKana}</span>
                   </div>
                   {accountType === 'corporate' && companyName && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F3F4F6' }}>
