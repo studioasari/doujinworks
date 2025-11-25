@@ -28,8 +28,10 @@ type BusinessProfile = {
   id: string
   profile_id: string
   account_type: string | null
-  full_name: string | null
-  full_name_kana: string | null
+  last_name: string | null
+  first_name: string | null
+  last_name_kana: string | null
+  first_name_kana: string | null
   company_name: string | null
   phone: string | null
   postal_code: string | null
@@ -250,6 +252,12 @@ export default function DashboardPage() {
     return category ? categories[category] || category : '未設定'
   }
 
+  // 氏名を結合して表示
+  function getFullName(lastName: string | null, firstName: string | null) {
+    if (!lastName && !firstName) return '未設定'
+    return `${lastName || ''} ${firstName || ''}`.trim()
+  }
+
   if (loading) {
     return (
       <>
@@ -446,7 +454,7 @@ export default function DashboardPage() {
                   <div>
                     <div className="text-tiny text-gray mb-4">氏名</div>
                     <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                      {businessProfile.full_name || '未設定'}
+                      {getFullName(businessProfile.last_name, businessProfile.first_name)}
                     </div>
                   </div>
 

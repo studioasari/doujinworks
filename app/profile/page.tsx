@@ -672,7 +672,7 @@ export default function ProfilePage() {
                 <Link
                   href="/dashboard"
                   className="btn-secondary"
-                  style={{ flex: 1, textAlign: 'center', lineHeight: '48px' }}
+                  style={{ flex: 1, textAlign: 'center' }}
                 >
                   キャンセル
                 </Link>
