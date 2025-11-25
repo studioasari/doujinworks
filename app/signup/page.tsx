@@ -225,8 +225,14 @@ export default function SignupPage() {
                     gap: '8px'
                   }}
                 >
-                  <i className="fas fa-envelope" style={{ color: '#FFFFFF' }}></i>
-                  メールで登録
+                  {loading ? (
+                    '送信中...'
+                  ) : (
+                    <>
+                      <i className="fas fa-envelope" style={{ color: '#FFFFFF' }}></i>
+                      メールで登録
+                    </>
+                  )}
                 </button>
               </form>
 
