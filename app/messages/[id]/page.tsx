@@ -5,6 +5,7 @@ import { supabase } from '../../../utils/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../components/Header'
+import Footer from '../../components/Footer'
 
 type Message = {
   id: string
@@ -15,6 +16,7 @@ type Message = {
 
 type OtherUser = {
   id: string
+  username: string | null
   display_name: string | null
   avatar_url: string | null
 }
@@ -92,13 +94,12 @@ export default function ChatRoomPage() {
     const { data: participations, error: participationsError } = await supabase
       .from('chat_room_participants')
       .select('chat_room_id, last_read_at')
-      .eq('user_id', profileId)
+      .eq('profile_id', profileId)
 
     if (participationsError || !participations || participations.length === 0) {
       return
     }
 
-    const roomIds = participations.map(p => p.chat_room_id)
     const roomsData: ChatRoom[] = []
 
     for (const participation of participations) {
@@ -106,9 +107,9 @@ export default function ChatRoomPage() {
 
       const { data: otherParticipants } = await supabase
         .from('chat_room_participants')
-        .select('user_id, profiles!chat_room_participants_user_id_fkey(id, display_name, avatar_url)')
+        .select('profile_id, profiles!chat_room_participants_profile_id_fkey(id, display_name, avatar_url)')
         .eq('chat_room_id', roomIdTemp)
-        .neq('user_id', profileId)
+        .neq('profile_id', profileId)
 
       const { data: lastMessage } = await supabase
         .from('messages')
@@ -158,15 +159,16 @@ export default function ChatRoomPage() {
   async function fetchOtherUser(profileId: string) {
     const { data } = await supabase
       .from('chat_room_participants')
-      .select('user_id, profiles!chat_room_participants_user_id_fkey(id, display_name, avatar_url)')
+      .select('profile_id, profiles!chat_room_participants_profile_id_fkey(id, username, display_name, avatar_url)')
       .eq('chat_room_id', roomId)
-      .neq('user_id', profileId)
+      .neq('profile_id', profileId)
       .single()
 
     if (data) {
       const profile = data.profiles as any
       setOtherUser({
         id: profile.id,
+        username: profile.username,
         display_name: profile.display_name,
         avatar_url: profile.avatar_url
       })
@@ -191,45 +193,42 @@ export default function ChatRoomPage() {
     setLoading(false)
   }
 
-async function sendMessage() {
-  if (!newMessage.trim() || sending) return
+  async function sendMessage() {
+    if (!newMessage.trim() || sending) return
 
-  setSending(true)
+    setSending(true)
 
-  const messageData = {
-    chat_room_id: roomId,
-    sender_id: currentProfileId,
-    content: newMessage.trim()
-  }
-
-  const { data, error } = await supabase
-    .from('messages')
-    .insert(messageData)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('メッセージ送信エラー:', error)
-    alert('メッセージの送信に失敗しました')
-  } else {
-    // 自分のメッセージを即座に追加（リアルタイム購読を待たない）
-    setMessages(prev => [...prev, data as Message])
-    setNewMessage('')
-    
-    // chat_roomsのupdated_atを更新
-    await supabase
-      .from('chat_rooms')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', roomId)
-    
-    // メッセージ一覧を更新
-    if (currentProfileId) {
-      fetchChatRooms(currentProfileId)
+    const messageData = {
+      chat_room_id: roomId,
+      sender_id: currentProfileId,
+      content: newMessage.trim()
     }
-  }
 
-  setSending(false)
-}
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(messageData)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('メッセージ送信エラー:', error)
+      alert('メッセージの送信に失敗しました')
+    } else {
+      setMessages(prev => [...prev, data as Message])
+      setNewMessage('')
+      
+      await supabase
+        .from('chat_rooms')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', roomId)
+      
+      if (currentProfileId) {
+        fetchChatRooms(currentProfileId)
+      }
+    }
+
+    setSending(false)
+  }
 
   function subscribeToMessages() {
     const channel = supabase
@@ -245,10 +244,8 @@ async function sendMessage() {
         (payload) => {
           const newMsg = payload.new as Message
           
-          // 自分のメッセージは既に追加済みなので、他人のメッセージのみ追加
           if (newMsg.sender_id !== currentProfileId) {
             setMessages(prev => {
-              // 重複チェック
               if (prev.find(m => m.id === newMsg.id)) {
                 return prev
               }
@@ -257,7 +254,6 @@ async function sendMessage() {
             updateLastReadAt()
           }
           
-          // メッセージ一覧を更新
           if (currentProfileId) {
             fetchChatRooms(currentProfileId)
           }
@@ -275,7 +271,7 @@ async function sendMessage() {
       .from('chat_room_participants')
       .update({ last_read_at: new Date().toISOString() })
       .eq('chat_room_id', roomId)
-      .eq('user_id', currentProfileId)
+      .eq('profile_id', currentProfileId)
   }
 
   function scrollToBottom() {
@@ -323,17 +319,20 @@ async function sendMessage() {
       <Header />
       <div style={{
         display: 'flex',
-        height: 'calc(100vh - 80px)',
+        height: 'calc(100vh - 64px)',
         backgroundColor: '#FFFFFF'
       }}>
-        {/* 左サイドバー: メッセージ一覧 */}
-        <aside style={{
-          width: '320px',
-          borderRight: '1px solid #E5E5E5',
-          backgroundColor: '#FFFFFF',
-          overflowY: 'auto',
-          flexShrink: 0
-        }}>
+        {/* 左サイドバー: メッセージ一覧（PC only） */}
+        <aside 
+          className="hidden-mobile"
+          style={{
+            width: '320px',
+            borderRight: '1px solid #E5E5E5',
+            backgroundColor: '#FFFFFF',
+            overflowY: 'auto',
+            flexShrink: 0
+          }}
+        >
           <div style={{
             padding: '20px',
             borderBottom: '1px solid #E5E5E5',
@@ -386,7 +385,6 @@ async function sendMessage() {
                     fontSize: '20px',
                     color: '#6B6B6B',
                     position: 'relative'
-                    // overflow: hidden を削除
                   }}>
                     {room.other_user.avatar_url ? (
                       <img
@@ -396,7 +394,7 @@ async function sendMessage() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          borderRadius: '50%'  // ← これを追加
+                          borderRadius: '50%'
                         }}
                       />
                     ) : (
@@ -466,6 +464,17 @@ async function sendMessage() {
           }}>
             {otherUser && (
               <div className="flex gap-16" style={{ alignItems: 'center' }}>
+                <Link
+                  href="/messages"
+                  className="hidden-mobile"
+                  style={{
+                    fontSize: '20px',
+                    color: '#6B6B6B',
+                    textDecoration: 'none'
+                  }}
+                >
+                  ←
+                </Link>
                 <div style={{
                   width: '48px',
                   height: '48px',
@@ -494,7 +503,7 @@ async function sendMessage() {
                   )}
                 </div>
                 <Link
-                  href={`/creators/${otherUser.id}`}
+                  href={otherUser.username ? `/creators/${otherUser.username}` : '#'}
                   className="card-title"
                   style={{
                     textDecoration: 'none',
@@ -515,13 +524,13 @@ async function sendMessage() {
             backgroundColor: '#F9F9F9'
           }}>
             {loading && (
-              <div className="loading-state" style={{ padding: '40px 20px' }}>
+              <div className="loading-state">
                 読み込み中...
               </div>
             )}
 
             {!loading && messages.length === 0 && (
-              <div className="empty-state" style={{ padding: '40px 20px' }}>
+              <div className="empty-state">
                 メッセージがありません
               </div>
             )}
@@ -617,6 +626,7 @@ async function sendMessage() {
           </div>
         </div>
       </div>
+      <Footer />
     </>
   )
 }

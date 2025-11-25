@@ -1,22 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../utils/supabase'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import DashboardSidebar from '../../components/DashboardSidebar'
 
 export default function UploadPortfolioPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [tags, setTags] = useState('')
-  const [externalUrl, setExternalUrl] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>('')
   const [isPublic, setIsPublic] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [dragging, setDragging] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -46,24 +49,50 @@ export default function UploadPortfolioPage() {
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB制限
-        alert('ファイルサイズは5MB以下にしてください')
-        return
-      }
-      
-      if (!file.type.startsWith('image/')) {
-        alert('画像ファイルを選択してください')
-        return
-      }
+      processImageFile(file)
+    }
+  }
 
-      setImageFile(file)
-      
-      // プレビュー生成
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  function processImageFile(file: File) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ファイルサイズは5MB以下にしてください')
+      return
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      alert('画像ファイルを選択してください')
+      return
+    }
+
+    setImageFile(file)
+    
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleImageClick() {
+    imageInputRef.current?.click()
+  }
+
+  function handleImageDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      processImageFile(file)
+    }
+  }
+
+  function handleImageRemove(e: React.MouseEvent) {
+    e.stopPropagation()
+    setImageFile(null)
+    setImagePreview('')
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
     }
   }
 
@@ -75,6 +104,11 @@ export default function UploadPortfolioPage() {
       return
     }
 
+    if (!category) {
+      alert('カテゴリを選択してください')
+      return
+    }
+
     if (!imageFile) {
       alert('画像を選択してください')
       return
@@ -83,7 +117,6 @@ export default function UploadPortfolioPage() {
     setUploading(true)
 
     try {
-      // 認証ユーザーのUIDを取得
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         alert('ログインが必要です')
@@ -91,7 +124,7 @@ export default function UploadPortfolioPage() {
         return
       }
 
-      // 1. 画像をStorageにアップロード（auth.uid()を使用）
+      // 1. 画像をStorageにアップロード
       const fileExt = imageFile.name.split('.').pop()
       const fileName = `${user.id}/${Date.now()}.${fileExt}`
       
@@ -117,11 +150,11 @@ export default function UploadPortfolioPage() {
           creator_id: currentUserId,
           title: title.trim(),
           description: description.trim() || null,
-          category: category || null,
+          category: category,
           tags: tagsArray,
           image_url: publicUrl,
           thumbnail_url: publicUrl,
-          external_url: externalUrl.trim() || null,
+          external_url: null,
           is_public: isPublic
         })
 
@@ -130,7 +163,7 @@ export default function UploadPortfolioPage() {
       }
 
       alert('作品をアップロードしました！')
-      router.push('/portfolio')
+      router.push('/portfolio/manage')
     } catch (error) {
       console.error('アップロードエラー:', error)
       alert('アップロードに失敗しました')
@@ -142,173 +175,209 @@ export default function UploadPortfolioPage() {
   return (
     <>
       <Header />
-      <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow">
-          <h1 className="page-title mb-40">
-            作品をアップロード
-          </h1>
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FFFFFF',
+        display: 'flex',
+        alignItems: 'flex-start'
+      }}>
+        <DashboardSidebar />
 
-          <form onSubmit={handleSubmit} className="card-no-hover p-40">
-            {/* 画像アップロード */}
-            <div className="mb-32">
-              <label className="form-label">
-                作品画像 <span className="form-required">*</span>
-              </label>
-              
-              {imagePreview ? (
-                <div className="mb-16">
-                  <img
-                    src={imagePreview}
-                    alt="プレビュー"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '400px',
-                      borderRadius: '8px',
-                      objectFit: 'contain'
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{
-                  border: '2px dashed #E5E5E5',
-                  borderRadius: '8px',
-                  padding: '60px 20px',
-                  textAlign: 'center',
-                  marginBottom: '16px',
-                  backgroundColor: '#F9F9F9'
-                }}>
-                  <p className="text-gray mb-8">
-                    画像をドラッグ&ドロップ または クリックして選択
-                  </p>
-                  <p className="text-tiny" style={{ color: '#9E9E9E' }}>
-                    JPG, PNG, GIF (最大5MB)
-                  </p>
-                </div>
-              )}
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="input-field"
-                style={{ fontSize: '14px' }}
-              />
-            </div>
-
-            {/* タイトル */}
-            <div className="mb-24">
-              <label className="form-label">
-                タイトル <span className="form-required">*</span>
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="作品のタイトル"
-                required
-                className="input-field"
-              />
-            </div>
-
-            {/* カテゴリ */}
-            <div className="mb-24">
-              <label className="form-label">カテゴリ</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="select-field"
-              >
-                <option value="">選択してください</option>
-                <option value="illustration">イラスト</option>
-                <option value="manga">漫画</option>
-                <option value="novel">小説</option>
-                <option value="music">音楽</option>
-                <option value="voice">ボイス</option>
-                <option value="video">動画</option>
-                <option value="game">ゲーム</option>
-                <option value="3d">3Dモデル</option>
-                <option value="other">その他</option>
-              </select>
-            </div>
-
-            {/* 説明 */}
-            <div className="mb-24">
-              <label className="form-label">説明</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="作品の説明を入力してください"
-                rows={6}
-                className="textarea-field"
-              />
-            </div>
-
-            {/* タグ */}
-            <div className="mb-24">
-              <label className="form-label">タグ</label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
-                className="input-field"
-              />
-            </div>
-
-            {/* 外部URL */}
-            <div className="mb-24">
-              <label className="form-label">外部リンク</label>
-              <input
-                type="url"
-                value={externalUrl}
-                onChange={(e) => setExternalUrl(e.target.value)}
-                placeholder="https://pixiv.net/..."
-                className="input-field"
-              />
-            </div>
-
-            {/* 公開設定 */}
-            <div className="mb-32">
-              <label className="flex gap-8" style={{
+        <main style={{ 
+          flex: 1, 
+          padding: '40px',
+          width: '100%',
+          maxWidth: '100%',
+          minHeight: '100vh'
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            {/* 戻るボタン */}
+            <Link
+              href="/portfolio/manage"
+              className="text-small text-gray"
+              style={{
+                display: 'inline-flex',
                 alignItems: 'center',
-                cursor: 'pointer'
-              }}>
+                gap: '8px',
+                textDecoration: 'none',
+                marginBottom: '24px'
+              }}
+            >
+              ← 作品管理に戻る
+            </Link>
+
+            <h1 className="page-title mb-40">
+              作品をアップロード
+            </h1>
+
+            <form onSubmit={handleSubmit} className="card-no-hover p-40">
+              {/* 画像アップロード */}
+              <div className="mb-32">
+                <label className="form-label">
+                  作品画像 <span className="form-required">*</span>
+                </label>
+                
+                <div
+                  className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
+                  style={{ width: '100%', height: '300px' }}
+                  onClick={handleImageClick}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setDragging(true)
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={handleImageDrop}
+                >
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="プレビュー" />
+                  ) : (
+                    <div className="upload-area-content" style={{ height: '100%' }}>
+                      <div className="upload-area-icon">
+                        <i className="fas fa-image"></i>
+                      </div>
+                      <div className="upload-area-text">
+                        クリックまたはドラッグして<br />作品画像をアップロード
+                      </div>
+                      <div className="upload-area-hint">
+                        JPG, PNG, GIF / 最大5MB
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <input
-                  type="checkbox"
-                  checked={isPublic}
-                  onChange={(e) => setIsPublic(e.target.checked)}
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  style={{ display: 'none' }}
+                />
+
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    className="btn-danger btn-small"
+                    style={{ marginTop: '12px' }}
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+
+              {/* タイトル */}
+              <div className="mb-24">
+                <label className="form-label">
+                  タイトル <span className="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="作品のタイトル"
+                  required
+                  className="input-field"
+                />
+              </div>
+
+              {/* カテゴリ */}
+              <div className="mb-24">
+                <label className="form-label">
+                  カテゴリ <span className="form-required">*</span>
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  required
+                  className="select-field"
+                >
+                  <option value="">選択してください</option>
+                  <option value="illustration">イラスト</option>
+                  <option value="manga">漫画</option>
+                  <option value="novel">小説</option>
+                  <option value="music">音楽</option>
+                  <option value="voice">ボイス</option>
+                  <option value="video">動画</option>
+                  <option value="game">ゲーム</option>
+                  <option value="3d">3Dモデル</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+
+              {/* 説明 */}
+              <div className="mb-24">
+                <label className="form-label">説明</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="作品の説明を入力してください"
+                  rows={6}
+                  className="textarea-field"
+                />
+              </div>
+
+              {/* タグ */}
+              <div className="mb-24">
+                <label className="form-label">タグ</label>
+                <input
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
+                  className="input-field"
+                />
+              </div>
+
+              {/* 公開設定 */}
+              <div className="mb-32">
+                <label 
+                  className="flex gap-12" 
                   style={{
-                    width: '18px',
-                    height: '18px',
+                    alignItems: 'center',
                     cursor: 'pointer'
                   }}
-                />
-                <span className="text-small">
-                  この作品を公開する
-                </span>
-              </label>
-            </div>
+                >
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      cursor: 'pointer',
+                      accentColor: '#1A1A1A'
+                    }}
+                  />
+                  <span className="text-small">
+                    この作品を公開する
+                  </span>
+                </label>
+                <div className="text-tiny text-gray" style={{ marginTop: '8px', marginLeft: '32px' }}>
+                  チェックを外すと、アップロードできますが作品は非公開になります
+                </div>
+              </div>
 
-            {/* ボタン */}
-            <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => router.back()}
-                disabled={uploading}
-                className="btn-secondary"
-              >
-                キャンセル
-              </button>
-              <button
-                type="submit"
-                disabled={uploading}
-                className="btn-primary"
-              >
-                {uploading ? 'アップロード中...' : 'アップロード'}
-              </button>
-            </div>
-          </form>
-        </div>
+              {/* ボタン */}
+              <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => router.push('/portfolio/manage')}
+                  disabled={uploading}
+                  className="btn-secondary"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="btn-primary"
+                >
+                  {uploading ? 'アップロード中...' : 'アップロード'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </main>
       </div>
       <Footer />
     </>

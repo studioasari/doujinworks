@@ -93,6 +93,8 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
+  display: inline-block;
+  text-align: center;
 }
 
 .btn-primary:hover {
@@ -114,6 +116,8 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.2s;
+  display: inline-block;
+  text-align: center;
 }
 
 .btn-secondary:hover {
@@ -261,6 +265,30 @@ button {
   background-color: #FAFAFA;
 }
 
+/* クリエイター詳細ページ用レイアウト */
+.creator-detail-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ダッシュボード用グリッド */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+/* ポートフォリオ詳細ページ用レイアウト */
+.portfolio-detail-layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
 /* ========================================
    グリッド系
    ======================================== */
@@ -297,6 +325,7 @@ button {
 .badge-category {
   border: 1px solid #E5E5E5;
   color: #6B6B6B;
+  background-color: #FFFFFF;
 }
 
 .badge-status {
@@ -545,6 +574,7 @@ button {
 .filter-button.active {
   background-color: #1A1A1A;
   color: #FFFFFF;
+  border-color: #1A1A1A;
 }
 
 .filter-button:hover:not(.active) {
@@ -651,9 +681,135 @@ button {
    レスポンシブ対応
    ======================================== */
 
-/* モバイル対応 */
+/* タブレット対応 (1024px以下) */
+@media (max-width: 1024px) {
+  .container {
+    padding: 32px 16px;
+  }
+
+  .creator-detail-layout {
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .portfolio-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+}
+
+/* モバイル対応 (768px以下) */
 @media (max-width: 768px) {
   .hidden-mobile {
     display: none !important;
+  }
+
+  .container {
+    padding: 24px 16px;
+  }
+
+  .container-narrow {
+    padding: 24px 16px;
+  }
+
+  /* 2カラム → 1カラム */
+  .creator-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  /* ダッシュボードグリッド */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* ポートフォリオ詳細レイアウト */
+  .portfolio-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  /* グリッドの調整 */
+  .grid-portfolio {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .grid-requests {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .grid-creators {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* 見出しサイズ調整 */
+  .page-title {
+    font-size: 24px;
+  }
+
+  .section-title {
+    font-size: 20px;
+  }
+
+  .card-title {
+    font-size: 18px;
+  }
+
+  /* ボタン調整 */
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  /* フィルターボックス */
+  .filter-box {
+    padding: 16px;
+  }
+
+  .filter-buttons {
+    gap: 8px;
+  }
+
+  .filter-button {
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+}
+
+/* 小型モバイル対応 (480px以下) */
+@media (max-width: 480px) {
+  .grid-portfolio {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-creators {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+
+  .section-title {
+    font-size: 18px;
   }
 }

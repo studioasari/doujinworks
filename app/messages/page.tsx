@@ -5,6 +5,8 @@ import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../components/Header'
+import Footer from '../components/Footer'
+import DashboardSidebar from '../components/DashboardSidebar'
 
 type ChatRoom = {
   id: string
@@ -56,7 +58,7 @@ export default function MessagesPage() {
     const { data: participations, error: participationsError } = await supabase
       .from('chat_room_participants')
       .select('chat_room_id, last_read_at')
-      .eq('user_id', profileId)
+      .eq('profile_id', profileId)
 
     if (participationsError) {
       console.error('チャットルーム取得エラー:', participationsError)
@@ -76,9 +78,9 @@ export default function MessagesPage() {
 
       const { data: otherParticipants } = await supabase
         .from('chat_room_participants')
-        .select('user_id, profiles!chat_room_participants_user_id_fkey(id, display_name, avatar_url)')
+        .select('profile_id, profiles!chat_room_participants_profile_id_fkey(id, display_name, avatar_url)')
         .eq('chat_room_id', roomId)
-        .neq('user_id', profileId)
+        .neq('profile_id', profileId)
 
       const { data: lastMessage } = await supabase
         .from('messages')
@@ -147,79 +149,68 @@ export default function MessagesPage() {
       <Header />
       <div style={{
         display: 'flex',
-        height: 'calc(100vh - 80px)',
-        backgroundColor: '#FFFFFF'
+        alignItems: 'flex-start'
       }}>
-        {/* 左サイドバー: メッセージ一覧 */}
-        <aside style={{
-          width: '320px',
-          borderRight: '1px solid #E5E5E5',
-          backgroundColor: '#FFFFFF',
-          overflowY: 'auto',
-          flexShrink: 0
+        <DashboardSidebar />
+
+        <main style={{
+          flex: 1,
+          minHeight: '100vh',
+          backgroundColor: '#FFFFFF'
         }}>
           <div style={{
-            padding: '20px',
-            borderBottom: '1px solid #E5E5E5',
-            position: 'sticky',
-            top: 0,
-            backgroundColor: '#FFFFFF',
-            zIndex: 10
+            padding: '40px',
+            borderBottom: '1px solid #E5E5E5'
           }}>
-            <h2 className="card-title">メッセージ</h2>
+            <h1 className="page-title">メッセージ</h1>
           </div>
 
           {loading && (
-            <div className="loading-state" style={{ padding: '40px 20px' }}>
+            <div className="loading-state">
               読み込み中...
             </div>
           )}
 
           {!loading && chatRooms.length === 0 && (
-            <div className="empty-state" style={{ padding: '40px 20px' }}>
-              <p className="text-gray text-small mb-16">メッセージがありません</p>
-              <Link href="/creators" className="btn-primary btn-small" style={{ width: '100%', textAlign: 'center' }}>
+            <div className="empty-state">
+              <p className="text-gray mb-24">メッセージがありません</p>
+              <Link href="/creators" className="btn-primary">
                 クリエイターを探す
               </Link>
             </div>
           )}
 
           {!loading && chatRooms.length > 0 && (
-            <div>
+            <div style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              padding: '20px'
+            }}>
               {chatRooms.map((room) => (
                 <Link
                   key={room.id}
                   href={`/messages/${room.id}`}
-                  className="flex gap-12"
+                  className="card"
                   style={{
+                    display: 'flex',
                     alignItems: 'center',
-                    padding: '16px 20px',
-                    textDecoration: 'none',
-                    borderBottom: '1px solid #E5E5E5',
-                    backgroundColor: '#FFFFFF',
-                    transition: 'background-color 0.2s',
-                    display: 'flex'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F5F5F5'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#FFFFFF'
+                    gap: '16px',
+                    padding: '20px',
+                    marginBottom: '16px'
                   }}
                 >
                   <div style={{
-                    width: '48px',
-                    height: '48px',
+                    width: '56px',
+                    height: '56px',
                     borderRadius: '50%',
                     backgroundColor: '#E5E5E5',
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '20px',
+                    fontSize: '24px',
                     color: '#6B6B6B',
                     position: 'relative'
-                    // overflow: hidden を削除
                   }}>
                     {room.other_user.avatar_url ? (
                       <img
@@ -229,7 +220,7 @@ export default function MessagesPage() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          borderRadius: '50%'  // ← これを追加
+                          borderRadius: '50%'
                         }}
                       />
                     ) : (
@@ -243,15 +234,14 @@ export default function MessagesPage() {
                         backgroundColor: '#FF4444',
                         color: '#FFFFFF',
                         borderRadius: '12px',
-                        minWidth: '20px',
-                        height: '20px',
+                        minWidth: '24px',
+                        height: '24px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '11px',
+                        fontSize: '12px',
                         fontWeight: 'bold',
-                        padding: '0 6px',
-                        zIndex: 10
+                        padding: '0 8px'
                       }}>
                         {room.unread_count}
                       </div>
@@ -259,8 +249,8 @@ export default function MessagesPage() {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="flex-between mb-4" style={{ alignItems: 'baseline' }}>
-                      <h3 className="text-small" style={{
+                    <div className="flex-between mb-8" style={{ alignItems: 'baseline' }}>
+                      <h3 className="card-subtitle" style={{
                         fontWeight: room.unread_count > 0 ? 'bold' : '600',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -268,7 +258,7 @@ export default function MessagesPage() {
                       }}>
                         {room.other_user.display_name || '名前未設定'}
                       </h3>
-                      <span className="text-tiny text-gray" style={{ flexShrink: 0, marginLeft: '8px' }}>
+                      <span className="text-tiny text-gray" style={{ flexShrink: 0, marginLeft: '12px' }}>
                         {room.last_message && formatMessageTime(room.last_message.created_at)}
                       </span>
                     </div>
@@ -282,28 +272,9 @@ export default function MessagesPage() {
               ))}
             </div>
           )}
-        </aside>
-
-        {/* 右側: 空の状態（PC版のみ表示） */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#FAFAFA'
-        }}
-        className="hidden-mobile"
-        >
-          <div style={{ textAlign: 'center', color: '#6B6B6B' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>
-              <i className="fas fa-comments"></i>
-            </div>
-            <p className="text-gray" style={{ fontSize: '18px' }}>
-              チャットを選択してください
-            </p>
-          </div>
-        </div>
+        </main>
       </div>
+      <Footer />
     </>
   )
 }

@@ -9,23 +9,26 @@ import Footer from '../components/Footer'
 
 type Creator = {
   id: string
+  username: string | null
   display_name: string | null
   bio: string | null
   avatar_url: string | null
-  role: string
+  account_type: string | null
+  can_receive_work: boolean
+  can_request_work: boolean
 }
 
 export default function CreatorsPage() {
   const [creators, setCreators] = useState<Creator[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'creator' | 'both'>('all')
+  const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'casual' | 'business'>('all')
   const router = useRouter()
 
   useEffect(() => {
     checkAuth()
     fetchCreators()
-  }, [roleFilter])
+  }, [accountTypeFilter])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -40,13 +43,12 @@ export default function CreatorsPage() {
     let query = supabase
       .from('profiles')
       .select('*')
-      .eq('is_creator', true)
       .order('created_at', { ascending: false })
 
-    if (roleFilter === 'creator') {
-      query = query.eq('role', 'creator')
-    } else if (roleFilter === 'both') {
-      query = query.eq('role', 'both')
+    if (accountTypeFilter === 'casual') {
+      query = query.eq('account_type', 'casual')
+    } else if (accountTypeFilter === 'business') {
+      query = query.eq('account_type', 'business')
     }
 
     const { data, error } = await query
@@ -64,8 +66,10 @@ export default function CreatorsPage() {
     if (!searchQuery) return true
     const displayName = creator.display_name || ''
     const bio = creator.bio || ''
+    const username = creator.username || ''
     return displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           bio.toLowerCase().includes(searchQuery.toLowerCase())
+           bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           username.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
   return (
@@ -87,39 +91,39 @@ export default function CreatorsPage() {
               </label>
               <input
                 type="text"
-                placeholder="クリエイター名や自己紹介で検索..."
+                placeholder="クリエイター名やユーザーIDで検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="input-field"
               />
             </div>
 
-            {/* 役割フィルター */}
+            {/* アカウント種別フィルター */}
             <div>
               <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
-                役割で絞り込み
+                アカウント種別で絞り込み
               </label>
               <div className="filter-buttons">
                 <button
-                  onClick={() => setRoleFilter('all')}
-                  className={`filter-button ${roleFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setAccountTypeFilter('all')}
+                  className={`filter-button ${accountTypeFilter === 'all' ? 'active' : ''}`}
                   style={{ borderRadius: '4px' }}
                 >
                   すべて
                 </button>
                 <button
-                  onClick={() => setRoleFilter('creator')}
-                  className={`filter-button ${roleFilter === 'creator' ? 'active' : ''}`}
+                  onClick={() => setAccountTypeFilter('casual')}
+                  className={`filter-button ${accountTypeFilter === 'casual' ? 'active' : ''}`}
                   style={{ borderRadius: '4px' }}
                 >
-                  クリエイターのみ
+                  一般利用
                 </button>
                 <button
-                  onClick={() => setRoleFilter('both')}
-                  className={`filter-button ${roleFilter === 'both' ? 'active' : ''}`}
+                  onClick={() => setAccountTypeFilter('business')}
+                  className={`filter-button ${accountTypeFilter === 'business' ? 'active' : ''}`}
                   style={{ borderRadius: '4px' }}
                 >
-                  両方
+                  ビジネス利用
                 </button>
               </div>
             </div>
@@ -153,7 +157,7 @@ export default function CreatorsPage() {
               {filteredCreators.map((creator) => (
                 <Link
                   key={creator.id}
-                  href={`/creators/${creator.id}`}
+                  href={`/creators/${creator.username}`}
                   className="card"
                   style={{ padding: 0, overflow: 'hidden' }}
                 >
@@ -199,7 +203,7 @@ export default function CreatorsPage() {
                       fontSize: '14px',
                       fontWeight: '600',
                       color: '#1A1A1A',
-                      marginBottom: '8px',
+                      marginBottom: '4px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
@@ -207,14 +211,23 @@ export default function CreatorsPage() {
                       {creator.display_name || '名前未設定'}
                     </h2>
 
-                    {/* 役割バッジ */}
+                    {/* Username */}
+                    {creator.username && (
+                      <p style={{
+                        fontSize: '11px',
+                        color: '#6B6B6B',
+                        marginBottom: '8px'
+                      }}>
+                        @{creator.username}
+                      </p>
+                    )}
+
+                    {/* アカウント種別バッジ */}
                     <span className="badge badge-category" style={{
                       fontSize: '10px',
                       padding: '3px 8px'
                     }}>
-                      {creator.role === 'creator' && 'クリエイター'}
-                      {creator.role === 'client' && '依頼者'}
-                      {creator.role === 'both' && 'クリエイター・依頼者'}
+                      {creator.account_type === 'casual' ? '一般利用' : 'ビジネス利用'}
                     </span>
                   </div>
 

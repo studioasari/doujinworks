@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import DashboardSidebar from '../components/DashboardSidebar'
 import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
 
 export default function ProfilePage() {
@@ -16,11 +17,13 @@ export default function ProfilePage() {
   const [draggingAvatar, setDraggingAvatar] = useState(false)
   const [draggingHeader, setDraggingHeader] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   
   // 基本情報
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
-  const [role, setRole] = useState('both')
+  const [accountType, setAccountType] = useState<'casual' | 'business'>('casual')
+  const [currentAccountType, setCurrentAccountType] = useState<'casual' | 'business'>('casual')
   
   // 画像
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -32,6 +35,9 @@ export default function ProfilePage() {
   const [twitterUrl, setTwitterUrl] = useState('')
   const [pixivUrl, setPixivUrl] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
+  
+  // ビジネスアカウント切り替え確認
+  const [showBusinessUpgrade, setShowBusinessUpgrade] = useState(false)
   
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -56,23 +62,25 @@ export default function ProfilePage() {
     setUser(user)
 
     // 既存のプロフィールを取得
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', user.id)
       .single()
 
-    if (profile) {
-      setDisplayName(profile.display_name || '')
-      setBio(profile.bio || '')
-      setRole(profile.role || 'both')
-      setAvatarUrl(profile.avatar_url || null)
-      setAvatarPreview(profile.avatar_url || null)
-      setHeaderUrl(profile.header_url || null)
-      setHeaderPreview(profile.header_url || null)
-      setTwitterUrl(profile.twitter_url || '')
-      setPixivUrl(profile.pixiv_url || '')
-      setWebsiteUrl(profile.website_url || '')
+    if (profileData) {
+      setProfile(profileData)
+      setDisplayName(profileData.display_name || '')
+      setBio(profileData.bio || '')
+      setAccountType(profileData.account_type || 'casual')
+      setCurrentAccountType(profileData.account_type || 'casual')
+      setAvatarUrl(profileData.avatar_url || null)
+      setAvatarPreview(profileData.avatar_url || null)
+      setHeaderUrl(profileData.header_url || null)
+      setHeaderPreview(profileData.header_url || null)
+      setTwitterUrl(profileData.twitter_url || '')
+      setPixivUrl(profileData.pixiv_url || '')
+      setWebsiteUrl(profileData.website_url || '')
     }
 
     setLoading(false)
@@ -251,6 +259,24 @@ export default function ProfilePage() {
     }
   }
 
+  // ビジネスアカウントへの切り替え確認
+  const handleAccountTypeChange = (newType: 'casual' | 'business') => {
+    // 一般→ビジネスへの切り替えのみ確認
+    if (currentAccountType === 'casual' && newType === 'business') {
+      setShowBusinessUpgrade(true)
+    } else {
+      setAccountType(newType)
+    }
+  }
+
+  // ビジネスアカウント切り替え実行
+  const confirmBusinessUpgrade = () => {
+    setAccountType('business')
+    setShowBusinessUpgrade(false)
+    setSuccess('ビジネスアカウントに切り替えます。保存してください。')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
   // プロフィール保存
   const handleSave = async () => {
     if (!user) return
@@ -259,22 +285,23 @@ export default function ProfilePage() {
     setError('')
     setSuccess('')
 
-    // is_creator, is_client を role から決定
-    const isCreator = role === 'creator' || role === 'both'
-    const isClient = role === 'client' || role === 'both'
-
-    const profileData = {
+    const profileData: any = {
       user_id: user.id,
       display_name: displayName,
       bio: bio,
-      role: role,
-      is_creator: isCreator,
-      is_client: isClient,
+      account_type: accountType,
+      can_receive_work: accountType === 'business',
+      can_request_work: accountType === 'business',
       avatar_url: avatarUrl,
       header_url: headerUrl,
       twitter_url: twitterUrl,
       pixiv_url: pixivUrl,
       website_url: websiteUrl,
+    }
+
+    // username が存在する場合のみ含める（変更はしない）
+    if (profile?.username) {
+      profileData.username = profile.username
     }
 
     // upsert（存在すれば更新、なければ作成）
@@ -286,11 +313,20 @@ export default function ProfilePage() {
       setError(error.message)
       setSaving(false)
     } else {
-      setSuccess('プロフィールを保存しました')
-      setSaving(false)
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1500)
+      // ビジネスアカウントに切り替えた場合、settings画面へ誘導
+      if (currentAccountType === 'casual' && accountType === 'business') {
+        setSuccess('ビジネスアカウントに切り替えました。ビジネス情報を入力してください。')
+        setSaving(false)
+        setTimeout(() => {
+          router.push('/settings')
+        }, 2000)
+      } else {
+        setSuccess('プロフィールを保存しました')
+        setSaving(false)
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1500)
+      }
     }
   }
 
@@ -316,93 +352,7 @@ export default function ProfilePage() {
         backgroundColor: '#FFFFFF',
         display: 'flex'
       }}>
-        {/* サイドバー */}
-        <aside style={{
-          width: '240px',
-          borderRight: '1px solid #E5E5E5',
-          padding: '40px 0',
-          flexShrink: 0
-        }}>
-          <nav style={{ padding: '0 20px' }}>
-            <Link 
-              href="/dashboard"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              概要
-            </Link>
-
-            <div style={{
-              padding: '12px 20px',
-              marginBottom: '4px',
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              fontSize: '15px',
-              fontWeight: '600'
-            }}>
-              プロフィール編集
-            </div>
-
-            <Link 
-              href="/portfolio"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              作品管理
-            </Link>
-
-            <Link 
-              href="/requests"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              依頼管理
-            </Link>
-          </nav>
-        </aside>
+        <DashboardSidebar />
 
         {/* メインコンテンツ */}
         <main style={{ flex: 1, padding: '40px' }}>
@@ -531,6 +481,28 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* ユーザーID（変更不可） */}
+              {profile?.username && (
+                <div className="mb-24">
+                  <label className="form-label">
+                    ユーザーID
+                  </label>
+                  <div style={{
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid #E5E5E5',
+                    borderRadius: '8px',
+                    backgroundColor: '#F9F9F9',
+                    color: '#6B6B6B'
+                  }}>
+                    @{profile.username}
+                  </div>
+                  <div className="text-tiny text-gray" style={{ marginTop: '6px' }}>
+                    ユーザーIDは変更できません
+                  </div>
+                </div>
+              )}
+
               {/* 表示名 */}
               <div className="mb-24">
                 <label className="form-label">
@@ -606,67 +578,56 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* 利用目的 */}
+              {/* アカウント種別 */}
               <div className="mb-32">
                 <label className="form-label mb-12">
-                  利用目的
+                  アカウント種別
                 </label>
                 
                 <div className="flex flex-col gap-12">
-                  <label className={`radio-card ${role === 'creator' ? 'active' : ''}`}>
+                  <label className={`radio-card ${accountType === 'casual' ? 'active' : ''}`}>
                     <input
                       type="radio"
-                      name="role"
-                      value="creator"
-                      checked={role === 'creator'}
-                      onChange={(e) => setRole(e.target.value)}
+                      name="accountType"
+                      value="casual"
+                      checked={accountType === 'casual'}
+                      onChange={(e) => handleAccountTypeChange(e.target.value as 'casual')}
+                      disabled={currentAccountType === 'business'}
                     />
                     <div>
                       <div style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>
-                        クリエイター
+                        一般利用
                       </div>
                       <div className="text-tiny text-gray">
-                        作品を作って依頼を受ける
+                        趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
                       </div>
                     </div>
                   </label>
 
-                  <label className={`radio-card ${role === 'client' ? 'active' : ''}`}>
+                  <label className={`radio-card ${accountType === 'business' ? 'active' : ''}`}>
                     <input
                       type="radio"
-                      name="role"
-                      value="client"
-                      checked={role === 'client'}
-                      onChange={(e) => setRole(e.target.value)}
+                      name="accountType"
+                      value="business"
+                      checked={accountType === 'business'}
+                      onChange={(e) => handleAccountTypeChange(e.target.value as 'business')}
                     />
                     <div>
                       <div style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>
-                        クライアント（依頼者）
+                        ビジネス利用
                       </div>
                       <div className="text-tiny text-gray">
-                        クリエイターに依頼する
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className={`radio-card ${role === 'both' ? 'active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value="both"
-                      checked={role === 'both'}
-                      onChange={(e) => setRole(e.target.value)}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>
-                        両方
-                      </div>
-                      <div className="text-tiny text-gray">
-                        作品を作ることも依頼することもある
+                        仕事の受発注、報酬の受け取りなどビジネスとして利用する
                       </div>
                     </div>
                   </label>
                 </div>
+
+                {currentAccountType === 'business' && (
+                  <div className="text-tiny text-gray" style={{ marginTop: '12px' }}>
+                    ※ ビジネスアカウントから一般アカウントへの変更はできません
+                  </div>
+                )}
               </div>
 
               {/* エラー・成功メッセージ */}
@@ -720,6 +681,65 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
+
+      {/* ビジネスアカウント切り替え確認モーダル */}
+      {showBusinessUpgrade && (
+        <>
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }} onClick={() => setShowBusinessUpgrade(false)}>
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '100%'
+            }} onClick={(e) => e.stopPropagation()}>
+              <h2 className="card-title mb-16">ビジネスアカウントに切り替えますか？</h2>
+              
+              <div className="text-small text-gray mb-24">
+                ビジネスアカウントに切り替えると、以下の機能が利用できるようになります。
+                <ul style={{ marginTop: '12px', paddingLeft: '20px' }}>
+                  <li>仕事の受発注</li>
+                  <li>報酬の受け取り</li>
+                  <li>請求書の発行</li>
+                </ul>
+                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#FFF5F5', border: '1px solid #FECACA', borderRadius: '8px', fontSize: '13px', color: '#7F1D1D' }}>
+                  ※ 一度ビジネスアカウントに切り替えると、一般アカウントには戻せません
+                </div>
+              </div>
+
+              <div className="flex gap-12">
+                <button
+                  onClick={() => setShowBusinessUpgrade(false)}
+                  className="btn-secondary"
+                  style={{ flex: 1 }}
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={confirmBusinessUpgrade}
+                  className="btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  切り替える
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <Footer />
     </>
   )

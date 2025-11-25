@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import DashboardSidebar from '../components/DashboardSidebar'
 
 type Profile = {
   id: string
   user_id: string
+  username: string | null
   display_name: string | null
   bio: string | null
   avatar_url: string | null
@@ -17,9 +19,25 @@ type Profile = {
   twitter_url: string | null
   pixiv_url: string | null
   website_url: string | null
-  role: string
-  is_creator: boolean
-  is_client: boolean
+  account_type: string | null
+  can_receive_work: boolean
+  can_request_work: boolean
+}
+
+type BusinessProfile = {
+  id: string
+  profile_id: string
+  account_type: string | null
+  full_name: string | null
+  full_name_kana: string | null
+  company_name: string | null
+  phone: string | null
+  postal_code: string | null
+  prefecture: string | null
+  address1: string | null
+  address2: string | null
+  birth_date: string | null
+  gender: string | null
 }
 
 type PortfolioItem = {
@@ -50,6 +68,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
   const [stats, setStats] = useState({
@@ -64,68 +83,90 @@ export default function DashboardPage() {
   }, [])
 
   async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    setUser(user)
-    await loadProfile(user.id)
-    await loadPortfolio(user.id)
-    await loadChatRooms(user.id)
-    await loadStats(user.id)
-    setLoading(false)
-  }
-
-  async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    
-    setProfile(data)
-  }
-
-  async function loadPortfolio(userId: string) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single()
-
-    if (!profileData) return
-
-    const { data } = await supabase
-      .from('portfolio_items')
-      .select('id, title, category, image_url, thumbnail_url')
-      .eq('creator_id', profileData.id)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .limit(6)
-
-    setPortfolioItems(data || [])
-  }
-
-  async function loadChatRooms(userId: string) {
     try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single()
-
-      if (!profileData) {
-        setChatRooms([])
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        router.push('/login')
         return
       }
 
-      const { data: participantData } = await supabase
+      setUser(user)
+      await loadProfile(user.id)
+    } catch (error) {
+      console.error('認証エラー:', error)
+      router.push('/login')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      
+      if (error) throw error
+      
+      if (data) {
+        setProfile(data)
+        await Promise.all([
+          loadBusinessProfile(data.id),
+          loadPortfolio(data.id),
+          loadChatRooms(data.id),
+          loadStats(data.id)
+        ])
+      }
+    } catch (error) {
+      console.error('プロフィール取得エラー:', error)
+    }
+  }
+
+  async function loadBusinessProfile(profileId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('profile_id', profileId)
+        .single()
+      
+      if (data) {
+        setBusinessProfile(data)
+      }
+    } catch (error) {
+      console.error('ビジネスプロフィール取得エラー:', error)
+    }
+  }
+
+  async function loadPortfolio(profileId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('portfolio_items')
+        .select('id, title, category, image_url, thumbnail_url')
+        .eq('creator_id', profileId)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(6)
+
+      if (error) throw error
+      setPortfolioItems(data || [])
+    } catch (error) {
+      console.error('ポートフォリオ取得エラー:', error)
+      setPortfolioItems([])
+    }
+  }
+
+  async function loadChatRooms(profileId: string) {
+    try {
+      const { data: participantData, error: participantError } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id')
-        .eq('profile_id', profileData.id)
+        .eq('profile_id', profileId)
+
+      if (participantError) throw participantError
 
       if (!participantData || participantData.length === 0) {
         setChatRooms([])
@@ -148,60 +189,50 @@ export default function DashboardPage() {
         .order('updated_at', { ascending: false })
         .limit(3)
 
-      if (error) {
-        console.error('チャットルーム取得エラー:', error)
-        setChatRooms([])
-        return
-      }
-
-      if (data) {
-        setChatRooms(data as any)
-      } else {
-        setChatRooms([])
-      }
+      if (error) throw error
+      setChatRooms(data as any || [])
     } catch (error) {
-      console.error('loadChatRooms エラー:', error)
+      console.error('チャットルーム取得エラー:', error)
       setChatRooms([])
     }
   }
 
-  async function loadStats(userId: string) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .single()
+  async function loadStats(profileId: string) {
+    try {
+      const [portfolioResult, receivedResult, sentResult, messageResult] = await Promise.all([
+        supabase
+          .from('portfolio_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('creator_id', profileId)
+          .eq('is_public', true),
+        supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('creator_id', profileId),
+        supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', profileId),
+        supabase
+          .from('chat_room_participants')
+          .select('*', { count: 'exact', head: true })
+          .eq('profile_id', profileId)
+      ])
 
-    if (!profileData) return
+      const portfolioCount = portfolioResult.count || 0
+      const receivedCount = receivedResult.count || 0
+      const sentCount = sentResult.count || 0
+      const requestCount = receivedCount + sentCount
+      const messageCount = messageResult.count || 0
 
-    const { count: portfolioCount } = await supabase
-      .from('portfolio_items')
-      .select('*', { count: 'exact', head: true })
-      .eq('creator_id', profileData.id)
-      .eq('is_public', true)
-
-    const { count: receivedCount } = await supabase
-      .from('requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('creator_id', profileData.id)
-
-    const { count: sentCount } = await supabase
-      .from('requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('client_id', profileData.id)
-
-    const requestCount = (receivedCount || 0) + (sentCount || 0)
-
-    const { count: messageCount } = await supabase
-      .from('chat_room_participants')
-      .select('*', { count: 'exact', head: true })
-      .eq('profile_id', profileData.id)
-
-    setStats({
-      portfolioCount: portfolioCount || 0,
-      requestCount,
-      messageCount: messageCount || 0
-    })
+      setStats({
+        portfolioCount,
+        requestCount,
+        messageCount
+      })
+    } catch (error) {
+      console.error('統計情報取得エラー:', error)
+    }
   }
 
   function getCategoryLabel(category: string | null) {
@@ -239,104 +270,22 @@ export default function DashboardPage() {
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
-        display: 'flex'
+        display: 'flex',
+        alignItems: 'flex-start'
       }}>
-        <aside style={{
-          width: '240px',
-          borderRight: '1px solid #E5E5E5',
-          padding: '40px 0',
-          flexShrink: 0
+        <DashboardSidebar />
+
+        <main style={{ 
+          flex: 1, 
+          padding: '40px',
+          width: '100%',
+          maxWidth: '100%',
+          minHeight: '100vh'
         }}>
-          <nav style={{ padding: '0 20px' }}>
-            <div style={{
-              padding: '12px 20px',
-              marginBottom: '4px',
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              fontSize: '15px',
-              fontWeight: '600'
-            }}>
-              概要
-            </div>
-
-            <Link 
-              href="/profile"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              プロフィール編集
-            </Link>
-
-            <Link 
-              href="/portfolio"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              作品管理
-            </Link>
-
-            <Link 
-              href="/requests"
-              style={{
-                display: 'block',
-                padding: '12px 20px',
-                marginBottom: '4px',
-                color: '#6B6B6B',
-                borderRadius: '8px',
-                fontSize: '15px',
-                textDecoration: 'none',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9F9F9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              依頼管理
-            </Link>
-          </nav>
-        </aside>
-
-        <main style={{ flex: 1, padding: '40px' }}>
           <h1 className="page-title mb-40">ダッシュボード</h1>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-            gap: '24px',
-            marginBottom: '40px'
-          }}>
+          <div className="dashboard-grid">
+            {/* プロフィールカード */}
             <div className="card-no-hover" style={{ overflow: 'hidden', padding: 0 }}>
               <div style={{
                 width: '100%',
@@ -411,9 +360,16 @@ export default function DashboardPage() {
                   justifyContent: 'space-between',
                   marginBottom: '12px'
                 }}>
-                  <h2 className="card-title" style={{ marginBottom: 0 }}>
-                    {profile?.display_name || '名前未設定'}
-                  </h2>
+                  <div>
+                    <h2 className="card-title" style={{ marginBottom: '4px' }}>
+                      {profile?.display_name || '名前未設定'}
+                    </h2>
+                    {profile?.username && (
+                      <p className="text-small text-gray">
+                        @{profile.username}
+                      </p>
+                    )}
+                  </div>
                   
                   {(profile?.twitter_url || profile?.pixiv_url || profile?.website_url) && (
                     <div className="flex gap-8">
@@ -437,14 +393,14 @@ export default function DashboardPage() {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <span className="badge badge-category">
-                    {profile?.role === 'creator' && 'クリエイター'}
-                    {profile?.role === 'client' && 'クライアント'}
-                    {profile?.role === 'both' && 'クリエイター・依頼者'}
-                  </span>
+                  {profile?.account_type && (
+                    <span className="badge badge-category">
+                      {profile.account_type === 'casual' ? '一般利用' : 'ビジネス利用'}
+                    </span>
+                  )}
                 </div>
 
-                <div className="info-box mb-32">
+                <div className="info-box mb-16">
                   <div className="info-row">
                     <span className="text-gray">作品数</span>
                     <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
@@ -465,13 +421,160 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <Link href={`/creators/${profile?.id}`} className="btn-secondary" style={{ width: '100%' }}>
+                <Link href={`/creators/${profile?.username}`} className="btn-secondary" style={{ width: '100%', marginBottom: '8px' }}>
                   プロフィールを見る
+                </Link>
+                <Link href="/profile" className="btn-primary" style={{ width: '100%' }}>
+                  プロフィール編集
                 </Link>
               </div>
             </div>
 
-            <div className="card-no-hover p-24">
+            {/* ビジネス情報カード（ビジネス利用の場合のみ表示） */}
+            {profile?.account_type === 'business' && businessProfile && (
+              <div className="card-no-hover p-24">
+                <h2 className="card-title mb-24">ビジネス情報</h2>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <div className="text-tiny text-gray mb-4">アカウント種別</div>
+                    <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {businessProfile.account_type === 'individual' ? '個人' : '法人'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-tiny text-gray mb-4">氏名</div>
+                    <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {businessProfile.full_name || '未設定'}
+                    </div>
+                  </div>
+
+                  {businessProfile.account_type === 'corporate' && businessProfile.company_name && (
+                    <div>
+                      <div className="text-tiny text-gray mb-4">会社名</div>
+                      <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                        {businessProfile.company_name}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-tiny text-gray mb-4">電話番号</div>
+                    <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {businessProfile.phone || '未設定'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-tiny text-gray mb-4">住所</div>
+                    <div className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
+                      {businessProfile.postal_code && `〒${businessProfile.postal_code}`}
+                      <br />
+                      {businessProfile.prefecture}{businessProfile.address1}
+                      {businessProfile.address2 && <><br />{businessProfile.address2}</>}
+                    </div>
+                  </div>
+
+                  <Link href="/settings" className="btn-secondary" style={{ width: '100%', marginTop: '8px' }}>
+                    ビジネス情報を編集
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* 最近のメッセージカード（一般利用の場合、または2カラム目に表示） */}
+            {profile?.account_type !== 'business' && (
+              <div className="card-no-hover p-24">
+                <div className="flex-between mb-24">
+                  <h2 className="card-title">最近のメッセージ</h2>
+                  {chatRooms.length > 0 && (
+                    <Link href="/messages" className="text-small text-gray">
+                      すべて見る
+                    </Link>
+                  )}
+                </div>
+
+                {chatRooms.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '40px 20px' }}>
+                    <p className="text-small text-gray">
+                      メッセージはまだありません
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {chatRooms.map((room) => {
+                      const otherParticipant = room.chat_room_participants
+                        ?.find((p) => p.profiles && p.profiles.id !== profile?.id)
+                        ?.profiles
+                      const lastMessage = room.messages?.[0]
+
+                      return (
+                        <Link
+                          key={room.id}
+                          href={`/messages/${room.id}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px',
+                            border: '1px solid #E5E5E5',
+                            borderRadius: '8px',
+                            textDecoration: 'none',
+                            transition: 'border-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#1A1A1A'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#E5E5E5'
+                          }}
+                        >
+                          <div className="avatar avatar-medium">
+                            {otherParticipant?.avatar_url ? (
+                              <img
+                                src={otherParticipant.avatar_url}
+                                alt={otherParticipant.display_name || ''}
+                              />
+                            ) : (
+                              <i className="fas fa-user"></i>
+                            )}
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="text-small" style={{ 
+                              fontWeight: '600', 
+                              color: '#1A1A1A',
+                              marginBottom: '4px'
+                            }}>
+                              {otherParticipant?.display_name || '名前未設定'}
+                            </div>
+                            <div className="text-small text-gray text-ellipsis">
+                              {lastMessage?.content || 'メッセージなし'}
+                            </div>
+                          </div>
+
+                          <div className="text-tiny text-gray" style={{ flexShrink: 0 }}>
+                            {lastMessage?.created_at ? 
+                              new Date(lastMessage.created_at).toLocaleDateString('ja-JP', {
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                              : ''
+                            }
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ビジネス利用の場合、メッセージを下段に表示 */}
+          {profile?.account_type === 'business' && (
+            <div className="card-no-hover p-24 mb-40">
               <div className="flex-between mb-24">
                 <h2 className="card-title">最近のメッセージ</h2>
                 {chatRooms.length > 0 && (
@@ -488,7 +591,11 @@ export default function DashboardPage() {
                   </p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '16px'
+                }}>
                   {chatRooms.map((room) => {
                     const otherParticipant = room.chat_room_participants
                       ?.find((p) => p.profiles && p.profiles.id !== profile?.id)
@@ -555,8 +662,9 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          )}
 
+          {/* あなたの作品 */}
           <div className="card-no-hover p-24 mb-40">
             <div className="flex-between mb-24">
               <h2 className="card-title">あなたの作品</h2>
