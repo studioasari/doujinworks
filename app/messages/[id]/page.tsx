@@ -45,6 +45,7 @@ export default function ChatRoomPage() {
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const params = useParams()
   const roomId = params.id as string
@@ -63,14 +64,21 @@ export default function ChatRoomPage() {
     if (currentProfileId && roomId) {
       fetchMessages()
       fetchOtherUser(currentProfileId)
-      subscribeToMessages()
+      const unsubscribe = subscribeToMessages()
       updateLastReadAt()
+      
+      return () => {
+        unsubscribe()
+      }
     }
   }, [currentProfileId, roomId])
 
+  // 初回読み込み完了時のみスクロール
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (messages.length > 0 && !loading) {
+      scrollToBottom(true)
+    }
+  }, [loading])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -193,6 +201,21 @@ export default function ChatRoomPage() {
     setLoading(false)
   }
 
+  // ユーザーが下にいるかチェック
+  function isNearBottom() {
+    const container = messagesContainerRef.current
+    if (!container) return true
+    const threshold = 100 // 下から100px以内なら「下にいる」とみなす
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+  }
+
+  // スクロール関数（改善版）
+  function scrollToBottom(force = false) {
+    if (force || isNearBottom()) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+    }
+  }
+
   async function sendMessage() {
     if (!newMessage.trim() || sending) return
 
@@ -216,6 +239,9 @@ export default function ChatRoomPage() {
     } else {
       setMessages(prev => [...prev, data as Message])
       setNewMessage('')
+      
+      // 送信後は強制スクロール
+      setTimeout(() => scrollToBottom(true), 50)
       
       await supabase
         .from('chat_rooms')
@@ -245,12 +271,20 @@ export default function ChatRoomPage() {
           const newMsg = payload.new as Message
           
           if (newMsg.sender_id !== currentProfileId) {
+            // 下にいる時だけスクロール（上を見ている時は邪魔しない）
+            const shouldScroll = isNearBottom()
+            
             setMessages(prev => {
               if (prev.find(m => m.id === newMsg.id)) {
                 return prev
               }
               return [...prev, newMsg]
             })
+            
+            if (shouldScroll) {
+              setTimeout(() => scrollToBottom(true), 50)
+            }
+            
             updateLastReadAt()
           }
           
@@ -272,10 +306,6 @@ export default function ChatRoomPage() {
       .update({ last_read_at: new Date().toISOString() })
       .eq('chat_room_id', roomId)
       .eq('profile_id', currentProfileId)
-  }
-
-  function scrollToBottom() {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   function formatTime(dateString: string) {
@@ -466,7 +496,6 @@ export default function ChatRoomPage() {
               <div className="flex gap-16" style={{ alignItems: 'center' }}>
                 <Link
                   href="/messages"
-                  className="hidden-mobile"
                   style={{
                     fontSize: '20px',
                     color: '#6B6B6B',
@@ -517,12 +546,15 @@ export default function ChatRoomPage() {
           </div>
 
           {/* メッセージエリア */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '20px',
-            backgroundColor: '#F9F9F9'
-          }}>
+          <div 
+            ref={messagesContainerRef}
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '20px',
+              backgroundColor: '#F9F9F9'
+            }}
+          >
             {loading && (
               <div className="loading-state">
                 読み込み中...
