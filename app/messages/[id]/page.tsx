@@ -205,14 +205,17 @@ export default function ChatRoomPage() {
   function isNearBottom() {
     const container = messagesContainerRef.current
     if (!container) return true
-    const threshold = 100 // 下から100px以内なら「下にいる」とみなす
+    const threshold = 100
     return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
   }
 
-  // スクロール関数（改善版）
+  // スクロール関数（メッセージエリア内だけ）
   function scrollToBottom(force = false) {
+    const container = messagesContainerRef.current
+    if (!container) return
+    
     if (force || isNearBottom()) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+      container.scrollTop = container.scrollHeight
     }
   }
 
@@ -271,7 +274,6 @@ export default function ChatRoomPage() {
           const newMsg = payload.new as Message
           
           if (newMsg.sender_id !== currentProfileId) {
-            // 下にいる時だけスクロール（上を見ている時は邪魔しない）
             const shouldScroll = isNearBottom()
             
             setMessages(prev => {
