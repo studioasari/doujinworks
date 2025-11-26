@@ -113,30 +113,32 @@ export default function CreatorDetailPage() {
     setSendingMessage(true)
 
     try {
-      // 既存のチャットルームを検索
-      const { data: existingRooms } = await supabase
+      // 既存のチャットルームを検索（改善版）
+      const { data: myRooms } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id')
         .eq('profile_id', currentProfileId)
 
-      if (existingRooms && existingRooms.length > 0) {
-        const roomIds = existingRooms.map(r => r.chat_room_id)
+      if (myRooms && myRooms.length > 0) {
+        const roomIds = myRooms.map(r => r.chat_room_id)
         
-        const { data: targetRoom } = await supabase
+        // 相手も参加しているルームを探す
+        const { data: sharedRooms, error: sharedError } = await supabase
           .from('chat_room_participants')
           .select('chat_room_id')
           .eq('profile_id', creator.id)
           .in('chat_room_id', roomIds)
-          .single()
 
-        if (targetRoom) {
-          router.push(`/messages/${targetRoom.chat_room_id}`)
+        // エラーがなく、共有ルームが見つかった場合
+        if (!sharedError && sharedRooms && sharedRooms.length > 0) {
+          // 最初に見つかったルームにリダイレクト
+          router.push(`/messages/${sharedRooms[0].chat_room_id}`)
           setSendingMessage(false)
           return
         }
       }
 
-      // 新しいチャットルームを作成
+      // 既存ルームがない場合、新しいチャットルームを作成
       const { data: newRoom, error: roomError } = await supabase
         .from('chat_rooms')
         .insert({})
@@ -144,18 +146,26 @@ export default function CreatorDetailPage() {
         .single()
 
       if (roomError || !newRoom) {
+        console.error('チャットルーム作成エラー:', roomError)
         alert('チャットルームの作成に失敗しました')
         setSendingMessage(false)
         return
       }
 
       // 参加者を追加
-      await supabase
+      const { error: participantsError } = await supabase
         .from('chat_room_participants')
         .insert([
           { chat_room_id: newRoom.id, profile_id: currentProfileId },
           { chat_room_id: newRoom.id, profile_id: creator.id }
         ])
+
+      if (participantsError) {
+        console.error('参加者追加エラー:', participantsError)
+        alert('参加者の追加に失敗しました')
+        setSendingMessage(false)
+        return
+      }
 
       router.push(`/messages/${newRoom.id}`)
     } catch (error) {
