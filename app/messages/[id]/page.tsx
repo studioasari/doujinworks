@@ -80,6 +80,24 @@ export default function ChatRoomPage() {
     }
   }, [currentProfileId, roomId])
 
+  // タブがアクティブになったときに既読をつける
+  useEffect(() => {
+    if (!currentProfileId || !roomId) return
+
+    const handleVisibilityChange = () => {
+      // タブがアクティブになったら既読をつける
+      if (!document.hidden) {
+        updateLastReadAt()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [currentProfileId, roomId])
+
   // 初回読み込み完了時のみスクロール
   useEffect(() => {
     if (messages.length > 0 && !loading) {
@@ -373,6 +391,11 @@ export default function ChatRoomPage() {
   }
 
   async function updateLastReadAt() {
+    // ブラウザタブが非アクティブの場合は既読をつけない
+    if (document.hidden) {
+      return
+    }
+
     await supabase
       .from('chat_room_participants')
       .update({ last_read_at: new Date().toISOString() })
@@ -446,21 +469,6 @@ export default function ChatRoomPage() {
             flexShrink: 0
           }}
         >
-          <div style={{
-            padding: '12px 20px',
-            borderBottom: '1px solid #E5E5E5',
-            position: 'sticky',
-            top: 0,
-            backgroundColor: '#FFFFFF',
-            zIndex: 10
-          }}>
-            <h2 style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#1A1A1A'
-            }}>メッセージ</h2>
-          </div>
-
           {chatRooms.length === 0 ? (
             <div className="empty-state" style={{ padding: '40px 20px' }}>
               <p className="text-gray text-small">メッセージがありません</p>
