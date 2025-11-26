@@ -19,6 +19,7 @@ type OtherUser = {
   username: string | null
   display_name: string | null
   avatar_url: string | null
+  bio: string | null
 }
 
 type ChatRoom = {
@@ -43,7 +44,9 @@ export default function ChatRoomPage() {
   const [sending, setSending] = useState(false)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null)
+  const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<string | null>(null)
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
+  const [showProfileModal, setShowProfileModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -64,11 +67,14 @@ export default function ChatRoomPage() {
     if (currentProfileId && roomId) {
       fetchMessages()
       fetchOtherUser(currentProfileId)
-      const unsubscribe = subscribeToMessages()
+      fetchOtherUserLastReadAt()
+      const unsubscribeMessages = subscribeToMessages()
+      const unsubscribeReadStatus = subscribeToReadStatus()
       updateLastReadAt()
       
       return () => {
-        unsubscribe()
+        unsubscribeMessages()
+        unsubscribeReadStatus()
       }
     }
   }, [currentProfileId, roomId])
@@ -167,7 +173,7 @@ export default function ChatRoomPage() {
   async function fetchOtherUser(profileId: string) {
     const { data } = await supabase
       .from('chat_room_participants')
-      .select('profile_id, profiles!chat_room_participants_profile_id_fkey(id, username, display_name, avatar_url)')
+      .select('profile_id, profiles!chat_room_participants_profile_id_fkey(id, username, display_name, avatar_url, bio)')
       .eq('chat_room_id', roomId)
       .neq('profile_id', profileId)
       .single()
@@ -178,8 +184,24 @@ export default function ChatRoomPage() {
         id: profile.id,
         username: profile.username,
         display_name: profile.display_name,
-        avatar_url: profile.avatar_url
+        avatar_url: profile.avatar_url,
+        bio: profile.bio
       })
+    }
+  }
+
+  async function fetchOtherUserLastReadAt() {
+    if (!otherUser) return
+
+    const { data } = await supabase
+      .from('chat_room_participants')
+      .select('last_read_at')
+      .eq('chat_room_id', roomId)
+      .neq('profile_id', currentProfileId)
+      .single()
+
+    if (data) {
+      setOtherUserLastReadAt(data.last_read_at)
     }
   }
 
@@ -287,11 +309,38 @@ export default function ChatRoomPage() {
               setTimeout(() => scrollToBottom(true), 50)
             }
             
+            // 相手のメッセージを受信したら既読をつける
             updateLastReadAt()
           }
           
           if (currentProfileId) {
             fetchChatRooms(currentProfileId)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  function subscribeToReadStatus() {
+    const channel = supabase
+      .channel(`read_status_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_room_participants',
+          filter: `chat_room_id=eq.${roomId}`
+        },
+        (payload) => {
+          const updated = payload.new as any
+          // 相手の既読状態が更新された場合
+          if (updated.profile_id !== currentProfileId) {
+            setOtherUserLastReadAt(updated.last_read_at)
           }
         }
       )
@@ -308,6 +357,17 @@ export default function ChatRoomPage() {
       .update({ last_read_at: new Date().toISOString() })
       .eq('chat_room_id', roomId)
       .eq('profile_id', currentProfileId)
+
+    // 未読カウントを更新
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+  }
+
+  function isMessageRead(message: Message): boolean {
+    if (message.sender_id !== currentProfileId) return false
+    if (!otherUserLastReadAt) return false
+    return new Date(otherUserLastReadAt) >= new Date(message.created_at)
   }
 
   function formatTime(dateString: string) {
@@ -506,19 +566,23 @@ export default function ChatRoomPage() {
                 >
                   ←
                 </Link>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E5E5E5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px',
-                  color: '#6B6B6B',
-                  overflow: 'hidden',
-                  flexShrink: 0
-                }}>
+                <div 
+                  onClick={() => setShowProfileModal(true)}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#E5E5E5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    color: '#6B6B6B',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }}
+                >
                   {otherUser.avatar_url ? (
                     <img
                       src={otherUser.avatar_url}
@@ -533,16 +597,16 @@ export default function ChatRoomPage() {
                     otherUser.display_name?.charAt(0) || '?'
                   )}
                 </div>
-                <Link
-                  href={otherUser.username ? `/creators/${otherUser.username}` : '#'}
+                <div
+                  onClick={() => setShowProfileModal(true)}
                   className="card-title"
                   style={{
-                    textDecoration: 'none',
-                    fontSize: '18px'
+                    fontSize: '18px',
+                    cursor: 'pointer'
                   }}
                 >
                   {otherUser.display_name || '名前未設定'}
-                </Link>
+                </div>
               </div>
             )}
           </div>
@@ -574,6 +638,11 @@ export default function ChatRoomPage() {
               const showDate = index === 0 || 
                 new Date(messages[index - 1].created_at).toDateString() !== 
                 new Date(message.created_at).toDateString()
+              
+              // 既読判定：最後のメッセージ、または次のメッセージが未読の場合に表示
+              const isLastMessage = index === messages.length - 1
+              const nextMessageIsUnread = !isLastMessage && !isMessageRead(messages[index + 1])
+              const showReadStatus = isCurrentUser && isMessageRead(message) && (isLastMessage || nextMessageIsUnread)
 
               return (
                 <div key={message.id}>
@@ -591,8 +660,45 @@ export default function ChatRoomPage() {
                   <div style={{
                     display: 'flex',
                     justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
-                    marginBottom: '12px'
+                    marginBottom: '12px',
+                    gap: '8px'
                   }}>
+                    {/* 相手のメッセージの場合、左側にアイコン表示 */}
+                    {!isCurrentUser && otherUser && (
+                      <div 
+                        onClick={() => setShowProfileModal(true)}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: '#E5E5E5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          color: '#6B6B6B',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          cursor: 'pointer',
+                          alignSelf: 'flex-end'
+                        }}
+                      >
+                        {otherUser.avatar_url ? (
+                          <img
+                            src={otherUser.avatar_url}
+                            alt={otherUser.display_name || ''}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          otherUser.display_name?.charAt(0) || '?'
+                        )}
+                      </div>
+                    )}
+
                     <div style={{
                       maxWidth: '70%',
                       display: 'flex',
@@ -609,9 +715,21 @@ export default function ChatRoomPage() {
                       }}>
                         {message.content}
                       </div>
-                      <span className="text-tiny text-gray" style={{ marginTop: '4px' }}>
-                        {formatTime(message.created_at)}
-                      </span>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginTop: '4px'
+                      }}>
+                        <span className="text-tiny text-gray">
+                          {formatTime(message.created_at)}
+                        </span>
+                        {showReadStatus && (
+                          <span className="text-tiny" style={{ color: '#4A90E2', fontWeight: '600' }}>
+                            既読
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -660,6 +778,114 @@ export default function ChatRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* プロフィールモーダル */}
+      {showProfileModal && otherUser && (
+        <div
+          onClick={() => setShowProfileModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            {/* アバター */}
+            <div style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              backgroundColor: '#E5E5E5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '40px',
+              color: '#6B6B6B',
+              overflow: 'hidden',
+              margin: '0 auto 20px',
+              border: '1px solid #E5E5E5'
+            }}>
+              {otherUser.avatar_url ? (
+                <img
+                  src={otherUser.avatar_url}
+                  alt={otherUser.display_name || ''}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <i className="fas fa-user"></i>
+              )}
+            </div>
+
+            {/* 名前 */}
+            <h2 className="card-title mb-8" style={{ textAlign: 'center' }}>
+              {otherUser.display_name || '名前未設定'}
+            </h2>
+
+            {/* Username */}
+            {otherUser.username && (
+              <p className="text-small text-gray mb-20" style={{ textAlign: 'center' }}>
+                @{otherUser.username}
+              </p>
+            )}
+
+            {/* 自己紹介 */}
+            {otherUser.bio && (
+              <div className="mb-24">
+                <p className="text-small" style={{
+                  lineHeight: '1.7',
+                  whiteSpace: 'pre-wrap',
+                  color: '#6B6B6B',
+                  textAlign: 'center'
+                }}>
+                  {otherUser.bio}
+                </p>
+              </div>
+            )}
+
+            {/* ボタン */}
+            <div className="flex flex-col gap-12">
+              {otherUser.username && (
+                <Link
+                  href={`/creators/${otherUser.username}`}
+                  className="btn-primary"
+                  style={{ width: '100%', textAlign: 'center' }}
+                >
+                  プロフィールを見る
+                </Link>
+              )}
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="btn-secondary"
+                style={{ width: '100%' }}
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   )
