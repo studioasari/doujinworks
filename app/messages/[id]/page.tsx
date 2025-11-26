@@ -49,6 +49,7 @@ export default function ChatRoomPage() {
   const [showProfileModal, setShowProfileModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
   const params = useParams()
   const roomId = params.id as string
@@ -85,6 +86,14 @@ export default function ChatRoomPage() {
       scrollToBottom(true)
     }
   }, [loading])
+
+  // テキストエリアの自動リサイズ
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+    }
+  }, [newMessage])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -551,15 +560,15 @@ export default function ChatRoomPage() {
           {/* ヘッダー */}
           <div style={{
             borderBottom: '1px solid #E5E5E5',
-            padding: '16px 20px',
+            padding: '12px 20px',
             backgroundColor: '#FFFFFF'
           }}>
             {otherUser && (
-              <div className="flex gap-16" style={{ alignItems: 'center' }}>
+              <div className="flex gap-12" style={{ alignItems: 'center' }}>
                 <Link
                   href="/messages"
                   style={{
-                    fontSize: '20px',
+                    fontSize: '18px',
                     color: '#6B6B6B',
                     textDecoration: 'none'
                   }}
@@ -569,14 +578,14 @@ export default function ChatRoomPage() {
                 <div 
                   onClick={() => setShowProfileModal(true)}
                   style={{
-                    width: '48px',
-                    height: '48px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '50%',
                     backgroundColor: '#E5E5E5',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '20px',
+                    fontSize: '16px',
                     color: '#6B6B6B',
                     overflow: 'hidden',
                     flexShrink: 0,
@@ -599,10 +608,11 @@ export default function ChatRoomPage() {
                 </div>
                 <div
                   onClick={() => setShowProfileModal(true)}
-                  className="card-title"
                   style={{
-                    fontSize: '18px',
-                    cursor: 'pointer'
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    color: '#1A1A1A'
                   }}
                 >
                   {otherUser.display_name || '名前未設定'}
@@ -661,7 +671,8 @@ export default function ChatRoomPage() {
                     display: 'flex',
                     justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
                     marginBottom: '12px',
-                    gap: '8px'
+                    gap: '8px',
+                    alignItems: 'flex-start'
                   }}>
                     {/* 相手のメッセージの場合、左側にアイコン表示 */}
                     {!isCurrentUser && otherUser && (
@@ -679,8 +690,7 @@ export default function ChatRoomPage() {
                           color: '#6B6B6B',
                           overflow: 'hidden',
                           flexShrink: 0,
-                          cursor: 'pointer',
-                          alignSelf: 'flex-end'
+                          cursor: 'pointer'
                         }}
                       >
                         {otherUser.avatar_url ? (
@@ -711,6 +721,7 @@ export default function ChatRoomPage() {
                         padding: '12px 16px',
                         borderRadius: '16px',
                         wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
                         border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
                       }}>
                         {message.content}
@@ -718,14 +729,14 @@ export default function ChatRoomPage() {
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '6px',
                         marginTop: '4px'
                       }}>
                         <span className="text-tiny text-gray">
                           {formatTime(message.created_at)}
                         </span>
                         {showReadStatus && (
-                          <span className="text-tiny" style={{ color: '#4A90E2', fontWeight: '600' }}>
+                          <span className="text-tiny" style={{ color: '#B0B0B0' }}>
                             既読
                           </span>
                         )}
@@ -744,12 +755,12 @@ export default function ChatRoomPage() {
             padding: '16px 20px',
             backgroundColor: '#FFFFFF'
           }}>
-            <div className="flex gap-12">
-              <input
-                type="text"
+            <div className="flex gap-12" style={{ alignItems: 'flex-end' }}>
+              <textarea
+                ref={textareaRef}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
                     sendMessage()
@@ -757,10 +768,19 @@ export default function ChatRoomPage() {
                 }}
                 placeholder="メッセージを入力..."
                 disabled={sending}
-                className="input-field"
+                rows={1}
                 style={{
                   flex: 1,
-                  borderRadius: '24px'
+                  padding: '12px 16px',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '24px',
+                  fontSize: '16px',
+                  color: '#1A1A1A',
+                  resize: 'none',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.5',
+                  maxHeight: '120px',
+                  overflowY: 'auto'
                 }}
               />
               <button
@@ -769,7 +789,8 @@ export default function ChatRoomPage() {
                 className="btn-primary"
                 style={{
                   borderRadius: '24px',
-                  opacity: !newMessage.trim() || sending ? 0.5 : 1
+                  opacity: !newMessage.trim() || sending ? 0.5 : 1,
+                  flexShrink: 0
                 }}
               >
                 送信
@@ -793,7 +814,8 @@ export default function ChatRoomPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000
+            zIndex: 1000,
+            padding: '20px'
           }}
         >
           <div
@@ -801,9 +823,9 @@ export default function ChatRoomPage() {
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
-              padding: '32px',
-              maxWidth: '400px',
-              width: '90%',
+              padding: '40px',
+              maxWidth: '440px',
+              width: '100%',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
             }}
           >
@@ -819,7 +841,7 @@ export default function ChatRoomPage() {
               fontSize: '40px',
               color: '#6B6B6B',
               overflow: 'hidden',
-              margin: '0 auto 20px',
+              margin: '0 auto 24px',
               border: '1px solid #E5E5E5'
             }}>
               {otherUser.avatar_url ? (
@@ -844,14 +866,14 @@ export default function ChatRoomPage() {
 
             {/* Username */}
             {otherUser.username && (
-              <p className="text-small text-gray mb-20" style={{ textAlign: 'center' }}>
+              <p className="text-small text-gray mb-24" style={{ textAlign: 'center' }}>
                 @{otherUser.username}
               </p>
             )}
 
             {/* 自己紹介 */}
             {otherUser.bio && (
-              <div className="mb-24">
+              <div className="mb-32">
                 <p className="text-small" style={{
                   lineHeight: '1.7',
                   whiteSpace: 'pre-wrap',
@@ -864,7 +886,7 @@ export default function ChatRoomPage() {
             )}
 
             {/* ボタン */}
-            <div className="flex flex-col gap-12">
+            <div className="flex flex-col gap-16">
               {otherUser.username && (
                 <Link
                   href={`/creators/${otherUser.username}`}
