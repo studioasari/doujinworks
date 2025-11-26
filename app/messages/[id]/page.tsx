@@ -90,8 +90,20 @@ export default function ChatRoomPage() {
   // テキストエリアの自動リサイズ
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+      const textarea = textareaRef.current
+      textarea.style.height = 'auto'
+      const newHeight = textarea.scrollHeight
+      
+      // 最大高さ（5行分：約144px）
+      const maxHeight = 144
+      
+      if (newHeight > maxHeight) {
+        textarea.style.height = maxHeight + 'px'
+        textarea.style.overflowY = 'auto'
+      } else {
+        textarea.style.height = newHeight + 'px'
+        textarea.style.overflowY = 'hidden'
+      }
     }
   }, [newMessage])
 
@@ -435,14 +447,18 @@ export default function ChatRoomPage() {
           }}
         >
           <div style={{
-            padding: '20px',
+            padding: '12px 20px',
             borderBottom: '1px solid #E5E5E5',
             position: 'sticky',
             top: 0,
             backgroundColor: '#FFFFFF',
             zIndex: 10
           }}>
-            <h2 className="card-title">メッセージ</h2>
+            <h2 style={{
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#1A1A1A'
+            }}>メッセージ</h2>
           </div>
 
           {chatRooms.length === 0 ? (
@@ -648,11 +664,6 @@ export default function ChatRoomPage() {
               const showDate = index === 0 || 
                 new Date(messages[index - 1].created_at).toDateString() !== 
                 new Date(message.created_at).toDateString()
-              
-              // 既読判定：最後のメッセージ、または次のメッセージが未読の場合に表示
-              const isLastMessage = index === messages.length - 1
-              const nextMessageIsUnread = !isLastMessage && !isMessageRead(messages[index + 1])
-              const showReadStatus = isCurrentUser && isMessageRead(message) && (isLastMessage || nextMessageIsUnread)
 
               return (
                 <div key={message.id}>
@@ -735,7 +746,7 @@ export default function ChatRoomPage() {
                         <span className="text-tiny text-gray">
                           {formatTime(message.created_at)}
                         </span>
-                        {showReadStatus && (
+                        {isCurrentUser && isMessageRead(message) && (
                           <span className="text-tiny" style={{ color: '#B0B0B0' }}>
                             既読
                           </span>
@@ -779,8 +790,8 @@ export default function ChatRoomPage() {
                   resize: 'none',
                   fontFamily: 'inherit',
                   lineHeight: '1.5',
-                  maxHeight: '120px',
-                  overflowY: 'auto'
+                  overflowY: 'hidden',
+                  maxHeight: '144px'
                 }}
               />
               <button
