@@ -80,21 +80,28 @@ export default function ChatRoomPage() {
     }
   }, [currentProfileId, roomId])
 
-  // タブがアクティブになったときに既読をつける
+  // タブ・ウィンドウがアクティブになったときに既読をつける
   useEffect(() => {
     if (!currentProfileId || !roomId) return
 
     const handleVisibilityChange = () => {
-      // タブがアクティブになったら既読をつける
+      if (!document.hidden && document.hasFocus()) {
+        updateLastReadAt()
+      }
+    }
+
+    const handleFocus = () => {
       if (!document.hidden) {
         updateLastReadAt()
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
     }
   }, [currentProfileId, roomId])
 
@@ -391,8 +398,8 @@ export default function ChatRoomPage() {
   }
 
   async function updateLastReadAt() {
-    // ブラウザタブが非アクティブの場合は既読をつけない
-    if (document.hidden) {
+    // ブラウザタブが非アクティブ、またはウィンドウがフォーカスされていない場合は既読をつけない
+    if (document.hidden || !document.hasFocus()) {
       return
     }
 
@@ -780,6 +787,14 @@ export default function ChatRoomPage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => {
+                  // IME入力中（日本語入力など）は送信しない
+                  if (e.nativeEvent.isComposing) return
+                  
+                  // モバイルデバイスの場合はEnterキーでの送信を無効化
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                  if (isMobile) return
+                  
+                  // PC環境でShift+Enterなしの場合のみ送信
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
                     sendMessage()
