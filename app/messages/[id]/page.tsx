@@ -128,7 +128,7 @@ export default function ChatRoomPage() {
   useEffect(() => {
     if (textareaRef.current) {
       const textarea = textareaRef.current
-      textarea.style.height = 'auto'
+      textarea.style.height = '44px'
       const newHeight = textarea.scrollHeight
       
       const maxHeight = 144
@@ -136,7 +136,7 @@ export default function ChatRoomPage() {
       if (newHeight > maxHeight) {
         textarea.style.height = maxHeight + 'px'
         textarea.style.overflowY = 'auto'
-      } else {
+      } else if (newHeight > 44) {
         textarea.style.height = newHeight + 'px'
         textarea.style.overflowY = 'hidden'
       }
@@ -167,10 +167,8 @@ export default function ChatRoomPage() {
     for (const message of messages) {
       if (message.file_url && !signedUrls[message.file_url]) {
         try {
-          // file_urlがパス形式かフルURL形式かを判定
           let filePath = message.file_url
           
-          // フルURLの場合はパスを抽出（後方互換性のため）
           if (filePath.includes('supabase.co/storage/v1/object/')) {
             const matches = filePath.match(/chat-files\/(.+)/)
             if (matches) {
@@ -178,7 +176,6 @@ export default function ChatRoomPage() {
             }
           }
           
-          // 署名付きURLを生成（有効期限: 1時間）
           const { data, error } = await supabase.storage
             .from('chat-files')
             .createSignedUrl(filePath, 3600)
@@ -393,7 +390,6 @@ export default function ChatRoomPage() {
 
       const fileType = getFileType(file)
 
-      // パスのみを返す（セキュア）
       return { url: filePath, type: fileType }
     } catch (error) {
       console.error('ファイルアップロードエラー:', error)
@@ -916,19 +912,13 @@ export default function ChatRoomPage() {
                       maxWidth: '70%',
                       display: 'flex',
                       flexDirection: 'column',
-                      alignItems: isCurrentUser ? 'flex-end' : 'flex-start'
+                      alignItems: isCurrentUser ? 'flex-end' : 'flex-start',
+                      gap: '4px'
                     }}>
-                      <div style={{
-                        backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
-                        color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
-                        padding: message.file_url ? '8px' : '12px 16px',
-                        borderRadius: '16px',
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-wrap',
-                        border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
-                      }}>
-                        {message.file_type === 'image' && signedUrl && (
-                          <div>
+                      {/* 画像・動画（吹き出しなし） */}
+                      {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
+                        <div style={{ position: 'relative' }}>
+                          {message.file_type === 'image' ? (
                             <img
                               src={signedUrl}
                               alt={message.file_name || '画像'}
@@ -938,39 +928,10 @@ export default function ChatRoomPage() {
                                 width: '100%',
                                 borderRadius: '12px',
                                 display: 'block',
-                                cursor: 'pointer',
-                                marginBottom: message.content ? '8px' : '4px'
+                                cursor: 'pointer'
                               }}
                             />
-                            <button
-                              onClick={() => handleDownload(message.file_url!, message.file_name || '画像.jpg')}
-                              style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
-                                border: 'none',
-                                borderRadius: '8px',
-                                color: 'inherit',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                marginTop: '4px',
-                                transition: 'opacity 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                            >
-                              <i className="fas fa-download" style={{ fontSize: '12px' }}></i>
-                              保存
-                            </button>
-                          </div>
-                        )}
-                        
-                        {message.file_type === 'video' && signedUrl && (
-                          <div>
+                          ) : (
                             <video
                               src={signedUrl}
                               controls
@@ -980,38 +941,58 @@ export default function ChatRoomPage() {
                                 width: '100%',
                                 borderRadius: '12px',
                                 display: 'block',
-                                cursor: 'pointer',
-                                marginBottom: message.content ? '8px' : '4px'
+                                cursor: 'pointer'
                               }}
                             />
-                            <button
-                              onClick={() => handleDownload(message.file_url!, message.file_name || '動画.mp4')}
-                              style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
-                                border: 'none',
-                                borderRadius: '8px',
-                                color: 'inherit',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                marginTop: '4px',
-                                transition: 'opacity 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                            >
-                              <i className="fas fa-download" style={{ fontSize: '12px' }}></i>
-                              保存
-                            </button>
-                          </div>
-                        )}
-                        
-                        {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
+                          )}
+                          <button
+                            onClick={() => handleDownload(message.file_url!, message.file_name || (message.file_type === 'image' ? '画像.jpg' : '動画.mp4'))}
+                            style={{
+                              position: 'absolute',
+                              bottom: '8px',
+                              right: '8px',
+                              padding: '4px 8px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <i className="fas fa-download" style={{ fontSize: '10px' }}></i>
+                            保存
+                          </button>
+                        </div>
+                      )}
+
+                      {/* テキストメッセージ（吹き出しあり） */}
+                      {message.content && (
+                        <div style={{
+                          backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
+                          color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
+                          padding: '12px 16px',
+                          borderRadius: '16px',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
+                        }}>
+                          {message.content}
+                        </div>
+                      )}
+
+                      {/* ファイル（PDF・ZIP）（吹き出しあり） */}
+                      {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
+                        <div style={{
+                          backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
+                          color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
+                          padding: '8px',
+                          borderRadius: '16px',
+                          border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
+                        }}>
                           <a
                             href={signedUrl}
                             download={message.file_name || undefined}
@@ -1025,8 +1006,7 @@ export default function ChatRoomPage() {
                               backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
                               borderRadius: '8px',
                               textDecoration: 'none',
-                              color: 'inherit',
-                              marginBottom: message.content ? '8px' : '0'
+                              color: 'inherit'
                             }}
                           >
                             <i className={`fas ${getFileIcon(message.file_type)}`} style={{ fontSize: '24px' }}></i>
@@ -1046,21 +1026,14 @@ export default function ChatRoomPage() {
                             </div>
                             <i className="fas fa-download" style={{ fontSize: '16px' }}></i>
                           </a>
-                        )}
-                        
-                        {message.content && (
-                          <div style={{
-                            padding: message.file_url ? '4px 8px' : '0'
-                          }}>
-                            {message.content}
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
+
+                      {/* 時刻・既読 */}
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        marginTop: '4px'
+                        gap: '6px'
                       }}>
                         <span className="text-tiny text-gray">
                           {formatTime(message.created_at)}
@@ -1237,7 +1210,8 @@ export default function ChatRoomPage() {
                     fontFamily: 'inherit',
                     lineHeight: '1.5',
                     overflowY: 'hidden',
-                    maxHeight: '144px'
+                    minHeight: '44px',
+                    height: '44px'
                   }}
                 />
                 <button
@@ -1245,8 +1219,9 @@ export default function ChatRoomPage() {
                   disabled={(!newMessage.trim() && !selectedFile) || sending}
                   className="btn-primary"
                   style={{
+                    height: '44px',
                     borderRadius: '24px',
-                    padding: '12px 24px',
+                    padding: '0 24px',
                     opacity: (!newMessage.trim() && !selectedFile) || sending ? 0.5 : 1,
                     flexShrink: 0
                   }}
