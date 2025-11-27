@@ -813,3 +813,10 @@ button {
     font-size: 18px;
   }
 }
+
+/* PC対応 (769px以上) */
+@media (min-width: 769px) {
+  .hidden-desktop {
+    display: none !important;
+  }
+}

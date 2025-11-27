@@ -12,6 +12,9 @@ type Message = {
   sender_id: string
   content: string
   created_at: string
+  file_url: string | null
+  file_type: string | null
+  file_name: string | null
 }
 
 type OtherUser = {
@@ -47,9 +50,13 @@ export default function ChatRoomPage() {
   const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<string | null>(null)
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const params = useParams()
   const roomId = params.id as string
@@ -287,15 +294,99 @@ export default function ChatRoomPage() {
     }
   }
 
+  // ファイル選択ハンドラー
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // ファイルサイズチェック（50MB）
+    if (file.size > 50 * 1024 * 1024) {
+      alert('ファイルサイズは50MB以下にしてください')
+      return
+    }
+
+    // ファイルタイプチェック
+    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    const validVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm']
+    
+    if (!validImageTypes.includes(file.type) && !validVideoTypes.includes(file.type)) {
+      alert('対応ファイル形式: JPG, PNG, GIF, WebP, MP4, MOV, WebM')
+      return
+    }
+
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+  }
+
+  // ファイル削除
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  // ファイルアップロード関数
+  const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `${roomId}/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('chat-files')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-files')
+        .getPublicUrl(filePath)
+
+      const fileType = file.type.startsWith('image/') ? 'image' : 'video'
+
+      return { url: publicUrl, type: fileType }
+    } catch (error) {
+      console.error('ファイルアップロードエラー:', error)
+      return null
+    }
+  }
+
   async function sendMessage() {
-    if (!newMessage.trim() || sending) return
+    if ((!newMessage.trim() && !selectedFile) || sending) return
 
     setSending(true)
+    setUploading(true)
+
+    let fileUrl: string | null = null
+    let fileType: string | null = null
+    let fileName: string | null = null
+
+    // ファイルがある場合はアップロード
+    if (selectedFile) {
+      const uploadResult = await uploadFile(selectedFile)
+      if (!uploadResult) {
+        alert('ファイルのアップロードに失敗しました')
+        setSending(false)
+        setUploading(false)
+        return
+      }
+      fileUrl = uploadResult.url
+      fileType = uploadResult.type
+      fileName = selectedFile.name
+    }
 
     const messageData = {
       chat_room_id: roomId,
       sender_id: currentProfileId,
-      content: newMessage.trim()
+      content: newMessage.trim() || '',
+      file_url: fileUrl,
+      file_type: fileType,
+      file_name: fileName
     }
 
     const { data, error } = await supabase
@@ -310,8 +401,8 @@ export default function ChatRoomPage() {
     } else {
       setMessages(prev => [...prev, data as Message])
       setNewMessage('')
+      handleRemoveFile()
       
-      // 送信後は強制スクロール
       setTimeout(() => scrollToBottom(true), 50)
       
       await supabase
@@ -325,6 +416,7 @@ export default function ChatRoomPage() {
     }
 
     setSending(false)
+    setUploading(false)
   }
 
   function subscribeToMessages() {
@@ -588,12 +680,15 @@ export default function ChatRoomPage() {
           flexDirection: 'column',
           backgroundColor: '#FFFFFF'
         }}>
-          {/* ヘッダー */}
-          <div style={{
-            borderBottom: '1px solid #E5E5E5',
-            padding: '12px 20px',
-            backgroundColor: '#FFFFFF'
-          }}>
+          {/* ヘッダー（モバイルのみ表示） */}
+          <div 
+            className="hidden-desktop"
+            style={{
+              borderBottom: '1px solid #E5E5E5',
+              padding: '12px 20px',
+              backgroundColor: '#FFFFFF'
+            }}
+          >
             {otherUser && (
               <div className="flex gap-12" style={{ alignItems: 'center' }}>
                 <Link
@@ -744,13 +839,50 @@ export default function ChatRoomPage() {
                       <div style={{
                         backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
                         color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
-                        padding: '12px 16px',
+                        padding: message.file_url ? '8px' : '12px 16px',
                         borderRadius: '16px',
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-wrap',
                         border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
                       }}>
-                        {message.content}
+                        {/* 画像表示 */}
+                        {message.file_type === 'image' && message.file_url && (
+                          <img
+                            src={message.file_url}
+                            alt={message.file_name || '画像'}
+                            style={{
+                              maxWidth: '300px',
+                              width: '100%',
+                              borderRadius: '12px',
+                              display: 'block',
+                              marginBottom: message.content ? '8px' : '0'
+                            }}
+                          />
+                        )}
+                        
+                        {/* 動画表示 */}
+                        {message.file_type === 'video' && message.file_url && (
+                          <video
+                            src={message.file_url}
+                            controls
+                            style={{
+                              maxWidth: '300px',
+                              width: '100%',
+                              borderRadius: '12px',
+                              display: 'block',
+                              marginBottom: message.content ? '8px' : '0'
+                            }}
+                          />
+                        )}
+                        
+                        {/* テキスト */}
+                        {message.content && (
+                          <div style={{
+                            padding: message.file_url ? '4px 8px' : '0'
+                          }}>
+                            {message.content}
+                          </div>
+                        )}
                       </div>
                       <div style={{
                         display: 'flex',
@@ -778,57 +910,148 @@ export default function ChatRoomPage() {
           {/* 入力エリア */}
           <div style={{
             borderTop: '1px solid #E5E5E5',
-            padding: '16px 20px',
             backgroundColor: '#FFFFFF'
           }}>
-            <div className="flex gap-12" style={{ alignItems: 'flex-end' }}>
-              <textarea
-                ref={textareaRef}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  // IME入力中（日本語入力など）は送信しない
-                  if (e.nativeEvent.isComposing) return
-                  
-                  // モバイルデバイスの場合はEnterキーでの送信を無効化
-                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-                  if (isMobile) return
-                  
-                  // PC環境でShift+Enterなしの場合のみ送信
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
-                }}
-                placeholder="メッセージを入力..."
-                disabled={sending}
-                rows={1}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '24px',
-                  fontSize: '16px',
-                  color: '#1A1A1A',
-                  resize: 'none',
-                  fontFamily: 'inherit',
-                  lineHeight: '1.5',
-                  overflowY: 'hidden',
-                  maxHeight: '144px'
-                }}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!newMessage.trim() || sending}
-                className="btn-primary"
-                style={{
-                  borderRadius: '24px',
-                  opacity: !newMessage.trim() || sending ? 0.5 : 1,
-                  flexShrink: 0
-                }}
-              >
-                送信
-              </button>
+            {/* ファイルプレビュー */}
+            {selectedFile && previewUrl && (
+              <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #E5E5E5',
+                position: 'relative'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  display: 'inline-block',
+                  maxWidth: '200px'
+                }}>
+                  {selectedFile.type.startsWith('image/') ? (
+                    <img
+                      src={previewUrl}
+                      alt="プレビュー"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '150px',
+                        borderRadius: '8px',
+                        display: 'block'
+                      }}
+                    />
+                  ) : (
+                    <video
+                      src={previewUrl}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '150px',
+                        borderRadius: '8px',
+                        display: 'block'
+                      }}
+                      controls
+                    />
+                  )}
+                  <button
+                    onClick={handleRemoveFile}
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: '#1A1A1A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-tiny text-gray" style={{ marginTop: '8px' }}>
+                  {selectedFile.name}
+                </p>
+              </div>
+            )}
+
+            <div style={{ padding: '16px 20px' }}>
+              <div className="flex gap-12" style={{ alignItems: 'flex-end' }}>
+                {/* ファイル添付ボタン */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending || uploading}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: '1px solid #E5E5E5',
+                    backgroundColor: '#FFFFFF',
+                    color: '#6B6B6B',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'border-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E5E5'}
+                >
+                  📎
+                </button>
+
+                <textarea
+                  ref={textareaRef}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.nativeEvent.isComposing) return
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                    if (isMobile) return
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      sendMessage()
+                    }
+                  }}
+                  placeholder="メッセージを入力..."
+                  disabled={sending}
+                  rows={1}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '1px solid #E5E5E5',
+                    borderRadius: '24px',
+                    fontSize: '16px',
+                    color: '#1A1A1A',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.5',
+                    overflowY: 'hidden',
+                    maxHeight: '144px'
+                  }}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={(!newMessage.trim() && !selectedFile) || sending}
+                  className="btn-primary"
+                  style={{
+                    borderRadius: '24px',
+                    opacity: (!newMessage.trim() && !selectedFile) || sending ? 0.5 : 1,
+                    flexShrink: 0
+                  }}
+                >
+                  {uploading ? 'アップロード中...' : '送信'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
