@@ -5,7 +5,6 @@ import { supabase } from '../../../utils/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../components/Header'
-import Footer from '../../components/Footer'
 
 type Message = {
   id: string
@@ -128,17 +127,23 @@ export default function ChatRoomPage() {
   useEffect(() => {
     if (textareaRef.current) {
       const textarea = textareaRef.current
-      textarea.style.height = '44px'
-      const newHeight = textarea.scrollHeight
       
-      const maxHeight = 144
-      
-      if (newHeight > maxHeight) {
-        textarea.style.height = maxHeight + 'px'
-        textarea.style.overflowY = 'auto'
-      } else if (newHeight > 44) {
-        textarea.style.height = newHeight + 'px'
+      if (newMessage === '') {
+        textarea.style.height = '44px'
         textarea.style.overflowY = 'hidden'
+      } else {
+        textarea.style.height = '44px'
+        const newHeight = textarea.scrollHeight
+        
+        const maxHeight = 144
+        
+        if (newHeight > maxHeight) {
+          textarea.style.height = maxHeight + 'px'
+          textarea.style.overflowY = 'auto'
+        } else if (newHeight > 44) {
+          textarea.style.height = newHeight + 'px'
+          textarea.style.overflowY = 'hidden'
+        }
       }
     }
   }, [newMessage])
@@ -1200,7 +1205,7 @@ export default function ChatRoomPage() {
                   rows={1}
                   style={{
                     flex: 1,
-                    padding: '11px 16px',
+                    padding: '10px 16px',
                     boxSizing: 'border-box',
                     border: '1px solid #E5E5E5',
                     borderRadius: '24px',
@@ -1208,7 +1213,7 @@ export default function ChatRoomPage() {
                     color: '#1A1A1A',
                     resize: 'none',
                     fontFamily: 'inherit',
-                    lineHeight: '1.5',
+                    lineHeight: '20px',
                     overflowY: 'hidden',
                     minHeight: '44px',
                     height: '44px'
@@ -1409,8 +1414,6 @@ export default function ChatRoomPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   )
 }
