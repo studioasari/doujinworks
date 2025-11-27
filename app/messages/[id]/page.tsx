@@ -54,6 +54,7 @@ export default function ChatRoomPage() {
   const [uploading, setUploading] = useState(false)
   const [enlargedMedia, setEnlargedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({})
+  const [justSentMessageId, setJustSentMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -332,6 +333,13 @@ export default function ChatRoomPage() {
     }
   }
 
+  const handleMediaLoad = (messageId: string) => {
+    if (messageId === justSentMessageId) {
+      scrollToBottom(true)
+      setJustSentMessageId(null)
+    }
+  }
+
   const getFileType = (file: File): string => {
     if (file.type.startsWith('image/')) return 'image'
     if (file.type.startsWith('video/')) return 'video'
@@ -451,11 +459,10 @@ export default function ChatRoomPage() {
       setNewMessage('')
       handleRemoveFile()
       
-      // ファイル送信時は画像/動画のロードを待つため遅延を長くする
-      if (hasFile) {
-        setTimeout(() => scrollToBottom(true), 100)
-        setTimeout(() => scrollToBottom(true), 300)
-        setTimeout(() => scrollToBottom(true), 500)
+      // ファイルがある場合はメッセージIDを記録（画像ロード後にスクロール）
+      // ファイルがない場合は即座にスクロール
+      if (hasFile && (data.file_type === 'image' || data.file_type === 'video')) {
+        setJustSentMessageId(data.id)
       } else {
         setTimeout(() => scrollToBottom(true), 50)
       }
@@ -937,6 +944,7 @@ export default function ChatRoomPage() {
                             <img
                               src={signedUrl}
                               alt={message.file_name || '画像'}
+                              onLoad={() => handleMediaLoad(message.id)}
                               onClick={() => setEnlargedMedia({ url: signedUrl, type: 'image' })}
                               style={{
                                 maxWidth: '300px',
@@ -950,6 +958,7 @@ export default function ChatRoomPage() {
                             <video
                               src={signedUrl}
                               controls
+                              onLoadedData={() => handleMediaLoad(message.id)}
                               onClick={() => setEnlargedMedia({ url: signedUrl, type: 'video' })}
                               style={{
                                 maxWidth: '300px',
