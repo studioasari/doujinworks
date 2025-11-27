@@ -54,6 +54,7 @@ export default function ChatRoomPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [enlargedMedia, setEnlargedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
+  const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -120,6 +121,7 @@ export default function ChatRoomPage() {
   useEffect(() => {
     if (messages.length > 0 && !loading) {
       scrollToBottom(true)
+      generateSignedUrls()
     }
   }, [loading, messages.length])
 
@@ -156,6 +158,42 @@ export default function ChatRoomPage() {
 
     if (profile) {
       setCurrentProfileId(profile.id)
+    }
+  }
+
+  async function generateSignedUrls() {
+    const urlsToGenerate: { [key: string]: string } = {}
+    
+    for (const message of messages) {
+      if (message.file_url && !signedUrls[message.file_url]) {
+        try {
+          // file_urlがパス形式かフルURL形式かを判定
+          let filePath = message.file_url
+          
+          // フルURLの場合はパスを抽出（後方互換性のため）
+          if (filePath.includes('supabase.co/storage/v1/object/')) {
+            const matches = filePath.match(/chat-files\/(.+)/)
+            if (matches) {
+              filePath = matches[1]
+            }
+          }
+          
+          // 署名付きURLを生成（有効期限: 1時間）
+          const { data, error } = await supabase.storage
+            .from('chat-files')
+            .createSignedUrl(filePath, 3600)
+          
+          if (!error && data) {
+            urlsToGenerate[message.file_url] = data.signedUrl
+          }
+        } catch (error) {
+          console.error('署名付きURL生成エラー:', error)
+        }
+      }
+    }
+    
+    if (Object.keys(urlsToGenerate).length > 0) {
+      setSignedUrls(prev => ({ ...prev, ...urlsToGenerate }))
     }
   }
 
@@ -353,13 +391,10 @@ export default function ChatRoomPage() {
 
       if (uploadError) throw uploadError
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('chat-files')
-        .getPublicUrl(filePath)
-
       const fileType = getFileType(file)
 
-      return { url: publicUrl, type: fileType }
+      // パスのみを返す（セキュア）
+      return { url: filePath, type: fileType }
     } catch (error) {
       console.error('ファイルアップロードエラー:', error)
       return null
@@ -567,9 +602,20 @@ export default function ChatRoomPage() {
     }
   }
 
+  const getSignedUrl = (fileUrl: string | null): string | null => {
+    if (!fileUrl) return null
+    return signedUrls[fileUrl] || null
+  }
+
   const handleDownload = async (fileUrl: string, fileName: string) => {
     try {
-      const response = await fetch(fileUrl)
+      const signedUrl = getSignedUrl(fileUrl)
+      if (!signedUrl) {
+        alert('ファイルURLの生成に失敗しました')
+        return
+      }
+      
+      const response = await fetch(signedUrl)
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -810,6 +856,7 @@ export default function ChatRoomPage() {
               const showDate = index === 0 || 
                 new Date(messages[index - 1].created_at).toDateString() !== 
                 new Date(message.created_at).toDateString()
+              const signedUrl = getSignedUrl(message.file_url)
 
               return (
                 <div key={message.id}>
@@ -880,12 +927,12 @@ export default function ChatRoomPage() {
                         whiteSpace: 'pre-wrap',
                         border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
                       }}>
-                        {message.file_type === 'image' && message.file_url && (
+                        {message.file_type === 'image' && signedUrl && (
                           <div>
                             <img
-                              src={message.file_url}
+                              src={signedUrl}
                               alt={message.file_name || '画像'}
-                              onClick={() => setEnlargedMedia({ url: message.file_url!, type: 'image' })}
+                              onClick={() => setEnlargedMedia({ url: signedUrl, type: 'image' })}
                               style={{
                                 maxWidth: '300px',
                                 width: '100%',
@@ -922,12 +969,12 @@ export default function ChatRoomPage() {
                           </div>
                         )}
                         
-                        {message.file_type === 'video' && message.file_url && (
+                        {message.file_type === 'video' && signedUrl && (
                           <div>
                             <video
-                              src={message.file_url}
+                              src={signedUrl}
                               controls
-                              onClick={() => setEnlargedMedia({ url: message.file_url!, type: 'video' })}
+                              onClick={() => setEnlargedMedia({ url: signedUrl, type: 'video' })}
                               style={{
                                 maxWidth: '300px',
                                 width: '100%',
@@ -964,9 +1011,9 @@ export default function ChatRoomPage() {
                           </div>
                         )}
                         
-                        {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && message.file_url && (
+                        {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
                           <a
-                            href={message.file_url}
+                            href={signedUrl}
                             download={message.file_name || undefined}
                             target="_blank"
                             rel="noopener noreferrer"
