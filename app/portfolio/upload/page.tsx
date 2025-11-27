@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../../utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,18 +8,16 @@ import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import DashboardSidebar from '../../components/DashboardSidebar'
 
-export default function UploadPortfolioPage() {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
-  const [tags, setTags] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string>('')
-  const [isPublic, setIsPublic] = useState(true)
-  const [uploading, setUploading] = useState(false)
+type Genre = {
+  id: string
+  name: string
+  icon: string
+  description: string
+  path: string
+}
+
+export default function UploadSelectPage() {
   const [currentUserId, setCurrentUserId] = useState<string>('')
-  const [dragging, setDragging] = useState(false)
-  const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -46,130 +44,63 @@ export default function UploadPortfolioPage() {
     }
   }
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) {
-      processImageFile(file)
+  const genres: Genre[] = [
+    {
+      id: 'illustration',
+      name: 'イラスト',
+      icon: 'fas fa-image',
+      description: '1枚のイラスト作品',
+      path: '/portfolio/upload/illustration'
+    },
+    {
+      id: 'manga',
+      name: 'マンガ',
+      icon: 'fas fa-book',
+      description: '複数ページの漫画作品',
+      path: '/portfolio/upload/manga'
+    },
+    {
+      id: 'text',
+      name: '小説・テキスト',
+      icon: 'fas fa-file-alt',
+      description: '小説、エッセイ、詩など',
+      path: '/portfolio/upload/text'
+    },
+    {
+      id: 'music',
+      name: '音楽',
+      icon: 'fas fa-music',
+      description: 'オリジナル楽曲、BGMなど',
+      path: '/portfolio/upload/music'
+    },
+    {
+      id: 'voice',
+      name: 'ボイス',
+      icon: 'fas fa-microphone',
+      description: 'ボイスドラマ、ナレーションなど',
+      path: '/portfolio/upload/voice'
+    },
+    {
+      id: 'video',
+      name: '動画',
+      icon: 'fas fa-video',
+      description: 'アニメーション、MV、実写など',
+      path: '/portfolio/upload/video'
     }
-  }
+  ]
 
-  function processImageFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ファイルサイズは5MB以下にしてください')
-      return
-    }
-    
-    if (!file.type.startsWith('image/')) {
-      alert('画像ファイルを選択してください')
-      return
-    }
-
-    setImageFile(file)
-    
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  function handleImageClick() {
-    imageInputRef.current?.click()
-  }
-
-  function handleImageDrop(e: React.DragEvent) {
-    e.preventDefault()
-    setDragging(false)
-    
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      processImageFile(file)
-    }
-  }
-
-  function handleImageRemove(e: React.MouseEvent) {
-    e.stopPropagation()
-    setImageFile(null)
-    setImagePreview('')
-    if (imageInputRef.current) {
-      imageInputRef.current.value = ''
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-
-    if (!title.trim()) {
-      alert('タイトルは必須です')
-      return
-    }
-
-    if (!category) {
-      alert('カテゴリを選択してください')
-      return
-    }
-
-    if (!imageFile) {
-      alert('画像を選択してください')
-      return
-    }
-
-    setUploading(true)
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        alert('ログインが必要です')
-        router.push('/login')
-        return
-      }
-
-      // 1. 画像をStorageにアップロード
-      const fileExt = imageFile.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('portfolio-images')
-        .upload(fileName, imageFile)
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // 2. 公開URLを取得
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio-images')
-        .getPublicUrl(fileName)
-
-      // 3. データベースに保存
-      const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
-
-      const { error: dbError } = await supabase
-        .from('portfolio_items')
-        .insert({
-          creator_id: currentUserId,
-          title: title.trim(),
-          description: description.trim() || null,
-          category: category,
-          tags: tagsArray,
-          image_url: publicUrl,
-          thumbnail_url: publicUrl,
-          external_url: null,
-          is_public: isPublic
-        })
-
-      if (dbError) {
-        throw dbError
-      }
-
-      alert('作品をアップロードしました！')
-      router.push('/portfolio/manage')
-    } catch (error) {
-      console.error('アップロードエラー:', error)
-      alert('アップロードに失敗しました')
-    } finally {
-      setUploading(false)
-    }
+  if (!currentUserId) {
+    return (
+      <>
+        <Header />
+        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
+          <div className="loading-state">
+            読み込み中...
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
   }
 
   return (
@@ -190,10 +121,10 @@ export default function UploadPortfolioPage() {
           maxWidth: '100%',
           minHeight: '100vh'
         }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
             {/* 戻るボタン */}
             <Link
-              href="/portfolio/manage"
+              href="/dashboard"
               className="text-small text-gray"
               style={{
                 display: 'inline-flex',
@@ -203,179 +134,77 @@ export default function UploadPortfolioPage() {
                 marginBottom: '24px'
               }}
             >
-              ← 作品管理に戻る
+              ← ダッシュボードに戻る
             </Link>
 
-            <h1 className="page-title mb-40">
-              作品をアップロード
-            </h1>
+            {/* ヘッダー */}
+            <div className="mb-40">
+              <h1 className="page-title mb-12">
+                ポートフォリオをアップロード
+              </h1>
+              <p className="text-small text-gray">
+                どのジャンルの作品をアップロードしますか？
+              </p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="card-no-hover p-40">
-              {/* 画像アップロード */}
-              <div className="mb-32">
-                <label className="form-label">
-                  作品画像 <span className="form-required">*</span>
-                </label>
-                
-                <div
-                  className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
-                  style={{ width: '100%', height: '300px' }}
-                  onClick={handleImageClick}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDragging(true)
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={handleImageDrop}
-                >
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="プレビュー" />
-                  ) : (
-                    <div className="upload-area-content" style={{ height: '100%' }}>
-                      <div className="upload-area-icon">
-                        <i className="fas fa-image"></i>
-                      </div>
-                      <div className="upload-area-text">
-                        クリックまたはドラッグして<br />作品画像をアップロード
-                      </div>
-                      <div className="upload-area-hint">
-                        JPG, PNG, GIF / 最大5MB
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  style={{ display: 'none' }}
-                />
-
-                {imagePreview && (
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="btn-danger btn-small"
-                    style={{ marginTop: '12px' }}
-                  >
-                    削除
-                  </button>
-                )}
-              </div>
-
-              {/* タイトル */}
-              <div className="mb-24">
-                <label className="form-label">
-                  タイトル <span className="form-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="作品のタイトル"
-                  required
-                  className="input-field"
-                />
-              </div>
-
-              {/* カテゴリ */}
-              <div className="mb-24">
-                <label className="form-label">
-                  カテゴリ <span className="form-required">*</span>
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  required
-                  className="select-field"
-                >
-                  <option value="">選択してください</option>
-                  <option value="illustration">イラスト</option>
-                  <option value="manga">漫画</option>
-                  <option value="novel">小説</option>
-                  <option value="music">音楽</option>
-                  <option value="voice">ボイス</option>
-                  <option value="video">動画</option>
-                  <option value="game">ゲーム</option>
-                  <option value="3d">3Dモデル</option>
-                  <option value="other">その他</option>
-                </select>
-              </div>
-
-              {/* 説明 */}
-              <div className="mb-24">
-                <label className="form-label">説明</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="作品の説明を入力してください"
-                  rows={6}
-                  className="textarea-field"
-                />
-              </div>
-
-              {/* タグ */}
-              <div className="mb-24">
-                <label className="form-label">タグ</label>
-                <input
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
-                  className="input-field"
-                />
-              </div>
-
-              {/* 公開設定 */}
-              <div className="mb-32">
-                <label 
-                  className="flex gap-12" 
+            {/* ジャンルカード */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '24px'
+            }}>
+              {genres.map((genre) => (
+                <Link
+                  key={genre.id}
+                  href={genre.path}
+                  className="card"
                   style={{
-                    alignItems: 'center',
-                    cursor: 'pointer'
+                    padding: '32px',
+                    textAlign: 'center',
+                    textDecoration: 'none'
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      cursor: 'pointer',
-                      accentColor: '#1A1A1A'
-                    }}
-                  />
-                  <span className="text-small">
-                    この作品を公開する
-                  </span>
-                </label>
-                <div className="text-tiny text-gray" style={{ marginTop: '8px', marginLeft: '32px' }}>
-                  チェックを外すと、アップロードできますが作品は非公開になります
-                </div>
-              </div>
+                  {/* アイコン */}
+                  <div style={{
+                    fontSize: '48px',
+                    color: '#1A1A1A',
+                    marginBottom: '16px'
+                  }}>
+                    <i className={genre.icon}></i>
+                  </div>
 
-              {/* ボタン */}
-              <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => router.push('/portfolio/manage')}
-                  disabled={uploading}
-                  className="btn-secondary"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="btn-primary"
-                >
-                  {uploading ? 'アップロード中...' : 'アップロード'}
-                </button>
-              </div>
-            </form>
+                  {/* ジャンル名 */}
+                  <h2 className="card-title mb-8">
+                    {genre.name}
+                  </h2>
+
+                  {/* 説明 */}
+                  <p className="text-small text-gray">
+                    {genre.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+
+            {/* 補足情報 */}
+            <div className="info-box" style={{ marginTop: '40px' }}>
+              <h3 className="form-label mb-12">
+                <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
+                アップロードに関する注意事項
+              </h3>
+              <ul style={{
+                fontSize: '14px',
+                color: '#6B6B6B',
+                lineHeight: '1.8',
+                paddingLeft: '20px'
+              }}>
+                <li>イラスト・マンガ: 1枚あたり最大5MB</li>
+                <li>小説・テキスト: 最大100,000文字</li>
+                <li>音楽: 最大20MB（約7〜10分）</li>
+                <li>ボイス: 最大10MB（約3〜5分）</li>
+                <li>動画: 最大100MB（約2〜3分）</li>
+              </ul>
+            </div>
           </div>
         </main>
       </div>
