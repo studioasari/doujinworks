@@ -75,7 +75,6 @@ export default function ChatRoomPage() {
     if (currentProfileId && roomId) {
       fetchMessages()
       fetchOtherUser(currentProfileId)
-      fetchOtherUserLastReadAt()
       const unsubscribeMessages = subscribeToMessages()
       const unsubscribeReadStatus = subscribeToReadStatus()
       updateLastReadAt()
@@ -87,7 +86,12 @@ export default function ChatRoomPage() {
     }
   }, [currentProfileId, roomId])
 
-  // タブ・ウィンドウがアクティブになったときに既読をつける
+  useEffect(() => {
+    if (otherUser && currentProfileId && roomId) {
+      fetchOtherUserLastReadAt()
+    }
+  }, [otherUser, currentProfileId, roomId])
+
   useEffect(() => {
     if (!currentProfileId || !roomId) return
 
@@ -112,21 +116,18 @@ export default function ChatRoomPage() {
     }
   }, [currentProfileId, roomId])
 
-  // 初回読み込み完了時のみスクロール
   useEffect(() => {
     if (messages.length > 0 && !loading) {
       scrollToBottom(true)
     }
-  }, [loading])
+  }, [loading, messages.length])
 
-  // テキストエリアの自動リサイズ
   useEffect(() => {
     if (textareaRef.current) {
       const textarea = textareaRef.current
       textarea.style.height = 'auto'
       const newHeight = textarea.scrollHeight
       
-      // 最大高さ（5行分：約144px）
       const maxHeight = 144
       
       if (newHeight > maxHeight) {
@@ -244,8 +245,6 @@ export default function ChatRoomPage() {
   }
 
   async function fetchOtherUserLastReadAt() {
-    if (!otherUser) return
-
     const { data } = await supabase
       .from('chat_room_participants')
       .select('last_read_at')
@@ -276,7 +275,6 @@ export default function ChatRoomPage() {
     setLoading(false)
   }
 
-  // ユーザーが下にいるかチェック
   function isNearBottom() {
     const container = messagesContainerRef.current
     if (!container) return true
@@ -284,7 +282,6 @@ export default function ChatRoomPage() {
     return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
   }
 
-  // スクロール関数（メッセージエリア内だけ）
   function scrollToBottom(force = false) {
     const container = messagesContainerRef.current
     if (!container) return
@@ -294,31 +291,44 @@ export default function ChatRoomPage() {
     }
   }
 
-  // ファイル選択ハンドラー
+  const getFileType = (file: File): string => {
+    if (file.type.startsWith('image/')) return 'image'
+    if (file.type.startsWith('video/')) return 'video'
+    if (file.type === 'application/pdf') return 'pdf'
+    if (file.type === 'application/zip' || file.type === 'application/x-zip-compressed') return 'zip'
+    return 'file'
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // ファイルサイズチェック（50MB）
     if (file.size > 50 * 1024 * 1024) {
       alert('ファイルサイズは50MB以下にしてください')
       return
     }
 
-    // ファイルタイプチェック
-    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-    const validVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm']
+    const validTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/quicktime', 'video/webm',
+      'application/pdf',
+      'application/zip', 'application/x-zip-compressed'
+    ]
     
-    if (!validImageTypes.includes(file.type) && !validVideoTypes.includes(file.type)) {
-      alert('対応ファイル形式: JPG, PNG, GIF, WebP, MP4, MOV, WebM')
+    if (!validTypes.includes(file.type)) {
+      alert('対応ファイル形式: JPG, PNG, GIF, WebP, MP4, MOV, WebM, PDF, ZIP')
       return
     }
 
     setSelectedFile(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    
+    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      setPreviewUrl(URL.createObjectURL(file))
+    } else {
+      setPreviewUrl(null)
+    }
   }
 
-  // ファイル削除
   const handleRemoveFile = () => {
     setSelectedFile(null)
     if (previewUrl) {
@@ -330,7 +340,6 @@ export default function ChatRoomPage() {
     }
   }
 
-  // ファイルアップロード関数
   const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
     try {
       const fileExt = file.name.split('.').pop()
@@ -347,7 +356,7 @@ export default function ChatRoomPage() {
         .from('chat-files')
         .getPublicUrl(filePath)
 
-      const fileType = file.type.startsWith('image/') ? 'image' : 'video'
+      const fileType = getFileType(file)
 
       return { url: publicUrl, type: fileType }
     } catch (error) {
@@ -366,7 +375,6 @@ export default function ChatRoomPage() {
     let fileType: string | null = null
     let fileName: string | null = null
 
-    // ファイルがある場合はアップロード
     if (selectedFile) {
       const uploadResult = await uploadFile(selectedFile)
       if (!uploadResult) {
@@ -447,7 +455,6 @@ export default function ChatRoomPage() {
               setTimeout(() => scrollToBottom(true), 50)
             }
             
-            // 相手のメッセージを受信したら既読をつける
             updateLastReadAt()
           }
           
@@ -476,7 +483,6 @@ export default function ChatRoomPage() {
         },
         (payload) => {
           const updated = payload.new as any
-          // 相手の既読状態が更新された場合
           if (updated.profile_id !== currentProfileId) {
             setOtherUserLastReadAt(updated.last_read_at)
           }
@@ -490,7 +496,6 @@ export default function ChatRoomPage() {
   }
 
   async function updateLastReadAt() {
-    // ブラウザタブが非アクティブ、またはウィンドウがフォーカスされていない場合は既読をつけない
     if (document.hidden || !document.hasFocus()) {
       return
     }
@@ -501,7 +506,6 @@ export default function ChatRoomPage() {
       .eq('chat_room_id', roomId)
       .eq('profile_id', currentProfileId)
 
-    // 未読カウントを更新
     if (currentProfileId) {
       fetchChatRooms(currentProfileId)
     }
@@ -549,6 +553,19 @@ export default function ChatRoomPage() {
     }
   }
 
+  const getFileIcon = (fileType: string | null) => {
+    switch (fileType) {
+      case 'pdf':
+        return 'fa-file-pdf'
+      case 'zip':
+        return 'fa-file-zipper'
+      case 'file':
+        return 'fa-file'
+      default:
+        return 'fa-file'
+    }
+  }
+
   return (
     <>
       <Header />
@@ -557,7 +574,7 @@ export default function ChatRoomPage() {
         height: 'calc(100vh - 64px)',
         backgroundColor: '#FFFFFF'
       }}>
-        {/* 左サイドバー: メッセージ一覧（PC only） */}
+        {/* 左サイドバー */}
         <aside 
           className="hidden-mobile"
           style={{
@@ -673,14 +690,14 @@ export default function ChatRoomPage() {
           )}
         </aside>
 
-        {/* 右側: チャットエリア */}
+        {/* チャットエリア */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: '#FFFFFF'
         }}>
-          {/* ヘッダー（モバイルのみ表示） */}
+          {/* ヘッダー(モバイルのみ) */}
           <div 
             className="hidden-desktop"
             style={{
@@ -795,7 +812,6 @@ export default function ChatRoomPage() {
                     gap: '8px',
                     alignItems: 'flex-start'
                   }}>
-                    {/* 相手のメッセージの場合、左側にアイコン表示 */}
                     {!isCurrentUser && otherUser && (
                       <div 
                         onClick={() => setShowProfileModal(true)}
@@ -845,7 +861,6 @@ export default function ChatRoomPage() {
                         whiteSpace: 'pre-wrap',
                         border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
                       }}>
-                        {/* 画像表示 */}
                         {message.file_type === 'image' && message.file_url && (
                           <img
                             src={message.file_url}
@@ -860,7 +875,6 @@ export default function ChatRoomPage() {
                           />
                         )}
                         
-                        {/* 動画表示 */}
                         {message.file_type === 'video' && message.file_url && (
                           <video
                             src={message.file_url}
@@ -875,7 +889,43 @@ export default function ChatRoomPage() {
                           />
                         )}
                         
-                        {/* テキスト */}
+                        {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && message.file_url && (
+                          <a
+                            href={message.file_url}
+                            download={message.file_name || undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '12px',
+                              backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
+                              borderRadius: '8px',
+                              textDecoration: 'none',
+                              color: 'inherit',
+                              marginBottom: message.content ? '8px' : '0'
+                            }}
+                          >
+                            <i className={`fas ${getFileIcon(message.file_type)}`} style={{ fontSize: '24px' }}></i>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {message.file_name}
+                              </div>
+                              <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                {message.file_type?.toUpperCase()}
+                              </div>
+                            </div>
+                            <i className="fas fa-download" style={{ fontSize: '16px' }}></i>
+                          </a>
+                        )}
+                        
                         {message.content && (
                           <div style={{
                             padding: message.file_url ? '4px 8px' : '0'
@@ -912,8 +962,7 @@ export default function ChatRoomPage() {
             borderTop: '1px solid #E5E5E5',
             backgroundColor: '#FFFFFF'
           }}>
-            {/* ファイルプレビュー */}
-            {selectedFile && previewUrl && (
+            {selectedFile && (
               <div style={{
                 padding: '16px 20px',
                 borderBottom: '1px solid #E5E5E5',
@@ -924,7 +973,7 @@ export default function ChatRoomPage() {
                   display: 'inline-block',
                   maxWidth: '200px'
                 }}>
-                  {selectedFile.type.startsWith('image/') ? (
+                  {selectedFile.type.startsWith('image/') && previewUrl && (
                     <img
                       src={previewUrl}
                       alt="プレビュー"
@@ -935,7 +984,9 @@ export default function ChatRoomPage() {
                         display: 'block'
                       }}
                     />
-                  ) : (
+                  )}
+                  
+                  {selectedFile.type.startsWith('video/') && previewUrl && (
                     <video
                       src={previewUrl}
                       style={{
@@ -947,6 +998,29 @@ export default function ChatRoomPage() {
                       controls
                     />
                   )}
+                  
+                  {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '16px',
+                      backgroundColor: '#F9F9F9',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E5E5'
+                    }}>
+                      <i className={`fas ${getFileIcon(getFileType(selectedFile))}`} style={{ fontSize: '32px', color: '#6B6B6B' }}></i>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600' }}>
+                          {selectedFile.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B6B6B' }}>
+                          {getFileType(selectedFile).toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <button
                     onClick={handleRemoveFile}
                     style={{
@@ -969,19 +1043,15 @@ export default function ChatRoomPage() {
                     ✕
                   </button>
                 </div>
-                <p className="text-tiny text-gray" style={{ marginTop: '8px' }}>
-                  {selectedFile.name}
-                </p>
               </div>
             )}
 
             <div style={{ padding: '16px 20px' }}>
               <div className="flex gap-12" style={{ alignItems: 'flex-end' }}>
-                {/* ファイル添付ボタン */}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm,application/pdf,application/zip,application/x-zip-compressed"
                   onChange={handleFileSelect}
                   style={{ display: 'none' }}
                 />
@@ -995,18 +1065,23 @@ export default function ChatRoomPage() {
                     border: '1px solid #E5E5E5',
                     backgroundColor: '#FFFFFF',
                     color: '#6B6B6B',
-                    fontSize: '20px',
+                    fontSize: '18px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    opacity: (sending || uploading) ? 0.5 : 1
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
+                  onMouseEnter={(e) => {
+                    if (!sending && !uploading) {
+                      e.currentTarget.style.borderColor = '#1A1A1A'
+                    }
+                  }}
                   onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E5E5'}
                 >
-                  📎
+                  <i className="fas fa-paperclip"></i>
                 </button>
 
                 <textarea
@@ -1086,7 +1161,6 @@ export default function ChatRoomPage() {
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
             }}
           >
-            {/* アバター */}
             <div style={{
               width: '100px',
               height: '100px',
@@ -1116,19 +1190,16 @@ export default function ChatRoomPage() {
               )}
             </div>
 
-            {/* 名前 */}
             <h2 className="card-title mb-8" style={{ textAlign: 'center' }}>
               {otherUser.display_name || '名前未設定'}
             </h2>
 
-            {/* Username */}
             {otherUser.username && (
               <p className="text-small text-gray mb-24" style={{ textAlign: 'center' }}>
                 @{otherUser.username}
               </p>
             )}
 
-            {/* 自己紹介 */}
             {otherUser.bio && (
               <div className="mb-32">
                 <p className="text-small" style={{
@@ -1142,7 +1213,6 @@ export default function ChatRoomPage() {
               </div>
             )}
 
-            {/* ボタン */}
             <div className="flex flex-col gap-16">
               {otherUser.username && (
                 <Link
