@@ -406,6 +406,7 @@ export default function ChatRoomPage() {
     if ((!newMessage.trim() && !selectedFile) || sending) return
 
     setSending(true)
+    const hasFile = !!selectedFile
     if (selectedFile) {
       setUploading(true)
     }
@@ -450,7 +451,14 @@ export default function ChatRoomPage() {
       setNewMessage('')
       handleRemoveFile()
       
-      setTimeout(() => scrollToBottom(true), 50)
+      // ファイル送信時は画像/動画のロードを待つため遅延を長くする
+      if (hasFile) {
+        setTimeout(() => scrollToBottom(true), 100)
+        setTimeout(() => scrollToBottom(true), 300)
+        setTimeout(() => scrollToBottom(true), 500)
+      } else {
+        setTimeout(() => scrollToBottom(true), 50)
+      }
       
       await supabase
         .from('chat_rooms')
