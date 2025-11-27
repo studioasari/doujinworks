@@ -53,6 +53,7 @@ export default function ChatRoomPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [enlargedMedia, setEnlargedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -566,6 +567,24 @@ export default function ChatRoomPage() {
     }
   }
 
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('ダウンロードエラー:', error)
+      alert('ダウンロードに失敗しました')
+    }
+  }
+
   return (
     <>
       <Header />
@@ -862,31 +881,87 @@ export default function ChatRoomPage() {
                         border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
                       }}>
                         {message.file_type === 'image' && message.file_url && (
-                          <img
-                            src={message.file_url}
-                            alt={message.file_name || '画像'}
-                            style={{
-                              maxWidth: '300px',
-                              width: '100%',
-                              borderRadius: '12px',
-                              display: 'block',
-                              marginBottom: message.content ? '8px' : '0'
-                            }}
-                          />
+                          <div>
+                            <img
+                              src={message.file_url}
+                              alt={message.file_name || '画像'}
+                              onClick={() => setEnlargedMedia({ url: message.file_url!, type: 'image' })}
+                              style={{
+                                maxWidth: '300px',
+                                width: '100%',
+                                borderRadius: '12px',
+                                display: 'block',
+                                cursor: 'pointer',
+                                marginBottom: message.content ? '8px' : '4px'
+                              }}
+                            />
+                            <button
+                              onClick={() => handleDownload(message.file_url!, message.file_name || '画像.jpg')}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: 'inherit',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                marginTop: '4px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <i className="fas fa-download" style={{ fontSize: '12px' }}></i>
+                              保存
+                            </button>
+                          </div>
                         )}
                         
                         {message.file_type === 'video' && message.file_url && (
-                          <video
-                            src={message.file_url}
-                            controls
-                            style={{
-                              maxWidth: '300px',
-                              width: '100%',
-                              borderRadius: '12px',
-                              display: 'block',
-                              marginBottom: message.content ? '8px' : '0'
-                            }}
-                          />
+                          <div>
+                            <video
+                              src={message.file_url}
+                              controls
+                              onClick={() => setEnlargedMedia({ url: message.file_url!, type: 'video' })}
+                              style={{
+                                maxWidth: '300px',
+                                width: '100%',
+                                borderRadius: '12px',
+                                display: 'block',
+                                cursor: 'pointer',
+                                marginBottom: message.content ? '8px' : '4px'
+                              }}
+                            />
+                            <button
+                              onClick={() => handleDownload(message.file_url!, message.file_name || '動画.mp4')}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                backgroundColor: isCurrentUser ? 'rgba(255,255,255,0.1)' : '#F9F9F9',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: 'inherit',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                marginTop: '4px',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                            >
+                              <i className="fas fa-download" style={{ fontSize: '12px' }}></i>
+                              保存
+                            </button>
+                          </div>
                         )}
                         
                         {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && message.file_url && (
@@ -1047,7 +1122,11 @@ export default function ChatRoomPage() {
             )}
 
             <div style={{ padding: '16px 20px' }}>
-              <div className="flex gap-12" style={{ alignItems: 'flex-end' }}>
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                alignItems: 'flex-end'
+              }}>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1059,8 +1138,8 @@ export default function ChatRoomPage() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={sending || uploading}
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '50%',
                     border: '1px solid #E5E5E5',
                     backgroundColor: '#FFFFFF',
@@ -1120,6 +1199,7 @@ export default function ChatRoomPage() {
                   className="btn-primary"
                   style={{
                     borderRadius: '24px',
+                    padding: '12px 24px',
                     opacity: (!newMessage.trim() && !selectedFile) || sending ? 0.5 : 1,
                     flexShrink: 0
                   }}
@@ -1131,6 +1211,78 @@ export default function ChatRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* 画像・動画拡大表示モーダル */}
+      {enlargedMedia && (
+        <div
+          onClick={() => setEnlargedMedia(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          <button
+            onClick={() => setEnlargedMedia(null)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              color: '#1A1A1A',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2001
+            }}
+          >
+            ✕
+          </button>
+          
+          {enlargedMedia.type === 'image' ? (
+            <img
+              src={enlargedMedia.url}
+              alt="拡大画像"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '90%',
+                maxHeight: '90%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                cursor: 'default'
+              }}
+            />
+          ) : (
+            <video
+              src={enlargedMedia.url}
+              controls
+              autoPlay
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: '90%',
+                maxHeight: '90%',
+                borderRadius: '8px',
+                cursor: 'default'
+              }}
+            />
+          )}
+        </div>
+      )}
 
       {/* プロフィールモーダル */}
       {showProfileModal && otherUser && (
