@@ -823,8 +823,7 @@ export default function UploadIllustrationPage() {
                           opacity: draggedIndex === index ? 0.5 : 1,
                           border: dragOverIndex === index ? '3px solid #1A1A1A' : '2px solid #E5E5E5',
                           borderRadius: '8px',
-                          transition: 'all 0.2s ease',
-                          overflow: 'hidden'
+                          transition: 'all 0.2s ease'
                         }}
                       >
                         <img
@@ -834,6 +833,8 @@ export default function UploadIllustrationPage() {
                             width: '100%',
                             height: '150px',
                             objectFit: 'cover',
+                            borderRadius: '8px',
+                            display: 'block',
                             pointerEvents: 'none'
                           }}
                         />
@@ -855,7 +856,7 @@ export default function UploadIllustrationPage() {
                           </div>
                         )}
 
-                        {/* 削除ボタン（右上の角） */}
+                        {/* 削除ボタン */}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -864,20 +865,21 @@ export default function UploadIllustrationPage() {
                           }}
                           style={{
                             position: 'absolute',
-                            top: '4px',
-                            right: '4px',
-                            width: '24px',
-                            height: '24px',
+                            top: '8px',
+                            right: '8px',
+                            width: '20px',
+                            height: '20px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
                             color: '#FFFFFF',
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '50%',
                             cursor: 'pointer',
-                            fontSize: '18px',
-                            lineHeight: '1'
+                            fontSize: '14px',
+                            lineHeight: '1',
+                            padding: '0'
                           }}
                         >
                           ✕
