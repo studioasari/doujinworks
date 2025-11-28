@@ -855,7 +855,7 @@ export default function UploadIllustrationPage() {
                           </div>
                         )}
 
-                        {/* 削除ボタン（右上に✕） */}
+                        {/* 削除ボタン（右上の角） */}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -864,30 +864,19 @@ export default function UploadIllustrationPage() {
                           }}
                           style={{
                             position: 'absolute',
-                            top: '8px',
-                            right: '8px',
-                            width: '28px',
-                            height: '28px',
+                            top: '0',
+                            right: '0',
+                            width: '24px',
+                            height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: 'rgba(244, 67, 54, 0.95)',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '50%',
+                            backgroundColor: '#FFFFFF',
+                            color: '#1A1A1A',
+                            border: '1px solid #E5E5E5',
+                            borderRadius: '0 8px 0 4px',
                             cursor: 'pointer',
-                            fontSize: '16px',
-                            fontWeight: 'bold',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(244, 67, 54, 1)'
-                            e.currentTarget.style.transform = 'scale(1.1)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.95)'
-                            e.currentTarget.style.transform = 'scale(1)'
+                            fontSize: '14px'
                           }}
                         >
                           ✕
