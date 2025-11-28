@@ -864,19 +864,20 @@ export default function UploadIllustrationPage() {
                           }}
                           style={{
                             position: 'absolute',
-                            top: '0',
-                            right: '0',
+                            top: '4px',
+                            right: '4px',
                             width: '24px',
                             height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: '#FFFFFF',
-                            color: '#1A1A1A',
-                            border: '1px solid #E5E5E5',
-                            borderRadius: '0 8px 0 4px',
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '4px',
                             cursor: 'pointer',
-                            fontSize: '14px'
+                            fontSize: '18px',
+                            lineHeight: '1'
                           }}
                         >
                           ✕
