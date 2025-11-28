@@ -8,6 +8,50 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import DashboardSidebar from '../../../components/DashboardSidebar'
 
+// トーストメッセージコンポーネント
+function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose()
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        padding: '16px 24px',
+        borderRadius: '8px',
+        backgroundColor: type === 'success' ? '#4CAF50' : '#F44336',
+        color: '#FFFFFF',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        zIndex: 9999,
+        animation: 'slideIn 0.3s ease-out'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <i className={type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}></i>
+        <span>{message}</span>
+      </div>
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function UploadIllustrationPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -18,6 +62,16 @@ export default function UploadIllustrationPage() {
   const [uploading, setUploading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [dragging, setDragging] = useState(false)
+  
+  // エラー状態
+  const [errors, setErrors] = useState({
+    title: '',
+    image: ''
+  })
+
+  // トースト状態
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -39,11 +93,22 @@ export default function UploadIllustrationPage() {
       if (profile) {
         setCurrentUserId(profile.id)
       } else {
-        alert('プロフィールが見つかりません')
+        setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
       }
     }
   }
+
+  // タイトルのリアルタイムバリデーション
+  useEffect(() => {
+    if (title.length > 50) {
+      setErrors(prev => ({ ...prev, title: 'タイトルは50文字以内にしてください' }))
+    } else if (title.length > 0 && title.trim().length === 0) {
+      setErrors(prev => ({ ...prev, title: 'タイトルは空白のみにはできません' }))
+    } else {
+      setErrors(prev => ({ ...prev, title: '' }))
+    }
+  }, [title])
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -53,17 +118,23 @@ export default function UploadIllustrationPage() {
   }
 
   function processImageFile(file: File) {
+    // ファイルサイズチェック
     if (file.size > 5 * 1024 * 1024) {
-      alert('ファイルサイズは5MB以下にしてください')
+      setErrors(prev => ({ ...prev, image: 'ファイルサイズは5MB以下にしてください' }))
+      setToast({ message: 'ファイルサイズは5MB以下にしてください', type: 'error' })
       return
     }
     
-    if (!file.type.startsWith('image/')) {
-      alert('画像ファイルを選択してください')
+    // ファイル形式チェック（厳格化）
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      setErrors(prev => ({ ...prev, image: '対応フォーマット: JPG, PNG, GIF, WebP' }))
+      setToast({ message: '対応フォーマット: JPG, PNG, GIF, WebP', type: 'error' })
       return
     }
 
     setImageFile(file)
+    setErrors(prev => ({ ...prev, image: '' }))
     
     const reader = new FileReader()
     reader.onloadend = () => {
@@ -90,6 +161,7 @@ export default function UploadIllustrationPage() {
     e.stopPropagation()
     setImageFile(null)
     setImagePreview('')
+    setErrors(prev => ({ ...prev, image: '' }))
     if (imageInputRef.current) {
       imageInputRef.current.value = ''
     }
@@ -98,13 +170,26 @@ export default function UploadIllustrationPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
+    // バリデーション
     if (!title.trim()) {
-      alert('タイトルは必須です')
+      setErrors(prev => ({ ...prev, title: 'タイトルは必須です' }))
+      setToast({ message: 'タイトルを入力してください', type: 'error' })
+      return
+    }
+
+    if (title.length > 50) {
+      setToast({ message: 'タイトルは50文字以内にしてください', type: 'error' })
       return
     }
 
     if (!imageFile) {
-      alert('画像を選択してください')
+      setErrors(prev => ({ ...prev, image: '画像を選択してください' }))
+      setToast({ message: '画像を選択してください', type: 'error' })
+      return
+    }
+
+    if (description.length > 1000) {
+      setToast({ message: '説明は1000文字以内にしてください', type: 'error' })
       return
     }
 
@@ -113,7 +198,7 @@ export default function UploadIllustrationPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        alert('ログインが必要です')
+        setToast({ message: 'ログインが必要です', type: 'error' })
         router.push('/login')
         return
       }
@@ -136,7 +221,9 @@ export default function UploadIllustrationPage() {
         .getPublicUrl(fileName)
 
       // 3. データベースに保存
-      const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
+      const tagsArray = tags 
+        ? tags.split(/[,、]/).map(tag => tag.trim()).filter(tag => tag) 
+        : []
 
       const { error: dbError } = await supabase
         .from('portfolio_items')
@@ -155,14 +242,32 @@ export default function UploadIllustrationPage() {
         throw dbError
       }
 
-      alert('イラストをアップロードしました！')
-      router.push('/portfolio/manage')
+      setToast({ message: 'イラストをアップロードしました！', type: 'success' })
+      
+      // 少し待ってから遷移（トーストを見せるため）
+      setTimeout(() => {
+        router.push('/portfolio/manage')
+      }, 1500)
     } catch (error) {
       console.error('アップロードエラー:', error)
-      alert('アップロードに失敗しました')
+      setToast({ message: 'アップロードに失敗しました', type: 'error' })
     } finally {
       setUploading(false)
     }
+  }
+
+  if (!currentUserId) {
+    return (
+      <>
+        <Header />
+        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
+          <div className="loading-state">
+            読み込み中...
+          </div>
+        </div>
+        <Footer />
+      </>
+    )
   }
 
   return (
@@ -232,7 +337,7 @@ export default function UploadIllustrationPage() {
                         クリックまたはドラッグして<br />イラストをアップロード
                       </div>
                       <div className="upload-area-hint">
-                        JPG, PNG, GIF / 最大5MB
+                        JPG, PNG, GIF, WebP / 最大5MB
                       </div>
                     </div>
                   )}
@@ -241,10 +346,21 @@ export default function UploadIllustrationPage() {
                 <input
                   ref={imageInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handleImageChange}
                   style={{ display: 'none' }}
                 />
+
+                {errors.image && (
+                  <div style={{
+                    marginTop: '8px',
+                    fontSize: '14px',
+                    color: '#F44336'
+                  }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                    {errors.image}
+                  </div>
+                )}
 
                 {imagePreview && (
                   <button
@@ -262,26 +378,61 @@ export default function UploadIllustrationPage() {
               <div className="mb-24">
                 <label className="form-label">
                   タイトル <span className="form-required">*</span>
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    fontSize: '12px', 
+                    color: title.length > 50 ? '#F44336' : '#6B6B6B',
+                    fontWeight: 'normal'
+                  }}>
+                    {title.length} / 50
+                  </span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="イラストのタイトル"
-                  required
+                  maxLength={50}
                   className="input-field"
+                  style={{
+                    borderColor: errors.title ? '#F44336' : undefined
+                  }}
                 />
+                {errors.title && (
+                  <div style={{
+                    marginTop: '8px',
+                    fontSize: '14px',
+                    color: '#F44336'
+                  }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                    {errors.title}
+                  </div>
+                )}
               </div>
 
               {/* 説明 */}
               <div className="mb-24">
-                <label className="form-label">説明</label>
+                <label className="form-label">
+                  説明
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    fontSize: '12px', 
+                    color: description.length > 1000 ? '#F44336' : '#6B6B6B',
+                    fontWeight: 'normal'
+                  }}>
+                    {description.length} / 1000
+                  </span>
+                </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="イラストの説明を入力してください"
                   rows={6}
+                  maxLength={1000}
                   className="textarea-field"
+                  style={{
+                    borderColor: description.length > 1000 ? '#F44336' : undefined
+                  }}
                 />
               </div>
 
@@ -295,6 +446,13 @@ export default function UploadIllustrationPage() {
                   placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
                   className="input-field"
                 />
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: '#6B6B6B'
+                }}>
+                  カンマ（,）または読点（、）で区切ってください
+                </div>
               </div>
 
               {/* 公開設定 */}
@@ -335,7 +493,7 @@ export default function UploadIllustrationPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading}
+                  disabled={uploading || !!errors.title || !!errors.image}
                   className="btn-primary"
                 >
                   {uploading ? 'アップロード中...' : 'アップロード'}
@@ -346,6 +504,15 @@ export default function UploadIllustrationPage() {
         </main>
       </div>
       <Footer />
+
+      {/* トーストメッセージ */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   )
 }
