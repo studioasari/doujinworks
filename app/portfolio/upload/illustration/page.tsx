@@ -352,6 +352,10 @@ export default function UploadIllustrationPage() {
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
   
+  // ドラッグ＆ドロップ用の状態
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  
   // エラー状態
   const [errors, setErrors] = useState({
     title: '',
@@ -530,21 +534,46 @@ export default function UploadIllustrationPage() {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
   }
 
-  function moveImage(index: number, direction: 'up' | 'down') {
-    if (direction === 'up' && index === 0) return
-    if (direction === 'down' && index === imageFiles.length - 1) return
+  // ドラッグ開始
+  function handleDragStart(e: React.DragEvent, index: number) {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }
 
-    const newIndex = direction === 'up' ? index - 1 : index + 1
+  // ドラッグ中
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    if (draggedIndex === null) return
+    if (index !== draggedIndex) {
+      setDragOverIndex(index)
+    }
+  }
+
+  // ドラッグ終了
+  function handleDragEnd() {
+    if (draggedIndex === null || dragOverIndex === null) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
 
     const newFiles = [...imageFiles]
     const newPreviews = [...imagePreviews]
 
-    // ファイルを入れ替え
-    ;[newFiles[index], newFiles[newIndex]] = [newFiles[newIndex], newFiles[index]]
-    ;[newPreviews[index], newPreviews[newIndex]] = [newPreviews[newIndex], newPreviews[index]]
+    // 要素を移動
+    const draggedFile = newFiles[draggedIndex]
+    const draggedPreview = newPreviews[draggedIndex]
+
+    newFiles.splice(draggedIndex, 1)
+    newPreviews.splice(draggedIndex, 1)
+
+    newFiles.splice(dragOverIndex, 0, draggedFile)
+    newPreviews.splice(dragOverIndex, 0, draggedPreview)
 
     setImageFiles(newFiles)
     setImagePreviews(newPreviews)
+    setDraggedIndex(null)
+    setDragOverIndex(null)
   }
 
   // プリセットタグの追加/削除
@@ -769,7 +798,7 @@ export default function UploadIllustrationPage() {
                     color: '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    {imageFiles.length}/10枚
+                    {imageFiles.length}/10枚（ドラッグして並び替え）
                   </span>
                 </label>
 
@@ -782,7 +811,37 @@ export default function UploadIllustrationPage() {
                     marginBottom: '16px'
                   }}>
                     {imagePreviews.map((preview, index) => (
-                      <div key={index} style={{ position: 'relative' }}>
+                      <div
+                        key={index}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        style={{
+                          position: 'relative',
+                          cursor: 'grab',
+                          opacity: draggedIndex === index ? 0.5 : 1,
+                          border: dragOverIndex === index ? '2px solid #1A1A1A' : '2px solid transparent',
+                          borderRadius: '8px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {/* ドラッグハンドル */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          color: '#FFFFFF',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          fontSize: '16px',
+                          cursor: 'grab',
+                          zIndex: 10
+                        }}>
+                          <i className="fas fa-grip-vertical"></i>
+                        </div>
+
                         <img
                           src={preview}
                           alt={`プレビュー ${index + 1}`}
@@ -791,9 +850,10 @@ export default function UploadIllustrationPage() {
                             height: '150px',
                             objectFit: 'cover',
                             borderRadius: '8px',
-                            border: '2px solid #E5E5E5'
+                            pointerEvents: 'none'
                           }}
                         />
+
                         {/* メインバッジ */}
                         {index === 0 && (
                           <div style={{
@@ -810,64 +870,27 @@ export default function UploadIllustrationPage() {
                             メイン
                           </div>
                         )}
-                        {/* ボタン */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          display: 'flex',
-                          gap: '4px'
-                        }}>
-                          {index > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => moveImage(index, 'up')}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                            >
-                              ↑
-                            </button>
-                          )}
-                          {index < imageFiles.length - 1 && (
-                            <button
-                              type="button"
-                              onClick={() => moveImage(index, 'down')}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                color: '#FFFFFF',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                            >
-                              ↓
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: 'rgba(244, 67, 54, 0.9)',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
+
+                        {/* 削除ボタン */}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          style={{
+                            position: 'absolute',
+                            bottom: '8px',
+                            right: '8px',
+                            padding: '6px 10px',
+                            backgroundColor: 'rgba(244, 67, 54, 0.9)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          削除
+                        </button>
                       </div>
                     ))}
                   </div>
