@@ -52,16 +52,150 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   )
 }
 
+// 確認モーダルコンポーネント
+function ConfirmModal({ 
+  title, 
+  description, 
+  tags, 
+  imagePreview, 
+  visibility,
+  onConfirm, 
+  onCancel 
+}: { 
+  title: string
+  description: string
+  tags: string[]
+  imagePreview: string
+  visibility: string
+  onConfirm: () => void
+  onCancel: () => void 
+}) {
+  const visibilityLabels = {
+    public: '全体公開',
+    followers: 'フォロワーのみ',
+    private: '非公開（自分のみ）'
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9998,
+        padding: '20px'
+      }}
+      onClick={onCancel}
+    >
+      <div
+        className="card-no-hover"
+        style={{
+          maxWidth: '600px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          padding: '32px',
+          backgroundColor: '#FFFFFF'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="card-title mb-24">
+          <i className="fas fa-check-circle" style={{ marginRight: '12px', color: '#4CAF50' }}></i>
+          アップロード内容の確認
+        </h2>
+
+        {/* 画像プレビュー */}
+        <div style={{ marginBottom: '24px' }}>
+          <img 
+            src={imagePreview} 
+            alt="プレビュー" 
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: '300px',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              border: '1px solid #E5E5E5'
+            }}
+          />
+        </div>
+
+        {/* タイトル */}
+        <div className="mb-16">
+          <div className="form-label" style={{ marginBottom: '8px' }}>タイトル</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{title}</div>
+        </div>
+
+        {/* 説明 */}
+        {description && (
+          <div className="mb-16">
+            <div className="form-label" style={{ marginBottom: '8px' }}>説明</div>
+            <div className="text-small" style={{ whiteSpace: 'pre-wrap' }}>{description}</div>
+          </div>
+        )}
+
+        {/* タグ */}
+        {tags.length > 0 && (
+          <div className="mb-16">
+            <div className="form-label" style={{ marginBottom: '8px' }}>タグ</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {tags.map((tag, index) => (
+                <span key={index} className="badge badge-category">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 公開範囲 */}
+        <div className="mb-32">
+          <div className="form-label" style={{ marginBottom: '8px' }}>公開範囲</div>
+          <div style={{ fontSize: '14px', color: '#1A1A1A' }}>
+            {visibilityLabels[visibility as keyof typeof visibilityLabels]}
+          </div>
+        </div>
+
+        {/* ボタン */}
+        <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary"
+          >
+            修正する
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="btn-primary"
+          >
+            確定してアップロード
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function UploadIllustrationPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [tags, setTags] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [customTag, setCustomTag] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>('')
-  const [isPublic, setIsPublic] = useState(true)
+  const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
   const [uploading, setUploading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [dragging, setDragging] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   
   // エラー状態
   const [errors, setErrors] = useState({
@@ -75,8 +209,17 @@ export default function UploadIllustrationPage() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  // プリセットタグ
+  const presetTags = [
+    'オリジナル', 'ファンアート', 'ファンタジー', '現代', 'SF',
+    '女の子', '男の子', '風景', '動物', '静物',
+    'モノクロ', 'カラー', '線画', '厚塗り', '水彩',
+    'キャラクター', '背景', 'ポートレート', '全身', 'バストアップ'
+  ]
+
   useEffect(() => {
     checkAuth()
+    loadDraft()
   }, [])
 
   async function checkAuth() {
@@ -95,6 +238,40 @@ export default function UploadIllustrationPage() {
       } else {
         setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
+      }
+    }
+  }
+
+  // 下書き保存
+  function saveDraft() {
+    const draft = {
+      title,
+      description,
+      selectedTags,
+      visibility,
+      timestamp: Date.now()
+    }
+    localStorage.setItem('illustration_draft', JSON.stringify(draft))
+    setToast({ message: '下書きを保存しました', type: 'success' })
+  }
+
+  // 下書き読み込み
+  function loadDraft() {
+    const saved = localStorage.getItem('illustration_draft')
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved)
+        // 24時間以内の下書きのみ復元
+        if (Date.now() - draft.timestamp < 24 * 60 * 60 * 1000) {
+          setTitle(draft.title || '')
+          setDescription(draft.description || '')
+          setSelectedTags(draft.selectedTags || [])
+          setVisibility(draft.visibility || 'public')
+        } else {
+          localStorage.removeItem('illustration_draft')
+        }
+      } catch (e) {
+        console.error('下書きの読み込みに失敗しました', e)
       }
     }
   }
@@ -167,7 +344,45 @@ export default function UploadIllustrationPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // プリセットタグの追加/削除
+  function togglePresetTag(tag: string) {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag))
+    } else {
+      if (selectedTags.length >= 10) {
+        setToast({ message: 'タグは10個まで追加できます', type: 'error' })
+        return
+      }
+      setSelectedTags([...selectedTags, tag])
+    }
+  }
+
+  // カスタムタグの追加
+  function addCustomTag() {
+    const trimmedTag = customTag.trim()
+    if (!trimmedTag) return
+
+    if (selectedTags.includes(trimmedTag)) {
+      setToast({ message: 'すでに追加されているタグです', type: 'error' })
+      return
+    }
+
+    if (selectedTags.length >= 10) {
+      setToast({ message: 'タグは10個まで追加できます', type: 'error' })
+      return
+    }
+
+    setSelectedTags([...selectedTags, trimmedTag])
+    setCustomTag('')
+  }
+
+  // タグの削除
+  function removeTag(tag: string) {
+    setSelectedTags(selectedTags.filter(t => t !== tag))
+  }
+
+  // フォーム送信前の確認
+  function handlePreSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     // バリデーション
@@ -193,6 +408,13 @@ export default function UploadIllustrationPage() {
       return
     }
 
+    // 確認モーダルを表示
+    setShowConfirmModal(true)
+  }
+
+  // 実際のアップロード処理
+  async function handleConfirmedSubmit() {
+    setShowConfirmModal(false)
     setUploading(true)
 
     try {
@@ -204,12 +426,12 @@ export default function UploadIllustrationPage() {
       }
 
       // 1. 画像をStorageにアップロード
-      const fileExt = imageFile.name.split('.').pop()
+      const fileExt = imageFile!.name.split('.').pop()
       const fileName = `${user.id}/${Date.now()}.${fileExt}`
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('portfolio-images')
-        .upload(fileName, imageFile)
+        .upload(fileName, imageFile!)
 
       if (uploadError) {
         throw uploadError
@@ -221,10 +443,6 @@ export default function UploadIllustrationPage() {
         .getPublicUrl(fileName)
 
       // 3. データベースに保存
-      const tagsArray = tags 
-        ? tags.split(/[,、]/).map(tag => tag.trim()).filter(tag => tag) 
-        : []
-
       const { error: dbError } = await supabase
         .from('portfolio_items')
         .insert({
@@ -232,15 +450,18 @@ export default function UploadIllustrationPage() {
           title: title.trim(),
           description: description.trim() || null,
           category: 'illustration',
-          tags: tagsArray,
+          tags: selectedTags,
           image_url: publicUrl,
           thumbnail_url: publicUrl,
-          is_public: isPublic
+          is_public: visibility === 'public' // 一旦is_publicで保存
         })
 
       if (dbError) {
         throw dbError
       }
+
+      // 下書きを削除
+      localStorage.removeItem('illustration_draft')
 
       setToast({ message: 'イラストをアップロードしました！', type: 'success' })
       
@@ -304,11 +525,22 @@ export default function UploadIllustrationPage() {
               ← ジャンル選択に戻る
             </Link>
 
-            <h1 className="page-title mb-40">
-              イラストをアップロード
-            </h1>
+            {/* タイトル */}
+            <div className="flex-between mb-40">
+              <h1 className="page-title">
+                イラストをアップロード
+              </h1>
+              <button
+                type="button"
+                onClick={saveDraft}
+                className="btn-secondary btn-small"
+              >
+                <i className="fas fa-save" style={{ marginRight: '8px' }}></i>
+                下書き保存
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="card-no-hover p-40">
+            <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* 画像アップロード */}
               <div className="mb-32">
                 <label className="form-label">
@@ -436,49 +668,179 @@ export default function UploadIllustrationPage() {
                 />
               </div>
 
-              {/* タグ */}
+              {/* タグ（プリセット） */}
               <div className="mb-24">
-                <label className="form-label">タグ</label>
-                <input
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="タグをカンマ区切りで入力 (例: オリジナル, ファンタジー, 女の子)"
-                  className="input-field"
-                />
-                <div style={{
-                  marginTop: '8px',
-                  fontSize: '12px',
-                  color: '#6B6B6B'
+                <label className="form-label">
+                  プリセットタグ
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    fontSize: '12px', 
+                    color: '#6B6B6B',
+                    fontWeight: 'normal'
+                  }}>
+                    クリックで追加/削除（最大10個）
+                  </span>
+                </label>
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '8px',
+                  padding: '16px',
+                  backgroundColor: '#FAFAFA',
+                  borderRadius: '8px'
                 }}>
-                  カンマ（,）または読点（、）で区切ってください
+                  {presetTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => togglePresetTag(tag)}
+                      className="filter-button"
+                      style={{
+                        backgroundColor: selectedTags.includes(tag) ? '#1A1A1A' : '#FFFFFF',
+                        color: selectedTags.includes(tag) ? '#FFFFFF' : '#1A1A1A',
+                        borderColor: selectedTags.includes(tag) ? '#1A1A1A' : '#E5E5E5'
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* 公開設定 */}
-              <div className="mb-32">
-                <label 
-                  className="flex gap-12" 
-                  style={{
-                    alignItems: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
+              {/* カスタムタグ */}
+              <div className="mb-24">
+                <label className="form-label">カスタムタグを追加</label>
+                <div style={{ display: 'flex', gap: '12px' }}>
                   <input
-                    type="checkbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      cursor: 'pointer',
-                      accentColor: '#1A1A1A'
+                    type="text"
+                    value={customTag}
+                    onChange={(e) => setCustomTag(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addCustomTag()
+                      }
                     }}
+                    placeholder="タグを入力してEnterまたは追加ボタン"
+                    className="input-field"
+                    style={{ flex: 1 }}
                   />
-                  <span className="text-small">
-                    この作品を公開する
-                  </span>
+                  <button
+                    type="button"
+                    onClick={addCustomTag}
+                    className="btn-secondary"
+                    disabled={!customTag.trim() || selectedTags.length >= 10}
+                  >
+                    追加
+                  </button>
+                </div>
+              </div>
+
+              {/* 選択されたタグ */}
+              {selectedTags.length > 0 && (
+                <div className="mb-32">
+                  <label className="form-label">選択中のタグ ({selectedTags.length}/10)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {selectedTags.map((tag, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 12px',
+                          backgroundColor: '#1A1A1A',
+                          color: '#FFFFFF',
+                          borderRadius: '16px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#FFFFFF',
+                            cursor: 'pointer',
+                            padding: '0',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 公開範囲設定 */}
+              <div className="mb-32">
+                <label className="form-label mb-12">
+                  公開範囲 <span className="form-required">*</span>
                 </label>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <label className="radio-card" style={{ borderColor: visibility === 'public' ? '#1A1A1A' : '#E5E5E5' }}>
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="public"
+                      checked={visibility === 'public'}
+                      onChange={(e) => setVisibility(e.target.value as 'public')}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                        <i className="fas fa-globe" style={{ marginRight: '8px' }}></i>
+                        全体公開
+                      </div>
+                      <div className="text-small text-gray">
+                        誰でも閲覧できます
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="radio-card" style={{ borderColor: visibility === 'followers' ? '#1A1A1A' : '#E5E5E5' }}>
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="followers"
+                      checked={visibility === 'followers'}
+                      onChange={(e) => setVisibility(e.target.value as 'followers')}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                        <i className="fas fa-users" style={{ marginRight: '8px' }}></i>
+                        フォロワーのみ
+                      </div>
+                      <div className="text-small text-gray">
+                        あなたをフォローしているユーザーのみ閲覧できます
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="radio-card" style={{ borderColor: visibility === 'private' ? '#1A1A1A' : '#E5E5E5' }}>
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value="private"
+                      checked={visibility === 'private'}
+                      onChange={(e) => setVisibility(e.target.value as 'private')}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                        <i className="fas fa-lock" style={{ marginRight: '8px' }}></i>
+                        非公開（自分のみ）
+                      </div>
+                      <div className="text-small text-gray">
+                        あなただけが閲覧できます
+                      </div>
+                    </div>
+                  </label>
+                </div>
               </div>
 
               {/* ボタン */}
@@ -496,7 +858,7 @@ export default function UploadIllustrationPage() {
                   disabled={uploading || !!errors.title || !!errors.image}
                   className="btn-primary"
                 >
-                  {uploading ? 'アップロード中...' : 'アップロード'}
+                  {uploading ? 'アップロード中...' : '確認画面へ'}
                 </button>
               </div>
             </form>
@@ -504,6 +866,19 @@ export default function UploadIllustrationPage() {
         </main>
       </div>
       <Footer />
+
+      {/* 確認モーダル */}
+      {showConfirmModal && (
+        <ConfirmModal
+          title={title}
+          description={description}
+          tags={selectedTags}
+          imagePreview={imagePreview}
+          visibility={visibility}
+          onConfirm={handleConfirmedSubmit}
+          onCancel={() => setShowConfirmModal(false)}
+        />
+      )}
 
       {/* トーストメッセージ */}
       {toast && (
