@@ -821,27 +821,12 @@ export default function UploadIllustrationPage() {
                           position: 'relative',
                           cursor: 'grab',
                           opacity: draggedIndex === index ? 0.5 : 1,
-                          border: dragOverIndex === index ? '2px solid #1A1A1A' : '2px solid transparent',
+                          border: dragOverIndex === index ? '3px solid #1A1A1A' : '2px solid #E5E5E5',
                           borderRadius: '8px',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s ease',
+                          overflow: 'hidden'
                         }}
                       >
-                        {/* ドラッグハンドル */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          color: '#FFFFFF',
-                          padding: '6px',
-                          borderRadius: '4px',
-                          fontSize: '16px',
-                          cursor: 'grab',
-                          zIndex: 10
-                        }}>
-                          <i className="fas fa-grip-vertical"></i>
-                        </div>
-
                         <img
                           src={preview}
                           alt={`プレビュー ${index + 1}`}
@@ -849,7 +834,6 @@ export default function UploadIllustrationPage() {
                             width: '100%',
                             height: '150px',
                             objectFit: 'cover',
-                            borderRadius: '8px',
                             pointerEvents: 'none'
                           }}
                         />
@@ -871,25 +855,42 @@ export default function UploadIllustrationPage() {
                           </div>
                         )}
 
-                        {/* 削除ボタン */}
+                        {/* 削除ボタン（右上に✕） */}
                         <button
                           type="button"
-                          onClick={() => removeImage(index)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeImage(index)
+                          }}
                           style={{
                             position: 'absolute',
-                            bottom: '8px',
+                            top: '8px',
                             right: '8px',
-                            padding: '6px 10px',
-                            backgroundColor: 'rgba(244, 67, 54, 0.9)',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(244, 67, 54, 0.95)',
                             color: '#FFFFFF',
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '50%',
                             cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(244, 67, 54, 1)'
+                            e.currentTarget.style.transform = 'scale(1.1)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.95)'
+                            e.currentTarget.style.transform = 'scale(1)'
                           }}
                         >
-                          削除
+                          ✕
                         </button>
                       </div>
                     ))}
