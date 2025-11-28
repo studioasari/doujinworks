@@ -88,9 +88,6 @@ export default function Header() {
     if (!profile?.id) return
 
     try {
-      console.log('未読メッセージ取得開始:', profile.id)
-
-      // 自分が参加しているチャットルームを取得
       const { data: participations, error: participationError } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id, last_read_at')
@@ -102,11 +99,8 @@ export default function Header() {
       }
 
       if (!participations || participations.length === 0) {
-        console.log('参加しているチャットルームがありません')
         return
       }
-
-      console.log('参加チャットルーム:', participations)
 
       let totalUnread = 0
       const messages: UnreadMessage[] = []
@@ -177,9 +171,6 @@ export default function Header() {
       messages.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
-
-      console.log('未読メッセージ総数:', totalUnread)
-      console.log('表示するメッセージ:', messages.slice(0, 5))
 
       setUnreadCount(totalUnread)
       setRecentMessages(messages.slice(0, 5))
