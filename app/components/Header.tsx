@@ -87,65 +87,105 @@ export default function Header() {
   const loadUnreadMessages = async () => {
     if (!profile?.id) return
 
-    // 自分が参加しているチャットルームを取得
-    const { data: participations } = await supabase
-      .from('chat_room_participants')
-      .select('chat_room_id, last_read_at')
-      .eq('profile_id', profile.id)
+    try {
+      console.log('未読メッセージ取得開始:', profile.id)
 
-    if (!participations) return
+      // 自分が参加しているチャットルームを取得
+      const { data: participations, error: participationError } = await supabase
+        .from('chat_room_participants')
+        .select('chat_room_id, last_read_at')
+        .eq('profile_id', profile.id)
 
-    let totalUnread = 0
-    const messages: UnreadMessage[] = []
+      if (participationError) {
+        console.error('参加ルーム取得エラー:', participationError)
+        return
+      }
 
-    for (const participation of participations) {
-      // 各チャットルームの未読メッセージ数を取得
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('chat_room_id', participation.chat_room_id)
-        .neq('sender_id', profile.id)
-        .gt('created_at', participation.last_read_at || '1970-01-01')
+      if (!participations || participations.length === 0) {
+        console.log('参加しているチャットルームがありません')
+        return
+      }
 
-      totalUnread += count || 0
+      console.log('参加チャットルーム:', participations)
 
-      // 最新の未読メッセージを取得（最大5件）
-      if (messages.length < 5) {
-        const { data: unreadMessages } = await supabase
+      let totalUnread = 0
+      const messages: UnreadMessage[] = []
+
+      for (const participation of participations) {
+        // 未読メッセージ数を取得
+        const { count } = await supabase
           .from('messages')
-          .select(`
-            chat_room_id,
-            content,
-            created_at,
-            sender:profiles!messages_sender_id_fkey(display_name, avatar_url)
-          `)
+          .select('*', { count: 'exact', head: true })
           .eq('chat_room_id', participation.chat_room_id)
           .neq('sender_id', profile.id)
           .gt('created_at', participation.last_read_at || '1970-01-01')
-          .order('created_at', { ascending: false })
-          .limit(5 - messages.length)
 
-        if (unreadMessages && unreadMessages.length > 0) {
-          unreadMessages.forEach((msg: any) => {
-            messages.push({
-              chat_room_id: msg.chat_room_id,
-              sender_name: msg.sender?.display_name || '名前未設定',
-              sender_avatar: msg.sender?.avatar_url || null,
-              content: msg.content || 'ファイルを送信しました',
-              created_at: msg.created_at
-            })
-          })
+        totalUnread += count || 0
+
+        // 最新の未読メッセージを取得（最大5件まで）
+        if (messages.length < 5) {
+          const { data: unreadMessages, error: messagesError } = await supabase
+            .from('messages')
+            .select('id, chat_room_id, content, created_at, sender_id, file_type')
+            .eq('chat_room_id', participation.chat_room_id)
+            .neq('sender_id', profile.id)
+            .gt('created_at', participation.last_read_at || '1970-01-01')
+            .order('created_at', { ascending: false })
+            .limit(5 - messages.length)
+
+          if (messagesError) {
+            console.error('メッセージ取得エラー:', messagesError)
+            continue
+          }
+
+          if (unreadMessages && unreadMessages.length > 0) {
+            // 各メッセージの送信者情報を個別に取得
+            for (const msg of unreadMessages) {
+              const { data: senderProfile } = await supabase
+                .from('profiles')
+                .select('display_name, avatar_url')
+                .eq('id', msg.sender_id)
+                .single()
+
+              // コンテンツの決定
+              let displayContent = msg.content
+              if (!displayContent || displayContent.trim() === '') {
+                if (msg.file_type === 'image') {
+                  displayContent = '画像を送信しました'
+                } else if (msg.file_type === 'video') {
+                  displayContent = '動画を送信しました'
+                } else if (msg.file_type) {
+                  displayContent = 'ファイルを送信しました'
+                } else {
+                  displayContent = 'メッセージ'
+                }
+              }
+
+              messages.push({
+                chat_room_id: msg.chat_room_id,
+                sender_name: senderProfile?.display_name || '名前未設定',
+                sender_avatar: senderProfile?.avatar_url || null,
+                content: displayContent,
+                created_at: msg.created_at
+              })
+            }
+          }
         }
       }
+
+      // 作成日時でソート（新しい順）
+      messages.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      console.log('未読メッセージ総数:', totalUnread)
+      console.log('表示するメッセージ:', messages.slice(0, 5))
+
+      setUnreadCount(totalUnread)
+      setRecentMessages(messages.slice(0, 5))
+    } catch (error) {
+      console.error('loadUnreadMessages 全体エラー:', error)
     }
-
-    // 作成日時でソート（新しい順）
-    messages.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-
-    setUnreadCount(totalUnread)
-    setRecentMessages(messages.slice(0, 5))
   }
 
   const subscribeToMessages = () => {
