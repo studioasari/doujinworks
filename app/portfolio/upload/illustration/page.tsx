@@ -8,6 +8,16 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import DashboardSidebar from '../../../components/DashboardSidebar'
 
+// 下書きの型定義
+type Draft = {
+  id: string
+  title: string
+  description: string
+  selectedTags: string[]
+  visibility: 'public' | 'followers' | 'private'
+  timestamp: number
+}
+
 // トーストメッセージコンポーネント
 function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
   useEffect(() => {
@@ -57,7 +67,7 @@ function ConfirmModal({
   title, 
   description, 
   tags, 
-  imagePreview, 
+  imagePreviews, 
   visibility,
   onConfirm, 
   onCancel 
@@ -65,7 +75,7 @@ function ConfirmModal({
   title: string
   description: string
   tags: string[]
-  imagePreview: string
+  imagePreviews: string[]
   visibility: string
   onConfirm: () => void
   onCancel: () => void 
@@ -96,7 +106,7 @@ function ConfirmModal({
       <div
         className="card-no-hover"
         style={{
-          maxWidth: '600px',
+          maxWidth: '700px',
           width: '100%',
           maxHeight: '90vh',
           overflow: 'auto',
@@ -112,18 +122,44 @@ function ConfirmModal({
 
         {/* 画像プレビュー */}
         <div style={{ marginBottom: '24px' }}>
-          <img 
-            src={imagePreview} 
-            alt="プレビュー" 
-            style={{
-              width: '100%',
-              height: 'auto',
-              maxHeight: '300px',
-              objectFit: 'contain',
-              borderRadius: '8px',
-              border: '1px solid #E5E5E5'
-            }}
-          />
+          <div className="form-label" style={{ marginBottom: '12px' }}>
+            画像 ({imagePreviews.length}枚)
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+            gap: '12px'
+          }}>
+            {imagePreviews.map((preview, index) => (
+              <div key={index} style={{ position: 'relative' }}>
+                <img 
+                  src={preview} 
+                  alt={`プレビュー ${index + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '150px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E5E5'
+                  }}
+                />
+                {index === 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    padding: '4px 8px',
+                    backgroundColor: '#1A1A1A',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    borderRadius: '4px'
+                  }}>
+                    メイン
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* タイトル */}
@@ -184,23 +220,142 @@ function ConfirmModal({
   )
 }
 
+// 下書き管理モーダル
+function DraftModal({ 
+  drafts, 
+  onLoad, 
+  onDelete, 
+  onClose 
+}: { 
+  drafts: Draft[]
+  onLoad: (draft: Draft) => void
+  onDelete: (draftId: string) => void
+  onClose: () => void 
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9998,
+        padding: '20px'
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card-no-hover"
+        style={{
+          maxWidth: '600px',
+          width: '100%',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          padding: '32px',
+          backgroundColor: '#FFFFFF'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="card-title mb-24">
+          <i className="fas fa-folder-open" style={{ marginRight: '12px' }}></i>
+          保存済みの下書き ({drafts.length}件)
+        </h2>
+
+        {drafts.length === 0 ? (
+          <div className="empty-state" style={{ padding: '40px 20px' }}>
+            保存された下書きはありません
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {drafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="card"
+                style={{
+                  padding: '16px',
+                  cursor: 'default'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex-between mb-12">
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                      {draft.title || '（タイトルなし）'}
+                    </div>
+                    <div className="text-small text-gray">
+                      {new Date(draft.timestamp).toLocaleString('ja-JP')}
+                    </div>
+                  </div>
+                  <div className="flex gap-8">
+                    <button
+                      onClick={() => onLoad(draft)}
+                      className="btn-primary btn-small"
+                    >
+                      復元
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('この下書きを削除しますか？')) {
+                          onDelete(draft.id)
+                        }
+                      }}
+                      className="btn-danger btn-small"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+                {draft.selectedTags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {draft.selectedTags.slice(0, 5).map((tag, index) => (
+                      <span key={index} className="badge badge-category" style={{ fontSize: '11px' }}>
+                        {tag}
+                      </span>
+                    ))}
+                    {draft.selectedTags.length > 5 && (
+                      <span className="text-tiny text-gray">+{draft.selectedTags.length - 5}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ marginTop: '24px', textAlign: 'right' }}>
+          <button onClick={onClose} className="btn-secondary">
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function UploadIllustrationPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string>('')
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
   const [uploading, setUploading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [dragging, setDragging] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showDraftModal, setShowDraftModal] = useState(false)
+  const [drafts, setDrafts] = useState<Draft[]>([])
   
   // エラー状態
   const [errors, setErrors] = useState({
     title: '',
-    image: ''
+    images: ''
   })
 
   // トースト状態
@@ -219,7 +374,7 @@ export default function UploadIllustrationPage() {
 
   useEffect(() => {
     checkAuth()
-    loadDraft()
+    loadDrafts()
   }, [])
 
   async function checkAuth() {
@@ -242,38 +397,57 @@ export default function UploadIllustrationPage() {
     }
   }
 
+  // 下書き一覧を読み込み
+  function loadDrafts() {
+    try {
+      const saved = localStorage.getItem('illustration_drafts')
+      if (saved) {
+        const parsedDrafts = JSON.parse(saved)
+        setDrafts(parsedDrafts)
+      }
+    } catch (e) {
+      console.error('下書きの読み込みに失敗しました', e)
+    }
+  }
+
   // 下書き保存
   function saveDraft() {
-    const draft = {
+    if (!title.trim() && selectedTags.length === 0) {
+      setToast({ message: 'タイトルまたはタグを入力してから保存してください', type: 'error' })
+      return
+    }
+
+    const newDraft: Draft = {
+      id: Date.now().toString(),
       title,
       description,
       selectedTags,
       visibility,
       timestamp: Date.now()
     }
-    localStorage.setItem('illustration_draft', JSON.stringify(draft))
+
+    const updatedDrafts = [newDraft, ...drafts]
+    localStorage.setItem('illustration_drafts', JSON.stringify(updatedDrafts))
+    setDrafts(updatedDrafts)
     setToast({ message: '下書きを保存しました', type: 'success' })
   }
 
-  // 下書き読み込み
-  function loadDraft() {
-    const saved = localStorage.getItem('illustration_draft')
-    if (saved) {
-      try {
-        const draft = JSON.parse(saved)
-        // 24時間以内の下書きのみ復元
-        if (Date.now() - draft.timestamp < 24 * 60 * 60 * 1000) {
-          setTitle(draft.title || '')
-          setDescription(draft.description || '')
-          setSelectedTags(draft.selectedTags || [])
-          setVisibility(draft.visibility || 'public')
-        } else {
-          localStorage.removeItem('illustration_draft')
-        }
-      } catch (e) {
-        console.error('下書きの読み込みに失敗しました', e)
-      }
-    }
+  // 下書きを復元
+  function loadDraft(draft: Draft) {
+    setTitle(draft.title)
+    setDescription(draft.description)
+    setSelectedTags(draft.selectedTags)
+    setVisibility(draft.visibility)
+    setShowDraftModal(false)
+    setToast({ message: '下書きを復元しました', type: 'success' })
+  }
+
+  // 下書きを削除
+  function deleteDraft(draftId: string) {
+    const updatedDrafts = drafts.filter(d => d.id !== draftId)
+    localStorage.setItem('illustration_drafts', JSON.stringify(updatedDrafts))
+    setDrafts(updatedDrafts)
+    setToast({ message: '下書きを削除しました', type: 'success' })
   }
 
   // タイトルのリアルタイムバリデーション
@@ -288,36 +462,53 @@ export default function UploadIllustrationPage() {
   }, [title])
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) {
-      processImageFile(file)
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      processImageFiles(files)
     }
   }
 
-  function processImageFile(file: File) {
-    // ファイルサイズチェック
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, image: 'ファイルサイズは5MB以下にしてください' }))
-      setToast({ message: 'ファイルサイズは5MB以下にしてください', type: 'error' })
-      return
-    }
-    
-    // ファイル形式チェック（厳格化）
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.type)) {
-      setErrors(prev => ({ ...prev, image: '対応フォーマット: JPG, PNG, GIF, WebP' }))
-      setToast({ message: '対応フォーマット: JPG, PNG, GIF, WebP', type: 'error' })
+  function processImageFiles(files: File[]) {
+    // 既存の画像と合わせて10枚まで
+    const totalFiles = imageFiles.length + files.length
+    if (totalFiles > 10) {
+      setToast({ message: '画像は最大10枚までアップロードできます', type: 'error' })
       return
     }
 
-    setImageFile(file)
-    setErrors(prev => ({ ...prev, image: '' }))
-    
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
+    // 各ファイルをチェック
+    const validFiles: File[] = []
+    for (const file of files) {
+      // ファイルサイズチェック
+      if (file.size > 5 * 1024 * 1024) {
+        setToast({ message: `${file.name}: ファイルサイズは5MB以下にしてください`, type: 'error' })
+        continue
+      }
+      
+      // ファイル形式チェック
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        setToast({ message: `${file.name}: 対応フォーマット: JPG, PNG, GIF, WebP`, type: 'error' })
+        continue
+      }
+
+      validFiles.push(file)
     }
-    reader.readAsDataURL(file)
+
+    if (validFiles.length === 0) return
+
+    // 画像ファイルを追加
+    setImageFiles([...imageFiles, ...validFiles])
+    setErrors(prev => ({ ...prev, images: '' }))
+    
+    // プレビュー生成
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   function handleImageClick() {
@@ -328,20 +519,32 @@ export default function UploadIllustrationPage() {
     e.preventDefault()
     setDragging(false)
     
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      processImageFile(file)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      processImageFiles(files)
     }
   }
 
-  function handleImageRemove(e: React.MouseEvent) {
-    e.stopPropagation()
-    setImageFile(null)
-    setImagePreview('')
-    setErrors(prev => ({ ...prev, image: '' }))
-    if (imageInputRef.current) {
-      imageInputRef.current.value = ''
-    }
+  function removeImage(index: number) {
+    setImageFiles(imageFiles.filter((_, i) => i !== index))
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
+  }
+
+  function moveImage(index: number, direction: 'up' | 'down') {
+    if (direction === 'up' && index === 0) return
+    if (direction === 'down' && index === imageFiles.length - 1) return
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+
+    const newFiles = [...imageFiles]
+    const newPreviews = [...imagePreviews]
+
+    // ファイルを入れ替え
+    ;[newFiles[index], newFiles[newIndex]] = [newFiles[newIndex], newFiles[index]]
+    ;[newPreviews[index], newPreviews[newIndex]] = [newPreviews[newIndex], newPreviews[index]]
+
+    setImageFiles(newFiles)
+    setImagePreviews(newPreviews)
   }
 
   // プリセットタグの追加/削除
@@ -397,8 +600,8 @@ export default function UploadIllustrationPage() {
       return
     }
 
-    if (!imageFile) {
-      setErrors(prev => ({ ...prev, image: '画像を選択してください' }))
+    if (imageFiles.length === 0) {
+      setErrors(prev => ({ ...prev, images: '画像を選択してください' }))
       setToast({ message: '画像を選択してください', type: 'error' })
       return
     }
@@ -426,23 +629,30 @@ export default function UploadIllustrationPage() {
       }
 
       // 1. 画像をStorageにアップロード
-      const fileExt = imageFile!.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const uploadedUrls: string[] = []
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('portfolio-images')
-        .upload(fileName, imageFile!)
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('portfolio-images')
+          .upload(fileName, file)
 
-      if (uploadError) {
-        throw uploadError
+        if (uploadError) {
+          throw uploadError
+        }
+
+        // 公開URLを取得
+        const { data: { publicUrl } } = supabase.storage
+          .from('portfolio-images')
+          .getPublicUrl(fileName)
+
+        uploadedUrls.push(publicUrl)
       }
 
-      // 2. 公開URLを取得
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio-images')
-        .getPublicUrl(fileName)
-
-      // 3. データベースに保存
+      // 2. データベースに保存
       const { error: dbError } = await supabase
         .from('portfolio_items')
         .insert({
@@ -451,17 +661,15 @@ export default function UploadIllustrationPage() {
           description: description.trim() || null,
           category: 'illustration',
           tags: selectedTags,
-          image_url: publicUrl,
-          thumbnail_url: publicUrl,
-          is_public: visibility === 'public' // 一旦is_publicで保存
+          image_url: uploadedUrls[0], // メイン画像（1枚目）
+          thumbnail_url: uploadedUrls[0],
+          image_urls: uploadedUrls.length > 1 ? uploadedUrls : null, // 複数枚の場合のみ
+          is_public: visibility === 'public'
         })
 
       if (dbError) {
         throw dbError
       }
-
-      // 下書きを削除
-      localStorage.removeItem('illustration_draft')
 
       setToast({ message: 'イラストをアップロードしました！', type: 'success' })
       
@@ -530,79 +738,186 @@ export default function UploadIllustrationPage() {
               <h1 className="page-title">
                 イラストをアップロード
               </h1>
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="btn-secondary btn-small"
-              >
-                <i className="fas fa-save" style={{ marginRight: '8px' }}></i>
-                下書き保存
-              </button>
+              <div className="flex gap-12">
+                <button
+                  type="button"
+                  onClick={() => setShowDraftModal(true)}
+                  className="btn-secondary btn-small"
+                >
+                  <i className="fas fa-folder-open" style={{ marginRight: '8px' }}></i>
+                  下書き ({drafts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={saveDraft}
+                  className="btn-secondary btn-small"
+                >
+                  <i className="fas fa-save" style={{ marginRight: '8px' }}></i>
+                  下書き保存
+                </button>
+              </div>
             </div>
 
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* 画像アップロード */}
               <div className="mb-32">
-                <label className="form-label">
+                <label className="form-label mb-12">
                   イラスト画像 <span className="form-required">*</span>
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    fontSize: '12px', 
+                    color: '#6B6B6B',
+                    fontWeight: 'normal'
+                  }}>
+                    {imageFiles.length}/10枚
+                  </span>
                 </label>
+
+                {/* アップロード済み画像 */}
+                {imageFiles.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} style={{ position: 'relative' }}>
+                        <img
+                          src={preview}
+                          alt={`プレビュー ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '150px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: '2px solid #E5E5E5'
+                          }}
+                        />
+                        {/* メインバッジ */}
+                        {index === 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '8px',
+                            left: '8px',
+                            padding: '4px 8px',
+                            backgroundColor: '#1A1A1A',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            borderRadius: '4px'
+                          }}>
+                            メイン
+                          </div>
+                        )}
+                        {/* ボタン */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          display: 'flex',
+                          gap: '4px'
+                        }}>
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => moveImage(index, 'up')}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              ↑
+                            </button>
+                          )}
+                          {index < imageFiles.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => moveImage(index, 'down')}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              ↓
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: 'rgba(244, 67, 54, 0.9)',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
-                <div
-                  className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
-                  style={{ width: '100%', height: '400px' }}
-                  onClick={handleImageClick}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDragging(true)
-                  }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={handleImageDrop}
-                >
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="プレビュー" />
-                  ) : (
+                {/* アップロードエリア */}
+                {imageFiles.length < 10 && (
+                  <div
+                    className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
+                    style={{ width: '100%', height: '200px' }}
+                    onClick={handleImageClick}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setDragging(true)
+                    }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={handleImageDrop}
+                  >
                     <div className="upload-area-content" style={{ height: '100%' }}>
                       <div className="upload-area-icon">
-                        <i className="fas fa-image"></i>
+                        <i className="fas fa-images"></i>
                       </div>
                       <div className="upload-area-text">
-                        クリックまたはドラッグして<br />イラストをアップロード
+                        クリックまたはドラッグして<br />画像を追加
                       </div>
                       <div className="upload-area-hint">
-                        JPG, PNG, GIF, WebP / 最大5MB
+                        JPG, PNG, GIF, WebP / 最大5MB / 最大10枚
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <input
                   ref={imageInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handleImageChange}
+                  multiple
                   style={{ display: 'none' }}
                 />
 
-                {errors.image && (
+                {errors.images && (
                   <div style={{
                     marginTop: '8px',
                     fontSize: '14px',
                     color: '#F44336'
                   }}>
                     <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
-                    {errors.image}
+                    {errors.images}
                   </div>
-                )}
-
-                {imagePreview && (
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="btn-danger btn-small"
-                    style={{ marginTop: '12px' }}
-                  >
-                    削除
-                  </button>
                 )}
               </div>
 
@@ -855,7 +1170,7 @@ export default function UploadIllustrationPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading || !!errors.title || !!errors.image}
+                  disabled={uploading || !!errors.title || !!errors.images}
                   className="btn-primary"
                 >
                   {uploading ? 'アップロード中...' : '確認画面へ'}
@@ -873,10 +1188,20 @@ export default function UploadIllustrationPage() {
           title={title}
           description={description}
           tags={selectedTags}
-          imagePreview={imagePreview}
+          imagePreviews={imagePreviews}
           visibility={visibility}
           onConfirm={handleConfirmedSubmit}
           onCancel={() => setShowConfirmModal(false)}
+        />
+      )}
+
+      {/* 下書き管理モーダル */}
+      {showDraftModal && (
+        <DraftModal
+          drafts={drafts}
+          onLoad={loadDraft}
+          onDelete={deleteDraft}
+          onClose={() => setShowDraftModal(false)}
         />
       )}
 
