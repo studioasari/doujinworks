@@ -36,6 +36,19 @@ export default function Header() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // スマホでメニューが開いているときに背面スクロールを禁止
+  useEffect(() => {
+    if (isMobile && (isMessageMenuOpen || isNotificationMenuOpen || isMenuOpen)) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isMobile, isMessageMenuOpen, isNotificationMenuOpen, isMenuOpen])
+
   useEffect(() => {
     checkUser()
 
@@ -134,7 +147,7 @@ export default function Header() {
 
         totalUnread += count || 0
 
-        if (messages.length < 5) {
+        if (messages.length < 30) {
           const { data: unreadMessages, error: messagesError } = await supabase
             .from('messages')
             .select('id, chat_room_id, content, created_at, sender_id, file_type')
@@ -143,7 +156,7 @@ export default function Header() {
             .neq('sender_id', profile.id)
             .gt('created_at', participation.last_read_at || '1970-01-01')
             .order('created_at', { ascending: false })
-            .limit(5 - messages.length)
+            .limit(30 - messages.length)
 
           if (messagesError) {
             console.error('メッセージ取得エラー:', messagesError)
@@ -192,7 +205,7 @@ export default function Header() {
       )
 
       setUnreadCount(totalUnread)
-      setRecentMessages(messages.slice(0, 5))
+      setRecentMessages(messages.slice(0, 30))
     } catch (error) {
       console.error('loadUnreadMessages 全体エラー:', error)
     }
