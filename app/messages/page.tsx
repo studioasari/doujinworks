@@ -19,8 +19,10 @@ type ChatRoom = {
   last_message: {
     content: string
     created_at: string
+    file_type: string | null
   } | null
   unread_count: number
+  pinned: boolean
 }
 
 export default function MessagesPage() {
@@ -57,8 +59,9 @@ export default function MessagesPage() {
 
     const { data: participations, error: participationsError } = await supabase
       .from('chat_room_participants')
-      .select('chat_room_id, last_read_at')
+      .select('chat_room_id, last_read_at, pinned, hidden')
       .eq('profile_id', profileId)
+      .eq('hidden', false) // 非表示でないもののみ
 
     if (participationsError) {
       console.error('チャットルーム取得エラー:', participationsError)
@@ -84,8 +87,9 @@ export default function MessagesPage() {
 
       const { data: lastMessage } = await supabase
         .from('messages')
-        .select('content, created_at')
+        .select('content, created_at, file_type')
         .eq('chat_room_id', roomId)
+        .eq('deleted', false)
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
@@ -94,6 +98,7 @@ export default function MessagesPage() {
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('chat_room_id', roomId)
+        .eq('deleted', false)
         .neq('sender_id', profileId)
         .gt('created_at', participation.last_read_at || '1970-01-01')
 
@@ -115,14 +120,18 @@ export default function MessagesPage() {
             avatar_url: otherUser.avatar_url
           },
           last_message: lastMessage || null,
-          unread_count: unreadCount || 0
+          unread_count: unreadCount || 0,
+          pinned: participation.pinned || false
         })
       }
     }
 
-    roomsData.sort((a, b) => 
-      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    )
+    // ピン止めされたものを上に、その後は更新日時順
+    roomsData.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
 
     setChatRooms(roomsData)
     setLoading(false)
@@ -144,6 +153,34 @@ export default function MessagesPage() {
     }
   }
 
+  // 最終メッセージの表示テキストを取得
+  function getLastMessageText(message: ChatRoom['last_message']): string {
+    if (!message) return 'メッセージがありません'
+    
+    // テキストがある場合はそれを表示
+    if (message.content && message.content.trim() !== '') {
+      return message.content
+    }
+    
+    // テキストがなくてファイルがある場合
+    if (message.file_type) {
+      switch (message.file_type) {
+        case 'image':
+          return '画像を送信しました'
+        case 'video':
+          return '動画を送信しました'
+        case 'pdf':
+          return 'PDFを送信しました'
+        case 'zip':
+          return 'ZIPファイルを送信しました'
+        default:
+          return 'ファイルを送信しました'
+      }
+    }
+    
+    return 'メッセージ'
+  }
+
   return (
     <>
       <Header />
@@ -159,7 +196,7 @@ export default function MessagesPage() {
           backgroundColor: '#FFFFFF'
         }}>
           <div style={{
-            padding: '40px',
+            padding: '24px 40px',
             borderBottom: '1px solid #E5E5E5'
           }}>
             <h1 className="page-title">メッセージ</h1>
@@ -181,24 +218,40 @@ export default function MessagesPage() {
           )}
 
           {!loading && chatRooms.length > 0 && (
-            <div style={{
-              maxWidth: '800px',
-              margin: '0 auto',
-              padding: '20px'
-            }}>
-              {chatRooms.map((room) => (
+            <div>
+              {chatRooms.map((room, index) => (
                 <Link
                   key={room.id}
                   href={`/messages/${room.id}`}
-                  className="card"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
-                    padding: '20px',
-                    marginBottom: '16px'
+                    padding: '12px 20px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    backgroundColor: '#FFFFFF',
+                    borderBottom: '1px solid #E5E5E5',
+                    transition: 'background-color 0.2s',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F9F9F9'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF'
                   }}
                 >
+                  {room.pinned && (
+                    <i className="fas fa-thumbtack" style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '12px',
+                      fontSize: '12px',
+                      color: '#6B6B6B'
+                    }}></i>
+                  )}
+
                   <div style={{
                     width: '56px',
                     height: '56px',
@@ -249,23 +302,42 @@ export default function MessagesPage() {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="flex-between mb-8" style={{ alignItems: 'baseline' }}>
-                      <h3 className="card-subtitle" style={{
+                    <div style={{ 
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                      marginBottom: '6px'
+                    }}>
+                      <h3 style={{
+                        fontSize: '15px',
                         fontWeight: room.unread_count > 0 ? 'bold' : '600',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        color: '#1A1A1A',
+                        margin: 0
                       }}>
                         {room.other_user.display_name || '名前未設定'}
                       </h3>
-                      <span className="text-tiny text-gray" style={{ flexShrink: 0, marginLeft: '12px' }}>
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#6B6B6B',
+                        flexShrink: 0,
+                        marginLeft: '12px'
+                      }}>
                         {room.last_message && formatMessageTime(room.last_message.created_at)}
                       </span>
                     </div>
-                    <p className="text-small text-gray text-ellipsis" style={{
-                      fontWeight: room.unread_count > 0 ? '600' : 'normal'
+                    <p style={{
+                      fontSize: '14px',
+                      color: '#6B6B6B',
+                      fontWeight: room.unread_count > 0 ? '600' : 'normal',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      margin: 0
                     }}>
-                      {room.last_message?.content || 'メッセージがありません'}
+                      {getLastMessageText(room.last_message)}
                     </p>
                   </div>
                 </Link>

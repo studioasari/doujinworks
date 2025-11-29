@@ -14,6 +14,7 @@ type Message = {
   file_url: string | null
   file_type: string | null
   file_name: string | null
+  deleted: boolean
 }
 
 type OtherUser = {
@@ -35,9 +36,22 @@ type ChatRoom = {
   last_message: {
     content: string
     created_at: string
+    file_type: string | null
   } | null
   unread_count: number
+  pinned: boolean
 }
+
+type ContextMenu = {
+  x: number
+  y: number
+  type: 'room' | 'message'
+  roomId?: string
+  messageId?: string
+  isPinned?: boolean
+} | null
+
+const MESSAGES_PER_PAGE = 30
 
 export default function ChatRoomPage() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -55,6 +69,11 @@ export default function ChatRoomPage() {
   const [enlargedMedia, setEnlargedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({})
   const [justSentMessageId, setJustSentMessageId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenu>(null)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [oldestMessageId, setOldestMessageId] = useState<string | null>(null)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -75,7 +94,8 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     if (currentProfileId && roomId) {
-      fetchMessages()
+      setIsInitialLoad(false) // ルーム変更時にリセット
+      fetchMessages(true)
       fetchOtherUser(currentProfileId)
       const unsubscribeMessages = subscribeToMessages()
       const unsubscribeReadStatus = subscribeToReadStatus()
@@ -122,6 +142,14 @@ export default function ChatRoomPage() {
     if (messages.length > 0 && !loading) {
       scrollToBottom(true)
       generateSignedUrls()
+      setIsInitialLoad(true) // 初回読み込み完了
+      
+      // 画像読み込みのために少し待ってからフラグをfalseに
+      const timer = setTimeout(() => {
+        setIsInitialLoad(false)
+      }, 2000) // 2秒後にリセット
+      
+      return () => clearTimeout(timer)
     }
   }, [loading, messages.length])
 
@@ -148,6 +176,29 @@ export default function ChatRoomPage() {
       }
     }
   }, [newMessage])
+
+  // コンテキストメニューを閉じる
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null)
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
+
+  // スクロールイベント監視（無限スクロール）
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      // 上部に到達したかチェック
+      if (container.scrollTop < 100 && hasMoreMessages && !loadingMore && !loading) {
+        loadMoreMessages()
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [hasMoreMessages, loadingMore, loading, oldestMessageId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -203,8 +254,9 @@ export default function ChatRoomPage() {
   async function fetchChatRooms(profileId: string) {
     const { data: participations, error: participationsError } = await supabase
       .from('chat_room_participants')
-      .select('chat_room_id, last_read_at')
+      .select('chat_room_id, last_read_at, pinned, hidden')
       .eq('profile_id', profileId)
+      .eq('hidden', false) // 非表示でないもののみ
 
     if (participationsError || !participations || participations.length === 0) {
       return
@@ -223,8 +275,9 @@ export default function ChatRoomPage() {
 
       const { data: lastMessage } = await supabase
         .from('messages')
-        .select('content, created_at')
+        .select('content, created_at, file_type')
         .eq('chat_room_id', roomIdTemp)
+        .eq('deleted', false)
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
@@ -233,6 +286,7 @@ export default function ChatRoomPage() {
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('chat_room_id', roomIdTemp)
+        .eq('deleted', false)
         .neq('sender_id', profileId)
         .gt('created_at', participation.last_read_at || '1970-01-01')
 
@@ -254,14 +308,18 @@ export default function ChatRoomPage() {
             avatar_url: otherUserData.avatar_url
           },
           last_message: lastMessage || null,
-          unread_count: unreadCount || 0
+          unread_count: unreadCount || 0,
+          pinned: participation.pinned || false
         })
       }
     }
 
-    roomsData.sort((a, b) => 
-      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    )
+    // ピン止めされたものを上に、その後は更新日時順
+    roomsData.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1
+      if (!a.pinned && b.pinned) return 1
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    })
 
     setChatRooms(roomsData)
   }
@@ -299,22 +357,91 @@ export default function ChatRoomPage() {
     }
   }
 
-  async function fetchMessages() {
-    setLoading(true)
+  async function fetchMessages(isInitial = false) {
+    if (isInitial) {
+      setLoading(true)
+    }
 
     const { data, error } = await supabase
       .from('messages')
       .select('*')
       .eq('chat_room_id', roomId)
-      .order('created_at', { ascending: true })
+      .eq('deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE)
 
     if (error) {
       console.error('メッセージ取得エラー:', error)
     } else {
-      setMessages(data || [])
+      const reversedData = (data || []).reverse()
+      setMessages(reversedData)
+      
+      if (data && data.length > 0) {
+        setOldestMessageId(data[data.length - 1].id)
+        setHasMoreMessages(data.length === MESSAGES_PER_PAGE)
+      } else {
+        setHasMoreMessages(false)
+      }
     }
 
-    setLoading(false)
+    if (isInitial) {
+      setLoading(false)
+    }
+  }
+
+  async function loadMoreMessages() {
+    if (!oldestMessageId || loadingMore || !hasMoreMessages) return
+
+    setLoadingMore(true)
+
+    const oldestMessage = messages[0]
+    if (!oldestMessage) {
+      setLoadingMore(false)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_room_id', roomId)
+      .eq('deleted', false)
+      .lt('created_at', oldestMessage.created_at)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE)
+
+    if (error) {
+      console.error('追加メッセージ取得エラー:', error)
+    } else {
+      if (data && data.length > 0) {
+        const reversedData = data.reverse()
+        
+        // 現在のスクロール位置を保存
+        const container = messagesContainerRef.current
+        const oldScrollHeight = container?.scrollHeight || 0
+        
+        // 重複を除外してマージ
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.id))
+          const newMessages = reversedData.filter(m => !existingIds.has(m.id))
+          return [...newMessages, ...prev]
+        })
+        
+        setOldestMessageId(data[data.length - 1].id)
+        setHasMoreMessages(data.length === MESSAGES_PER_PAGE)
+        
+        // スクロール位置を維持
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight
+            container.scrollTop = newScrollHeight - oldScrollHeight
+          }
+        }, 0)
+      } else {
+        setHasMoreMessages(false)
+      }
+    }
+
+    setLoadingMore(false)
   }
 
   function isNearBottom() {
@@ -334,9 +461,13 @@ export default function ChatRoomPage() {
   }
 
   const handleMediaLoad = (messageId: string) => {
-    if (messageId === justSentMessageId) {
+    // 初回読み込み時または送信直後の場合はスクロール位置を一番下に維持
+    if (isInitialLoad || messageId === justSentMessageId) {
       scrollToBottom(true)
-      setJustSentMessageId(null)
+      
+      if (messageId === justSentMessageId) {
+        setJustSentMessageId(null)
+      }
     }
   }
 
@@ -442,7 +573,8 @@ export default function ChatRoomPage() {
       content: newMessage.trim() || '',
       file_url: fileUrl,
       file_type: fileType,
-      file_name: fileName
+      file_name: fileName,
+      deleted: false
     }
 
     const { data, error } = await supabase
@@ -455,12 +587,17 @@ export default function ChatRoomPage() {
       console.error('メッセージ送信エラー:', error)
       alert('メッセージの送信に失敗しました')
     } else {
-      setMessages(prev => [...prev, data as Message])
+      // 重複を避けるために追加前にチェック
+      setMessages(prev => {
+        if (prev.find(m => m.id === data.id)) {
+          return prev
+        }
+        return [...prev, data as Message]
+      })
+      
       setNewMessage('')
       handleRemoveFile()
       
-      // ファイルがある場合はメッセージIDを記録（画像ロード後にスクロール）
-      // ファイルがない場合は即座にスクロール
       if (hasFile && (data.file_type === 'image' || data.file_type === 'video')) {
         setJustSentMessageId(data.id)
       } else {
@@ -495,7 +632,7 @@ export default function ChatRoomPage() {
         (payload) => {
           const newMsg = payload.new as Message
           
-          if (newMsg.sender_id !== currentProfileId) {
+          if (newMsg.sender_id !== currentProfileId && !newMsg.deleted) {
             const shouldScroll = isNearBottom()
             
             setMessages(prev => {
@@ -514,6 +651,26 @@ export default function ChatRoomPage() {
           
           if (currentProfileId) {
             fetchChatRooms(currentProfileId)
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${roomId}`
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Message
+          
+          // メッセージが削除された場合
+          if (updatedMsg.deleted) {
+            setMessages(prev => prev.filter(m => m.id !== updatedMsg.id))
+            if (currentProfileId) {
+              fetchChatRooms(currentProfileId)
+            }
           }
         }
       )
@@ -607,6 +764,34 @@ export default function ChatRoomPage() {
     }
   }
 
+  // 最終メッセージの表示テキストを取得
+  function getLastMessageText(message: ChatRoom['last_message']): string {
+    if (!message) return 'メッセージがありません'
+    
+    // テキストがある場合はそれを表示
+    if (message.content && message.content.trim() !== '') {
+      return message.content
+    }
+    
+    // テキストがなくてファイルがある場合
+    if (message.file_type) {
+      switch (message.file_type) {
+        case 'image':
+          return '画像を送信しました'
+        case 'video':
+          return '動画を送信しました'
+        case 'pdf':
+          return 'PDFを送信しました'
+        case 'zip':
+          return 'ZIPファイルを送信しました'
+        default:
+          return 'ファイルを送信しました'
+      }
+    }
+    
+    return 'メッセージ'
+  }
+
   const getFileIcon = (fileType: string | null) => {
     switch (fileType) {
       case 'pdf':
@@ -649,6 +834,127 @@ export default function ChatRoomPage() {
     }
   }
 
+  // 右クリックハンドラー
+  const handleRoomContextMenu = (e: React.MouseEvent, room: ChatRoom) => {
+    e.preventDefault()
+    
+    // メニューのサイズを考慮して位置を調整
+    const menuWidth = 180
+    const menuHeight = 100
+    let x = e.clientX
+    let y = e.clientY
+    
+    // 画面の右端を超える場合は左に表示
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 10
+    }
+    
+    // 画面の下端を超える場合は上に表示
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 10
+    }
+    
+    setContextMenu({
+      x,
+      y,
+      type: 'room',
+      roomId: room.id,
+      isPinned: room.pinned
+    })
+  }
+
+  const handleMessageContextMenu = (e: React.MouseEvent, message: Message) => {
+    // 自分が送信したメッセージのみ削除可能
+    if (message.sender_id !== currentProfileId) {
+      return
+    }
+    
+    e.preventDefault()
+    
+    // メニューのサイズを考慮して位置を調整
+    const menuWidth = 180
+    const menuHeight = 60
+    let x = e.clientX
+    let y = e.clientY
+    
+    // 画面の右端を超える場合は左に表示
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 10
+    }
+    
+    // 画面の下端を超える場合は上に表示
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 10
+    }
+    
+    setContextMenu({
+      x,
+      y,
+      type: 'message',
+      messageId: message.id
+    })
+  }
+
+  // トークのピン止め/解除
+  const handleTogglePin = async (roomId: string, isPinned: boolean) => {
+    await supabase
+      .from('chat_room_participants')
+      .update({ pinned: !isPinned })
+      .eq('chat_room_id', roomId)
+      .eq('profile_id', currentProfileId)
+
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+    setContextMenu(null)
+  }
+
+  // トークの削除（非表示）
+  const handleHideRoom = async (roomId: string) => {
+    if (!confirm('このトークを削除しますか？（相手からは引き続き見えます）')) {
+      setContextMenu(null)
+      return
+    }
+
+    await supabase
+      .from('chat_room_participants')
+      .update({ hidden: true })
+      .eq('chat_room_id', roomId)
+      .eq('profile_id', currentProfileId)
+
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+    
+    // 現在開いているトークを削除した場合、メッセージ一覧に戻る
+    if (roomId === params.id) {
+      router.push('/messages')
+    }
+    
+    setContextMenu(null)
+  }
+
+  // メッセージの削除
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('このメッセージを削除しますか？（お互いに見えなくなります）')) {
+      setContextMenu(null)
+      return
+    }
+
+    await supabase
+      .from('messages')
+      .update({ deleted: true })
+      .eq('id', messageId)
+
+    setMessages(prev => prev.filter(m => m.id !== messageId))
+    
+    if (currentProfileId) {
+      fetchChatRooms(currentProfileId)
+    }
+    
+    setContextMenu(null)
+  }
+
   return (
     <>
       <Header />
@@ -678,6 +984,7 @@ export default function ChatRoomPage() {
                 <Link
                   key={room.id}
                   href={`/messages/${room.id}`}
+                  onContextMenu={(e) => handleRoomContextMenu(e, room)}
                   className="flex gap-12"
                   style={{
                     alignItems: 'center',
@@ -686,7 +993,8 @@ export default function ChatRoomPage() {
                     borderBottom: '1px solid #E5E5E5',
                     backgroundColor: room.id === roomId ? '#F9F9F9' : '#FFFFFF',
                     transition: 'background-color 0.2s',
-                    display: 'flex'
+                    display: 'flex',
+                    position: 'relative'
                   }}
                   onMouseEnter={(e) => {
                     if (room.id !== roomId) {
@@ -697,6 +1005,16 @@ export default function ChatRoomPage() {
                     e.currentTarget.style.backgroundColor = room.id === roomId ? '#F9F9F9' : '#FFFFFF'
                   }}
                 >
+                  {room.pinned && (
+                    <i className="fas fa-thumbtack" style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      fontSize: '12px',
+                      color: '#6B6B6B'
+                    }}></i>
+                  )}
+                  
                   <div style={{
                     width: '48px',
                     height: '48px',
@@ -764,7 +1082,7 @@ export default function ChatRoomPage() {
                     <p className="text-small text-gray text-ellipsis" style={{
                       fontWeight: room.unread_count > 0 ? '600' : 'normal'
                     }}>
-                      {room.last_message?.content || 'メッセージがありません'}
+                      {getLastMessageText(room.last_message)}
                     </p>
                   </div>
                 </Link>
@@ -857,6 +1175,17 @@ export default function ChatRoomPage() {
               backgroundColor: '#F9F9F9'
             }}
           >
+            {loadingMore && (
+              <div style={{
+                textAlign: 'center',
+                padding: '12px',
+                fontSize: '14px',
+                color: '#6B6B6B'
+              }}>
+                読み込み中...
+              </div>
+            )}
+
             {loading && (
               <div className="loading-state">
                 読み込み中...
@@ -889,13 +1218,15 @@ export default function ChatRoomPage() {
                     </div>
                   )}
 
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
-                    marginBottom: '12px',
-                    gap: '8px',
-                    alignItems: 'flex-start'
-                  }}>
+                  <div 
+                    style={{
+                      display: 'flex',
+                      justifyContent: isCurrentUser ? 'flex-end' : 'flex-start',
+                      marginBottom: '12px',
+                      gap: '8px',
+                      alignItems: 'flex-start'
+                    }}
+                  >
                     {!isCurrentUser && otherUser && (
                       <div 
                         onClick={() => setShowProfileModal(true)}
@@ -939,7 +1270,10 @@ export default function ChatRoomPage() {
                     }}>
                       {/* 画像・動画（吹き出しなし） */}
                       {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
-                        <div style={{ position: 'relative' }}>
+                        <div 
+                          onContextMenu={(e) => handleMessageContextMenu(e, message)}
+                          style={{ position: 'relative' }}
+                        >
                           {message.file_type === 'image' ? (
                             <img
                               src={signedUrl}
@@ -995,7 +1329,10 @@ export default function ChatRoomPage() {
 
                       {/* ファイル（PDF・ZIP）（吹き出しなし） */}
                       {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
-                        <div style={{ position: 'relative' }}>
+                        <div 
+                          onContextMenu={(e) => handleMessageContextMenu(e, message)}
+                          style={{ position: 'relative' }}
+                        >
                           <a
                             href={signedUrl}
                             download={message.file_name || undefined}
@@ -1036,15 +1373,18 @@ export default function ChatRoomPage() {
 
                       {/* テキストメッセージ（吹き出しあり） */}
                       {message.content && (
-                        <div style={{
-                          backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
-                          color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
-                          padding: '12px 16px',
-                          borderRadius: '16px',
-                          wordBreak: 'break-word',
-                          whiteSpace: 'pre-wrap',
-                          border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
-                        }}>
+                        <div 
+                          onContextMenu={(e) => handleMessageContextMenu(e, message)}
+                          style={{
+                            backgroundColor: isCurrentUser ? '#1A1A1A' : '#FFFFFF',
+                            color: isCurrentUser ? '#FFFFFF' : '#1A1A1A',
+                            padding: '12px 16px',
+                            borderRadius: '16px',
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap',
+                            border: isCurrentUser ? 'none' : '1px solid #E5E5E5'
+                          }}
+                        >
                           {message.content}
                         </div>
                       )}
@@ -1256,6 +1596,100 @@ export default function ChatRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* コンテキストメニュー */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E5E5E5',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 3000,
+            minWidth: '180px',
+            overflow: 'hidden'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.type === 'room' && (
+            <>
+              <button
+                onClick={() => handleTogglePin(contextMenu.roomId!, contextMenu.isPinned!)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#1A1A1A',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9F9F9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <i className={`fas fa-thumbtack`} style={{ width: '16px', color: '#6B6B6B' }}></i>
+                {contextMenu.isPinned ? 'ピン止めを外す' : 'ピン止め'}
+              </button>
+              <button
+                onClick={() => handleHideRoom(contextMenu.roomId!)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#FF4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'background-color 0.2s',
+                  borderTop: '1px solid #E5E5E5'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFF5F5'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <i className="fas fa-trash" style={{ width: '16px' }}></i>
+                トークを削除
+              </button>
+            </>
+          )}
+          
+          {contextMenu.type === 'message' && (
+            <button
+              onClick={() => handleDeleteMessage(contextMenu.messageId!)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: '#FF4444',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FFF5F5'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <i className="fas fa-trash" style={{ width: '16px' }}></i>
+              メッセージを削除
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 画像・動画拡大表示モーダル */}
       {enlargedMedia && (

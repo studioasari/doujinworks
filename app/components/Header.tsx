@@ -18,9 +18,23 @@ export default function Header() {
   const [profile, setProfile] = useState<any>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMessageMenuOpen, setIsMessageMenuOpen] = useState(false)
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
+  const [notificationTab, setNotificationTab] = useState<'notifications' | 'announcements'>('notifications')
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentMessages, setRecentMessages] = useState<UnreadMessage[]>([])
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     checkUser()
@@ -55,16 +69,19 @@ export default function Header() {
       if (!target.closest('.message-menu-container')) {
         setIsMessageMenuOpen(false)
       }
+      if (!target.closest('.notification-menu-container')) {
+        setIsNotificationMenuOpen(false)
+      }
     }
 
-    if (isMenuOpen || isMessageMenuOpen) {
+    if (isMenuOpen || isMessageMenuOpen || isNotificationMenuOpen) {
       document.addEventListener('click', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('click', handleClickOutside)
     }
-  }, [isMenuOpen, isMessageMenuOpen])
+  }, [isMenuOpen, isMessageMenuOpen, isNotificationMenuOpen])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -90,8 +107,9 @@ export default function Header() {
     try {
       const { data: participations, error: participationError } = await supabase
         .from('chat_room_participants')
-        .select('chat_room_id, last_read_at')
+        .select('chat_room_id, last_read_at, hidden')
         .eq('profile_id', profile.id)
+        .eq('hidden', false)
 
       if (participationError) {
         console.error('参加ルーム取得エラー:', participationError)
@@ -106,22 +124,22 @@ export default function Header() {
       const messages: UnreadMessage[] = []
 
       for (const participation of participations) {
-        // 未読メッセージ数を取得
         const { count } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('chat_room_id', participation.chat_room_id)
+          .eq('deleted', false)
           .neq('sender_id', profile.id)
           .gt('created_at', participation.last_read_at || '1970-01-01')
 
         totalUnread += count || 0
 
-        // 最新の未読メッセージを取得（最大5件まで）
         if (messages.length < 5) {
           const { data: unreadMessages, error: messagesError } = await supabase
             .from('messages')
             .select('id, chat_room_id, content, created_at, sender_id, file_type')
             .eq('chat_room_id', participation.chat_room_id)
+            .eq('deleted', false)
             .neq('sender_id', profile.id)
             .gt('created_at', participation.last_read_at || '1970-01-01')
             .order('created_at', { ascending: false })
@@ -133,7 +151,6 @@ export default function Header() {
           }
 
           if (unreadMessages && unreadMessages.length > 0) {
-            // 各メッセージの送信者情報を個別に取得
             for (const msg of unreadMessages) {
               const { data: senderProfile } = await supabase
                 .from('profiles')
@@ -141,13 +158,16 @@ export default function Header() {
                 .eq('id', msg.sender_id)
                 .single()
 
-              // コンテンツの決定
               let displayContent = msg.content
               if (!displayContent || displayContent.trim() === '') {
                 if (msg.file_type === 'image') {
                   displayContent = '画像を送信しました'
                 } else if (msg.file_type === 'video') {
                   displayContent = '動画を送信しました'
+                } else if (msg.file_type === 'pdf') {
+                  displayContent = 'PDFを送信しました'
+                } else if (msg.file_type === 'zip') {
+                  displayContent = 'ZIPファイルを送信しました'
                 } else if (msg.file_type) {
                   displayContent = 'ファイルを送信しました'
                 } else {
@@ -167,7 +187,6 @@ export default function Header() {
         }
       }
 
-      // 作成日時でソート（新しい順）
       messages.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
@@ -193,8 +212,7 @@ export default function Header() {
         },
         (payload) => {
           const newMessage = payload.new as any
-          // 自分が送ったメッセージは除外
-          if (newMessage.sender_id !== profile.id) {
+          if (newMessage.sender_id !== profile.id && !newMessage.deleted) {
             loadUnreadMessages()
           }
         }
@@ -209,6 +227,20 @@ export default function Header() {
         },
         () => {
           loadUnreadMessages()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          const updatedMessage = payload.new as any
+          if (updatedMessage.deleted) {
+            loadUnreadMessages()
+          }
         }
       )
       .subscribe()
@@ -248,7 +280,11 @@ export default function Header() {
   const MessageIcon = () => (
     <div className="message-menu-container" style={{ position: 'relative' }}>
       <button
-        onClick={() => setIsMessageMenuOpen(!isMessageMenuOpen)}
+        onClick={() => {
+          setIsNotificationMenuOpen(false)
+          setIsMenuOpen(false)
+          setIsMessageMenuOpen(!isMessageMenuOpen)
+        }}
         style={{
           color: '#6B6B6B',
           fontSize: '20px',
@@ -282,154 +318,337 @@ export default function Header() {
         )}
       </button>
 
-      {/* メッセージドロップダウン */}
       {isMessageMenuOpen && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 12px)',
-          right: 0,
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E5E5',
-          borderRadius: '8px',
-          minWidth: '320px',
-          maxWidth: '400px',
-          zIndex: 1000,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid #E5E5E5',
-            fontWeight: '600',
-            fontSize: '14px',
-            color: '#1A1A1A'
+        <>
+          <div 
+            className="message-overlay"
+            onClick={() => setIsMessageMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: '60px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 9998,
+              display: isMobile ? 'block' : 'none'
+            }}
+          />
+          
+          <div className="message-dropdown" style={isMobile ? {
+            position: 'fixed',
+            top: '60px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#FFFFFF',
+            border: 'none',
+            borderRadius: 0,
+            zIndex: 9999,
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column'
+          } : {
+            position: 'absolute',
+            top: 'calc(100% + 12px)',
+            right: 0,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E5E5E5',
+            borderRadius: '8px',
+            minWidth: '320px',
+            maxWidth: '400px',
+            zIndex: 9999,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
           }}>
-            メッセージ
-          </div>
-
-          {recentMessages.length === 0 ? (
             <div style={{
-              padding: '32px 16px',
-              textAlign: 'center',
-              color: '#6B6B6B',
-              fontSize: '14px'
+              padding: '12px 16px',
+              borderBottom: '1px solid #E5E5E5',
+              fontWeight: '600',
+              fontSize: '14px',
+              color: '#1A1A1A',
+              textAlign: isMobile ? 'center' : 'left'
             }}>
-              新しいメッセージはありません
+              メッセージ
             </div>
-          ) : (
-            <div>
-              {recentMessages.map((message, index) => (
-                <Link
-                  key={`${message.chat_room_id}-${index}`}
-                  href={`/messages/${message.chat_room_id}`}
-                  onClick={() => setIsMessageMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    textDecoration: 'none',
-                    borderBottom: index < recentMessages.length - 1 ? '1px solid #F0F0F0' : 'none',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F9F9F9'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                >
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#E5E5E5',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden'
-                  }}>
-                    {message.sender_avatar ? (
-                      <img
-                        src={message.sender_avatar}
-                        alt={message.sender_name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: '16px', color: '#6B6B6B' }}>
-                        {message.sender_name.charAt(0)}
-                      </span>
-                    )}
-                  </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
+            {recentMessages.length === 0 ? (
+              <div style={{
+                padding: '32px 16px',
+                textAlign: 'center',
+                color: '#6B6B6B',
+                fontSize: '14px'
+              }}>
+                新しいメッセージはありません
+              </div>
+            ) : (
+              <div style={isMobile ? {
+                flex: 1,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch'
+              } : undefined}>
+                {recentMessages.map((message, index) => (
+                  <Link
+                    key={`${message.chat_room_id}-${index}`}
+                    href={`/messages/${message.chat_room_id}`}
+                    onClick={() => setIsMessageMenuOpen(false)}
+                    style={{
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'baseline',
-                      marginBottom: '4px'
+                      gap: '12px',
+                      padding: '12px 16px',
+                      textDecoration: 'none',
+                      borderBottom: index < recentMessages.length - 1 ? '1px solid #F0F0F0' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F9F9F9'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: '#E5E5E5',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
                     }}>
+                      {message.sender_avatar ? (
+                        <img
+                          src={message.sender_avatar}
+                          alt={message.sender_name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '16px', color: '#6B6B6B' }}>
+                          {message.sender_name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        color: '#1A1A1A',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'baseline',
+                        marginBottom: '4px'
+                      }}>
+                        <div style={{
+                          fontWeight: '600',
+                          fontSize: '14px',
+                          color: '#1A1A1A',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {message.sender_name}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#6B6B6B',
+                          flexShrink: 0,
+                          marginLeft: '8px'
+                        }}>
+                          {formatMessageTime(message.created_at)}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: '13px',
+                        color: '#6B6B6B',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                       }}>
-                        {message.sender_name}
-                      </div>
-                      <div style={{
-                        fontSize: '12px',
-                        color: '#6B6B6B',
-                        flexShrink: 0,
-                        marginLeft: '8px'
-                      }}>
-                        {formatMessageTime(message.created_at)}
+                        {truncateText(message.content, 40)}
                       </div>
                     </div>
-                    <div style={{
-                      fontSize: '13px',
-                      color: '#6B6B6B',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {truncateText(message.content, 40)}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+                  </Link>
+                ))}
+              </div>
+            )}
 
-          <Link
-            href="/messages"
-            onClick={() => setIsMessageMenuOpen(false)}
+            <Link
+              href="/messages"
+              onClick={() => setIsMessageMenuOpen(false)}
+              style={isMobile ? {
+                display: 'block',
+                padding: '12px 16px',
+                textAlign: 'center',
+                color: '#1A1A1A',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: '600',
+                margin: '16px',
+                backgroundColor: '#F5F5F5',
+                borderRadius: '8px',
+                border: 'none'
+              } : {
+                display: 'block',
+                padding: '12px 16px',
+                textAlign: 'center',
+                color: '#1A1A1A',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: '600',
+                borderTop: '1px solid #E5E5E5'
+              }}
+              onMouseEnter={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.backgroundColor = '#F9F9F9'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isMobile) {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }
+              }}
+            >
+              メッセージを確認する
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
+  const NotificationIcon = () => (
+    <div className="notification-menu-container" style={{ position: 'relative' }}>
+      <button
+        onClick={() => {
+          setIsMessageMenuOpen(false)
+          setIsMenuOpen(false)
+          setIsNotificationMenuOpen(!isNotificationMenuOpen)
+          if (!isNotificationMenuOpen) {
+            setNotificationTab('notifications')
+          }
+        }}
+        style={{
+          color: '#6B6B6B',
+          fontSize: '20px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          position: 'relative'
+        }}
+      >
+        <i className="far fa-bell"></i>
+      </button>
+
+      {isNotificationMenuOpen && (
+        <>
+          <div 
+            className="notification-overlay"
+            onClick={() => setIsNotificationMenuOpen(false)}
             style={{
-              display: 'block',
-              padding: '12px 16px',
-              textAlign: 'center',
-              color: '#1A1A1A',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '600',
-              borderTop: '1px solid #E5E5E5',
-              transition: 'background-color 0.2s'
+              position: 'fixed',
+              top: '60px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 9998,
+              display: isMobile ? 'block' : 'none'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#F9F9F9'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-            }}
-          >
-            メッセージを確認する
-          </Link>
-        </div>
+          />
+          
+          <div className="notification-dropdown" style={isMobile ? {
+            position: 'fixed',
+            top: '60px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#FFFFFF',
+            border: 'none',
+            borderRadius: 0,
+            zIndex: 9999,
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column'
+          } : {
+            position: 'absolute',
+            top: 'calc(100% + 12px)',
+            right: 0,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E5E5E5',
+            borderRadius: '8px',
+            minWidth: '320px',
+            maxWidth: '400px',
+            zIndex: 9999,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div className="notification-tabs" style={{
+              display: 'flex',
+              borderBottom: '1px solid #E5E5E5'
+            }}>
+              <button 
+                onClick={() => setNotificationTab('notifications')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: `2px solid ${notificationTab === 'notifications' ? '#1A1A1A' : 'transparent'}`,
+                  color: notificationTab === 'notifications' ? '#1A1A1A' : '#6B6B6B',
+                  fontWeight: notificationTab === 'notifications' ? '600' : '400',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                通知
+              </button>
+              <button 
+                onClick={() => setNotificationTab('announcements')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderBottom: `2px solid ${notificationTab === 'announcements' ? '#1A1A1A' : 'transparent'}`,
+                  color: notificationTab === 'announcements' ? '#1A1A1A' : '#6B6B6B',
+                  fontWeight: notificationTab === 'announcements' ? '600' : '400',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                お知らせ
+              </button>
+            </div>
+
+            <div className="notification-content" style={isMobile ? {
+              flex: 1,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch'
+            } : undefined}>
+              {notificationTab === 'notifications' ? (
+                <div style={{
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                  color: '#6B6B6B',
+                  fontSize: '14px'
+                }}>
+                  新しい通知はありません
+                </div>
+              ) : (
+                <div style={{
+                  padding: '32px 16px',
+                  textAlign: 'center',
+                  color: '#6B6B6B',
+                  fontSize: '14px'
+                }}>
+                  新しいお知らせはありません
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
@@ -439,6 +658,8 @@ export default function Header() {
       <style jsx>{`
         .header-container {
           padding: 16px 40px;
+          height: 64px;
+          box-sizing: border-box;
         }
         
         @media (max-width: 768px) {
@@ -447,8 +668,11 @@ export default function Header() {
           }
           .header-container {
             padding: 12px 16px;
+            height: 60px;
+            box-sizing: border-box;
           }
         }
+        
         @media (min-width: 769px) {
           .mobile-nav {
             display: none !important;
@@ -486,24 +710,21 @@ export default function Header() {
           <Link href="/creators" style={{ 
             color: '#6B6B6B', 
             textDecoration: 'none',
-            fontSize: '15px',
-            transition: 'color 0.2s'
+            fontSize: '15px'
           }}>
             クリエイター一覧
           </Link>
           <Link href="/portfolio" style={{ 
             color: '#6B6B6B', 
             textDecoration: 'none',
-            fontSize: '15px',
-            transition: 'color 0.2s'
+            fontSize: '15px'
           }}>
             ポートフォリオ
           </Link>
           <Link href="/requests" style={{ 
             color: '#6B6B6B', 
             textDecoration: 'none',
-            fontSize: '15px',
-            transition: 'color 0.2s'
+            fontSize: '15px'
           }}>
             依頼一覧
           </Link>
@@ -511,22 +732,15 @@ export default function Header() {
           {user ? (
             <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
               <MessageIcon />
-
-              <button style={{
-                color: '#6B6B6B',
-                fontSize: '20px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                position: 'relative'
-              }}>
-                <i className="far fa-bell"></i>
-              </button>
+              <NotificationIcon />
 
               <div className="profile-menu-container" style={{ position: 'relative' }}>
                 <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  onClick={() => {
+                    setIsMessageMenuOpen(false)
+                    setIsNotificationMenuOpen(false)
+                    setIsMenuOpen(!isMenuOpen)
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -546,8 +760,7 @@ export default function Header() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`,
-                    transition: 'border-color 0.2s'
+                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
                   }}>
                     {profile?.avatar_url ? (
                       <img
@@ -569,69 +782,131 @@ export default function Header() {
                 </button>
 
                 {isMenuOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    minWidth: '200px',
-                    zIndex: 1000
-                  }}>
-                    <Link
-                      href="/dashboard"
+                  <>
+                    <div 
+                      className="profile-overlay"
                       onClick={() => setIsMenuOpen(false)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        color: '#1A1A1A',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        transition: 'background-color 0.2s',
-                        borderBottom: '1px solid #E5E5E5'
+                        position: 'fixed',
+                        top: '60px',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 998,
+                        display: isMobile ? 'block' : 'none'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F9F9F9'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                      ダッシュボード
-                    </Link>
+                    />
+                    
+                    <div style={isMobile ? {
+                      position: 'fixed',
+                      top: '60px',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: 0,
+                      zIndex: 999,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '16px'
+                    } : {
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '8px',
+                      minWidth: '200px',
+                      zIndex: 1000,
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={isMobile ? {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#F5F5F5',
+                          borderRadius: '8px',
+                          marginBottom: '12px'
+                        } : {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          borderBottom: '1px solid #E5E5E5'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = '#F9F9F9'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                        ダッシュボード
+                      </Link>
 
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        width: '100%',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        color: '#1A1A1A',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                        textAlign: 'left'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F9F9F9'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                      ログアウト
-                    </button>
-                  </div>
+                      <button
+                        onClick={handleLogout}
+                        style={isMobile ? {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          width: '100%',
+                          backgroundColor: '#F5F5F5',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        } : {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          width: '100%',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = '#F9F9F9'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                        ログアウト
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -645,8 +920,7 @@ export default function Header() {
                 borderRadius: '24px',
                 textDecoration: 'none',
                 fontWeight: '600',
-                fontSize: '14px',
-                transition: 'all 0.2s'
+                fontSize: '14px'
               }}>
                 ログイン
               </Link>
@@ -658,8 +932,7 @@ export default function Header() {
                 borderRadius: '24px',
                 textDecoration: 'none',
                 fontWeight: '600',
-                fontSize: '14px',
-                transition: 'opacity 0.2s'
+                fontSize: '14px'
               }}>
                 会員登録
               </Link>
@@ -672,22 +945,15 @@ export default function Header() {
           {user ? (
             <>
               <MessageIcon />
-
-              <button style={{
-                color: '#6B6B6B',
-                fontSize: '20px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                position: 'relative'
-              }}>
-                <i className="far fa-bell"></i>
-              </button>
+              <NotificationIcon />
 
               <div className="profile-menu-container" style={{ position: 'relative' }}>
                 <button
-                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  onClick={() => {
+                    setIsMessageMenuOpen(false)
+                    setIsNotificationMenuOpen(false)
+                    setIsMenuOpen(!isMenuOpen)
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -707,8 +973,7 @@ export default function Header() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`,
-                    transition: 'border-color 0.2s'
+                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
                   }}>
                     {profile?.avatar_url ? (
                       <img
@@ -730,69 +995,131 @@ export default function Header() {
                 </button>
 
                 {isMenuOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    minWidth: '200px',
-                    zIndex: 1000
-                  }}>
-                    <Link
-                      href="/dashboard"
+                  <>
+                    <div 
+                      className="profile-overlay"
                       onClick={() => setIsMenuOpen(false)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        color: '#1A1A1A',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        transition: 'background-color 0.2s',
-                        borderBottom: '1px solid #E5E5E5'
+                        position: 'fixed',
+                        top: '60px',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 998,
+                        display: isMobile ? 'block' : 'none'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F9F9F9'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                      ダッシュボード
-                    </Link>
+                    />
+                    
+                    <div style={isMobile ? {
+                      position: 'fixed',
+                      top: '60px',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: 0,
+                      zIndex: 999,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '16px'
+                    } : {
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '8px',
+                      minWidth: '200px',
+                      zIndex: 1000,
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={isMobile ? {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#F5F5F5',
+                          borderRadius: '8px',
+                          marginBottom: '12px'
+                        } : {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          borderBottom: '1px solid #E5E5E5'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = '#F9F9F9'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                        ダッシュボード
+                      </Link>
 
-                    <button
-                      onClick={handleLogout}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        width: '100%',
-                        backgroundColor: 'transparent',
-                        border: 'none',
-                        color: '#1A1A1A',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s',
-                        textAlign: 'left'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F9F9F9'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                      ログアウト
-                    </button>
-                  </div>
+                      <button
+                        onClick={handleLogout}
+                        style={isMobile ? {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '16px',
+                          width: '100%',
+                          backgroundColor: '#F5F5F5',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        } : {
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          width: '100%',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          color: '#1A1A1A',
+                          textDecoration: 'none',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = '#F9F9F9'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isMobile) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                        ログアウト
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </>
@@ -806,8 +1133,7 @@ export default function Header() {
                 borderRadius: '24px',
                 textDecoration: 'none',
                 fontWeight: '600',
-                fontSize: '14px',
-                transition: 'all 0.2s'
+                fontSize: '14px'
               }}>
                 ログイン
               </Link>
@@ -819,8 +1145,7 @@ export default function Header() {
                 borderRadius: '24px',
                 textDecoration: 'none',
                 fontWeight: '600',
-                fontSize: '14px',
-                transition: 'opacity 0.2s'
+                fontSize: '14px'
               }}>
                 会員登録
               </Link>
