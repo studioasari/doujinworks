@@ -14,6 +14,7 @@ type Genre = {
   icon: string
   description: string
   path: string
+  specs: string
 }
 
 export default function UploadSelectPage() {
@@ -49,43 +50,49 @@ export default function UploadSelectPage() {
       id: 'illustration',
       name: 'イラスト',
       icon: 'fas fa-image',
-      description: '1枚のイラスト作品',
-      path: '/portfolio/upload/illustration'
+      description: '1枚絵のイラスト作品',
+      path: '/portfolio/upload/illustration',
+      specs: 'JPEG / PNG / GIF / 32MB'
     },
     {
       id: 'manga',
       name: 'マンガ',
       icon: 'fas fa-book',
-      description: '複数ページの漫画作品',
-      path: '/portfolio/upload/manga'
+      description: '複数ページのマンガ作品',
+      path: '/portfolio/upload/manga',
+      specs: 'JPEG / PNG / GIF / 32MB × 最大50ページ'
     },
     {
-      id: 'text',
-      name: '小説・テキスト',
+      id: 'novel',
+      name: '小説',
       icon: 'fas fa-file-alt',
       description: '小説、エッセイ、詩など',
-      path: '/portfolio/upload/text'
+      path: '/portfolio/upload/novel',
+      specs: '最大100,000文字'
     },
     {
       id: 'music',
       name: '音楽',
       icon: 'fas fa-music',
-      description: 'オリジナル楽曲、BGMなど',
-      path: '/portfolio/upload/music'
+      description: 'オリジナル楽曲やカバーなど',
+      path: '/portfolio/upload/music',
+      specs: 'MP3 / WAV / 20MB'
     },
     {
       id: 'voice',
       name: 'ボイス',
       icon: 'fas fa-microphone',
-      description: 'ボイスドラマ、ナレーションなど',
-      path: '/portfolio/upload/voice'
+      description: 'ボイスドラマ、朗読など',
+      path: '/portfolio/upload/voice',
+      specs: 'MP3 / WAV / 20MB'
     },
     {
       id: 'video',
       name: '動画',
       icon: 'fas fa-video',
-      description: 'アニメーション、MV、実写など',
-      path: '/portfolio/upload/video'
+      description: 'アニメーション、実写など',
+      path: '/portfolio/upload/video',
+      specs: 'MP4 / MOV / AVI / 200MB'
     }
   ]
 
@@ -138,12 +145,12 @@ export default function UploadSelectPage() {
             </Link>
 
             {/* ヘッダー */}
-            <div className="mb-40">
-              <h1 className="page-title mb-12">
-                ポートフォリオをアップロード
+            <div className="mb-32">
+              <h1 className="page-title mb-8">
+                作品をアップロード
               </h1>
               <p className="text-small text-gray">
-                どのジャンルの作品をアップロードしますか？
+                アップロードするジャンルを選択してください
               </p>
             </div>
 
@@ -151,7 +158,8 @@ export default function UploadSelectPage() {
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '24px'
+              gap: '20px',
+              marginBottom: '40px'
             }}>
               {genres.map((genre) => (
                 <Link
@@ -159,37 +167,52 @@ export default function UploadSelectPage() {
                   href={genre.path}
                   className="card"
                   style={{
-                    padding: '32px',
-                    textAlign: 'center',
+                    padding: '24px',
                     textDecoration: 'none'
                   }}
                 >
                   {/* アイコン */}
                   <div style={{
-                    fontSize: '48px',
+                    fontSize: '28px',
                     color: '#1A1A1A',
-                    marginBottom: '16px'
+                    marginBottom: '12px'
                   }}>
                     <i className={genre.icon}></i>
                   </div>
 
                   {/* ジャンル名 */}
-                  <h2 className="card-title mb-8">
+                  <h2 style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: '#1A1A1A',
+                    marginBottom: '6px'
+                  }}>
                     {genre.name}
                   </h2>
 
                   {/* 説明 */}
-                  <p className="text-small text-gray">
+                  <p style={{
+                    fontSize: '13px',
+                    color: '#6B6B6B',
+                    marginBottom: '12px'
+                  }}>
                     {genre.description}
                   </p>
+
+                  {/* スペック */}
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#999999'
+                  }}>
+                    {genre.specs}
+                  </div>
                 </Link>
               ))}
             </div>
 
             {/* 補足情報 */}
-            <div className="info-box" style={{ marginTop: '40px' }}>
+            <div className="card-no-hover" style={{ padding: '24px' }}>
               <h3 className="form-label mb-12">
-                <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
                 アップロードに関する注意事項
               </h3>
               <ul style={{
@@ -198,11 +221,9 @@ export default function UploadSelectPage() {
                 lineHeight: '1.8',
                 paddingLeft: '20px'
               }}>
-                <li>イラスト・マンガ: 1枚あたり最大5MB</li>
-                <li>小説・テキスト: 最大100,000文字</li>
-                <li>音楽: 最大20MB（約7〜10分）</li>
-                <li>ボイス: 最大10MB（約3〜5分）</li>
-                <li>動画: 最大100MB（約2〜3分）</li>
+                <li>画像ファイル: JPEG、PNG、GIF形式に対応（最大32MB）</li>
+                <li>音声・動画: ファイルアップロードまたは外部リンクに対応</li>
+                <li>公開設定: 全体公開、フォロワー限定、非公開から選択</li>
               </ul>
             </div>
           </div>

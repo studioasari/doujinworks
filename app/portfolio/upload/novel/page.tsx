@@ -74,26 +74,210 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   )
 }
 
+// プレビューモーダルコンポーネント
+function PreviewModal({ 
+  title,
+  synopsis,
+  content,
+  onClose 
+}: { 
+  title: string
+  synopsis: string
+  content: string
+  onClose: () => void 
+}) {
+  // モーダル表示中はスクロール無効化
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [])
+
+  // ルビを変換
+  function convertRuby(text: string): string {
+    return text.replace(/(.+?)《(.+?)》/g, '<ruby>$1<rt>$2</rt></ruby>')
+  }
+
+  // 改ページを変換
+  function convertPageBreak(text: string): string {
+    return text.replace(/───/g, '<div style="display: flex; align-items: center; justify-content: center; margin: 48px 0; padding: 16px; border: 2px solid #E5E5E5; border-radius: 8px; background-color: #FAFAFA; color: #6B6B6B; font-size: 14px; font-weight: bold;"><i class="fas fa-grip-lines" style="margin-right: 8px;"></i>ページ区切り</div>')
+  }
+
+  // 見出しを変換
+  function convertHeadings(text: string): string {
+    let result = text
+    // ### を h3 に
+    result = result.replace(/^### (.+)$/gm, '<h3 style="font-size: 18px; font-weight: bold; margin: 24px 0 12px 0;">$1</h3>')
+    // ## を h2 に
+    result = result.replace(/^## (.+)$/gm, '<h2 style="font-size: 22px; font-weight: bold; margin: 28px 0 14px 0;">$1</h2>')
+    // # を h1 に
+    result = result.replace(/^# (.+)$/gm, '<h1 style="font-size: 26px; font-weight: bold; margin: 32px 0 16px 0;">$1</h1>')
+    return result
+  }
+
+  // 強調を変換
+  function convertEmphasis(text: string): string {
+    return text.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: bold; background: linear-gradient(transparent 60%, #FFE066 60%);">$1</strong>')
+  }
+
+  // テキストを変換
+  function formatContent(text: string): string {
+    let formatted = text
+    formatted = convertRuby(formatted)
+    formatted = convertHeadings(formatted)
+    formatted = convertEmphasis(formatted)
+    formatted = convertPageBreak(formatted)
+    formatted = formatted.replace(/\n/g, '<br />')
+    return formatted
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9998,
+        padding: '20px',
+        overflowY: 'auto'
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card-no-hover"
+        style={{
+          maxWidth: '800px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          padding: '40px',
+          backgroundColor: '#FFFFFF'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '32px'
+        }}>
+          <h2 style={{ 
+            fontSize: '24px', 
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <i className="fas fa-eye"></i>
+            プレビュー
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#6B6B6B'
+            }}
+          >
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+
+        {/* タイトル */}
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          marginBottom: '24px',
+          lineHeight: '1.4'
+        }}>
+          {title || '（タイトルなし）'}
+        </h1>
+
+        {/* あらすじ */}
+        {synopsis && (
+          <div style={{
+            padding: '16px',
+            backgroundColor: '#FAFAFA',
+            borderRadius: '8px',
+            marginBottom: '32px',
+            borderLeft: '4px solid #1A1A1A'
+          }}>
+            <div style={{
+              fontSize: '13px',
+              color: '#6B6B6B',
+              fontWeight: 'bold',
+              marginBottom: '8px'
+            }}>
+              あらすじ
+            </div>
+            <div style={{
+              fontSize: '14px',
+              lineHeight: '1.8',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {synopsis}
+            </div>
+          </div>
+        )}
+
+        {/* 本文 */}
+        <div style={{
+          fontSize: '16px',
+          lineHeight: '2.0',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word'
+        }}>
+          {content ? (
+            <div dangerouslySetInnerHTML={{ __html: formatContent(content) }} />
+          ) : (
+            <div style={{ color: '#6B6B6B', fontStyle: 'italic' }}>
+              本文が入力されていません
+            </div>
+          )}
+        </div>
+
+        {/* 閉じるボタン */}
+        <div style={{ marginTop: '40px', textAlign: 'center' }}>
+          <button onClick={onClose} className="btn-secondary">
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // 確認モーダルコンポーネント
 function ConfirmModal({ 
-  title, 
-  description, 
+  title,
+  synopsis,
+  content,
   tags,
   rating,
   isOriginal,
   allowComments,
-  imagePreviews, 
+  thumbnailPreview,
   visibility,
   onConfirm, 
   onCancel 
 }: { 
   title: string
-  description: string
+  synopsis: string
+  content: string
   tags: string[]
   rating: string
   isOriginal: boolean
   allowComments: boolean
-  imagePreviews: string[]
+  thumbnailPreview: string
   visibility: string
   onConfirm: () => void
   onCancel: () => void 
@@ -117,6 +301,9 @@ function ConfirmModal({
       document.body.style.overflow = 'unset'
     }
   }, [])
+
+  // 文字数カウント
+  const charCount = content.length
 
   return (
     <div
@@ -160,47 +347,30 @@ function ConfirmModal({
           アップロード内容の確認
         </h2>
 
-        {/* 画像プレビュー */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-            gap: '12px',
-            marginBottom: '32px'
-          }}>
-            {imagePreviews.map((preview, index) => (
-              <div key={index} style={{ position: 'relative' }}>
-                <img 
-                  src={preview} 
-                  alt={`${index + 1}ページ目`}
-                  style={{
-                    width: '100%',
-                    height: '150px',
-                    objectFit: 'cover',
-                    borderRadius: '8px'
-                  }}
-                />
-                {/* ページ番号バッジ */}
-                <div style={{
-                  position: 'absolute',
-                  top: '8px',
-                  left: '8px',
-                  padding: '4px 8px',
-                  backgroundColor: '#1A1A1A',
-                  color: '#FFFFFF',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  borderRadius: '4px'
-                }}>
-                  {index + 1}p
-                </div>
-              </div>
-            ))}
+        {/* サムネイルプレビュー */}
+        {thumbnailPreview && (
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '32px'
+            }}>
+              <img 
+                src={thumbnailPreview} 
+                alt="サムネイル"
+                style={{
+                  maxWidth: '300px',
+                  maxHeight: '300px',
+                  objectFit: 'contain',
+                  borderRadius: '8px'
+                }}
+              />
+            </div>
+            <div style={{ 
+              borderBottom: '1px solid #E5E5E5'
+            }}></div>
           </div>
-          <div style={{ 
-            borderBottom: '1px solid #E5E5E5'
-          }}></div>
-        </div>
+        )}
 
         {/* タイトル */}
         <div style={{ 
@@ -225,8 +395,8 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* 説明 */}
-        {description && (
+        {/* あらすじ */}
+        {synopsis && (
           <div style={{ 
             paddingBottom: '24px',
             marginBottom: '24px',
@@ -238,7 +408,7 @@ function ConfirmModal({
               marginBottom: '8px',
               fontWeight: 'bold'
             }}>
-              説明
+              あらすじ
             </div>
             <div style={{ 
               fontSize: '14px',
@@ -246,10 +416,32 @@ function ConfirmModal({
               color: '#1A1A1A',
               whiteSpace: 'pre-wrap'
             }}>
-              {description}
+              {synopsis}
             </div>
           </div>
         )}
+
+        {/* 本文（文字数のみ） */}
+        <div style={{ 
+          paddingBottom: '24px',
+          marginBottom: '24px',
+          borderBottom: '1px solid #E5E5E5'
+        }}>
+          <div style={{ 
+            fontSize: '13px',
+            color: '#6B6B6B',
+            marginBottom: '8px',
+            fontWeight: 'bold'
+          }}>
+            本文
+          </div>
+          <div style={{ 
+            fontSize: '14px',
+            color: '#1A1A1A'
+          }}>
+            {charCount.toLocaleString()}文字
+          </div>
+        </div>
 
         {/* タグ */}
         <div style={{ 
@@ -434,7 +626,7 @@ function DraftModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {drafts.map((draft) => (
               <div
-                key={`${draft.category || 'manga_drafts'}-${draft.id}`}
+                key={`${draft.category || 'novel_drafts'}-${draft.id}`}
                 className="card"
                 style={{
                   padding: '20px',
@@ -490,7 +682,7 @@ function DraftModal({
                     {draft.title || '（タイトルなし）'}
                   </h3>
                   <div className="text-small text-gray">
-                    {new Date(draft.timestamp).toLocaleString('ja-JP')}
+                    {new Date(draft.timestamp).toLocaleString('ja-JP')} · {(draft.content || '').length.toLocaleString()}文字
                   </div>
                   {draft.selectedTags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
@@ -551,13 +743,14 @@ function DraftModal({
   )
 }
 
-export default function UploadMangaPage() {
+export default function UploadNovelPage() {
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [synopsis, setSynopsis] = useState('')
+  const [content, setContent] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
-  const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('')
   const [rating, setRating] = useState<'general' | 'r18' | 'r18g'>('general')
   const [isOriginal, setIsOriginal] = useState(false)
   const [allowComments, setAllowComments] = useState(true)
@@ -565,18 +758,17 @@ export default function UploadMangaPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [showHeadingMenu, setShowHeadingMenu] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
   
-  // ドラッグ＆ドロップ用の状態
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
-  
   // エラー状態
   const [errors, setErrors] = useState({
     title: '',
+    content: '',
     images: '',
     terms: ''
   })
@@ -585,15 +777,127 @@ export default function UploadMangaPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // ルビを挿入
+  function insertRuby() {
+    if (!contentRef.current) return
+    
+    const textarea = contentRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    
+    let newText
+    let cursorPosition
+    
+    if (selectedText) {
+      // 選択範囲がある場合：選択テキスト《》
+      newText = content.substring(0, start) + `${selectedText}《》` + content.substring(end)
+      cursorPosition = start + selectedText.length + 2 // 《の後ろ
+    } else {
+      // 選択範囲がない場合：《》を挿入
+      newText = content.substring(0, start) + '《》' + content.substring(end)
+      cursorPosition = start + 1 // 《の後ろ
+    }
+    
+    setContent(newText)
+    
+    // カーソル位置を復元
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(cursorPosition, cursorPosition)
+    }, 0)
+  }
+
+  // 改ページを挿入
+  function insertPageBreak() {
+    if (!contentRef.current) return
+    
+    const textarea = contentRef.current
+    const start = textarea.selectionStart
+    const newText = content.substring(0, start) + '\n───\n' + content.substring(start)
+    
+    setContent(newText)
+    
+    // カーソル位置を復元
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + 5, start + 5)
+    }, 0)
+  }
+
+  // 見出しを挿入
+  function insertHeading(level: number) {
+    if (!contentRef.current) return
+    
+    const textarea = contentRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    
+    const headingPrefix = '#'.repeat(level) + ' '
+    let newText
+    let cursorPosition
+    
+    if (selectedText) {
+      // 選択範囲がある場合：# 選択テキスト
+      newText = content.substring(0, start) + headingPrefix + selectedText + content.substring(end)
+      cursorPosition = start + headingPrefix.length + selectedText.length
+    } else {
+      // 選択範囲がない場合：# を挿入
+      newText = content.substring(0, start) + headingPrefix + content.substring(end)
+      cursorPosition = start + headingPrefix.length
+    }
+    
+    setContent(newText)
+    
+    // カーソル位置を復元
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(cursorPosition, cursorPosition)
+    }, 0)
+  }
+
+  // 強調を挿入
+  function insertEmphasis() {
+    if (!contentRef.current) return
+    
+    const textarea = contentRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    
+    let newText
+    let cursorPosition
+    
+    if (selectedText) {
+      // 選択範囲がある場合：**選択テキスト**
+      newText = content.substring(0, start) + `**${selectedText}**` + content.substring(end)
+      cursorPosition = start + selectedText.length + 4
+    } else {
+      // 選択範囲がない場合：****を挿入
+      newText = content.substring(0, start) + '****' + content.substring(end)
+      cursorPosition = start + 2 // **の間
+    }
+    
+    setContent(newText)
+    
+    // カーソル位置を復元
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(cursorPosition, cursorPosition)
+    }, 0)
+  }
+
   // プリセットタグ
   const presetTags = [
-    'オリジナル', 'ファンアート', 'ファンタジー', '現代', 'SF',
-    '女の子', '男の子', '風景', '動物', '静物',
-    'モノクロ', 'カラー', '線画', '厚塗り', '水彩',
-    'キャラクター', '背景', 'ポートレート', '全身', 'バストアップ'
+    'ファンタジー', '恋愛', 'ミステリー', 'SF', 'ホラー',
+    '現代', '歴史', '学園', '異世界', 'バトル',
+    'コメディ', 'シリアス', '短編', '長編', '完結',
+    '連載中', 'BL', 'GL', 'ハッピーエンド', 'バッドエンド'
   ]
 
   useEffect(() => {
@@ -611,14 +915,14 @@ export default function UploadMangaPage() {
 
   function restoreDraft(draftId: string) {
     try {
-      const saved = localStorage.getItem('manga_drafts')
+      const saved = localStorage.getItem('novel_drafts')
       if (saved) {
         const allDrafts = JSON.parse(saved)
         const draft = allDrafts[draftId]
         
         if (draft) {
           setTitle(draft.title || '')
-          setDescription(draft.description || '')
+          setContent(draft.content || '')
           setSelectedTags(draft.selectedTags || [])
           setRating(draft.rating || 'general')
           setIsOriginal(draft.isOriginal || false)
@@ -693,6 +997,8 @@ export default function UploadMangaPage() {
                 id,
                 title: data.title || '無題',
                 description: data.description || '',
+                synopsis: data.synopsis || '',
+                content: data.content || '',
                 selectedTags: data.selectedTags || [],
                 rating: data.rating || 'general',
                 isOriginal: data.isOriginal || false,
@@ -720,7 +1026,8 @@ export default function UploadMangaPage() {
   // 下書きを復元
   function loadDraft(draft: Draft) {
     setTitle(draft.title)
-    setDescription(draft.description)
+    setSynopsis(draft.synopsis || '')
+    setContent(draft.content || '')
     setSelectedTags(draft.selectedTags)
     setRating(draft.rating)
     setIsOriginal(draft.isOriginal)
@@ -733,7 +1040,7 @@ export default function UploadMangaPage() {
   // 下書きを削除
   function deleteDraft(draft: Draft) {
     try {
-      const storageKey = draft.category || 'manga_drafts'
+      const storageKey = draft.category || 'novel_drafts'
       const saved = localStorage.getItem(storageKey)
       if (saved) {
         const allDrafts = JSON.parse(saved)
@@ -751,17 +1058,17 @@ export default function UploadMangaPage() {
   // 自動保存（2秒後）
   useEffect(() => {
     if (!currentUserId) return
-    if (!title.trim() && selectedTags.length === 0) return
+    if (!title.trim() && !content.trim() && selectedTags.length === 0) return
 
     const autoSaveTimer = setTimeout(() => {
       try {
-        const saved = localStorage.getItem('manga_drafts')
+        const saved = localStorage.getItem('novel_drafts')
         let allDrafts = saved ? JSON.parse(saved) : {}
         
         const autoSaveId = 'autosave'
         allDrafts[autoSaveId] = {
           title,
-          description,
+          content,
           selectedTags,
           rating,
           isOriginal,
@@ -770,14 +1077,14 @@ export default function UploadMangaPage() {
           savedAt: new Date().toISOString()
         }
         
-        localStorage.setItem('manga_drafts', JSON.stringify(allDrafts))
+        localStorage.setItem('novel_drafts', JSON.stringify(allDrafts))
       } catch (error) {
         console.error('自動保存エラー:', error)
       }
     }, 2000)
 
     return () => clearTimeout(autoSaveTimer)
-  }, [title, description, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
+  }, [title, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
 
   // タイトルのリアルタイムバリデーション
   useEffect(() => {
@@ -790,64 +1097,44 @@ export default function UploadMangaPage() {
     }
   }, [title])
 
+  // 本文のリアルタイムバリデーション
+  useEffect(() => {
+    if (content.length > 100000) {
+      setErrors(prev => ({ ...prev, content: '本文は100,000文字以内にしてください' }))
+    } else {
+      setErrors(prev => ({ ...prev, content: '' }))
+    }
+  }, [content])
+
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      processImageFiles(files)
+    const file = e.target.files?.[0]
+    if (file) {
+      processThumbnailFile(file)
     }
   }
 
-  function processImageFiles(files: File[]) {
-    // 既存の画像と合わせて50枚まで
-    const totalFiles = imageFiles.length + files.length
-    if (totalFiles > 50) {
-      setToast({ message: '画像は最大50枚までアップロードできます', type: 'error' })
+  function processThumbnailFile(file: File) {
+    // ファイルサイズチェック（32MB）
+    if (file.size > 32 * 1024 * 1024) {
+      setToast({ message: 'ファイルサイズは32MB以下にしてください', type: 'error' })
       return
     }
-
-    // 合計サイズチェック（200MB）
-    const currentTotalSize = imageFiles.reduce((sum, file) => sum + file.size, 0)
-    const newFilesSize = files.reduce((sum, file) => sum + file.size, 0)
-    const totalSize = currentTotalSize + newFilesSize
     
-    if (totalSize > 200 * 1024 * 1024) {
-      setToast({ message: '画像の合計サイズは200MB以内にしてください', type: 'error' })
+    // ファイル形式チェック
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setToast({ message: '対応フォーマット: JPEG, PNG, GIF', type: 'error' })
       return
     }
 
-    // 各ファイルをチェック
-    const validFiles: File[] = []
-    for (const file of files) {
-      // ファイルサイズチェック（32MB）
-      if (file.size > 32 * 1024 * 1024) {
-        setToast({ message: `${file.name}: ファイルサイズは32MB以下にしてください`, type: 'error' })
-        continue
-      }
-      
-      // ファイル形式チェック
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-      if (!allowedTypes.includes(file.type)) {
-        setToast({ message: `${file.name}: 対応フォーマット: JPEG, PNG, GIF`, type: 'error' })
-        continue
-      }
-
-      validFiles.push(file)
-    }
-
-    if (validFiles.length === 0) return
-
-    // 画像ファイルを追加
-    setImageFiles([...imageFiles, ...validFiles])
-    setErrors(prev => ({ ...prev, images: '' }))
+    setThumbnailFile(file)
     
     // プレビュー生成
-    validFiles.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(file)
-    })
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   function handleImageClick() {
@@ -858,57 +1145,15 @@ export default function UploadMangaPage() {
     e.preventDefault()
     setDragging(false)
     
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length > 0) {
-      processImageFiles(files)
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      processThumbnailFile(file)
     }
   }
 
-  function removeImage(index: number) {
-    setImageFiles(imageFiles.filter((_, i) => i !== index))
-    setImagePreviews(imagePreviews.filter((_, i) => i !== index))
-  }
-
-  // ドラッグ開始
-  function handleDragStart(e: React.DragEvent, index: number) {
-    setDraggedIndex(index)
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  // ドラッグ中
-  function handleDragOver(e: React.DragEvent, index: number) {
-    e.preventDefault()
-    if (draggedIndex === null) return
-    if (index !== draggedIndex) {
-      setDragOverIndex(index)
-    }
-  }
-
-  // ドラッグ終了
-  function handleDragEnd() {
-    if (draggedIndex === null || dragOverIndex === null) {
-      setDraggedIndex(null)
-      setDragOverIndex(null)
-      return
-    }
-
-    const newFiles = [...imageFiles]
-    const newPreviews = [...imagePreviews]
-
-    // 要素を移動
-    const draggedFile = newFiles[draggedIndex]
-    const draggedPreview = newPreviews[draggedIndex]
-
-    newFiles.splice(draggedIndex, 1)
-    newPreviews.splice(draggedIndex, 1)
-
-    newFiles.splice(dragOverIndex, 0, draggedFile)
-    newPreviews.splice(dragOverIndex, 0, draggedPreview)
-
-    setImageFiles(newFiles)
-    setImagePreviews(newPreviews)
-    setDraggedIndex(null)
-    setDragOverIndex(null)
+  function removeThumbnail() {
+    setThumbnailFile(null)
+    setThumbnailPreview('')
   }
 
   // プリセットタグの追加/削除
@@ -964,9 +1209,14 @@ export default function UploadMangaPage() {
       return
     }
 
-    if (imageFiles.length === 0) {
-      setErrors(prev => ({ ...prev, images: '画像を選択してください' }))
-      setToast({ message: '画像を選択してください', type: 'error' })
+    if (!content.trim()) {
+      setErrors(prev => ({ ...prev, content: '本文は必須です' }))
+      setToast({ message: '本文を入力してください', type: 'error' })
+      return
+    }
+
+    if (content.length > 100000) {
+      setToast({ message: '本文は100,000文字以内にしてください', type: 'error' })
       return
     }
 
@@ -975,8 +1225,8 @@ export default function UploadMangaPage() {
       return
     }
 
-    if (description.length > 1000) {
-      setToast({ message: '説明は1000文字以内にしてください', type: 'error' })
+    if (synopsis.length > 500) {
+      setToast({ message: 'あらすじは500文字以内にしてください', type: 'error' })
       return
     }
 
@@ -994,11 +1244,12 @@ export default function UploadMangaPage() {
   const isFormValid = 
     title.trim().length > 0 && 
     title.length <= 50 &&
-    imageFiles.length > 0 && 
+    content.trim().length > 0 &&
+    content.length <= 100000 &&
     selectedTags.length > 0 && 
     agreedToTerms &&
     !errors.title &&
-    !errors.images &&
+    !errors.content &&
     !uploading
 
   // 実際のアップロード処理
@@ -1014,17 +1265,16 @@ export default function UploadMangaPage() {
         return
       }
 
-      // 1. 画像をStorageにアップロード
-      const uploadedUrls: string[] = []
+      // 1. サムネイルをStorageにアップロード（あれば）
+      let thumbnailUrl: string | null = null
       
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i]
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`
+      if (thumbnailFile) {
+        const fileExt = thumbnailFile.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`
         
         const { error: uploadError } = await supabase.storage
           .from('portfolio-images')
-          .upload(fileName, file)
+          .upload(fileName, thumbnailFile)
 
         if (uploadError) {
           throw uploadError
@@ -1035,7 +1285,7 @@ export default function UploadMangaPage() {
           .from('portfolio-images')
           .getPublicUrl(fileName)
 
-        uploadedUrls.push(publicUrl)
+        thumbnailUrl = publicUrl
       }
 
       // 2. データベースに保存
@@ -1044,15 +1294,15 @@ export default function UploadMangaPage() {
         .insert({
           creator_id: currentUserId,
           title: title.trim(),
-          description: description.trim() || null,
-          category: 'manga',
+          description: synopsis.trim() || null,
+          category: 'novel',
           rating: rating,
           is_original: isOriginal,
           allow_comments: allowComments,
           tags: selectedTags,
-          image_url: uploadedUrls[0], // メイン画像（1ページ目）
-          thumbnail_url: uploadedUrls[0],
-          image_urls: uploadedUrls, // マンガは必ず複数ページとして保存
+          text_content: content.trim(),
+          image_url: thumbnailUrl,
+          thumbnail_url: thumbnailUrl,
           is_public: visibility === 'public'
         })
 
@@ -1060,7 +1310,7 @@ export default function UploadMangaPage() {
         throw dbError
       }
 
-      setToast({ message: 'マンガをアップロードしました！', type: 'success' })
+      setToast({ message: '小説をアップロードしました！', type: 'success' })
       
       // 少し待ってから遷移（トーストを見せるため）
       setTimeout(() => {
@@ -1107,11 +1357,10 @@ export default function UploadMangaPage() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* 戻るボタン */}
             {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
-                マンガをアップロード
+                小説をアップロード
               </h1>
               <button
                 type="button"
@@ -1124,24 +1373,16 @@ export default function UploadMangaPage() {
             </div>
 
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
-              {/* 画像アップロード */}
+              {/* サムネイル画像アップロード */}
               <div className="mb-32">
                 <label className="form-label mb-12">
-                  マンガ画像 <span className="form-required">*</span>
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    {imageFiles.length}/50ページ（ドラッグして並び替え）
-                  </span>
+                  サムネイル画像（任意）
                 </label>
 
-                {/* 画像が0枚の時：大きなアップロードエリア */}
-                {imageFiles.length === 0 && (
+                {/* サムネイルなしの時：アップロードエリア */}
+                {!thumbnailPreview && (
                   <div
-                    className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
+                    className={`upload-area ${dragging ? 'dragging' : ''}`}
                     style={{ width: '100%', height: '200px' }}
                     onClick={handleImageClick}
                     onDragOver={(e) => {
@@ -1153,138 +1394,58 @@ export default function UploadMangaPage() {
                   >
                     <div className="upload-area-content" style={{ height: '100%' }}>
                       <div className="upload-area-icon">
-                        <i className="fas fa-images"></i>
+                        <i className="fas fa-image"></i>
                       </div>
                       <div className="upload-area-text">
-                        クリックまたはドラッグして<br />画像を追加
+                        クリックまたはドラッグしてサムネイルを追加
                       </div>
                       <div className="upload-area-hint">
-                        JPEG / GIF / PNG / 1枚32MB以内、最大50枚（合計200MB以内まで）
+                        JPEG / GIF / PNG / 32MB以内
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* 画像が1枚以上の時：グリッド表示 + 追加ボタン */}
-                {imageFiles.length > 0 && (
+                {/* サムネイルありの時：プレビュー表示 */}
+                {thumbnailPreview && (
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                    gap: '12px'
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: '400px'
                   }}>
-                    {/* アップロード済み画像 */}
-                    {imagePreviews.map((preview, index) => (
-                      <div
-                        key={index}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragOver={(e) => handleDragOver(e, index)}
-                        onDragEnd={handleDragEnd}
-                        style={{
-                          position: 'relative',
-                          cursor: 'grab',
-                          opacity: draggedIndex === index ? 0.5 : 1,
-                          border: dragOverIndex === index ? '3px solid #1A1A1A' : '2px solid #E5E5E5',
-                          borderRadius: '8px',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <img
-                          src={preview}
-                          alt={`${index + 1}ページ目`}
-                          style={{
-                            width: '100%',
-                            height: '150px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            display: 'block',
-                            pointerEvents: 'none'
-                          }}
-                        />
-
-                        {/* ページ番号バッジ */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          padding: '4px 8px',
-                          backgroundColor: '#1A1A1A',
-                          color: '#FFFFFF',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          borderRadius: '4px'
-                        }}>
-                          {index + 1}p
-                        </div>
-
-                        {/* 削除ボタン */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeImage(index)
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: '8px',
-                            right: '8px',
-                            width: '20px',
-                            height: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            lineHeight: '1',
-                            padding: '0'
-                          }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-
-                    {/* 画像追加ボタン（50枚未満の場合のみ） */}
-                    {imageFiles.length < 50 && (
-                      <div
-                        onClick={handleImageClick}
-                        onDragOver={(e) => {
-                          e.preventDefault()
-                          setDragging(true)
-                        }}
-                        onDragLeave={() => setDragging(false)}
-                        onDrop={handleImageDrop}
-                        style={{
-                          height: '150px',
-                          border: '2px dashed #E5E5E5',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: dragging ? '#FAFAFA' : '#FFFFFF',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <i className="fas fa-plus" style={{ 
-                          fontSize: '24px', 
-                          color: '#6B6B6B',
-                          marginBottom: '8px'
-                        }}></i>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: '#6B6B6B',
-                          textAlign: 'center'
-                        }}>
-                          画像を追加
-                        </div>
-                      </div>
-                    )}
+                    <img
+                      src={thumbnailPreview}
+                      alt="サムネイル"
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        maxHeight: '400px',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        border: '2px solid #E5E5E5'
+                      }}
+                    />
+                    {/* 削除ボタン */}
+                    <button
+                      type="button"
+                      onClick={removeThumbnail}
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        padding: '8px 12px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      <i className="fas fa-times" style={{ marginRight: '6px' }}></i>
+                      削除
+                    </button>
                   </div>
                 )}
 
@@ -1293,20 +1454,8 @@ export default function UploadMangaPage() {
                   type="file"
                   accept="image/jpeg,image/png,image/gif"
                   onChange={handleImageChange}
-                  multiple
                   style={{ display: 'none' }}
                 />
-
-                {errors.images && (
-                  <div style={{
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    color: '#F44336'
-                  }}>
-                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
-                    {errors.images}
-                  </div>
-                )}
               </div>
 
               {/* タイトル */}
@@ -1326,7 +1475,7 @@ export default function UploadMangaPage() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="マンガのタイトル"
+                  placeholder="小説のタイトル"
                   maxLength={50}
                   className="input-field"
                   style={{
@@ -1345,30 +1494,265 @@ export default function UploadMangaPage() {
                 )}
               </div>
 
-              {/* 説明 */}
+              {/* あらすじ */}
               <div className="mb-32">
                 <label className="form-label">
-                  説明
+                  あらすじ
                   <span style={{ 
                     marginLeft: '12px', 
                     fontSize: '12px', 
-                    color: description.length > 1000 ? '#F44336' : '#6B6B6B',
+                    color: synopsis.length > 500 ? '#F44336' : '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    {description.length} / 1000
+                    {synopsis.length} / 500
                   </span>
                 </label>
                 <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="マンガの説明を入力してください"
-                  rows={6}
-                  maxLength={1000}
+                  value={synopsis}
+                  onChange={(e) => setSynopsis(e.target.value)}
+                  placeholder="作品のあらすじを入力してください"
+                  rows={4}
+                  maxLength={500}
                   className="textarea-field"
                   style={{
-                    borderColor: description.length > 1000 ? '#F44336' : undefined
+                    borderColor: synopsis.length > 500 ? '#F44336' : undefined
                   }}
                 />
+              </div>
+
+              {/* 本文 */}
+              <div className="mb-24">
+                <label className="form-label">
+                  本文 <span className="form-required">*</span>
+                  <span style={{ 
+                    marginLeft: '12px', 
+                    fontSize: '12px', 
+                    color: content.length > 100000 ? '#F44336' : '#6B6B6B',
+                    fontWeight: 'normal'
+                  }}>
+                    {content.length.toLocaleString()} / 100,000
+                  </span>
+                </label>
+
+                {/* ツールバー */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  padding: '8px',
+                  backgroundColor: '#FAFAFA',
+                  borderRadius: '8px 8px 0 0',
+                  borderBottom: '1px solid #E5E5E5',
+                  position: 'relative'
+                }}>
+                  {/* 見出しボタン（ドロップダウン付き） */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+                      className="btn-secondary btn-small"
+                      style={{ fontSize: '13px' }}
+                    >
+                      <i className="fas fa-heading" style={{ marginRight: '6px' }}></i>
+                      見出し
+                      <i className="fas fa-chevron-down" style={{ marginLeft: '6px', fontSize: '10px' }}></i>
+                    </button>
+                    
+                    {/* ドロップダウンメニュー */}
+                    {showHeadingMenu && (
+                      <>
+                        {/* 背景クリックで閉じる */}
+                        <div
+                          onClick={() => setShowHeadingMenu(false)}
+                          style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 999
+                          }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          marginTop: '4px',
+                          backgroundColor: '#FFFFFF',
+                          border: '2px solid #E5E5E5',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                          zIndex: 1000,
+                          minWidth: '150px'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              insertHeading(1)
+                              setShowHeadingMenu(false)
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              textAlign: 'left',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              borderBottom: '1px solid #F5F5F5'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            # 見出し1
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              insertHeading(2)
+                              setShowHeadingMenu(false)
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              textAlign: 'left',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              borderBottom: '1px solid #F5F5F5'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            ## 見出し2
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              insertHeading(3)
+                              setShowHeadingMenu(false)
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '10px 16px',
+                              textAlign: 'left',
+                              border: 'none',
+                              background: 'none',
+                              cursor: 'pointer',
+                              fontSize: '13px'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            ### 見出し3
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={insertEmphasis}
+                    className="btn-secondary btn-small"
+                    style={{ fontSize: '13px' }}
+                  >
+                    <i className="fas fa-bold" style={{ marginRight: '6px' }}></i>
+                    強調
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={insertRuby}
+                    className="btn-secondary btn-small"
+                    style={{ fontSize: '13px' }}
+                  >
+                    <i className="fas fa-language" style={{ marginRight: '6px' }}></i>
+                    ルビ
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={insertPageBreak}
+                    className="btn-secondary btn-small"
+                    style={{ fontSize: '13px' }}
+                  >
+                    <i className="fas fa-grip-lines" style={{ marginRight: '6px' }}></i>
+                    改ページ
+                  </button>
+                </div>
+
+                <textarea
+                  ref={contentRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="本文を入力してください"
+                  rows={20}
+                  className="textarea-field"
+                  style={{
+                    borderColor: errors.content ? '#F44336' : undefined,
+                    fontFamily: 'monospace',
+                    lineHeight: '1.8',
+                    borderRadius: '0 0 8px 8px'
+                  }}
+                />
+                {errors.content && (
+                  <div style={{
+                    marginTop: '8px',
+                    fontSize: '14px',
+                    color: '#F44336'
+                  }}>
+                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                    {errors.content}
+                  </div>
+                )}
+                
+                {/* 記法の説明 */}
+                <div style={{
+                  marginTop: '12px',
+                  padding: '12px',
+                  backgroundColor: '#FAFAFA',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#6B6B6B'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                    <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
+                    記法の使い方
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    見出し1：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}># 見出し</code>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    見出し2：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>## 見出し</code>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    見出し3：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>### 見出し</code>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    強調：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>**強調したいテキスト**</code>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    ルビ：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>漢字《かんじ》</code>
+                  </div>
+                  <div>
+                    改ページ：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>───</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* プレビューボタン */}
+              <div className="mb-32" style={{ textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  className="btn-secondary"
+                  disabled={!title.trim() && !content.trim()}
+                >
+                  <i className="fas fa-eye" style={{ marginRight: '8px' }}></i>
+                  プレビュー
+                </button>
               </div>
 
               {/* カスタムタグ（メイン） */}
@@ -1794,16 +2178,27 @@ export default function UploadMangaPage() {
       </div>
       <Footer />
 
+      {/* プレビューモーダル */}
+      {showPreviewModal && (
+        <PreviewModal
+          title={title}
+          synopsis={synopsis}
+          content={content}
+          onClose={() => setShowPreviewModal(false)}
+        />
+      )}
+
       {/* 確認モーダル */}
       {showConfirmModal && (
         <ConfirmModal
           title={title}
-          description={description}
+          synopsis={synopsis}
+          content={content}
           tags={selectedTags}
           rating={rating}
           isOriginal={isOriginal}
           allowComments={allowComments}
-          imagePreviews={imagePreviews}
+          thumbnailPreview={thumbnailPreview}
           visibility={visibility}
           onConfirm={handleConfirmedSubmit}
           onCancel={() => setShowConfirmModal(false)}

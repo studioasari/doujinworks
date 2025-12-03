@@ -19,10 +19,12 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMessageMenuOpen, setIsMessageMenuOpen] = useState(false)
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
+  const [isUploadMenuOpen, setIsUploadMenuOpen] = useState(false)
   const [notificationTab, setNotificationTab] = useState<'notifications' | 'announcements'>('notifications')
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentMessages, setRecentMessages] = useState<UnreadMessage[]>([])
   const [isMobile, setIsMobile] = useState(false)
+  const [draftCount, setDraftCount] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -36,9 +38,41 @@ export default function Header() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // 下書き件数をカウント
+  useEffect(() => {
+    const countDrafts = () => {
+      try {
+        const genres = ['illustration_drafts', 'manga_drafts', 'novel_drafts', 'music_drafts', 'voice_drafts', 'video_drafts']
+        let totalCount = 0
+        
+        genres.forEach(genre => {
+          const saved = localStorage.getItem(genre)
+          if (saved) {
+            const allDrafts = JSON.parse(saved)
+            // 全ての下書きをカウント（autosave含む）
+            const count = Object.keys(allDrafts).length
+            totalCount += count
+          }
+        })
+        
+        setDraftCount(totalCount)
+      } catch (error) {
+        console.error('下書き件数の取得エラー:', error)
+        setDraftCount(0)
+      }
+    }
+
+    countDrafts()
+    
+    // 定期的に更新（5秒ごと）
+    const interval = setInterval(countDrafts, 5000)
+    
+    return () => clearInterval(interval)
+  }, [])
+
   // スマホでメニューが開いているときに背面スクロールを禁止
   useEffect(() => {
-    if (isMobile && (isMessageMenuOpen || isNotificationMenuOpen || isMenuOpen)) {
+    if (isMobile && (isMessageMenuOpen || isNotificationMenuOpen || isMenuOpen || isUploadMenuOpen)) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -47,7 +81,7 @@ export default function Header() {
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [isMobile, isMessageMenuOpen, isNotificationMenuOpen, isMenuOpen])
+  }, [isMobile, isMessageMenuOpen, isNotificationMenuOpen, isMenuOpen, isUploadMenuOpen])
 
   useEffect(() => {
     checkUser()
@@ -85,16 +119,19 @@ export default function Header() {
       if (!target.closest('.notification-menu-container')) {
         setIsNotificationMenuOpen(false)
       }
+      if (!target.closest('.upload-menu-container')) {
+        setIsUploadMenuOpen(false)
+      }
     }
 
-    if (isMenuOpen || isMessageMenuOpen || isNotificationMenuOpen) {
+    if (isMenuOpen || isMessageMenuOpen || isNotificationMenuOpen || isUploadMenuOpen) {
       document.addEventListener('click', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('click', handleClickOutside)
     }
-  }, [isMenuOpen, isMessageMenuOpen, isNotificationMenuOpen])
+  }, [isMenuOpen, isMessageMenuOpen, isNotificationMenuOpen, isUploadMenuOpen])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -666,6 +703,177 @@ export default function Header() {
     </div>
   )
 
+  const UploadButton = () => (
+    <div className="upload-menu-container" style={{ position: 'relative' }}>
+      {/* デスクトップ版: テキスト付き */}
+      {!isMobile && (
+        <div style={{
+          display: 'flex',
+          backgroundColor: '#1A1A1A',
+          borderRadius: '6px',
+          overflow: 'hidden'
+        }}>
+          {/* 左側: 投稿ページへ */}
+          <Link
+            href="/portfolio/upload"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              color: '#FFFFFF',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <i className="fas fa-pen" style={{ fontSize: '12px' }}></i>
+            投稿
+          </Link>
+
+          {/* 右側: ドロップダウン */}
+          <button
+            onClick={() => {
+              setIsMessageMenuOpen(false)
+              setIsNotificationMenuOpen(false)
+              setIsMenuOpen(false)
+              setIsUploadMenuOpen(!isUploadMenuOpen)
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '5px 10px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer'
+            }}
+          >
+            <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
+          </button>
+        </div>
+      )}
+
+      {/* モバイル版: アイコンのみ */}
+      {isMobile && (
+        <div style={{
+          display: 'flex',
+          backgroundColor: '#1A1A1A',
+          borderRadius: '18px',
+          overflow: 'hidden',
+          height: '36px'
+        }}>
+          {/* 左側: 投稿ページへ */}
+          <Link
+            href="/portfolio/upload"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 12px',
+              color: '#FFFFFF',
+              textDecoration: 'none',
+              borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <i className="fas fa-pen" style={{ fontSize: '14px' }}></i>
+          </Link>
+
+          {/* 右側: ドロップダウン */}
+          <button
+            onClick={() => {
+              setIsMessageMenuOpen(false)
+              setIsNotificationMenuOpen(false)
+              setIsMenuOpen(false)
+              setIsUploadMenuOpen(!isUploadMenuOpen)
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 10px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: '#FFFFFF',
+              cursor: 'pointer'
+            }}
+          >
+            <i className="fas fa-chevron-down" style={{ fontSize: '8px' }}></i>
+          </button>
+        </div>
+      )}
+
+      {isUploadMenuOpen && (
+        <>
+          <div 
+            className="upload-overlay"
+            onClick={() => setIsUploadMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: '60px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 9998,
+              display: isMobile ? 'block' : 'none'
+            }}
+          />
+          
+          <div className="upload-dropdown" style={isMobile ? {
+            position: 'fixed',
+            top: '60px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: '#FFFFFF',
+            border: 'none',
+            borderRadius: 0,
+            zIndex: 9999,
+            boxShadow: 'none',
+            display: 'flex',
+            flexDirection: 'column'
+          } : {
+            position: 'absolute',
+            top: 'calc(100% + 12px)',
+            right: 0,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E5E5E5',
+            borderRadius: '8px',
+            minWidth: '160px',
+            zIndex: 9999,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}>
+            <Link
+              href="/portfolio/drafts"
+              onClick={() => setIsUploadMenuOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                color: '#1A1A1A',
+                textDecoration: 'none',
+                fontSize: '14px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#F9F9F9'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+            >
+              <i className="fas fa-file-alt" style={{ color: '#6B6B6B', width: '16px', fontSize: '14px' }}></i>
+              下書き ({draftCount})
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   return (
     <>
       <style jsx>{`
@@ -676,7 +884,7 @@ export default function Header() {
         }
         
         @media (max-width: 768px) {
-          .desktop-nav {
+          .desktop-nav, .desktop-search {
             display: none !important;
           }
           .header-container {
@@ -701,12 +909,14 @@ export default function Header() {
         borderBottom: '1px solid #E5E5E5',
         position: 'sticky',
         top: 0,
-        zIndex: 100
+        zIndex: 100,
+        gap: '20px'
       }}>
         <Link href="/" style={{ 
           textDecoration: 'none',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          flexShrink: 0
         }}>
           <img 
             src="/logotype.png" 
@@ -718,32 +928,56 @@ export default function Header() {
           />
         </Link>
         
-        {/* デスクトップナビゲーション */}
-        <nav className="desktop-nav" style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-          <Link href="/creators" style={{ 
-            color: '#6B6B6B', 
-            textDecoration: 'none',
-            fontSize: '15px'
-          }}>
-            クリエイター一覧
-          </Link>
-          <Link href="/portfolio" style={{ 
-            color: '#6B6B6B', 
-            textDecoration: 'none',
-            fontSize: '15px'
-          }}>
-            ポートフォリオ
-          </Link>
-          <Link href="/requests" style={{ 
-            color: '#6B6B6B', 
-            textDecoration: 'none',
-            fontSize: '15px'
-          }}>
-            依頼一覧
-          </Link>
+        {/* デスクトップ検索ボックス */}
+        <div className="desktop-search" style={{ 
+          position: 'relative', 
+          flex: 1,
+          maxWidth: '500px'
+        }}>
+          <i className="fas fa-search" style={{ 
+            position: 'absolute',
+            left: '16px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: '#9B9B9B',
+            fontSize: '14px'
+          }}></i>
+          <input
+            type="text"
+            placeholder="作品やクリエイターを検索"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const query = (e.target as HTMLInputElement).value
+                if (query.trim()) {
+                  router.push(`/search?q=${encodeURIComponent(query)}`)
+                }
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 16px 10px 44px',
+              border: '1px solid #E5E5E5',
+              borderRadius: '24px',
+              fontSize: '14px',
+              outline: 'none',
+              backgroundColor: '#F9F9F9',
+              transition: 'all 0.2s'
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = '#FFFFFF'
+              e.currentTarget.style.borderColor = '#1A1A1A'
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = '#F9F9F9'
+              e.currentTarget.style.borderColor = '#E5E5E5'
+            }}
+          />
+        </div>
 
+        {/* 右側のアイコン群（デスクトップ） */}
+        <nav className="desktop-nav" style={{ display: 'flex', gap: '20px', alignItems: 'center', flexShrink: 0 }}>
           {user ? (
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <>
               <MessageIcon />
               <NotificationIcon />
 
@@ -752,6 +986,7 @@ export default function Header() {
                   onClick={() => {
                     setIsMessageMenuOpen(false)
                     setIsNotificationMenuOpen(false)
+                    setIsUploadMenuOpen(false)
                     setIsMenuOpen(!isMenuOpen)
                   }}
                   style={{
@@ -922,9 +1157,11 @@ export default function Header() {
                   </>
                 )}
               </div>
-            </div>
+
+              <UploadButton />
+            </>
           ) : (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <>
               <Link href="/login" style={{ 
                 color: '#1A1A1A',
                 backgroundColor: 'transparent',
@@ -949,7 +1186,7 @@ export default function Header() {
               }}>
                 会員登録
               </Link>
-            </div>
+            </>
           )}
         </nav>
 
@@ -965,6 +1202,7 @@ export default function Header() {
                   onClick={() => {
                     setIsMessageMenuOpen(false)
                     setIsNotificationMenuOpen(false)
+                    setIsUploadMenuOpen(false)
                     setIsMenuOpen(!isMenuOpen)
                   }}
                   style={{
@@ -1135,9 +1373,11 @@ export default function Header() {
                   </>
                 )}
               </div>
+
+              <UploadButton />
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <>
               <Link href="/login" style={{ 
                 color: '#1A1A1A',
                 backgroundColor: 'transparent',
@@ -1162,7 +1402,7 @@ export default function Header() {
               }}>
                 会員登録
               </Link>
-            </div>
+            </>
           )}
         </nav>
       </header>

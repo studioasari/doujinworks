@@ -52,7 +52,7 @@ export default function PortfolioManagePage() {
       .single()
     
     if (profile) {
-      setCurrentProfileId(profile.id)
+      setCurrentProfileId(user.id)
     } else {
       alert('プロフィールが見つかりません')
       router.push('/profile')
