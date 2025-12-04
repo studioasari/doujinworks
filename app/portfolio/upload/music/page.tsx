@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '../../../../utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -581,7 +581,22 @@ function DraftModal({
   )
 }
 
-export default function UploadMusicPage() {
+// 下書き復元用コンポーネント（useSearchParamsを使用）
+function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const draftId = searchParams.get('draft')
+    if (draftId) {
+      onRestore(draftId)
+    }
+  }, [searchParams, onRestore])
+
+  return null
+}
+
+// メインコンポーネント
+function UploadMusicPageContent() {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -619,7 +634,6 @@ export default function UploadMusicPage() {
   const audioInputRef = useRef<HTMLInputElement>(null)
   const thumbnailInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // プリセットタグ
   const presetTags = [
@@ -633,14 +647,6 @@ export default function UploadMusicPage() {
     checkAuth()
     loadDrafts()
   }, [])
-
-  // 下書き復元
-  useEffect(() => {
-    const draftId = searchParams.get('draft')
-    if (draftId) {
-      restoreDraft(draftId)
-    }
-  }, [searchParams])
 
   function restoreDraft(draftId: string) {
     try {
@@ -691,8 +697,6 @@ export default function UploadMusicPage() {
     }
   }
 
-  // 下書き一覧を読み込み
-  // 下書き読み込み（配列・オブジェクト両対応）
   // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
@@ -1139,6 +1143,12 @@ export default function UploadMusicPage() {
   return (
     <>
       <Header />
+      
+      {/* 下書き復元コンポーネント */}
+      <Suspense fallback={null}>
+        <DraftRestorer onRestore={restoreDraft} />
+      </Suspense>
+      
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
@@ -1945,4 +1955,9 @@ export default function UploadMusicPage() {
       )}
     </>
   )
+}
+
+// デフォルトエクスポート
+export default function UploadMusicPage() {
+  return <UploadMusicPageContent />
 }

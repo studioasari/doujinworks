@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '../../../../utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -743,7 +743,22 @@ function DraftModal({
   )
 }
 
-export default function UploadNovelPage() {
+// 下書き復元用コンポーネント（useSearchParamsを使用）
+function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const draftId = searchParams.get('draft')
+    if (draftId) {
+      onRestore(draftId)
+    }
+  }, [searchParams, onRestore])
+
+  return null
+}
+
+// メインコンポーネント
+function UploadNovelPageContent() {
   const [title, setTitle] = useState('')
   const [synopsis, setSynopsis] = useState('')
   const [content, setContent] = useState('')
@@ -779,7 +794,6 @@ export default function UploadNovelPage() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // ルビを挿入
   function insertRuby() {
@@ -905,14 +919,6 @@ export default function UploadNovelPage() {
     loadDrafts()
   }, [])
 
-  // 下書き復元
-  useEffect(() => {
-    const draftId = searchParams.get('draft')
-    if (draftId) {
-      restoreDraft(draftId)
-    }
-  }, [searchParams])
-
   function restoreDraft(draftId: string) {
     try {
       const saved = localStorage.getItem('novel_drafts')
@@ -922,6 +928,7 @@ export default function UploadNovelPage() {
         
         if (draft) {
           setTitle(draft.title || '')
+          setSynopsis(draft.synopsis || '')
           setContent(draft.content || '')
           setSelectedTags(draft.selectedTags || [])
           setRating(draft.rating || 'general')
@@ -958,8 +965,6 @@ export default function UploadNovelPage() {
     }
   }
 
-  // 下書き一覧を読み込み
-  // 下書き読み込み（配列・オブジェクト両対応）
   // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
@@ -1068,6 +1073,7 @@ export default function UploadNovelPage() {
         const autoSaveId = 'autosave'
         allDrafts[autoSaveId] = {
           title,
+          synopsis,
           content,
           selectedTags,
           rating,
@@ -1084,7 +1090,7 @@ export default function UploadNovelPage() {
     }, 2000)
 
     return () => clearTimeout(autoSaveTimer)
-  }, [title, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
+  }, [title, synopsis, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
 
   // タイトルのリアルタイムバリデーション
   useEffect(() => {
@@ -1341,6 +1347,12 @@ export default function UploadNovelPage() {
   return (
     <>
       <Header />
+      
+      {/* 下書き復元コンポーネント */}
+      <Suspense fallback={null}>
+        <DraftRestorer onRestore={restoreDraft} />
+      </Suspense>
+      
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
@@ -2225,4 +2237,9 @@ export default function UploadNovelPage() {
       )}
     </>
   )
+}
+
+// デフォルトエクスポート
+export default function UploadNovelPage() {
+  return <UploadNovelPageContent />
 }

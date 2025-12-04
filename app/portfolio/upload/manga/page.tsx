@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '../../../../utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -551,7 +551,22 @@ function DraftModal({
   )
 }
 
-export default function UploadMangaPage() {
+// 下書き復元用コンポーネント（useSearchParamsを使用）
+function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const draftId = searchParams.get('draft')
+    if (draftId) {
+      onRestore(draftId)
+    }
+  }, [searchParams, onRestore])
+
+  return null
+}
+
+// メインコンポーネント
+function UploadMangaPageContent() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -586,7 +601,6 @@ export default function UploadMangaPage() {
 
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // プリセットタグ
   const presetTags = [
@@ -600,14 +614,6 @@ export default function UploadMangaPage() {
     checkAuth()
     loadDrafts()
   }, [])
-
-  // 下書き復元
-  useEffect(() => {
-    const draftId = searchParams.get('draft')
-    if (draftId) {
-      restoreDraft(draftId)
-    }
-  }, [searchParams])
 
   function restoreDraft(draftId: string) {
     try {
@@ -654,8 +660,6 @@ export default function UploadMangaPage() {
     }
   }
 
-  // 下書き一覧を読み込み
-  // 下書き読み込み（配列・オブジェクト両対応）
   // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
@@ -1091,6 +1095,12 @@ export default function UploadMangaPage() {
   return (
     <>
       <Header />
+      
+      {/* 下書き復元コンポーネント */}
+      <Suspense fallback={null}>
+        <DraftRestorer onRestore={restoreDraft} />
+      </Suspense>
+      
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
@@ -1107,7 +1117,6 @@ export default function UploadMangaPage() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* 戻るボタン */}
             {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
@@ -1830,4 +1839,9 @@ export default function UploadMangaPage() {
       )}
     </>
   )
+}
+
+// デフォルトエクスポート
+export default function UploadMangaPage() {
+  return <UploadMangaPageContent />
 }

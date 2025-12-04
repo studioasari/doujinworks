@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '../../../../utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -581,7 +581,22 @@ function DraftModal({
   )
 }
 
-export default function UploadVoicePage() {
+// 下書き復元用コンポーネント（useSearchParamsを使用）
+function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const draftId = searchParams.get('draft')
+    if (draftId) {
+      onRestore(draftId)
+    }
+  }, [searchParams, onRestore])
+
+  return null
+}
+
+// メインコンポーネント
+function UploadVoicePageContent() {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'link'>('file')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -619,7 +634,6 @@ export default function UploadVoicePage() {
   const audioInputRef = useRef<HTMLInputElement>(null)
   const thumbnailInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // プリセットタグ（ボイス向け）
   const presetTags = [
@@ -633,14 +647,6 @@ export default function UploadVoicePage() {
     checkAuth()
     loadDrafts()
   }, [])
-
-  // 下書き復元
-  useEffect(() => {
-    const draftId = searchParams.get('draft')
-    if (draftId) {
-      restoreDraft(draftId)
-    }
-  }, [searchParams])
 
   function restoreDraft(draftId: string) {
     try {
@@ -691,8 +697,6 @@ export default function UploadVoicePage() {
     }
   }
 
-  // 下書き一覧を読み込み
-  // 下書き読み込み（配列・オブジェクト両対応）
   // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
@@ -1139,6 +1143,12 @@ export default function UploadVoicePage() {
   return (
     <>
       <Header />
+      
+      {/* 下書き復元コンポーネント */}
+      <Suspense fallback={null}>
+        <DraftRestorer onRestore={restoreDraft} />
+      </Suspense>
+      
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
@@ -1155,21 +1165,6 @@ export default function UploadVoicePage() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* 戻るボタン */}
-            <Link
-              href="/portfolio/upload"
-              className="text-small text-gray"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                textDecoration: 'none',
-                marginBottom: '24px'
-              }}
-            >
-              ← ジャンル選択に戻る
-            </Link>
-
             {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
@@ -1960,4 +1955,9 @@ export default function UploadVoicePage() {
       )}
     </>
   )
+}
+
+// デフォルトエクスポート
+export default function UploadVoicePage() {
+  return <UploadVoicePageContent />
 }
