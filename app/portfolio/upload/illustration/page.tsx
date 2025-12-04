@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '../../../../utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -373,7 +373,6 @@ function ConfirmModal({
   )
 }
 
-// 下書き管理モーダル
 // 下書きモーダルコンポーネント
 function DraftModal({ 
   drafts, 
@@ -553,7 +552,22 @@ function DraftModal({
   )
 }
 
-export default function UploadIllustrationPage() {
+// 下書き復元用コンポーネント（useSearchParamsを使用）
+function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const draftId = searchParams.get('draft')
+    if (draftId) {
+      onRestore(draftId)
+    }
+  }, [searchParams, onRestore])
+
+  return null
+}
+
+// メインコンポーネント
+function UploadIllustrationPageContent() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -588,7 +602,6 @@ export default function UploadIllustrationPage() {
 
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   // プリセットタグ
   const presetTags = [
@@ -602,14 +615,6 @@ export default function UploadIllustrationPage() {
     checkAuth()
     loadDrafts()
   }, [])
-
-  // 下書き復元
-  useEffect(() => {
-    const draftId = searchParams.get('draft')
-    if (draftId) {
-      restoreDraft(draftId)
-    }
-  }, [searchParams])
 
   function restoreDraft(draftId: string) {
     try {
@@ -1091,6 +1096,12 @@ export default function UploadIllustrationPage() {
   return (
     <>
       <Header />
+      
+      {/* 下書き復元コンポーネント */}
+      <Suspense fallback={null}>
+        <DraftRestorer onRestore={restoreDraft} />
+      </Suspense>
+      
       <div style={{ 
         minHeight: '100vh', 
         backgroundColor: '#FFFFFF',
@@ -1107,7 +1118,6 @@ export default function UploadIllustrationPage() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* 戻るボタン */}
             {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
@@ -1812,7 +1822,6 @@ export default function UploadIllustrationPage() {
         />
       )}
 
-      {/* 下書き管理モーダル */}
       {/* 下書きモーダル */}
       {showDraftModal && (
         <DraftModal
@@ -1833,4 +1842,9 @@ export default function UploadIllustrationPage() {
       )}
     </>
   )
+}
+
+// デフォルトエクスポート
+export default function UploadIllustrationPage() {
+  return <UploadIllustrationPageContent />
 }
