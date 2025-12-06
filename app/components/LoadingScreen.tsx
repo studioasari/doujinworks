@@ -14,7 +14,9 @@ export default function LoadingScreen({ message = '読み込み中...' }: { mess
         flex: 1, 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'center' 
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 200px)',  // ← 追加（ヘッダー+フッター分を引く）
+        padding: '60px 20px'  // ← 追加（上下に余白）
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
@@ -25,7 +27,7 @@ export default function LoadingScreen({ message = '読み込み中...' }: { mess
             height: '60px',
             alignItems: 'center'
           }}>
-            {[0, 1, 2, 3].map((i) => (  // ← 3から4に変更
+            {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
                 style={{
