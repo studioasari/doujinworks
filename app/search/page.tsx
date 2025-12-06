@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -36,10 +36,20 @@ type Creator = {
   workCount: number
 }
 
-export default function SearchPage() {
+// SearchParamsを読み取るコンポーネント
+function SearchParamsReader({ onQueryChange }: { onQueryChange: (query: string) => void }) {
   const searchParams = useSearchParams()
-  const query = searchParams.get('q') || ''
   
+  useEffect(() => {
+    const query = searchParams.get('q') || ''
+    onQueryChange(query)
+  }, [searchParams, onQueryChange])
+
+  return null
+}
+
+function SearchPageContent() {
+  const [query, setQuery] = useState('')
   const [works, setWorks] = useState<PortfolioItem[]>([])
   const [creators, setCreators] = useState<Creator[]>([])
   const [loading, setLoading] = useState(true)
@@ -331,6 +341,12 @@ export default function SearchPage() {
   return (
     <>
       <Header />
+      
+      {/* SearchParamsを読み取るコンポーネント */}
+      <Suspense fallback={null}>
+        <SearchParamsReader onQueryChange={setQuery} />
+      </Suspense>
+      
       <div style={{ minHeight: 'calc(100vh - 64px)', backgroundColor: '#FAFAFA' }}>
         <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         {/* 検索ヘッダー */}
@@ -444,4 +460,9 @@ export default function SearchPage() {
     <Footer />
   </>
   )
+}
+
+// デフォルトエクスポート
+export default function SearchPage() {
+  return <SearchPageContent />
 }
