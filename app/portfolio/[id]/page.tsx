@@ -8,6 +8,7 @@ import '../../globals.css'
 import { supabase } from '@/utils/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import LoadingScreen from '../../components/LoadingScreen'
 
 // 作品情報の型定義（実際のDBスキーマに合わせる）
 type PortfolioItem = {
@@ -797,38 +798,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   if (loading) {
-    return (
-      <>
-        <Header />
-        <div style={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          backgroundColor: '#FAFAFA'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div className="spinner" style={{
-              width: '50px',
-              height: '50px',
-              border: '4px solid #E5E5E5',
-              borderTop: '4px solid #FF4444',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 20px'
-            }}></div>
-            <p style={{ color: '#6B6B6B' }}>読み込み中...</p>
-          </div>
-          <style jsx>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-        <Footer />
-      </>
-    )
+    return <LoadingScreen message="作品を読み込んでいます..." />
   }
 
   if (!work || !creator) {
