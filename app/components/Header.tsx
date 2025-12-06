@@ -975,7 +975,7 @@ export default function Header() {
         </div>
 
         {/* 右側のアイコン群（デスクトップ） */}
-        <nav className="desktop-nav" style={{ display: 'flex', gap: '20px', alignItems: 'center', flexShrink: 0 }}>
+        <nav className="desktop-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
           {user ? (
             <>
               <MessageIcon />
@@ -1191,7 +1191,7 @@ export default function Header() {
         </nav>
 
         {/* モバイルナビゲーション */}
-        <nav className="mobile-nav" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <nav className="mobile-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {user ? (
             <>
               <MessageIcon />

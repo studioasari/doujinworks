@@ -43,7 +43,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'following'>('all')
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true) // ← 追加
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     checkAuth()
@@ -56,112 +56,25 @@ export default function Home() {
   }
 
   async function fetchData() {
-    setLoading(true) // ← 追加
+    console.time('データ取得時間')
+    setLoading(true)
+    
     try {
-      // 注目の作品（いいね数が多い最新作品、6件）
-      const { data: featuredData, error: featuredError } = await supabase
+      // 1. まとめて50件取得（最新順）→ 全セクションをカバー
+      const { data: allWorks, error } = await supabase
         .from('portfolio_items')
         .select('id, title, image_url, thumbnail_url, creator_id, category, created_at')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
-        .limit(20)
-
-      if (featuredError) {
-        console.error('注目作品取得エラー:', featuredError)
-      }
-
-      if (featuredData && featuredData.length > 0) {
-        // クリエイター情報を一括取得
-        const creatorIds = [...new Set(featuredData.map(w => w.creator_id))]
-        const { data: creatorsData } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url')
-          .in('user_id', creatorIds)
-
-        const creatorMap = new Map()
-        creatorsData?.forEach(c => creatorMap.set(c.user_id, c))
-
-        // いいね数とコメント数を並列取得（N+1解消）
-        const ids = featuredData.map(w => w.id).slice(0, 8)
-        const [{ data: likes }, { data: comments }] = await Promise.all([
-          supabase.from('portfolio_likes').select('portfolio_item_id').in('portfolio_item_id', ids),
-          supabase.from('comments').select('portfolio_item_id').in('portfolio_item_id', ids)
-        ])
-
-        const likeMap = new Map()
-        likes?.forEach(l => likeMap.set(l.portfolio_item_id, (likeMap.get(l.portfolio_item_id) || 0) + 1))
-        
-        const commentMap = new Map()
-        comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
-
-        const worksWithStats = featuredData.slice(0, 8).map((work: any) => ({
-          ...work,
-          profiles: creatorMap.get(work.creator_id),
-          likeCount: likeMap.get(work.id) || 0,
-          commentCount: commentMap.get(work.id) || 0
-        }))
-        
-        setFeaturedWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount))
-      }
-
-      // 新着作品（最新30件）
-      const { data: newData, error: newError } = await supabase
-        .from('portfolio_items')
-        .select('id, title, image_url, thumbnail_url, creator_id, category, created_at')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(30)
-
-      if (newError) {
-        console.error('新着作品取得エラー:', newError)
-      }
-
-      if (newData && newData.length > 0) {
-        // クリエイター情報を一括取得
-        const creatorIds = [...new Set(newData.map(w => w.creator_id))]
-        const { data: creatorsData } = await supabase
-          .from('profiles')
-          .select('user_id, username, display_name, avatar_url')
-          .in('user_id', creatorIds)
-
-        const creatorMap = new Map()
-        creatorsData?.forEach(c => creatorMap.set(c.user_id, c))
-
-        const ids = newData.map(w => w.id)
-        const [{ data: likes }, { data: comments }] = await Promise.all([
-          supabase.from('portfolio_likes').select('portfolio_item_id').in('portfolio_item_id', ids),
-          supabase.from('comments').select('portfolio_item_id').in('portfolio_item_id', ids)
-        ])
-
-        const likeMap = new Map()
-        likes?.forEach(l => likeMap.set(l.portfolio_item_id, (likeMap.get(l.portfolio_item_id) || 0) + 1))
-        
-        const commentMap = new Map()
-        comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
-
-        const worksWithStats = newData.map((work: any) => ({
-          ...work,
-          profiles: creatorMap.get(work.creator_id),
-          likeCount: likeMap.get(work.id) || 0,
-          commentCount: commentMap.get(work.id) || 0
-        }))
-        
-        setNewWorks(worksWithStats)
-      }
-
-      // 人気作品（いいね数順、12件）
-      const { data: allWorks, error: popularError } = await supabase
-        .from('portfolio_items')
-        .select('id, title, image_url, thumbnail_url, creator_id, category, created_at')
-        .eq('is_public', true)
         .limit(50)
 
-      if (popularError) {
-        console.error('人気作品取得エラー:', popularError)
+      if (error) {
+        console.error('作品取得エラー:', error)
+        return
       }
 
       if (allWorks && allWorks.length > 0) {
-        // クリエイター情報を一括取得
+        // 2. クリエイター情報を一括取得
         const creatorIds = [...new Set(allWorks.map(w => w.creator_id))]
         const { data: creatorsData } = await supabase
           .from('profiles')
@@ -171,43 +84,46 @@ export default function Home() {
         const creatorMap = new Map()
         creatorsData?.forEach(c => creatorMap.set(c.user_id, c))
 
+        // 3. いいね数とコメント数を一括取得（50件分まとめて）
         const ids = allWorks.map(w => w.id)
         const [{ data: likes }, { data: comments }] = await Promise.all([
           supabase.from('portfolio_likes').select('portfolio_item_id').in('portfolio_item_id', ids),
           supabase.from('comments').select('portfolio_item_id').in('portfolio_item_id', ids)
         ])
 
+        // 4. いいね数・コメント数をマッピング
         const likeMap = new Map()
         likes?.forEach(l => likeMap.set(l.portfolio_item_id, (likeMap.get(l.portfolio_item_id) || 0) + 1))
-
+        
         const commentMap = new Map()
         comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
 
+        // 5. 統計情報を追加
         const worksWithStats = allWorks.map((work: any) => ({
           ...work,
           profiles: creatorMap.get(work.creator_id),
           likeCount: likeMap.get(work.id) || 0,
           commentCount: commentMap.get(work.id) || 0
         }))
-        
-        setPopularWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount).slice(0, 18))
+
+        // 6. 1つのデータから各セクション用に振り分け
+        setNewWorks(worksWithStats.slice(0, 30))  // 新着30件
+        setFeaturedWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount).slice(0, 8))  // いいね順8件
+        setPopularWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount).slice(0, 18))  // いいね順18件
       }
 
-      // 注目クリエイター（作品数が多い順、8人）
-      const { data: creatorsData, error: creatorsError } = await supabase
+      // 7. クリエイター情報（1回だけ取得）
+      const { data: creatorsData } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url, bio')
         .limit(30)
 
-      if (creatorsError) {
-        console.error('クリエイター取得エラー:', creatorsError)
-      }
-
       if (creatorsData) {
-        const ids = creatorsData.map(c => c.user_id)
+        // 8. 作品数とフォロー数を一括取得
+        const creatorIds = creatorsData.map(c => c.user_id)
         const [{ data: works }, { data: follows }] = await Promise.all([
-          supabase.from('portfolio_items').select('creator_id').eq('is_public', true).in('creator_id', ids),
-          supabase.from('follows').select('following_id').in('following_id', ids)
+          supabase.from('portfolio_items').select('creator_id').eq('is_public', true).in('creator_id', creatorIds),
+          supabase.from('follows').select('following_id').in('following_id', creatorIds)
         ])
 
         const workMap = new Map()
@@ -224,10 +140,12 @@ export default function Home() {
         
         setFeaturedCreators(creatorsWithStats.filter(c => c.workCount > 0).sort((a, b) => b.workCount - a.workCount).slice(0, 12))
       }
+
     } catch (error) {
       console.error('データ取得エラー:', error)
     } finally {
-      setLoading(false) // ← 追加
+      console.timeEnd('データ取得時間')
+      setLoading(false)
     }
   }
 
@@ -391,7 +309,6 @@ export default function Home() {
           minHeight: '100%'
         }}
         className="sidebar-desktop">
-          {/* ... サイドバーの内容は同じ ... */}
           {/* メニュー */}
           <nav style={{ marginBottom: '20px' }}>
             <button
@@ -871,8 +788,6 @@ export default function Home() {
               })}
             </>
           )}
-
-          {/* CTAセクション削除 */}
         </div>
       </main>
 
