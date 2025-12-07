@@ -315,6 +315,11 @@ export default function CreatorDetailPage() {
 
     try {
       if (isFollowing) {
+        // フォロー解除の確認
+        if (!confirm('フォローを解除しますか？')) {
+          return
+        }
+        
         // フォロー解除
         await supabase
           .from('follows')
@@ -497,38 +502,111 @@ export default function CreatorDetailPage() {
                 />
               )}
               
-              {/* 共有ボタン（線上に配置） */}
-              <button
-                onClick={handleShare}
-                style={{
+              {/* アクションボタン（ヘッダー右下） */}
+              {!isOwnProfile ? (
+                <div style={{
                   position: 'absolute',
                   bottom: '-20px',
                   right: '40px',
-                  width: '40px',
-                  height: '40px',
-                  border: '1px solid #E5E5E5',
-                  borderRadius: '50%',
-                  backgroundColor: '#FFFFFF',
-                  color: '#6B6B6B',
-                  fontSize: '16px',
-                  cursor: 'pointer',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
+                  gap: '8px',
                   zIndex: 10
                 }}
-                className="share-button"
-                title="プロフィールを共有"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F5F5F5'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#FFFFFF'
-                }}
-              >
-                <i className="fas fa-share-alt"></i>
-              </button>
+                className="header-action-buttons">
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={sendingMessage}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      color: '#1A1A1A',
+                      fontSize: '16px',
+                      cursor: sendingMessage ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    title="メッセージ"
+                    onMouseEnter={(e) => {
+                      if (!sendingMessage) e.currentTarget.style.backgroundColor = '#F5F5F5'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#FFFFFF'
+                    }}
+                  >
+                    <i className="fas fa-envelope"></i>
+                  </button>
+                  <button
+                    onClick={handleFollow}
+                    style={{
+                      minWidth: '80px',
+                      height: '40px',
+                      borderRadius: '20px',
+                      backgroundColor: isFollowing ? '#FFFFFF' : '#1A1A1A',
+                      color: isFollowing ? '#1A1A1A' : '#FFFFFF',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      border: isFollowing ? '1px solid #E5E5E5' : 'none',
+                      padding: '0 16px'
+                    }}
+                    title={isFollowing ? 'フォロー中' : 'フォロー'}
+                    onMouseEnter={(e) => {
+                      if (isFollowing) {
+                        e.currentTarget.style.backgroundColor = '#F5F5F5'
+                      } else {
+                        e.currentTarget.style.backgroundColor = '#333333'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isFollowing ? '#FFFFFF' : '#1A1A1A'
+                    }}
+                  >
+                    {isFollowing ? 'フォロー中' : 'フォロー'}
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/profile"
+                  style={{
+                    position: 'absolute',
+                    bottom: '-20px',
+                    right: '40px',
+                    width: '140px',
+                    height: '40px',
+                    border: '1px solid #E5E5E5',
+                    borderRadius: '20px',
+                    backgroundColor: '#FFFFFF',
+                    color: '#1A1A1A',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    textDecoration: 'none',
+                    zIndex: 10
+                  }}
+                  className="header-action-buttons"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F5F5F5'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF'
+                  }}
+                >
+                  プロフィール編集
+                </Link>
+              )}
             </div>
 
             {/* プロフィール情報 */}
@@ -559,247 +637,91 @@ export default function CreatorDetailPage() {
                     alt={creator.display_name || ''}
                     fill
                     priority
-                    quality={85}
+                    quality={75}
                     style={{ objectFit: 'cover' }}
-                    sizes="(max-width: 768px) 100px, 120px"
+                    sizes="(max-width: 768px) 80px, 120px"
                   />
                 ) : (
                   <i className="fas fa-user" style={{ fontSize: '48px', color: '#9B9B9B' }}></i>
                 )}
               </div>
 
-              {/* 情報エリア */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: '20px',
-                marginBottom: '16px'
-              }}
-              className="profile-info-row">
-                {/* 左：名前と職業とSNS */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* 名前 */}
+              {/* 名前とユーザーID */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'baseline', 
+                  gap: '8px',
+                  flexWrap: 'wrap'
+                }}
+                className="name-username-row">
                   <h1 style={{
                     fontSize: '24px',
                     fontWeight: 'bold',
-                    marginBottom: '4px',
                     color: '#1A1A1A',
-                    lineHeight: '1.3'
+                    lineHeight: '1.3',
+                    margin: 0
                   }}
                   className="profile-name">
                     {creator.display_name || '名前未設定'}
                   </h1>
-
-                  {/* ユーザーID */}
                   {creator.username && (
                     <div style={{
                       fontSize: '14px',
-                      color: '#6B6B6B',
-                      marginBottom: '8px'
-                    }}>
+                      color: '#6B6B6B'
+                    }}
+                    className="username-display">
                       @{creator.username}
                     </div>
                   )}
-
-                  {/* 職業 */}
-                  {creator.job_title && (
-                    <div style={{
-                      fontSize: '14px',
-                      color: '#6B6B6B',
-                      marginBottom: '12px'
-                    }}>
-                      {creator.job_title}
-                    </div>
-                  )}
-
-                  {/* SNSリンク（PC用） */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '12px',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}
-                  className="sns-links-desktop">
-                    {creator.twitter_url && (
-                      <a
-                        href={creator.twitter_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: '#F5F5F5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <i className="fab fa-twitter"></i>
-                      </a>
-                    )}
-                    {creator.pixiv_url && (
-                      <a
-                        href={creator.pixiv_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: '#F5F5F5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <i className="fas fa-palette"></i>
-                      </a>
-                    )}
-                    {creator.instagram_url && (
-                      <a
-                        href={creator.instagram_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: '#F5F5F5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <i className="fab fa-instagram"></i>
-                      </a>
-                    )}
-                    {creator.youtube_url && (
-                      <a
-                        href={creator.youtube_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: '#F5F5F5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <i className="fab fa-youtube"></i>
-                      </a>
-                    )}
-                    {creator.website_url && (
-                      <a
-                        href={creator.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          backgroundColor: '#F5F5F5',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <i className="fas fa-link"></i>
-                      </a>
-                    )}
-                  </div>
                 </div>
-
-                {/* 右：ボタン */}
-                {!isOwnProfile ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '8px',
-                    flexShrink: 0
-                  }} 
-                  className="profile-actions-desktop">
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={sendingMessage}
-                      className="btn-secondary"
-                      style={{
-                        whiteSpace: 'nowrap',
-                        padding: '10px 20px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        minWidth: '140px',
-                        border: '1px solid #E5E5E5'
-                      }}
-                    >
-                      {sendingMessage ? '処理中...' : 'メッセージ'}
-                    </button>
-                    <button
-                      onClick={handleFollow}
-                      className={isFollowing ? 'btn-secondary' : 'btn-primary'}
-                      style={{
-                        whiteSpace: 'nowrap',
-                        padding: '10px 20px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        minWidth: '140px',
-                        border: '1px solid transparent'
-                      }}
-                    >
-                      {isFollowing ? 'フォロー中' : 'フォロー'}
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ flexShrink: 0 }} className="profile-actions-desktop">
-                    <Link
-                      href="/profile"
-                      className="btn-secondary"
-                      style={{
-                        whiteSpace: 'nowrap',
-                        padding: '10px 20px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        minWidth: '140px',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid #E5E5E5'
-                      }}
-                    >
-                      プロフィール編集
-                    </Link>
-                  </div>
-                )}
               </div>
 
-              {/* SNSリンク（モバイル用） */}
+              {/* 統計情報 */}
+              <div style={{
+                display: 'flex',
+                gap: '20px',
+                fontSize: '13px',
+                color: '#6B6B6B',
+                marginBottom: '16px'
+              }}>
+                <div>
+                  <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
+                    {portfolioItems.length}
+                  </span> 作品
+                </div>
+                <div>
+                  <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
+                    {followingCount.toLocaleString()}
+                  </span> フォロー
+                </div>
+                <div>
+                  <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
+                    {followerCount.toLocaleString()}
+                  </span> フォロワー
+                </div>
+              </div>
+
+              {/* 自己紹介 */}
+              {creator.bio && (
+                <p style={{
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  color: '#4A4A4A',
+                  marginBottom: '16px',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {creator.bio}
+                </p>
+              )}
+
+              {/* SNSリンクとシェアボタン */}
               <div style={{
                 display: 'flex',
                 gap: '12px',
-                marginBottom: '16px',
                 alignItems: 'center',
                 flexWrap: 'wrap'
-              }}
-              className="sns-links-mobile">
+              }}>
                 {creator.twitter_url && (
                   <a
                     href={creator.twitter_url}
@@ -905,98 +827,34 @@ export default function CreatorDetailPage() {
                     <i className="fas fa-link"></i>
                   </a>
                 )}
-              </div>
-
-              {/* 自己紹介 */}
-              {creator.bio && (
-                <p style={{
-                  fontSize: '14px',
-                  lineHeight: '1.7',
-                  color: '#4A4A4A',
-                  marginBottom: '16px',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {creator.bio}
-                </p>
-              )}
-
-            {/* 統計情報 */}
-            <div style={{
-              display: 'flex',
-              gap: '20px',
-              fontSize: '13px',
-              color: '#6B6B6B',
-              marginBottom: '20px'
-            }}>
-              <div>
-                <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
-                  {portfolioItems.length}
-                </span> 作品
-              </div>
-              <div>
-                <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
-                  {followerCount.toLocaleString()}
-                </span> フォロワー
-              </div>
-              <div>
-                <span style={{ fontWeight: 'bold', color: '#1A1A1A' }}>
-                  {followingCount.toLocaleString()}
-                </span> フォロー中
-              </div>
-            </div>
-
-            {/* モバイル用ボタン */}
-            <div className="profile-actions-mobile">
-              {!isOwnProfile ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={sendingMessage}
-                    className="btn-secondary"
-                    style={{
-                      width: '100%',
-                      padding: '12px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      border: '1px solid #E5E5E5'
-                    }}
-                  >
-                    {sendingMessage ? '処理中...' : 'メッセージ'}
-                  </button>
-                  <button
-                    onClick={handleFollow}
-                    className={isFollowing ? 'btn-secondary' : 'btn-primary'}
-                    style={{
-                      width: '100%',
-                      padding: '12px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      border: '1px solid transparent'
-                    }}
-                  >
-                    {isFollowing ? 'フォロー中' : 'フォロー'}
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href="/profile"
-                  className="btn-secondary"
+                {/* シェアボタン */}
+                <button
+                  onClick={handleShare}
                   style={{
-                    width: '100%',
-                    padding: '12px 24px',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: '#F5F5F5',
+                    color: '#1A1A1A',
                     fontSize: '14px',
-                    fontWeight: '600',
-                    textDecoration: 'none',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    border: '1px solid #E5E5E5'
+                    transition: 'all 0.2s',
+                    border: 'none'
+                  }}
+                  title="プロフィールを共有"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#E5E5E5'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F5F5F5'
                   }}
                 >
-                  プロフィール編集
-                </Link>
-              )}
-            </div>
+                  <i className="fas fa-share-alt"></i>
+                </button>
+              </div>
           </div>
         </div>
 
@@ -1090,24 +948,6 @@ export default function CreatorDetailPage() {
 
       {/* スタイル */}
       <style jsx>{`
-        /* デフォルト（PC）の表示設定 */
-        .sns-links-mobile {
-          display: none;
-        }
-
-        .sns-links-desktop {
-          display: flex;
-        }
-
-        .profile-actions-mobile {
-          display: none;
-        }
-
-        .profile-actions-desktop {
-          display: flex;
-        }
-
-        /* タブレット・モバイル対応 */
         @media (max-width: 1024px) {
           .works-grid {
             grid-template-columns: repeat(3, 1fr) !important;
@@ -1120,59 +960,46 @@ export default function CreatorDetailPage() {
             padding: 0 24px 24px 24px !important;
           }
 
-          .share-button {
+          .header-action-buttons {
             right: 24px !important;
           }
 
           .profile-avatar {
-            width: 100px !important;
-            height: 100px !important;
-            margin-top: -50px !important;
+            width: 80px !important;
+            height: 80px !important;
+            margin-top: -40px !important;
           }
 
           .profile-avatar > * {
-            width: 100px !important;
-            height: 100px !important;
-            max-width: 100px !important;
-            max-height: 100px !important;
-            min-width: 100px !important;
-            min-height: 100px !important;
+            width: 80px !important;
+            height: 80px !important;
+            max-width: 80px !important;
+            max-height: 80px !important;
+            min-width: 80px !important;
+            min-height: 80px !important;
           }
 
           .profile-avatar img {
-            width: 100px !important;
-            height: 100px !important;
+            width: 80px !important;
+            height: 80px !important;
           }
 
           .profile-avatar i {
-            font-size: 40px !important;
+            font-size: 32px !important;
           }
 
           .profile-name {
             font-size: 20px !important;
           }
 
-          .profile-info-row {
+          .name-username-row {
             flex-direction: column !important;
-            gap: 12px !important;
+            gap: 4px !important;
+            align-items: flex-start !important;
           }
 
-          /* SNSリンクの表示切り替え */
-          .sns-links-desktop {
-            display: none !important;
-          }
-
-          .sns-links-mobile {
-            display: flex !important;
-          }
-
-          /* PC用ボタンを非表示、モバイル用を表示 */
-          .profile-actions-desktop {
-            display: none !important;
-          }
-
-          .profile-actions-mobile {
-            display: block !important;
+          .username-display {
+            margin: 0 !important;
           }
 
           .tab-navigation {
