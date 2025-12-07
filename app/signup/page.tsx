@@ -174,7 +174,7 @@ export default function SignupPage() {
                 textAlign: 'center',
                 fontSize: '24px'
               }}>
-                同人ワークスに会員登録
+                新規会員登録
               </h2>
 
               <form onSubmit={handleEmailSignup} style={{ marginBottom: '32px' }}>
