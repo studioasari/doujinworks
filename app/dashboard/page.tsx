@@ -89,7 +89,7 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
         return
       }
 
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       await loadProfile(user.id)
     } catch (error) {
       console.error('認証エラー:', error)
-      router.push('/login')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
     } finally {
       setLoading(false)
     }

@@ -98,7 +98,7 @@ export default function DraftsPage() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push('/login')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
     } else {
       const { data: profile } = await supabase
         .from('profiles')

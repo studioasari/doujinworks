@@ -25,7 +25,7 @@ export default function CreateRequestPage() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push('/login')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
     } else {
       // profilesテーブルから profile.id を取得
       const { data: profile } = await supabase

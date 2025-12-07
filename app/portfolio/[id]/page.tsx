@@ -484,7 +484,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   async function handleLike() {
     if (!currentUserId) {
       if (confirm('いいねするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
       }
       return
     }
@@ -525,7 +525,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   async function handleFollow() {
     if (!currentUserId) {
       if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
       }
       return
     }
@@ -629,7 +629,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   async function handleCommentSubmit() {
     if (!currentUserId) {
       if (confirm('コメントするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
       }
       return
     }
@@ -679,7 +679,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   async function handleCommentLike(commentId: string) {
     if (!currentUserId) {
       if (confirm('いいねするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
       }
       return
     }
@@ -1729,7 +1729,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     コメントするにはログインが必要です
                   </p>
                   <button 
-                    onClick={() => router.push('/login')}
+                    onClick={() => router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)}
                     className="btn-primary"
                   >
                     ログイン

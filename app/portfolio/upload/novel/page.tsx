@@ -989,7 +989,7 @@ function UploadNovelPageContent() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push('/login')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
     } else {
       const { data: profile } = await supabase
         .from('profiles')
@@ -1314,7 +1314,7 @@ function UploadNovelPageContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setToast({ message: 'ログインが必要です', type: 'error' })
-        router.push('/login')
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
         return
       }
 

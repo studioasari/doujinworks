@@ -303,7 +303,7 @@ export default function Header() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     setIsMenuOpen(false)
-    router.push('/login')
+    router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
   }
 
   const formatMessageTime = (dateString: string) => {

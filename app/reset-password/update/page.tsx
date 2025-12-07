@@ -46,7 +46,7 @@ export default function UpdatePasswordPage() {
       if (error) throw error
 
       alert('パスワードを更新しました。ログインしてください。')
-      router.push('/login')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
     } catch (error: any) {
       setError(error.message || 'パスワードの更新に失敗しました')
     } finally {
