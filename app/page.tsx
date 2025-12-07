@@ -177,23 +177,22 @@ export default function Home() {
   ]
 
   function PortfolioCard({ item, size = 'normal' }: { item: PortfolioItem, size?: 'normal' | 'large' }) {
-    const isLarge = size === 'large'
-    
     return (
-      <Link href={`/portfolio/${item.id}`} style={{ display: 'block', textDecoration: 'none' }}>
+      <Link href={`/portfolio/${item.id}`} className="portfolio-card-link">
         {/* 画像部分 */}
-        <div style={{ 
+        <div className="portfolio-card-image" style={{ 
           position: 'relative',
           width: '100%',
           paddingTop: '100%',
           backgroundColor: '#F5F5F5',
           borderRadius: '8px',
           overflow: 'hidden',
-          marginBottom: '8px'
+          marginBottom: '12px'
         }}>
           <img
             src={item.thumbnail_url || item.image_url}
             alt={item.title}
+            loading="lazy"
             style={{ 
               position: 'absolute',
               top: 0,
@@ -208,9 +207,9 @@ export default function Home() {
             position: 'absolute',
             bottom: '8px',
             left: '8px',
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(0,0,0,0.7)',
             color: 'white',
-            padding: '2px 8px',
+            padding: '4px 10px',
             borderRadius: '4px',
             fontSize: '11px',
             fontWeight: '600'
@@ -220,23 +219,38 @@ export default function Home() {
         </div>
 
         {/* タイトル */}
-        <h3 style={{ 
-          fontSize: '14px',
-          fontWeight: '500',
+        <h3 className="portfolio-card-title" style={{ 
+          fontSize: '15px',
+          fontWeight: '600',
           color: '#1A1A1A',
-          marginBottom: '6px',
+          marginBottom: '8px',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          lineHeight: '1.4'
         }}>
           {item.title}
         </h3>
 
         {/* クリエイター情報 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+        <div
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            window.location.href = `/creators/${item.profiles?.username || ''}`
+          }}
+          className="portfolio-card-creator" 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            marginBottom: '10px',
+            cursor: 'pointer'
+          }}
+        >
           <div style={{
-            width: '20px',
-            height: '20px',
+            width: '24px',
+            height: '24px',
             borderRadius: '50%',
             overflow: 'hidden',
             backgroundColor: '#E5E5E5',
@@ -246,27 +260,39 @@ export default function Home() {
             justifyContent: 'center'
           }}>
             {item.profiles?.avatar_url ? (
-              <Image src={item.profiles.avatar_url} alt="" width={20} height={20} style={{ objectFit: 'cover' }} />
+              <Image src={item.profiles.avatar_url} alt="" width={24} height={24} style={{ objectFit: 'cover' }} />
             ) : (
-              <i className="fas fa-user" style={{ fontSize: '8px', color: '#9B9B9B' }}></i>
+              <i className="fas fa-user" style={{ fontSize: '10px', color: '#9B9B9B' }}></i>
             )}
           </div>
           <span style={{ 
-            fontSize: '12px', 
+            fontSize: '13px', 
             color: '#6B6B6B',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            flex: 1
+            flex: 1,
+            fontWeight: '500'
           }}>
             {item.profiles?.display_name || '名前未設定'}
           </span>
         </div>
 
         {/* いいね・コメント数 */}
-        <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#9B9B9B' }}>
-          <span><i className="far fa-heart"></i> {item.likeCount}</span>
-          <span><i className="far fa-comment"></i> {item.commentCount}</span>
+        <div className="portfolio-card-stats" style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          fontSize: '12px', 
+          color: '#9B9B9B' 
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <i className="far fa-heart"></i>
+            <span>{item.likeCount}</span>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <i className="far fa-comment"></i>
+            <span>{item.commentCount}</span>
+          </span>
         </div>
       </Link>
     )
@@ -290,9 +316,74 @@ export default function Home() {
       {/* レスポンシブ対応スタイル */}
       <style dangerouslySetInnerHTML={{
         __html: `
+          /* 作品カードのホバーエフェクト（さりげなく） */
+          .portfolio-card-link {
+            display: block;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+            border-radius: 8px;
+            padding: 8px;
+            margin: -8px;
+          }
+          
+          .portfolio-card-link:hover {
+            background-color: #FAFAFA;
+          }
+          
+          /* クリエイター情報の上にいるときはカード全体のホバーを無効化 */
+          .portfolio-card-link:has(.portfolio-card-creator:hover) {
+            background-color: transparent;
+          }
+          
+          /* クリエイター情報のホバーエフェクト */
+          .portfolio-card-creator {
+            transition: opacity 0.2s ease;
+          }
+          
+          .portfolio-card-creator:hover {
+            opacity: 0.7;
+          }
+          
           @media (max-width: 1024px) {
             .sidebar-desktop {
               display: none !important;
+            }
+          }
+          
+          /* スマホで2列表示 */
+          @media (max-width: 768px) {
+            .portfolio-grid {
+              grid-template-columns: repeat(2, 1fr) !important;
+              gap: 12px !important;
+            }
+            
+            .portfolio-card-image {
+              margin-bottom: 8px !important;
+              border-radius: 6px !important;
+            }
+            
+            .portfolio-card-title {
+              font-size: 13px !important;
+              margin-bottom: 6px !important;
+            }
+            
+            .portfolio-card-creator {
+              margin-bottom: 6px !important;
+              gap: 6px !important;
+            }
+            
+            .portfolio-card-creator span {
+              font-size: 11px !important;
+            }
+            
+            .portfolio-card-creator > div {
+              width: 20px !important;
+              height: 20px !important;
+            }
+            
+            .portfolio-card-stats {
+              font-size: 11px !important;
+              gap: 8px !important;
             }
           }
         `
@@ -622,7 +713,7 @@ export default function Home() {
                     <span>おすすめ作品</span>
                     <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                   </Link>
-                  <div style={{
+                  <div className="portfolio-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '16px'
@@ -650,7 +741,7 @@ export default function Home() {
                     <span>新着作品</span>
                     <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                   </Link>
-                  <div style={{
+                  <div className="portfolio-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '16px'
@@ -678,7 +769,7 @@ export default function Home() {
                     <span>人気作品</span>
                     <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                   </Link>
-                  <div style={{
+                  <div className="portfolio-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '16px'
@@ -711,7 +802,7 @@ export default function Home() {
                     <span>フォロー中の新着作品</span>
                     <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                   </Link>
-                  <div style={{
+                  <div className="portfolio-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '16px'
@@ -739,7 +830,7 @@ export default function Home() {
                     <span>注目作品</span>
                     <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                   </Link>
-                  <div style={{
+                  <div className="portfolio-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                     gap: '16px'
@@ -774,7 +865,7 @@ export default function Home() {
                       <span>新着{cat.label}</span>
                       <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
                     </Link>
-                    <div style={{
+                    <div className="portfolio-grid" style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
                       gap: '16px'

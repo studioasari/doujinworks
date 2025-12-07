@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -11,6 +11,10 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  
+  // リダイレクト先を取得（デフォルトはダッシュボード）
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
 
   // ログイン処理
   const handleLogin = async (e: React.FormEvent) => {
@@ -67,7 +71,8 @@ export default function LoginPage() {
         if (!profile || !profile.username) {
           router.push('/signup/complete')
         } else {
-          router.push('/dashboard')
+          // 元のページまたはダッシュボードにリダイレクト
+          router.push(redirectTo)
         }
       }
     } catch (error: any) {
@@ -83,10 +88,15 @@ export default function LoginPage() {
     setError('')
 
     try {
+      // リダイレクト先をクエリパラメータとして保持
+      const redirectUrl = redirectTo !== '/dashboard' 
+        ? `${window.location.origin}/signup/complete?redirect=${encodeURIComponent(redirectTo)}`
+        : `${window.location.origin}/signup/complete`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/signup/complete`,
+          redirectTo: redirectUrl,
         },
       })
 

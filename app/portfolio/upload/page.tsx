@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import LoadingScreen from '../../components/LoadingScreen'
 import DashboardSidebar from '../../components/DashboardSidebar'
 
 type Genre = {
@@ -19,6 +20,7 @@ type Genre = {
 
 export default function UploadSelectPage() {
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function UploadSelectPage() {
       
       if (profile) {
         setCurrentUserId(profile.id)
+        setLoading(false)
       } else {
         alert('プロフィールが見つかりません')
         router.push('/profile')
@@ -96,18 +99,8 @@ export default function UploadSelectPage() {
     }
   ]
 
-  if (!currentUserId) {
-    return (
-      <>
-        <Header />
-        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div className="loading-state">
-            読み込み中...
-          </div>
-        </div>
-        <Footer />
-      </>
-    )
+  if (loading) {
+    return <LoadingScreen message="読み込み中..." />
   }
 
   return (
@@ -129,21 +122,6 @@ export default function UploadSelectPage() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            {/* 戻るボタン */}
-            <Link
-              href="/dashboard"
-              className="text-small text-gray"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                textDecoration: 'none',
-                marginBottom: '24px'
-              }}
-            >
-              ← ダッシュボードに戻る
-            </Link>
-
             {/* ヘッダー */}
             <div className="mb-32">
               <h1 className="page-title mb-8">
@@ -230,6 +208,58 @@ export default function UploadSelectPage() {
         </main>
       </div>
       <Footer />
+      
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          /* メインレイアウト調整 */
+          main[style*="padding: 40px"] {
+            padding: 16px !important;
+          }
+          
+          /* ページタイトル */
+          .page-title {
+            font-size: 20px !important;
+          }
+          
+          /* ヘッダーセクション */
+          .mb-32 {
+            margin-bottom: 24px !important;
+          }
+          
+          /* グリッドレイアウト - モバイルは1列 */
+          div[style*="gridTemplateColumns: repeat(auto-fit, minmax(280px, 1fr))"] {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+            margin-bottom: 24px !important;
+          }
+          
+          /* カードpadding調整 */
+          .card[style*="padding: 24px"] {
+            padding: 20px !important;
+          }
+          
+          /* カードアイコン */
+          .card div[style*="fontSize: 28px"] {
+            font-size: 24px !important;
+            margin-bottom: 10px !important;
+          }
+          
+          /* カードタイトル */
+          .card h2[style*="fontSize: 18px"] {
+            font-size: 16px !important;
+          }
+          
+          /* 注意事項カード */
+          .card-no-hover[style*="padding: 24px"] {
+            padding: 20px !important;
+          }
+          
+          .card-no-hover ul {
+            font-size: 13px !important;
+            padding-left: 16px !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

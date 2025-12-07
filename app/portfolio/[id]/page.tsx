@@ -798,7 +798,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   if (loading) {
-    return <LoadingScreen message="作品を読み込んでいます..." />
+    return <LoadingScreen message="読み込み中..." />
   }
 
   if (!work || !creator) {
@@ -810,7 +810,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          backgroundColor: '#FAFAFA'
+          backgroundColor: '#FFFFFF'
         }}>
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ fontSize: '24px', marginBottom: '16px' }}>作品が見つかりません</h1>
@@ -829,7 +829,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <>
       <Header />
-      <div style={{ backgroundColor: '#FAFAFA', minHeight: '100vh' }}>
+      <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh' }}>
       <div className="portfolio-detail-layout">
         {/* 左サイドバー：作者情報（PC only） */}
         <aside className="creator-sidebar">
@@ -853,7 +853,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                   alt={creator.display_name}
                   width={120}
                   height={120}
-                  priority
+                  loading="lazy"
                   style={{ objectFit: 'cover' }}
                 />
               ) : (
@@ -1073,7 +1073,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                       alt={creator.display_name}
                       width={48}
                       height={48}
-                      priority
+                      loading="lazy"
                       style={{ objectFit: 'cover' }}
                     />
                   ) : (
@@ -1125,18 +1125,17 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
-          {/* 作品コンテンツ */}
-          <div className="card-no-hover" style={{ padding: '0', marginBottom: '24px', overflow: 'hidden' }}>
+          {/* 作品コンテンツ - 画像部分 */}
+          <div style={{ marginBottom: '24px', overflow: 'hidden', borderRadius: '12px' }}>
             {(work.category === 'illustration' || work.category === 'manga') && displayImages.length > 0 ? (
               <div>
-                {/* サムネイル画像（クリックで拡大） */}
+                {/* サムネイル画像（クリックで拡大）- 背景色削除 */}
                 <div 
                   onClick={() => setIsImageModalOpen(true)}
                   style={{
                     position: 'relative',
                     width: '100%',
                     maxHeight: '500px',
-                    backgroundColor: '#000000',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1263,7 +1262,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     display: 'flex',
                     gap: '12px',
                     padding: '20px',
-                    backgroundColor: '#FAFAFA',
+                    backgroundColor: '#F5F5F5',
                     overflowX: 'auto'
                   }}>
                     {displayImages.map((image, index) => (
@@ -1287,6 +1286,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                           alt={`${work.title} - ${index + 1}`}
                           width={100}
                           height={100}
+                          loading="lazy"
                           style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                         />
                       </div>
@@ -1322,6 +1322,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                       alt={work.title}
                       width={400}
                       height={400}
+                      loading="lazy"
                       style={{ objectFit: 'cover' }}
                     />
                   </div>
@@ -1558,7 +1559,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
           {authorWorks.length > 0 && (
             <div style={{ marginBottom: '40px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
-                この作者の他の作品
+                {creator.display_name}の他の作品
               </h2>
               <div style={{
                 display: 'grid',
@@ -1584,6 +1585,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                             src={workImages[0]}
                             alt={authorWork.title}
                             fill
+                            loading="lazy"
                             style={{ objectFit: 'cover' }}
                           />
                         )}
@@ -1767,6 +1769,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                             src={workImages[0]}
                             alt={relatedWork.title}
                             fill
+                            loading="lazy"
                             style={{ objectFit: 'cover' }}
                           />
                         )}
@@ -2107,6 +2110,7 @@ function CommentItem({
               alt={comment.user.display_name}
               width={36}
               height={36}
+              loading="lazy"
               style={{ objectFit: 'cover' }}
             />
           ) : (

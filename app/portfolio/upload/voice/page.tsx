@@ -6,7 +6,65 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
+import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+
+// 画像圧縮関数
+async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Canvas context not available'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas to Blob failed'))
+              return
+            }
+            
+            const compressedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            })
+
+            if (compressedFile.size > file.size) {
+              resolve(file)
+            } else {
+              resolve(compressedFile)
+            }
+          },
+          file.type,
+          quality
+        )
+      }
+      img.onerror = () => reject(new Error('Image load failed'))
+    }
+    reader.onerror = () => reject(new Error('File read failed'))
+  })
+}
 
 // 下書きの型定義
 type Draft = {
@@ -22,10 +80,8 @@ type Draft = {
   category?: string
   categoryName?: string
   categoryIcon?: string
-  // 小説用
   synopsis?: string
   content?: string
-  // 音楽・ボイス・動画用
   uploadMethod?: 'file' | 'link'
   externalLink?: string
 }
@@ -80,7 +136,7 @@ function ConfirmModal({
   description,
   tags,
   uploadMethod,
-  audioFileName,
+  videoFileName,
   externalLink,
   rating,
   isOriginal,
@@ -94,7 +150,7 @@ function ConfirmModal({
   description: string
   tags: string[]
   uploadMethod: 'file' | 'link'
-  audioFileName: string
+  videoFileName: string
   externalLink: string
   rating: string
   isOriginal: boolean
@@ -116,7 +172,6 @@ function ConfirmModal({
     r18g: 'R-18G'
   }
 
-  // モーダル表示中はスクロール無効化
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -166,7 +221,6 @@ function ConfirmModal({
           アップロード内容の確認
         </h2>
 
-        {/* サムネイルプレビュー */}
         {thumbnailPreview && (
           <div style={{ marginBottom: '32px' }}>
             <div style={{
@@ -185,13 +239,10 @@ function ConfirmModal({
                 }}
               />
             </div>
-            <div style={{ 
-              borderBottom: '1px solid #E5E5E5'
-            }}></div>
+            <div style={{ borderBottom: '1px solid #E5E5E5' }}></div>
           </div>
         )}
 
-        {/* タイトル */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -214,7 +265,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* 説明 */}
         {description && (
           <div style={{ 
             paddingBottom: '24px',
@@ -240,7 +290,6 @@ function ConfirmModal({
           </div>
         )}
 
-        {/* アップロード方法 */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -263,7 +312,7 @@ function ConfirmModal({
               gap: '8px'
             }}>
               <i className="fas fa-file-audio"></i>
-              {audioFileName}
+              {videoFileName}
             </div>
           ) : (
             <div style={{ 
@@ -281,7 +330,6 @@ function ConfirmModal({
           )}
         </div>
 
-        {/* タグ */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -304,7 +352,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* 年齢制限 */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -323,7 +370,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* オリジナル作品 */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -342,7 +388,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* コメント設定 */}
         <div style={{ 
           paddingBottom: '24px',
           marginBottom: '24px',
@@ -361,7 +406,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* 公開範囲 */}
         <div style={{ 
           paddingBottom: '32px',
           marginBottom: '32px',
@@ -380,7 +424,6 @@ function ConfirmModal({
           </div>
         </div>
 
-        {/* ボタン */}
         <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
           <button
             type="button"
@@ -414,7 +457,6 @@ function DraftModal({
   onDelete: (draft: Draft) => void
   onClose: () => void 
 }) {
-  // モーダル表示中はスクロール無効化
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -464,7 +506,7 @@ function DraftModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {drafts.map((draft) => (
               <div
-                key={`${draft.category || 'voice_drafts'}-${draft.id}`}
+                key={`${draft.category || 'video_drafts'}-${draft.id}`}
                 className="card"
                 style={{
                   padding: '20px',
@@ -581,7 +623,7 @@ function DraftModal({
   )
 }
 
-// 下書き復元用コンポーネント（useSearchParamsを使用）
+// 下書き復元用コンポーネント
 function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
   const searchParams = useSearchParams()
 
@@ -602,8 +644,8 @@ function UploadVoicePageContent() {
   const [description, setDescription] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
-  const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [audioFileName, setAudioFileName] = useState('')
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoFileName, setVideoFileName] = useState('')
   const [externalLink, setExternalLink] = useState('')
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string>('')
@@ -613,29 +655,29 @@ function UploadVoicePageContent() {
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
-  const [dragging, setDragging] = useState(false)
+  const [videoDragging, setVideoDragging] = useState(false)
+  const [thumbnailDragging, setThumbnailDragging] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
+  const [loading, setLoading] = useState(true)
   
-  // エラー状態
   const [errors, setErrors] = useState({
     title: '',
-    audio: '',
+    video: '',
     link: '',
     thumbnail: '',
     terms: ''
   })
 
-  // トースト状態
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
-  const audioInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const thumbnailInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  // プリセットタグ（ボイス向け）
   const presetTags = [
     'オリジナル', 'セリフ', 'ナレーション', 'ボイスドラマ', '朗読',
     '歌ってみた', 'ボイスコミック', 'ASMR', '囁き', '環境音',
@@ -650,7 +692,7 @@ function UploadVoicePageContent() {
 
   function restoreDraft(draftId: string) {
     try {
-      const saved = localStorage.getItem('voice_drafts')
+      const saved = localStorage.getItem('video_drafts')
       if (saved) {
         const allDrafts = JSON.parse(saved)
         const draft = allDrafts[draftId]
@@ -689,7 +731,9 @@ function UploadVoicePageContent() {
         .single()
       
       if (profile) {
-        setCurrentUserId(profile.id)
+        // ✅ 修正: user.idを使う
+        setCurrentUserId(user.id)
+        setLoading(false)
       } else {
         setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
@@ -697,7 +741,6 @@ function UploadVoicePageContent() {
     }
   }
 
-  // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
       const allCategories = [
@@ -716,7 +759,6 @@ function UploadVoicePageContent() {
         if (saved) {
           const parsed = JSON.parse(saved)
           
-          // 配列形式の場合
           if (Array.isArray(parsed)) {
             const draftsArray = parsed.map(draft => ({
               ...draft,
@@ -727,7 +769,6 @@ function UploadVoicePageContent() {
             }))
             allDrafts.push(...draftsArray)
           }
-          // オブジェクト形式の場合
           else if (typeof parsed === 'object') {
             const draftsArray = Object.entries(parsed)
               .map(([id, data]: [string, any]) => ({
@@ -751,7 +792,6 @@ function UploadVoicePageContent() {
         }
       })
 
-      // 新しい順にソート
       allDrafts.sort((a, b) => b.timestamp - a.timestamp)
       setDrafts(allDrafts)
     } catch (e) {
@@ -760,7 +800,6 @@ function UploadVoicePageContent() {
     }
   }
 
-  // 下書きを復元
   function loadDraft(draft: Draft) {
     setTitle(draft.title)
     setDescription(draft.description)
@@ -775,16 +814,15 @@ function UploadVoicePageContent() {
     setToast({ message: '下書きを復元しました', type: 'success' })
   }
 
-  // 下書きを削除
   function deleteDraft(draft: Draft) {
     try {
-      const storageKey = draft.category || 'voice_drafts'
+      const storageKey = draft.category || 'video_drafts'
       const saved = localStorage.getItem(storageKey)
       if (saved) {
         const allDrafts = JSON.parse(saved)
         delete allDrafts[draft.id]
         localStorage.setItem(storageKey, JSON.stringify(allDrafts))
-        loadDrafts() // 再読み込み
+        loadDrafts()
         setToast({ message: '下書きを削除しました', type: 'success' })
       }
     } catch (error) {
@@ -793,14 +831,13 @@ function UploadVoicePageContent() {
     }
   }
 
-  // 自動保存（2秒後）
   useEffect(() => {
     if (!currentUserId) return
     if (!title.trim() && selectedTags.length === 0) return
 
     const autoSaveTimer = setTimeout(() => {
       try {
-        const saved = localStorage.getItem('voice_drafts')
+        const saved = localStorage.getItem('video_drafts')
         let allDrafts = saved ? JSON.parse(saved) : {}
         
         const autoSaveId = 'autosave'
@@ -817,7 +854,7 @@ function UploadVoicePageContent() {
           savedAt: new Date().toISOString()
         }
         
-        localStorage.setItem('voice_drafts', JSON.stringify(allDrafts))
+        localStorage.setItem('video_drafts', JSON.stringify(allDrafts))
       } catch (error) {
         console.error('自動保存エラー:', error)
       }
@@ -826,7 +863,6 @@ function UploadVoicePageContent() {
     return () => clearTimeout(autoSaveTimer)
   }, [title, description, selectedTags, rating, isOriginal, allowComments, visibility, uploadMethod, externalLink, currentUserId])
 
-  // タイトルのリアルタイムバリデーション
   useEffect(() => {
     if (title.length > 50) {
       setErrors(prev => ({ ...prev, title: 'タイトルは50文字以内にしてください' }))
@@ -837,53 +873,49 @@ function UploadVoicePageContent() {
     }
   }, [title])
 
-  // 音声ファイル処理
-  function handleAudioChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleVideoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
-      processAudioFile(file)
+      processVideoFile(file)
     }
   }
 
-  function processAudioFile(file: File) {
-    // ファイルサイズチェック（20MB）
+  function processVideoFile(file: File) {
     if (file.size > 20 * 1024 * 1024) {
       setToast({ message: 'ファイルサイズは20MB以下にしてください', type: 'error' })
       return
     }
     
-    // ファイル形式チェック
     const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav']
     if (!allowedTypes.includes(file.type)) {
       setToast({ message: '対応フォーマット: MP3, WAV', type: 'error' })
       return
     }
 
-    setAudioFile(file)
-    setAudioFileName(file.name)
-    setErrors(prev => ({ ...prev, audio: '' }))
+    setVideoFile(file)
+    setVideoFileName(file.name)
+    setErrors(prev => ({ ...prev, video: '' }))
   }
 
-  function handleAudioClick() {
-    audioInputRef.current?.click()
+  function handleVideoClick() {
+    videoInputRef.current?.click()
   }
 
-  function handleAudioDrop(e: React.DragEvent) {
+  function handleVideoDrop(e: React.DragEvent) {
     e.preventDefault()
-    setDragging(false)
+    setVideoDragging(false)
     
     const file = e.dataTransfer.files[0]
     if (file) {
-      processAudioFile(file)
+      processVideoFile(file)
     }
   }
 
-  function removeAudio() {
-    setAudioFile(null)
-    setAudioFileName('')
+  function removeVideo() {
+    setVideoFile(null)
+    setVideoFileName('')
   }
 
-  // サムネイル処理
   function handleThumbnailChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) {
@@ -891,28 +923,43 @@ function UploadVoicePageContent() {
     }
   }
 
-  function processThumbnailFile(file: File) {
-    // ファイルサイズチェック（32MB）
-    if (file.size > 32 * 1024 * 1024) {
-      setToast({ message: 'サムネイルは32MB以下にしてください', type: 'error' })
-      return
-    }
+  async function processThumbnailFile(file: File) {
+    setCompressing(true)
     
-    // ファイル形式チェック
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      setToast({ message: '対応フォーマット: JPEG, PNG, GIF', type: 'error' })
-      return
-    }
+    try {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+      if (!allowedTypes.includes(file.type)) {
+        setToast({ message: '対応フォーマット: JPEG, PNG, GIF', type: 'error' })
+        return
+      }
 
-    setThumbnailFile(file)
-    
-    // プレビュー生成
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setThumbnailPreview(reader.result as string)
+      let processedFile = file
+      try {
+        if (file.type !== 'image/gif') {
+          processedFile = await compressImage(file, 1920, 0.8)
+          console.log(`圧縮: ${file.name} ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`)
+        }
+      } catch (compressError) {
+        console.error('圧縮エラー:', compressError)
+        setToast({ message: '画像の圧縮に失敗しました', type: 'error' })
+        return
+      }
+
+      if (processedFile.size > 32 * 1024 * 1024) {
+        setToast({ message: 'サムネイルは32MB以下にしてください', type: 'error' })
+        return
+      }
+
+      setThumbnailFile(processedFile)
+      
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string)
+      }
+      reader.readAsDataURL(processedFile)
+    } finally {
+      setCompressing(false)
     }
-    reader.readAsDataURL(file)
   }
 
   function handleThumbnailClick() {
@@ -921,7 +968,7 @@ function UploadVoicePageContent() {
 
   function handleThumbnailDrop(e: React.DragEvent) {
     e.preventDefault()
-    setDragging(false)
+    setThumbnailDragging(false)
     
     const file = e.dataTransfer.files[0]
     if (file) {
@@ -934,7 +981,6 @@ function UploadVoicePageContent() {
     setThumbnailPreview('')
   }
 
-  // プリセットタグの追加/削除
   function togglePresetTag(tag: string) {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag))
@@ -947,7 +993,6 @@ function UploadVoicePageContent() {
     }
   }
 
-  // カスタムタグの追加
   function addCustomTag() {
     const trimmedTag = customTag.trim()
     if (!trimmedTag) return
@@ -966,16 +1011,13 @@ function UploadVoicePageContent() {
     setCustomTag('')
   }
 
-  // タグの削除
   function removeTag(tag: string) {
     setSelectedTags(selectedTags.filter(t => t !== tag))
   }
 
-  // フォーム送信前の確認
   function handlePreSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // バリデーション
     if (!title.trim()) {
       setErrors(prev => ({ ...prev, title: 'タイトルは必須です' }))
       setToast({ message: 'タイトルを入力してください', type: 'error' })
@@ -987,8 +1029,8 @@ function UploadVoicePageContent() {
       return
     }
 
-    if (uploadMethod === 'file' && !audioFile) {
-      setErrors(prev => ({ ...prev, audio: '音声ファイルを選択してください' }))
+    if (uploadMethod === 'file' && !videoFile) {
+      setErrors(prev => ({ ...prev, video: '音声ファイルを選択してください' }))
       setToast({ message: '音声ファイルを選択してください', type: 'error' })
       return
     }
@@ -1015,23 +1057,21 @@ function UploadVoicePageContent() {
       return
     }
 
-    // 確認モーダルを表示
     setShowConfirmModal(true)
   }
 
-  // 必須項目がすべて満たされているかチェック
   const isFormValid = 
     title.trim().length > 0 && 
     title.length <= 50 &&
-    ((uploadMethod === 'file' && audioFile !== null) || (uploadMethod === 'link' && externalLink.trim().length > 0)) &&
+    ((uploadMethod === 'file' && videoFile !== null) || (uploadMethod === 'link' && externalLink.trim().length > 0)) &&
     selectedTags.length > 0 && 
     agreedToTerms &&
     !errors.title &&
-    !errors.audio &&
+    !errors.video &&
     !errors.link &&
-    !uploading
+    !uploading &&
+    !compressing
 
-  // 実際のアップロード処理
   async function handleConfirmedSubmit() {
     setShowConfirmModal(false)
     setUploading(true)
@@ -1044,31 +1084,28 @@ function UploadVoicePageContent() {
         return
       }
 
-      let audioUrl: string | null = null
+      let videoUrl: string | null = null
       let thumbnailUrl: string | null = null
 
-      // 1. 音声ファイルをアップロード（ファイルの場合）
-      if (uploadMethod === 'file' && audioFile) {
-        const fileExt = audioFile.name.split('.').pop()
+      if (uploadMethod === 'file' && videoFile) {
+        const fileExt = videoFile.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
         
         const { error: uploadError } = await supabase.storage
           .from('portfolio-audio')
-          .upload(fileName, audioFile)
+          .upload(fileName, videoFile)
 
         if (uploadError) {
           throw uploadError
         }
 
-        // 公開URLを取得
         const { data: { publicUrl } } = supabase.storage
           .from('portfolio-audio')
           .getPublicUrl(fileName)
 
-        audioUrl = publicUrl
+        videoUrl = publicUrl
       }
 
-      // 2. サムネイルをアップロード（あれば）
       if (thumbnailFile) {
         const fileExt = thumbnailFile.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${fileExt}`
@@ -1081,7 +1118,6 @@ function UploadVoicePageContent() {
           throw uploadError
         }
 
-        // 公開URLを取得
         const { data: { publicUrl } } = supabase.storage
           .from('portfolio-images')
           .getPublicUrl(fileName)
@@ -1089,32 +1125,40 @@ function UploadVoicePageContent() {
         thumbnailUrl = publicUrl
       }
 
-      // 3. データベースに保存
+      // データベースに保存
+      const insertData: any = {
+        creator_id: currentUserId,
+        title: title.trim(),
+        description: description.trim() || null,
+        category: 'voice',
+        rating: rating,
+        is_original: isOriginal,
+        allow_comments: allowComments,
+        tags: selectedTags,
+        image_url: thumbnailUrl,
+        thumbnail_url: thumbnailUrl,
+        is_public: visibility === 'public'
+      }
+
+      if (uploadMethod === 'file') {
+        insertData.video_url = videoUrl
+      } else {
+        insertData.external_link = externalLink.trim()
+      }
+
+      console.log('送信データ:', insertData)
+
       const { error: dbError } = await supabase
         .from('portfolio_items')
-        .insert({
-          creator_id: currentUserId,
-          title: title.trim(),
-          description: description.trim() || null,
-          category: 'voice',
-          rating: rating,
-          is_original: isOriginal,
-          allow_comments: allowComments,
-          tags: selectedTags,
-          audio_url: uploadMethod === 'file' ? audioUrl : null,
-          external_link: uploadMethod === 'link' ? externalLink.trim() : null,
-          image_url: thumbnailUrl,
-          thumbnail_url: thumbnailUrl,
-          is_public: visibility === 'public'
-        })
+        .insert(insertData)
 
       if (dbError) {
+        console.error('データベースエラー詳細:', dbError)
         throw dbError
       }
 
       setToast({ message: 'ボイスをアップロードしました！', type: 'success' })
       
-      // 少し待ってから遷移（トーストを見せるため）
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
@@ -1126,25 +1170,150 @@ function UploadVoicePageContent() {
     }
   }
 
-  if (!currentUserId) {
-    return (
-      <>
-        <Header />
-        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div className="loading-state">
-            読み込み中...
-          </div>
-        </div>
-        <Footer />
-      </>
-    )
+  if (loading) {
+    return <LoadingScreen message="読み込み中..." />
   }
 
   return (
     <>
+      <style jsx>{`
+        @media (max-width: 768px) {
+          /* === レイアウト === */
+          main { padding: 16px !important; }
+          .page-title { font-size: 20px !important; }
+          .flex-between {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 12px;
+            margin-bottom: 16px !important;
+          }
+          .btn-small {
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 16px !important;
+            padding: 12px 16px !important;
+            font-size: 12px !important;
+          }
+          .flex.gap-16 {
+            flex-direction: column;
+            gap: 12px !important;
+          }
+          .flex.gap-16 button { width: 100%; }
+          
+          /* 下書きモーダル内の削除ボタン */
+          .card button[style*="padding: 8px 16px"] {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+          }
+          
+          /* 確認モーダル - モバイル対応 */
+          .card-no-hover[style*="maxWidth: 800px"][style*="padding: 40px"] {
+            padding: 24px 16px !important;
+            max-height: 95vh !important;
+          }
+          
+          .card-no-hover[style*="maxWidth: 800px"] h2 {
+            font-size: 18px !important;
+            margin-bottom: 24px !important;
+          }
+          
+          /* 下書きモーダル - モバイル対応 */
+          .card-no-hover[style*="maxWidth: 600px"][style*="padding: 32px"] {
+            padding: 20px 16px !important;
+          }
+          
+          /* === フォーム === */
+          form.card-no-hover {
+            margin-top: 48px !important;
+            padding: 20px !important;
+            overflow: visible;
+            border-radius: 8px !important;
+          }
+          
+          /* === 耳タブ === */
+          form .mb-32:first-child {
+            position: relative;
+            margin: 0 0 20px 0 !important;
+          }
+          form .mb-32:first-child > label.form-label { display: none; }
+          
+          /* タブコンテナ */
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] {
+            position: absolute;
+            top: -67px;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            flex-direction: row !important;
+            gap: 12px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          /* タブボタン共通 */
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button {
+            flex: 1 !important;
+            border-radius: 8px 8px 0 0 !important;
+            padding: 12px !important;
+            font-size: 0 !important;
+            border-bottom: none !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button i {
+            font-size: 14px !important;
+          }
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button::after {
+            font-size: 14px !important;
+          }
+          
+          /* 選択中タブ */
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button[style*="background-color: rgb(26, 26, 26)"] {
+            background-color: #1A1A1A !important;
+            color: #FFFFFF !important;
+            border: 2px solid #1A1A1A !important;
+            border-bottom: none !important;
+            font-weight: bold !important;
+            z-index: 2;
+          }
+          
+          /* 非選択タブ */
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button[style*="background-color: rgb(255, 255, 255)"] {
+            background-color: #F5F5F5 !important;
+            color: #999999 !important;
+            border: 2px solid #E5E5E5 !important;
+            border-bottom: none !important;
+            z-index: 1;
+          }
+          
+          /* テキスト置き換え */
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button:nth-child(1)::after {
+            content: 'ファイル';
+          }
+          form .mb-32:first-child > div[style*="margin-bottom: 16px"] > button:nth-child(2)::after {
+            content: 'リンク';
+          }
+          
+          /* アップロードエリア */
+          form .mb-32:first-child > div.upload-area {
+            border-top: 2px solid #E5E5E5 !important;
+          }
+          
+          /* === ボタングループを縦並び === */
+          div[style*="marginBottom: '8px'"],
+          label.form-label + div[style*="display: flex"] {
+            flex-direction: column !important;
+          }
+          div[style*="marginBottom: '8px'"] > button,
+          label.form-label + div[style*="display: flex"] > button {
+            width: 100% !important;
+          }
+        }
+      `}</style>
       <Header />
       
-      {/* 下書き復元コンポーネント */}
       <Suspense fallback={null}>
         <DraftRestorer onRestore={restoreDraft} />
       </Suspense>
@@ -1165,7 +1334,6 @@ function UploadVoicePageContent() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
                 ボイスをアップロード
@@ -1179,6 +1347,24 @@ function UploadVoicePageContent() {
                 下書き ({drafts.length})
               </button>
             </div>
+
+            {compressing && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#FFF9E6',
+                border: '1px solid #FFE082',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <i className="fas fa-spinner fa-spin" style={{ color: '#F57C00' }}></i>
+                <span style={{ color: '#F57C00', fontSize: '14px', fontWeight: '500' }}>
+                  画像を圧縮しています...
+                </span>
+              </div>
+            )}
 
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* アップロード方法選択 */}
@@ -1227,22 +1413,21 @@ function UploadVoicePageContent() {
                   </button>
                 </div>
 
-                {/* ファイルアップロード */}
                 {uploadMethod === 'file' && (
                   <>
-                    {!audioFile && (
+                    {!videoFile && (
                       <div
-                        className={`upload-area ${dragging ? 'dragging' : ''}`}
-                        style={{ width: '100%', height: '150px' }}
-                        onClick={handleAudioClick}
+                        className={`upload-area ${videoDragging ? 'dragging' : ''}`}
+                        style={{ width: '100%', height: '200px' }}
+                        onClick={handleVideoClick}
                         onDragOver={(e) => {
                           e.preventDefault()
-                          setDragging(true)
+                          setVideoDragging(true)
                         }}
-                        onDragLeave={() => setDragging(false)}
-                        onDrop={handleAudioDrop}
+                        onDragLeave={() => setVideoDragging(false)}
+                        onDrop={handleVideoDrop}
                       >
-                        <div className="upload-area-content">
+                        <div className="upload-area-content" style={{ height: '100%' }}>
                           <div className="upload-area-icon">
                             <i className="fas fa-microphone"></i>
                           </div>
@@ -1256,7 +1441,7 @@ function UploadVoicePageContent() {
                       </div>
                     )}
 
-                    {audioFile && (
+                    {videoFile && (
                       <div style={{
                         padding: '16px',
                         border: '2px solid #E5E5E5',
@@ -1269,15 +1454,15 @@ function UploadVoicePageContent() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <i className="fas fa-file-audio" style={{ fontSize: '24px', color: '#1A1A1A' }}></i>
                           <div>
-                            <div style={{ fontWeight: 'bold' }}>{audioFileName}</div>
+                            <div style={{ fontWeight: 'bold' }}>{videoFileName}</div>
                             <div className="text-small text-gray">
-                              {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                              {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
                             </div>
                           </div>
                         </div>
                         <button
                           type="button"
-                          onClick={removeAudio}
+                          onClick={removeVideo}
                           className="btn-danger btn-small"
                         >
                           <i className="fas fa-times" style={{ marginRight: '6px' }}></i>
@@ -1287,27 +1472,26 @@ function UploadVoicePageContent() {
                     )}
 
                     <input
-                      ref={audioInputRef}
+                      ref={videoInputRef}
                       type="file"
                       accept="audio/mpeg,audio/mp3,audio/wav"
-                      onChange={handleAudioChange}
+                      onChange={handleVideoChange}
                       style={{ display: 'none' }}
                     />
 
-                    {errors.audio && (
+                    {errors.video && (
                       <div style={{
                         marginTop: '8px',
                         fontSize: '14px',
                         color: '#F44336'
                       }}>
                         <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
-                        {errors.audio}
+                        {errors.video}
                       </div>
                     )}
                   </>
                 )}
 
-                {/* 外部リンク */}
                 {uploadMethod === 'link' && (
                   <>
                     <input
@@ -1317,7 +1501,7 @@ function UploadVoicePageContent() {
                         setExternalLink(e.target.value)
                         setErrors(prev => ({ ...prev, link: '' }))
                       }}
-                      placeholder="https://www.youtube.com/watch?v=... または https://soundcloud.com/..."
+                      placeholder="https://www.youtube.com/watch?v=... または https://vimeo.com/..."
                       className="input-field"
                       style={{
                         borderColor: errors.link ? '#F44336' : undefined
@@ -1344,24 +1528,23 @@ function UploadVoicePageContent() {
                 )}
               </div>
 
-              {/* サムネイル画像アップロード（ファイルの場合のみ） */}
+              {/* サムネイル */}
               {uploadMethod === 'file' && (
                 <div className="mb-32">
                   <label className="form-label mb-12">
-                    サムネイル画像（任意）
+                    サムネイル画像（任意）・自動圧縮
                   </label>
 
-                  {/* サムネイルなしの時：アップロードエリア */}
                   {!thumbnailPreview && (
                     <div
-                      className={`upload-area ${dragging ? 'dragging' : ''}`}
+                      className={`upload-area ${thumbnailDragging ? 'dragging' : ''} ${compressing ? 'uploading' : ''}`}
                       style={{ width: '100%', height: '200px' }}
                       onClick={handleThumbnailClick}
                       onDragOver={(e) => {
                         e.preventDefault()
-                        setDragging(true)
+                        setThumbnailDragging(true)
                       }}
-                      onDragLeave={() => setDragging(false)}
+                      onDragLeave={() => setThumbnailDragging(false)}
                       onDrop={handleThumbnailDrop}
                     >
                       <div className="upload-area-content" style={{ height: '100%' }}>
@@ -1372,13 +1555,12 @@ function UploadVoicePageContent() {
                           クリックまたはドラッグしてサムネイルを追加
                         </div>
                         <div className="upload-area-hint">
-                          JPEG / GIF / PNG / 32MB以内
+                          JPEG / GIF / PNG / 自動圧縮（1920px幅）/ 32MB以内
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* サムネイルありの時：プレビュー表示 */}
                   {thumbnailPreview && (
                     <div style={{
                       position: 'relative',
@@ -1397,7 +1579,6 @@ function UploadVoicePageContent() {
                           border: '2px solid #E5E5E5'
                         }}
                       />
-                      {/* 削除ボタン */}
                       <button
                         type="button"
                         onClick={removeThumbnail}
@@ -1493,9 +1674,9 @@ function UploadVoicePageContent() {
                 />
               </div>
 
-              {/* カスタムタグ（メイン） */}
+              {/* タグ入力（入力欄内にタグ表示） */}
               <div className="mb-24">
-                <label className="form-label">
+                <label className="form-label mb-12">
                   タグを追加 <span className="form-required">*</span>
                   <span style={{ 
                     marginLeft: '12px', 
@@ -1503,10 +1684,58 @@ function UploadVoicePageContent() {
                     color: '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    最大10個まで（1個以上必須）
+                    最大10個まで（1個以上必須） {selectedTags.length}/10
                   </span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                
+                {/* タグと入力欄を統合 */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '12px',
+                  border: '2px solid #E5E5E5',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  minHeight: '48px',
+                  alignItems: 'center'
+                }}>
+                  {/* 選択済みタグ */}
+                  {selectedTags.map((tag, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        backgroundColor: '#1A1A1A',
+                        color: '#FFFFFF',
+                        borderRadius: '16px',
+                        fontSize: '13px'
+                      }}
+                    >
+                      <span>#{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          padding: '0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* 入力欄 */}
                   <input
                     type="text"
                     value={customTag}
@@ -1517,63 +1746,21 @@ function UploadVoicePageContent() {
                         addCustomTag()
                       }
                     }}
-                    placeholder="タグを入力してEnterまたは追加ボタン"
-                    className="input-field"
-                    style={{ flex: 1 }}
+                    placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
+                    disabled={selectedTags.length >= 10}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      padding: '4px'
+                    }}
                   />
-                  <button
-                    type="button"
-                    onClick={addCustomTag}
-                    className="btn-secondary"
-                    disabled={!customTag.trim() || selectedTags.length >= 10}
-                  >
-                    追加
-                  </button>
                 </div>
               </div>
 
-              {/* 選択されたタグ */}
-              {selectedTags.length > 0 && (
-                <div className="mb-24">
-                  <label className="form-label">選択中のタグ ({selectedTags.length}/10)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {selectedTags.map((tag, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '6px 12px',
-                          backgroundColor: '#1A1A1A',
-                          color: '#FFFFFF',
-                          borderRadius: '16px',
-                          fontSize: '14px'
-                        }}
-                      >
-                        <span>#{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            padding: '0',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* プリセットタグ（補助） */}
+              {/* プリセットタグ */}
               <div className="mb-32">
                 <label className="form-label">
                   プリセットタグから選択
@@ -1612,7 +1799,7 @@ function UploadVoicePageContent() {
                 </div>
               </div>
 
-              {/* 年齢制限（タブ風） */}
+              {/* 年齢制限 */}
               <div className="mb-32">
                 <label className="form-label mb-12">
                   年齢制限 <span className="form-required">*</span>
@@ -1764,7 +1951,7 @@ function UploadVoicePageContent() {
                 </div>
               </div>
 
-              {/* 公開範囲（タブ風） */}
+              {/* 公開範囲 */}
               <div className="mb-32">
                 <label className="form-label mb-12">
                   公開範囲 <span className="form-required">*</span>
@@ -1916,14 +2103,13 @@ function UploadVoicePageContent() {
       </div>
       <Footer />
 
-      {/* 確認モーダル */}
       {showConfirmModal && (
         <ConfirmModal
           title={title}
           description={description}
           tags={selectedTags}
           uploadMethod={uploadMethod}
-          audioFileName={audioFileName}
+          videoFileName={videoFileName}
           externalLink={externalLink}
           rating={rating}
           isOriginal={isOriginal}
@@ -1935,7 +2121,6 @@ function UploadVoicePageContent() {
         />
       )}
 
-      {/* 下書き管理モーダル */}
       {showDraftModal && (
         <DraftModal
           drafts={drafts}
@@ -1945,7 +2130,6 @@ function UploadVoicePageContent() {
         />
       )}
 
-      {/* トーストメッセージ */}
       {toast && (
         <Toast
           message={toast.message}
@@ -1957,7 +2141,6 @@ function UploadVoicePageContent() {
   )
 }
 
-// デフォルトエクスポート
 export default function UploadVoicePage() {
   return <UploadVoicePageContent />
 }

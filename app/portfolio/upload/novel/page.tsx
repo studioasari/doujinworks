@@ -6,7 +6,68 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
+import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+
+// 画像圧縮関数
+async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // 最大幅を超える場合はリサイズ
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Canvas context not available'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas to Blob failed'))
+              return
+            }
+            
+            // 圧縮後のファイルを作成
+            const compressedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            })
+
+            // 圧縮前より大きくなった場合は元のファイルを返す
+            if (compressedFile.size > file.size) {
+              resolve(file)
+            } else {
+              resolve(compressedFile)
+            }
+          },
+          file.type,
+          quality
+        )
+      }
+      img.onerror = () => reject(new Error('Image load failed'))
+    }
+    reader.onerror = () => reject(new Error('File read failed'))
+  })
+}
 
 // 下書きの型定義
 type Draft = {
@@ -22,10 +83,8 @@ type Draft = {
   category?: string
   categoryName?: string
   categoryIcon?: string
-  // 小説用
   synopsis?: string
   content?: string
-  // 音楽・ボイス・動画用
   uploadMethod?: 'file' | 'link'
   externalLink?: string
 }
@@ -86,7 +145,6 @@ function PreviewModal({
   content: string
   onClose: () => void 
 }) {
-  // モーダル表示中はスクロール無効化
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -107,18 +165,15 @@ function PreviewModal({
   // 見出しを変換
   function convertHeadings(text: string): string {
     let result = text
-    // ### を h3 に
     result = result.replace(/^### (.+)$/gm, '<h3 style="font-size: 18px; font-weight: bold; margin: 24px 0 12px 0;">$1</h3>')
-    // ## を h2 に
     result = result.replace(/^## (.+)$/gm, '<h2 style="font-size: 22px; font-weight: bold; margin: 28px 0 14px 0;">$1</h2>')
-    // # を h1 に
     result = result.replace(/^# (.+)$/gm, '<h1 style="font-size: 26px; font-weight: bold; margin: 32px 0 16px 0;">$1</h1>')
     return result
   }
 
-  // 強調を変換
+  // 強調を変換（下線なし、太字のみ）
   function convertEmphasis(text: string): string {
-    return text.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: bold; background: linear-gradient(transparent 60%, #FFE066 60%);">$1</strong>')
+    return text.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: bold;">$1</strong>')
   }
 
   // テキストを変換
@@ -294,7 +349,6 @@ function ConfirmModal({
     r18g: 'R-18G'
   }
 
-  // モーダル表示中はスクロール無効化
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -302,7 +356,6 @@ function ConfirmModal({
     }
   }, [])
 
-  // 文字数カウント
   const charCount = content.length
 
   return (
@@ -576,7 +629,6 @@ function DraftModal({
   onDelete: (draft: Draft) => void
   onClose: () => void 
 }) {
-  // モーダル表示中はスクロール無効化
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => {
@@ -743,7 +795,7 @@ function DraftModal({
   )
 }
 
-// 下書き復元用コンポーネント（useSearchParamsを使用）
+// 下書き復元用コンポーネント
 function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
   const searchParams = useSearchParams()
 
@@ -772,15 +824,16 @@ function UploadNovelPageContent() {
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [showHeadingMenu, setShowHeadingMenu] = useState(false)
-  const [dragging, setDragging] = useState(false)
+  const [thumbnailDragging, setThumbnailDragging] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
+  const [loading, setLoading] = useState(true)
   
-  // エラー状態
   const [errors, setErrors] = useState({
     title: '',
     content: '',
@@ -788,7 +841,6 @@ function UploadNovelPageContent() {
     terms: ''
   })
 
-  // トースト状態
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -808,18 +860,15 @@ function UploadNovelPageContent() {
     let cursorPosition
     
     if (selectedText) {
-      // 選択範囲がある場合：選択テキスト《》
       newText = content.substring(0, start) + `${selectedText}《》` + content.substring(end)
-      cursorPosition = start + selectedText.length + 2 // 《の後ろ
+      cursorPosition = start + selectedText.length + 2
     } else {
-      // 選択範囲がない場合：《》を挿入
       newText = content.substring(0, start) + '《》' + content.substring(end)
-      cursorPosition = start + 1 // 《の後ろ
+      cursorPosition = start + 1
     }
     
     setContent(newText)
     
-    // カーソル位置を復元
     setTimeout(() => {
       textarea.focus()
       textarea.setSelectionRange(cursorPosition, cursorPosition)
@@ -836,7 +885,6 @@ function UploadNovelPageContent() {
     
     setContent(newText)
     
-    // カーソル位置を復元
     setTimeout(() => {
       textarea.focus()
       textarea.setSelectionRange(start + 5, start + 5)
@@ -857,18 +905,15 @@ function UploadNovelPageContent() {
     let cursorPosition
     
     if (selectedText) {
-      // 選択範囲がある場合：# 選択テキスト
       newText = content.substring(0, start) + headingPrefix + selectedText + content.substring(end)
       cursorPosition = start + headingPrefix.length + selectedText.length
     } else {
-      // 選択範囲がない場合：# を挿入
       newText = content.substring(0, start) + headingPrefix + content.substring(end)
       cursorPosition = start + headingPrefix.length
     }
     
     setContent(newText)
     
-    // カーソル位置を復元
     setTimeout(() => {
       textarea.focus()
       textarea.setSelectionRange(cursorPosition, cursorPosition)
@@ -888,25 +933,21 @@ function UploadNovelPageContent() {
     let cursorPosition
     
     if (selectedText) {
-      // 選択範囲がある場合：**選択テキスト**
       newText = content.substring(0, start) + `**${selectedText}**` + content.substring(end)
       cursorPosition = start + selectedText.length + 4
     } else {
-      // 選択範囲がない場合：****を挿入
       newText = content.substring(0, start) + '****' + content.substring(end)
-      cursorPosition = start + 2 // **の間
+      cursorPosition = start + 2
     }
     
     setContent(newText)
     
-    // カーソル位置を復元
     setTimeout(() => {
       textarea.focus()
       textarea.setSelectionRange(cursorPosition, cursorPosition)
     }, 0)
   }
 
-  // プリセットタグ
   const presetTags = [
     'ファンタジー', '恋愛', 'ミステリー', 'SF', 'ホラー',
     '現代', '歴史', '学園', '異世界', 'バトル',
@@ -957,7 +998,9 @@ function UploadNovelPageContent() {
         .single()
       
       if (profile) {
-        setCurrentUserId(profile.id)
+        // ✅ 修正: user.idを使う（profile.idではなく）
+        setCurrentUserId(user.id)
+        setLoading(false)
       } else {
         setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
@@ -965,7 +1008,6 @@ function UploadNovelPageContent() {
     }
   }
 
-  // 下書き読み込み（全ジャンル対応）
   function loadDrafts() {
     try {
       const allCategories = [
@@ -984,7 +1026,6 @@ function UploadNovelPageContent() {
         if (saved) {
           const parsed = JSON.parse(saved)
           
-          // 配列形式の場合
           if (Array.isArray(parsed)) {
             const draftsArray = parsed.map(draft => ({
               ...draft,
@@ -995,7 +1036,6 @@ function UploadNovelPageContent() {
             }))
             allDrafts.push(...draftsArray)
           }
-          // オブジェクト形式の場合
           else if (typeof parsed === 'object') {
             const draftsArray = Object.entries(parsed)
               .map(([id, data]: [string, any]) => ({
@@ -1019,7 +1059,6 @@ function UploadNovelPageContent() {
         }
       })
 
-      // 新しい順にソート
       allDrafts.sort((a, b) => b.timestamp - a.timestamp)
       setDrafts(allDrafts)
     } catch (e) {
@@ -1028,7 +1067,6 @@ function UploadNovelPageContent() {
     }
   }
 
-  // 下書きを復元
   function loadDraft(draft: Draft) {
     setTitle(draft.title)
     setSynopsis(draft.synopsis || '')
@@ -1042,7 +1080,6 @@ function UploadNovelPageContent() {
     setToast({ message: '下書きを復元しました', type: 'success' })
   }
 
-  // 下書きを削除
   function deleteDraft(draft: Draft) {
     try {
       const storageKey = draft.category || 'novel_drafts'
@@ -1051,7 +1088,7 @@ function UploadNovelPageContent() {
         const allDrafts = JSON.parse(saved)
         delete allDrafts[draft.id]
         localStorage.setItem(storageKey, JSON.stringify(allDrafts))
-        loadDrafts() // 再読み込み
+        loadDrafts()
         setToast({ message: '下書きを削除しました', type: 'success' })
       }
     } catch (error) {
@@ -1060,7 +1097,6 @@ function UploadNovelPageContent() {
     }
   }
 
-  // 自動保存（2秒後）
   useEffect(() => {
     if (!currentUserId) return
     if (!title.trim() && !content.trim() && selectedTags.length === 0) return
@@ -1092,7 +1128,6 @@ function UploadNovelPageContent() {
     return () => clearTimeout(autoSaveTimer)
   }, [title, synopsis, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
 
-  // タイトルのリアルタイムバリデーション
   useEffect(() => {
     if (title.length > 50) {
       setErrors(prev => ({ ...prev, title: 'タイトルは50文字以内にしてください' }))
@@ -1103,7 +1138,6 @@ function UploadNovelPageContent() {
     }
   }, [title])
 
-  // 本文のリアルタイムバリデーション
   useEffect(() => {
     if (content.length > 100000) {
       setErrors(prev => ({ ...prev, content: '本文は100,000文字以内にしてください' }))
@@ -1119,28 +1153,48 @@ function UploadNovelPageContent() {
     }
   }
 
-  function processThumbnailFile(file: File) {
-    // ファイルサイズチェック（32MB）
-    if (file.size > 32 * 1024 * 1024) {
-      setToast({ message: 'ファイルサイズは32MB以下にしてください', type: 'error' })
-      return
-    }
+  async function processThumbnailFile(file: File) {
+    setCompressing(true)
     
-    // ファイル形式チェック
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-    if (!allowedTypes.includes(file.type)) {
-      setToast({ message: '対応フォーマット: JPEG, PNG, GIF', type: 'error' })
-      return
-    }
+    try {
+      // ファイル形式チェック
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+      if (!allowedTypes.includes(file.type)) {
+        setToast({ message: '対応フォーマット: JPEG, PNG, GIF', type: 'error' })
+        return
+      }
 
-    setThumbnailFile(file)
-    
-    // プレビュー生成
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setThumbnailPreview(reader.result as string)
+      // 画像を圧縮（1920px幅、品質80%）
+      let processedFile = file
+      try {
+        // GIF以外は圧縮
+        if (file.type !== 'image/gif') {
+          processedFile = await compressImage(file, 1920, 0.8)
+          console.log(`圧縮: ${file.name} ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`)
+        }
+      } catch (compressError) {
+        console.error('圧縮エラー:', compressError)
+        setToast({ message: '画像の圧縮に失敗しました', type: 'error' })
+        return
+      }
+
+      // 圧縮後のファイルサイズチェック（32MB）
+      if (processedFile.size > 32 * 1024 * 1024) {
+        setToast({ message: 'ファイルサイズは32MB以下にしてください', type: 'error' })
+        return
+      }
+
+      setThumbnailFile(processedFile)
+      
+      // プレビュー生成
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string)
+      }
+      reader.readAsDataURL(processedFile)
+    } finally {
+      setCompressing(false)
     }
-    reader.readAsDataURL(file)
   }
 
   function handleImageClick() {
@@ -1149,7 +1203,7 @@ function UploadNovelPageContent() {
 
   function handleImageDrop(e: React.DragEvent) {
     e.preventDefault()
-    setDragging(false)
+    setThumbnailDragging(false)
     
     const file = e.dataTransfer.files[0]
     if (file) {
@@ -1162,7 +1216,6 @@ function UploadNovelPageContent() {
     setThumbnailPreview('')
   }
 
-  // プリセットタグの追加/削除
   function togglePresetTag(tag: string) {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag))
@@ -1175,7 +1228,6 @@ function UploadNovelPageContent() {
     }
   }
 
-  // カスタムタグの追加
   function addCustomTag() {
     const trimmedTag = customTag.trim()
     if (!trimmedTag) return
@@ -1194,16 +1246,13 @@ function UploadNovelPageContent() {
     setCustomTag('')
   }
 
-  // タグの削除
   function removeTag(tag: string) {
     setSelectedTags(selectedTags.filter(t => t !== tag))
   }
 
-  // フォーム送信前の確認
   function handlePreSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // バリデーション
     if (!title.trim()) {
       setErrors(prev => ({ ...prev, title: 'タイトルは必須です' }))
       setToast({ message: 'タイトルを入力してください', type: 'error' })
@@ -1242,11 +1291,9 @@ function UploadNovelPageContent() {
       return
     }
 
-    // 確認モーダルを表示
     setShowConfirmModal(true)
   }
 
-  // 必須項目がすべて満たされているかチェック
   const isFormValid = 
     title.trim().length > 0 && 
     title.length <= 50 &&
@@ -1256,9 +1303,9 @@ function UploadNovelPageContent() {
     agreedToTerms &&
     !errors.title &&
     !errors.content &&
-    !uploading
+    !uploading &&
+    !compressing
 
-  // 実際のアップロード処理
   async function handleConfirmedSubmit() {
     setShowConfirmModal(false)
     setUploading(true)
@@ -1286,7 +1333,6 @@ function UploadNovelPageContent() {
           throw uploadError
         }
 
-        // 公開URLを取得
         const { data: { publicUrl } } = supabase.storage
           .from('portfolio-images')
           .getPublicUrl(fileName)
@@ -1318,7 +1364,6 @@ function UploadNovelPageContent() {
 
       setToast({ message: '小説をアップロードしました！', type: 'success' })
       
-      // 少し待ってから遷移（トーストを見せるため）
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
@@ -1330,25 +1375,65 @@ function UploadNovelPageContent() {
     }
   }
 
-  if (!currentUserId) {
-    return (
-      <>
-        <Header />
-        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div className="loading-state">
-            読み込み中...
-          </div>
-        </div>
-        <Footer />
-      </>
-    )
+  if (loading) {
+    return <LoadingScreen message="読み込み中..." />
   }
 
   return (
     <>
+      <style jsx>{`
+        @media (max-width: 768px) {
+          main {
+            padding: 20px !important;
+          }
+          
+          .page-title {
+            font-size: 20px !important;
+          }
+          
+          .card-no-hover {
+            padding: 24px !important;
+          }
+          
+          .p-40 {
+            padding: 24px !important;
+          }
+          
+          .flex-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 16px;
+          }
+          
+          .mb-40 {
+            margin-bottom: 24px !important;
+          }
+          
+          .btn-small {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 16px !important;
+            font-size: 12px !important;
+          }
+          
+          .flex.gap-16 {
+            flex-direction: column;
+            width: 100%;
+          }
+          
+          .flex.gap-16 button {
+            width: 100%;
+          }
+          
+          /* 下書きモーダル内の削除ボタン */
+          .card button[style*="padding: 8px 16px"] {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+          }
+        }
+      `}</style>
       <Header />
       
-      {/* 下書き復元コンポーネント */}
       <Suspense fallback={null}>
         <DraftRestorer onRestore={restoreDraft} />
       </Suspense>
@@ -1369,7 +1454,6 @@ function UploadNovelPageContent() {
           minHeight: '100vh'
         }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            {/* タイトル */}
             <div className="flex-between mb-40">
               <h1 className="page-title">
                 小説をアップロード
@@ -1384,24 +1468,42 @@ function UploadNovelPageContent() {
               </button>
             </div>
 
+            {/* 圧縮中の表示 */}
+            {compressing && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#FFF9E6',
+                border: '1px solid #FFE082',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <i className="fas fa-spinner fa-spin" style={{ color: '#F57C00' }}></i>
+                <span style={{ color: '#F57C00', fontSize: '14px', fontWeight: '500' }}>
+                  画像を圧縮しています...
+                </span>
+              </div>
+            )}
+
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* サムネイル画像アップロード */}
               <div className="mb-32">
                 <label className="form-label mb-12">
-                  サムネイル画像（任意）
+                  サムネイル画像（任意）・自動圧縮
                 </label>
 
-                {/* サムネイルなしの時：アップロードエリア */}
                 {!thumbnailPreview && (
                   <div
-                    className={`upload-area ${dragging ? 'dragging' : ''}`}
+                    className={`upload-area ${thumbnailDragging ? 'dragging' : ''} ${compressing ? 'uploading' : ''}`}
                     style={{ width: '100%', height: '200px' }}
                     onClick={handleImageClick}
                     onDragOver={(e) => {
                       e.preventDefault()
-                      setDragging(true)
+                      setThumbnailDragging(true)
                     }}
-                    onDragLeave={() => setDragging(false)}
+                    onDragLeave={() => setThumbnailDragging(false)}
                     onDrop={handleImageDrop}
                   >
                     <div className="upload-area-content" style={{ height: '100%' }}>
@@ -1412,13 +1514,12 @@ function UploadNovelPageContent() {
                         クリックまたはドラッグしてサムネイルを追加
                       </div>
                       <div className="upload-area-hint">
-                        JPEG / GIF / PNG / 32MB以内
+                        JPEG / GIF / PNG / 自動圧縮（1920px幅）/ 32MB以内
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* サムネイルありの時：プレビュー表示 */}
                 {thumbnailPreview && (
                   <div style={{
                     position: 'relative',
@@ -1437,7 +1538,6 @@ function UploadNovelPageContent() {
                         border: '2px solid #E5E5E5'
                       }}
                     />
-                    {/* 削除ボタン */}
                     <button
                       type="button"
                       onClick={removeThumbnail}
@@ -1557,7 +1657,6 @@ function UploadNovelPageContent() {
                   borderBottom: '1px solid #E5E5E5',
                   position: 'relative'
                 }}>
-                  {/* 見出しボタン（ドロップダウン付き） */}
                   <div style={{ position: 'relative' }}>
                     <button
                       type="button"
@@ -1570,10 +1669,8 @@ function UploadNovelPageContent() {
                       <i className="fas fa-chevron-down" style={{ marginLeft: '6px', fontSize: '10px' }}></i>
                     </button>
                     
-                    {/* ドロップダウンメニュー */}
                     {showHeadingMenu && (
                       <>
-                        {/* 背景クリックで閉じる */}
                         <div
                           onClick={() => setShowHeadingMenu(false)}
                           style={{
@@ -1743,7 +1840,7 @@ function UploadNovelPageContent() {
                     見出し3：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>### 見出し</code>
                   </div>
                   <div style={{ marginBottom: '4px' }}>
-                    強調：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>**強調したいテキスト**</code>
+                    強調（太字）：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>**強調したいテキスト**</code>
                   </div>
                   <div style={{ marginBottom: '4px' }}>
                     ルビ：<code style={{ backgroundColor: '#E5E5E5', padding: '2px 6px', borderRadius: '4px' }}>漢字《かんじ》</code>
@@ -1767,9 +1864,9 @@ function UploadNovelPageContent() {
                 </button>
               </div>
 
-              {/* カスタムタグ（メイン） */}
+              {/* タグ入力（入力欄内にタグ表示） */}
               <div className="mb-24">
-                <label className="form-label">
+                <label className="form-label mb-12">
                   タグを追加 <span className="form-required">*</span>
                   <span style={{ 
                     marginLeft: '12px', 
@@ -1777,10 +1874,58 @@ function UploadNovelPageContent() {
                     color: '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    最大10個まで（1個以上必須）
+                    最大10個まで（1個以上必須） {selectedTags.length}/10
                   </span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                
+                {/* タグと入力欄を統合 */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '12px',
+                  border: '2px solid #E5E5E5',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  minHeight: '48px',
+                  alignItems: 'center'
+                }}>
+                  {/* 選択済みタグ */}
+                  {selectedTags.map((tag, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        backgroundColor: '#1A1A1A',
+                        color: '#FFFFFF',
+                        borderRadius: '16px',
+                        fontSize: '13px'
+                      }}
+                    >
+                      <span>#{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          padding: '0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* 入力欄 */}
                   <input
                     type="text"
                     value={customTag}
@@ -1791,61 +1936,19 @@ function UploadNovelPageContent() {
                         addCustomTag()
                       }
                     }}
-                    placeholder="タグを入力してEnterまたは追加ボタン"
-                    className="input-field"
-                    style={{ flex: 1 }}
+                    placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
+                    disabled={selectedTags.length >= 10}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      padding: '4px'
+                    }}
                   />
-                  <button
-                    type="button"
-                    onClick={addCustomTag}
-                    className="btn-secondary"
-                    disabled={!customTag.trim() || selectedTags.length >= 10}
-                  >
-                    追加
-                  </button>
                 </div>
               </div>
-
-              {/* 選択されたタグ */}
-              {selectedTags.length > 0 && (
-                <div className="mb-24">
-                  <label className="form-label">選択中のタグ ({selectedTags.length}/10)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {selectedTags.map((tag, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '6px 12px',
-                          backgroundColor: '#1A1A1A',
-                          color: '#FFFFFF',
-                          borderRadius: '16px',
-                          fontSize: '14px'
-                        }}
-                      >
-                        <span>#{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            padding: '0',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* プリセットタグ（補助） */}
               <div className="mb-32">
@@ -2239,7 +2342,180 @@ function UploadNovelPageContent() {
   )
 }
 
-// デフォルトエクスポート
 export default function UploadNovelPage() {
   return <UploadNovelPageContent />
+}
+
+// モバイルレスポンシブCSS
+const styles = `
+  @media (max-width: 768px) {
+    /* メインレイアウト調整 */
+    main[style*="padding: 40px"] {
+      padding: 16px !important;
+    }
+    
+    /* ページタイトル */
+    .page-title {
+      font-size: 20px !important;
+    }
+    
+    /* フォームカード */
+    .card-no-hover.p-40 {
+      padding: 20px !important;
+    }
+    
+    /* フォーム要素のマージン */
+    .mb-32 {
+      margin-bottom: 24px !important;
+    }
+    
+    .mb-24 {
+      margin-bottom: 20px !important;
+    }
+    
+    /* ツールバー - 折り返し & 縦並び */
+    div[style*="padding: 8px"][style*="backgroundColor: #FAFAFA"]:has(button.btn-small) {
+      flex-wrap: wrap !important;
+      gap: 6px !important;
+      padding: 8px !important;
+    }
+    
+    div[style*="padding: 8px"][style*="backgroundColor: #FAFAFA"]:has(button.btn-small) button {
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+    }
+    
+    /* 年齢制限・公開範囲ボタン - 縦並び */
+    div[style*="display: flex"][style*="gap: 12px"] > button[style*="flex: 1"] {
+      flex: 1 1 100% !important;
+      min-width: 100% !important;
+    }
+    
+    div[style*="display: flex"][style*="gap: 12px"]:has(> button[style*="flex: 1"]) {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    /* コメント設定ボタン - 縦並び */
+    div.mb-32 > div[style*="display: flex"][style*="gap: 12px"] button {
+      flex: 1 1 100% !important;
+    }
+    
+    /* タグ入力エリア - 縦並び */
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) input {
+      flex: 1 1 100% !important;
+    }
+    
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) button {
+      width: 100% !important;
+    }
+    
+    /* 送信ボタンエリア - 縦並び */
+    .flex.gap-16[style*="justifyContent: flex-end"] {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    .flex.gap-16[style*="justifyContent: flex-end"] button {
+      width: 100% !important;
+    }
+    
+    /* プリセットタグエリア */
+    div[style*="padding: 16px"][style*="backgroundColor: #FAFAFA"] {
+      padding: 12px !important;
+    }
+    
+    /* チェックボックスエリア */
+    label[style*="padding: 12px"]:has(input[type="checkbox"]) {
+      padding: 12px 8px !important;
+    }
+    
+    label[style*="padding: 16px"]:has(input[type="checkbox"]) {
+      padding: 12px 8px !important;
+    }
+    
+    /* 下書きボタン */
+    .btn-small {
+      font-size: 12px !important;
+      padding: 6px 12px !important;
+    }
+    
+    /* タイトルと下書きボタンのflex調整 */
+    .flex-between.mb-40 {
+      margin-bottom: 24px !important;
+      gap: 12px !important;
+      align-items: center !important;
+    }
+    
+    /* 記法の説明エリア */
+    div[style*="padding: 12px"][style*="backgroundColor: #FAFAFA"]:has(code) {
+      padding: 12px 8px !important;
+      font-size: 12px !important;
+    }
+    
+    div[style*="padding: 12px"][style*="backgroundColor: #FAFAFA"]:has(code) code {
+      font-size: 11px !important;
+      padding: 2px 4px !important;
+    }
+    
+    /* プレビューモーダル - モバイル対応 */
+    .card-no-hover[style*="maxWidth: 800px"] {
+      padding: 24px 16px !important;
+      max-height: 95vh !important;
+    }
+    
+    .card-no-hover[style*="maxWidth: 800px"] h2 {
+      font-size: 18px !important;
+      margin-bottom: 24px !important;
+    }
+    
+    .card-no-hover[style*="maxWidth: 800px"] h1 {
+      font-size: 22px !important;
+    }
+    
+    /* 下書きモーダル - モバイル対応 */
+    .card-no-hover[style*="maxWidth: 600px"] {
+      padding: 20px 16px !important;
+    }
+    
+    /* 下書きカード */
+    .card[style*="padding: 20px"] {
+      padding: 16px !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+    
+    .card[style*="padding: 20px"] > div[style*="flex: 1"] {
+      width: 100% !important;
+    }
+    
+    .card[style*="padding: 20px"] > button {
+      width: 100% !important;
+      margin-top: 12px !important;
+    }
+    
+    /* 見出しメニュードロップダウン */
+    div[style*="position: absolute"][style*="minWidth: 150px"] {
+      left: 0 !important;
+      right: auto !important;
+      min-width: 120px !important;
+    }
+    
+    div[style*="position: absolute"][style*="minWidth: 150px"] button {
+      padding: 8px 12px !important;
+      font-size: 12px !important;
+    }
+  }
+`
+
+// スタイルを挿入
+if (typeof document !== 'undefined') {
+  const styleTag = document.createElement('style')
+  styleTag.textContent = styles
+  document.head.appendChild(styleTag)
 }

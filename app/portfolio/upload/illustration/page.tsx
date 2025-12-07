@@ -6,7 +6,68 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
+import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+
+// 画像圧縮関数
+async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // 最大幅を超える場合はリサイズ
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Canvas context not available'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas to Blob failed'))
+              return
+            }
+            
+            // 圧縮後のファイルを作成
+            const compressedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            })
+
+            // 圧縮前より大きくなった場合は元のファイルを返す
+            if (compressedFile.size > file.size) {
+              resolve(file)
+            } else {
+              resolve(compressedFile)
+            }
+          },
+          file.type,
+          quality
+        )
+      }
+      img.onerror = () => reject(new Error('Image load failed'))
+    }
+    reader.onerror = () => reject(new Error('File read failed'))
+  })
+}
 
 // 下書きの型定義
 type Draft = {
@@ -580,11 +641,13 @@ function UploadIllustrationPageContent() {
   const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [dragging, setDragging] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
   const [drafts, setDrafts] = useState<Draft[]>([])
+  const [loading, setLoading] = useState(true)
   
   // ドラッグ＆ドロップ用の状態
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -654,6 +717,7 @@ function UploadIllustrationPageContent() {
       
       if (profile) {
         setCurrentUserId(user.id)
+        setLoading(false)
       } else {
         setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
@@ -802,7 +866,7 @@ function UploadIllustrationPageContent() {
     }
   }
 
-  function processImageFiles(files: File[]) {
+  async function processImageFiles(files: File[]) {
     // 既存の画像と合わせて100枚まで
     const totalFiles = imageFiles.length + files.length
     if (totalFiles > 100) {
@@ -810,49 +874,71 @@ function UploadIllustrationPageContent() {
       return
     }
 
-    // 合計サイズチェック（200MB）
-    const currentTotalSize = imageFiles.reduce((sum, file) => sum + file.size, 0)
-    const newFilesSize = files.reduce((sum, file) => sum + file.size, 0)
-    const totalSize = currentTotalSize + newFilesSize
-    
-    if (totalSize > 200 * 1024 * 1024) {
-      setToast({ message: '画像の合計サイズは200MB以内にしてください', type: 'error' })
-      return
-    }
-
-    // 各ファイルをチェック
+    setCompressing(true)
     const validFiles: File[] = []
-    for (const file of files) {
-      // ファイルサイズチェック（32MB）
-      if (file.size > 32 * 1024 * 1024) {
-        setToast({ message: `${file.name}: ファイルサイズは32MB以下にしてください`, type: 'error' })
-        continue
+    const newPreviews: string[] = []
+
+    try {
+      for (const file of files) {
+        // ファイル形式チェック
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+        if (!allowedTypes.includes(file.type)) {
+          setToast({ message: `${file.name}: 対応フォーマット: JPEG, PNG, GIF`, type: 'error' })
+          continue
+        }
+
+        // 画像を圧縮（1920px幅、品質80%）
+        let processedFile = file
+        try {
+          // GIF以外は圧縮
+          if (file.type !== 'image/gif') {
+            processedFile = await compressImage(file, 1920, 0.8)
+            console.log(`圧縮: ${file.name} ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`)
+          }
+        } catch (compressError) {
+          console.error('圧縮エラー:', compressError)
+          setToast({ message: `${file.name}: 圧縮に失敗しました`, type: 'error' })
+          continue
+        }
+
+        // 圧縮後のファイルサイズチェック（32MB）
+        if (processedFile.size > 32 * 1024 * 1024) {
+          setToast({ message: `${file.name}: ファイルサイズは32MB以下にしてください`, type: 'error' })
+          continue
+        }
+
+        validFiles.push(processedFile)
+
+        // プレビュー生成
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          newPreviews.push(reader.result as string)
+          if (newPreviews.length === validFiles.length) {
+            setImagePreviews([...imagePreviews, ...newPreviews])
+          }
+        }
+        reader.readAsDataURL(processedFile)
       }
+
+      if (validFiles.length === 0) return
+
+      // 合計サイズチェック（200MB）
+      const currentTotalSize = imageFiles.reduce((sum, file) => sum + file.size, 0)
+      const newFilesSize = validFiles.reduce((sum, file) => sum + file.size, 0)
+      const totalSize = currentTotalSize + newFilesSize
       
-      // ファイル形式チェック
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-      if (!allowedTypes.includes(file.type)) {
-        setToast({ message: `${file.name}: 対応フォーマット: JPEG, PNG, GIF`, type: 'error' })
-        continue
+      if (totalSize > 200 * 1024 * 1024) {
+        setToast({ message: '画像の合計サイズは200MB以内にしてください', type: 'error' })
+        return
       }
 
-      validFiles.push(file)
+      // 画像ファイルを追加
+      setImageFiles([...imageFiles, ...validFiles])
+      setErrors(prev => ({ ...prev, images: '' }))
+
+    } finally {
+      setCompressing(false)
     }
-
-    if (validFiles.length === 0) return
-
-    // 画像ファイルを追加
-    setImageFiles([...imageFiles, ...validFiles])
-    setErrors(prev => ({ ...prev, images: '' }))
-    
-    // プレビュー生成
-    validFiles.forEach(file => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreviews(prev => [...prev, reader.result as string])
-      }
-      reader.readAsDataURL(file)
-    })
   }
 
   function handleImageClick() {
@@ -1004,7 +1090,8 @@ function UploadIllustrationPageContent() {
     agreedToTerms &&
     !errors.title &&
     !errors.images &&
-    !uploading
+    !uploading &&
+    !compressing
 
   // 実際のアップロード処理
   async function handleConfirmedSubmit() {
@@ -1079,22 +1166,63 @@ function UploadIllustrationPageContent() {
     }
   }
 
-  if (!currentUserId) {
-    return (
-      <>
-        <Header />
-        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-          <div className="loading-state">
-            読み込み中...
-          </div>
-        </div>
-        <Footer />
-      </>
-    )
+  if (loading) {
+    return <LoadingScreen message="読み込み中..." />
   }
 
   return (
     <>
+      <style jsx>{`
+        @media (max-width: 768px) {
+          main {
+            padding: 20px !important;
+          }
+          
+          .page-title {
+            font-size: 20px !important;
+          }
+          
+          .card-no-hover {
+            padding: 24px !important;
+          }
+          
+          .p-40 {
+            padding: 24px !important;
+          }
+          
+          .flex-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 16px;
+          }
+          
+          .mb-40 {
+            margin-bottom: 24px !important;
+          }
+          
+          .btn-small {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 16px !important;
+            font-size: 12px !important;
+          }
+          
+          .flex.gap-16 {
+            flex-direction: column;
+            width: 100%;
+          }
+          
+          .flex.gap-16 button {
+            width: 100%;
+          }
+          
+          /* 下書きモーダル内の削除ボタン */
+          .card button[style*="padding: 8px 16px"] {
+            padding: 6px 12px !important;
+            font-size: 12px !important;
+          }
+        }
+      `}</style>
       <Header />
       
       {/* 下書き復元コンポーネント */}
@@ -1133,6 +1261,25 @@ function UploadIllustrationPageContent() {
               </button>
             </div>
 
+            {/* 圧縮中の表示 */}
+            {compressing && (
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#FFF9E6',
+                border: '1px solid #FFE082',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <i className="fas fa-spinner fa-spin" style={{ color: '#F57C00' }}></i>
+                <span style={{ color: '#F57C00', fontSize: '14px', fontWeight: '500' }}>
+                  画像を圧縮しています...
+                </span>
+              </div>
+            )}
+
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* 画像アップロード */}
               <div className="mb-32">
@@ -1144,14 +1291,14 @@ function UploadIllustrationPageContent() {
                     color: '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    {imageFiles.length}/100枚（ドラッグして並び替え）
+                    {imageFiles.length}/100枚（ドラッグして並び替え）・自動圧縮
                   </span>
                 </label>
 
                 {/* 画像が0枚の時：大きなアップロードエリア */}
                 {imageFiles.length === 0 && (
                   <div
-                    className={`upload-area ${dragging ? 'dragging' : ''} ${uploading ? 'uploading' : ''}`}
+                    className={`upload-area ${dragging ? 'dragging' : ''} ${uploading || compressing ? 'uploading' : ''}`}
                     style={{ width: '100%', height: '200px' }}
                     onClick={handleImageClick}
                     onDragOver={(e) => {
@@ -1169,7 +1316,7 @@ function UploadIllustrationPageContent() {
                         クリックまたはドラッグして<br />画像を追加
                       </div>
                       <div className="upload-area-hint">
-                        JPEG / GIF / PNG / 1枚32MB以内、最大100枚（合計200MB以内まで）
+                        JPEG / GIF / PNG / 自動圧縮（1920px幅）/ 最大100枚（合計200MB以内まで）
                       </div>
                     </div>
                   </div>
@@ -1383,9 +1530,9 @@ function UploadIllustrationPageContent() {
                 />
               </div>
 
-              {/* カスタムタグ（メイン） */}
+              {/* タグ入力（入力欄内にタグ表示） */}
               <div className="mb-24">
-                <label className="form-label">
+                <label className="form-label mb-12">
                   タグを追加 <span className="form-required">*</span>
                   <span style={{ 
                     marginLeft: '12px', 
@@ -1393,10 +1540,58 @@ function UploadIllustrationPageContent() {
                     color: '#6B6B6B',
                     fontWeight: 'normal'
                   }}>
-                    最大10個まで（1個以上必須）
+                    最大10個まで（1個以上必須） {selectedTags.length}/10
                   </span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                
+                {/* タグと入力欄を統合 */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  padding: '12px',
+                  border: '2px solid #E5E5E5',
+                  borderRadius: '8px',
+                  backgroundColor: '#FFFFFF',
+                  minHeight: '48px',
+                  alignItems: 'center'
+                }}>
+                  {/* 選択済みタグ */}
+                  {selectedTags.map((tag, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        backgroundColor: '#1A1A1A',
+                        color: '#FFFFFF',
+                        borderRadius: '16px',
+                        fontSize: '13px'
+                      }}
+                    >
+                      <span>#{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          padding: '0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '12px'
+                        }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* 入力欄 */}
                   <input
                     type="text"
                     value={customTag}
@@ -1407,61 +1602,19 @@ function UploadIllustrationPageContent() {
                         addCustomTag()
                       }
                     }}
-                    placeholder="タグを入力してEnterまたは追加ボタン"
-                    className="input-field"
-                    style={{ flex: 1 }}
+                    placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
+                    disabled={selectedTags.length >= 10}
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      padding: '4px'
+                    }}
                   />
-                  <button
-                    type="button"
-                    onClick={addCustomTag}
-                    className="btn-secondary"
-                    disabled={!customTag.trim() || selectedTags.length >= 10}
-                  >
-                    追加
-                  </button>
                 </div>
               </div>
-
-              {/* 選択されたタグ */}
-              {selectedTags.length > 0 && (
-                <div className="mb-24">
-                  <label className="form-label">選択中のタグ ({selectedTags.length}/10)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {selectedTags.map((tag, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '6px 12px',
-                          backgroundColor: '#1A1A1A',
-                          color: '#FFFFFF',
-                          borderRadius: '16px',
-                          fontSize: '14px'
-                        }}
-                      >
-                        <span>#{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFFFFF',
-                            cursor: 'pointer',
-                            padding: '0',
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* プリセットタグ（補助） */}
               <div className="mb-32">
@@ -1847,4 +2000,159 @@ function UploadIllustrationPageContent() {
 // デフォルトエクスポート
 export default function UploadIllustrationPage() {
   return <UploadIllustrationPageContent />
+}
+
+// モバイルレスポンシブCSS
+const styles = `
+  @media (max-width: 768px) {
+    /* メインレイアウト調整 */
+    main[style*="padding: 40px"] {
+      padding: 16px !important;
+    }
+    
+    /* ページタイトル */
+    .page-title {
+      font-size: 20px !important;
+    }
+    
+    /* フォームカード */
+    .card-no-hover.p-40 {
+      padding: 20px !important;
+    }
+    
+    /* フォーム要素のマージン */
+    .mb-32 {
+      margin-bottom: 24px !important;
+    }
+    
+    .mb-24 {
+      margin-bottom: 20px !important;
+    }
+    
+    /* 画像グリッド - モバイルは2列 */
+    div[style*="gridTemplateColumns: repeat(auto-fill, minmax(150px, 1fr))"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important;
+    }
+    
+    /* 画像プレビュー高さ調整 */
+    img[style*="height: 150px"] {
+      height: 120px !important;
+    }
+    
+    div[style*="height: 150px"] {
+      height: 120px !important;
+    }
+    
+    /* 年齢制限・公開範囲ボタン - 縦並び */
+    div[style*="display: flex"][style*="gap: 12px"] > button[style*="flex: 1"] {
+      flex: 1 1 100% !important;
+      min-width: 100% !important;
+    }
+    
+    div[style*="display: flex"][style*="gap: 12px"]:has(> button[style*="flex: 1"]) {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    /* コメント設定ボタン - 縦並び */
+    div.mb-32 > div[style*="display: flex"][style*="gap: 12px"] button {
+      flex: 1 1 100% !important;
+    }
+    
+    /* タグ入力エリア - 縦並び */
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) input {
+      flex: 1 1 100% !important;
+    }
+    
+    div.mb-24 > div[style*="display: flex"][style*="gap: 12px"]:has(input.input-field) button {
+      width: 100% !important;
+    }
+    
+    /* 送信ボタンエリア - 縦並び */
+    .flex.gap-16[style*="justifyContent: flex-end"] {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    .flex.gap-16[style*="justifyContent: flex-end"] button {
+      width: 100% !important;
+    }
+    
+    /* プリセットタグエリア */
+    div[style*="padding: 16px"][style*="backgroundColor: #FAFAFA"] {
+      padding: 12px !important;
+    }
+    
+    /* チェックボックスエリア */
+    label[style*="padding: 12px"]:has(input[type="checkbox"]) {
+      padding: 12px 8px !important;
+    }
+    
+    label[style*="padding: 16px"]:has(input[type="checkbox"]) {
+      padding: 12px 8px !important;
+    }
+    
+    /* 下書きボタン */
+    .btn-small {
+      font-size: 12px !important;
+      padding: 6px 12px !important;
+    }
+    
+    /* タイトルと下書きボタンのflex調整 */
+    .flex-between.mb-40 {
+      margin-bottom: 24px !important;
+      gap: 12px !important;
+      align-items: center !important;
+    }
+    
+    /* 確認モーダル - モバイル対応 */
+    .card-no-hover[style*="maxWidth: 800px"] {
+      padding: 24px 16px !important;
+      max-height: 95vh !important;
+    }
+    
+    .card-no-hover[style*="maxWidth: 800px"] h2 {
+      font-size: 18px !important;
+      margin-bottom: 24px !important;
+    }
+    
+    /* 確認モーダルの画像グリッド - モバイルは2列 */
+    div[style*="gridTemplateColumns: repeat(auto-fill, minmax(150px, 1fr))"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    /* 下書きモーダル - モバイル対応 */
+    .card-no-hover[style*="maxWidth: 600px"] {
+      padding: 20px 16px !important;
+    }
+    
+    /* 下書きカード */
+    .card[style*="padding: 20px"] {
+      padding: 16px !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+    
+    .card[style*="padding: 20px"] > div[style*="flex: 1"] {
+      width: 100% !important;
+    }
+    
+    .card[style*="padding: 20px"] > button {
+      width: 100% !important;
+      margin-top: 12px !important;
+    }
+  }
+`
+
+// スタイルを挿入
+if (typeof document !== 'undefined') {
+  const styleTag = document.createElement('style')
+  styleTag.textContent = styles
+  document.head.appendChild(styleTag)
 }
