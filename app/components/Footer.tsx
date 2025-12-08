@@ -16,8 +16,8 @@ export default function Footer() {
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '40px',
+          gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', // サービス情報を広く、他は均等
+          gap: '60px', // gapを広げて余白を埋める
           marginBottom: '40px'
         }}>
           {/* サービス情報 */}
