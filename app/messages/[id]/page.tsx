@@ -15,6 +15,19 @@ type Message = {
   file_type: string | null
   file_name: string | null
   deleted: boolean
+  request_card_id: string | null
+}
+
+type WorkRequest = {
+  id: string
+  title: string
+  description: string
+  budget_min: number | null
+  budget_max: number | null
+  deadline: string | null
+  category: string
+  status: string
+  created_at: string
 }
 
 type OtherUser = {
@@ -28,6 +41,7 @@ type OtherUser = {
 type ChatRoom = {
   id: string
   updated_at: string
+  related_request_id: string | null
   other_user: {
     id: string
     display_name: string | null
@@ -53,6 +67,89 @@ type ContextMenu = {
 
 const MESSAGES_PER_PAGE = 30
 
+function RequestCardComponent({ request }: { request: WorkRequest }) {
+  return (
+    <div style={{
+      backgroundColor: '#FFFFFF',
+      border: '1px solid #E5E5E5',
+      borderRadius: '12px',
+      padding: '20px',
+      maxWidth: '400px'
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '12px'
+      }}>
+        <i className="fas fa-clipboard-list" style={{ color: '#6B6B6B', fontSize: '16px' }}></i>
+        <span style={{ fontSize: '13px', fontWeight: '600', color: '#6B6B6B' }}>
+          お仕事の依頼
+        </span>
+      </div>
+
+      <h3 style={{
+        fontSize: '15px',
+        fontWeight: '600',
+        marginBottom: '8px',
+        color: '#1A1A1A'
+      }}>
+        {request.title}
+      </h3>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        fontSize: '13px',
+        color: '#6B6B6B',
+        marginBottom: '12px'
+      }}>
+        {(request.budget_min || request.budget_max) && (
+          <div>
+            予算: {request.budget_min?.toLocaleString() || '未設定'}〜{request.budget_max?.toLocaleString() || '未設定'}円
+          </div>
+        )}
+        {request.deadline && (
+          <div>
+            納期: {new Date(request.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+          </div>
+        )}
+      </div>
+
+      <p style={{
+        fontSize: '13px',
+        color: '#6B6B6B',
+        lineHeight: '1.6',
+        marginBottom: '12px',
+        display: '-webkit-box',
+        WebkitLineClamp: 3,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden'
+      }}>
+        {request.description}
+      </p>
+
+      <Link
+        href={`/requests/${request.id}`}
+        style={{
+          display: 'inline-block',
+          padding: '8px 16px',
+          backgroundColor: '#F5F5F5',
+          color: '#1A1A1A',
+          borderRadius: '6px',
+          fontSize: '13px',
+          fontWeight: '600',
+          textDecoration: 'none',
+          transition: 'background-color 0.2s'
+        }}
+      >
+        依頼詳細を見る <i className="fas fa-arrow-right" style={{ fontSize: '11px', marginLeft: '4px' }}></i>
+      </Link>
+    </div>
+  )
+}
+
 export default function ChatRoomPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -74,6 +171,8 @@ export default function ChatRoomPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [oldestMessageId, setOldestMessageId] = useState<string | null>(null)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [relatedRequests, setRelatedRequests] = useState<WorkRequest[]>([])
+  const [requestCards, setRequestCards] = useState<{ [key: string]: WorkRequest }>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -94,7 +193,7 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     if (currentProfileId && roomId) {
-      setIsInitialLoad(false) // ルーム変更時にリセット
+      setIsInitialLoad(false)
       fetchMessages(true)
       fetchOtherUser(currentProfileId)
       const unsubscribeMessages = subscribeToMessages()
@@ -142,12 +241,12 @@ export default function ChatRoomPage() {
     if (messages.length > 0 && !loading) {
       scrollToBottom(true)
       generateSignedUrls()
-      setIsInitialLoad(true) // 初回読み込み完了
+      fetchRequestCards()
+      setIsInitialLoad(true)
       
-      // 画像読み込みのために少し待ってからフラグをfalseに
       const timer = setTimeout(() => {
         setIsInitialLoad(false)
-      }, 2000) // 2秒後にリセット
+      }, 2000)
       
       return () => clearTimeout(timer)
     }
@@ -177,20 +276,17 @@ export default function ChatRoomPage() {
     }
   }, [newMessage])
 
-  // コンテキストメニューを閉じる
   useEffect(() => {
     const handleClick = () => setContextMenu(null)
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [])
 
-  // スクロールイベント監視（無限スクロール）
   useEffect(() => {
     const container = messagesContainerRef.current
     if (!container) return
 
     const handleScroll = () => {
-      // 上部に到達したかチェック
       if (container.scrollTop < 100 && hasMoreMessages && !loadingMore && !loading) {
         loadMoreMessages()
       }
@@ -215,6 +311,29 @@ export default function ChatRoomPage() {
 
     if (profile) {
       setCurrentProfileId(profile.id)
+    }
+  }
+
+  async function fetchRequestCards() {
+    const requestCardIds = messages
+      .filter(m => m.request_card_id)
+      .map(m => m.request_card_id!)
+      .filter((id, index, self) => self.indexOf(id) === index)
+
+    if (requestCardIds.length === 0) return
+
+    const { data } = await supabase
+      .from('work_requests')
+      .select('*')
+      .in('id', requestCardIds)
+
+    if (data) {
+      const cardsMap: { [key: string]: WorkRequest } = {}
+      data.forEach(req => {
+        cardsMap[req.id] = req
+      })
+      setRequestCards(cardsMap)
+      setRelatedRequests(data)
     }
   }
 
@@ -256,7 +375,7 @@ export default function ChatRoomPage() {
       .from('chat_room_participants')
       .select('chat_room_id, last_read_at, pinned, hidden')
       .eq('profile_id', profileId)
-      .eq('hidden', false) // 非表示でないもののみ
+      .eq('hidden', false)
 
     if (participationsError || !participations || participations.length === 0) {
       return
@@ -292,7 +411,7 @@ export default function ChatRoomPage() {
 
       const { data: roomData } = await supabase
         .from('chat_rooms')
-        .select('updated_at')
+        .select('updated_at, related_request_id')
         .eq('id', roomIdTemp)
         .single()
 
@@ -302,6 +421,7 @@ export default function ChatRoomPage() {
         roomsData.push({
           id: roomIdTemp,
           updated_at: roomData?.updated_at || '',
+          related_request_id: roomData?.related_request_id || null,
           other_user: {
             id: otherUserData.id,
             display_name: otherUserData.display_name,
@@ -314,7 +434,6 @@ export default function ChatRoomPage() {
       }
     }
 
-    // ピン止めされたものを上に、その後は更新日時順
     roomsData.sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
@@ -415,11 +534,9 @@ export default function ChatRoomPage() {
       if (data && data.length > 0) {
         const reversedData = data.reverse()
         
-        // 現在のスクロール位置を保存
         const container = messagesContainerRef.current
         const oldScrollHeight = container?.scrollHeight || 0
         
-        // 重複を除外してマージ
         setMessages(prev => {
           const existingIds = new Set(prev.map(m => m.id))
           const newMessages = reversedData.filter(m => !existingIds.has(m.id))
@@ -429,7 +546,6 @@ export default function ChatRoomPage() {
         setOldestMessageId(data[data.length - 1].id)
         setHasMoreMessages(data.length === MESSAGES_PER_PAGE)
         
-        // スクロール位置を維持
         setTimeout(() => {
           if (container) {
             const newScrollHeight = container.scrollHeight
@@ -461,7 +577,6 @@ export default function ChatRoomPage() {
   }
 
   const handleMediaLoad = (messageId: string) => {
-    // 初回読み込み時または送信直後の場合はスクロール位置を一番下に維持
     if (isInitialLoad || messageId === justSentMessageId) {
       scrollToBottom(true)
       
@@ -587,7 +702,6 @@ export default function ChatRoomPage() {
       console.error('メッセージ送信エラー:', error)
       alert('メッセージの送信に失敗しました')
     } else {
-      // 重複を避けるために追加前にチェック
       setMessages(prev => {
         if (prev.find(m => m.id === data.id)) {
           return prev
@@ -665,7 +779,6 @@ export default function ChatRoomPage() {
         (payload) => {
           const updatedMsg = payload.new as Message
           
-          // メッセージが削除された場合
           if (updatedMsg.deleted) {
             setMessages(prev => prev.filter(m => m.id !== updatedMsg.id))
             if (currentProfileId) {
@@ -764,16 +877,13 @@ export default function ChatRoomPage() {
     }
   }
 
-  // 最終メッセージの表示テキストを取得
   function getLastMessageText(message: ChatRoom['last_message']): string {
     if (!message) return 'メッセージがありません'
     
-    // テキストがある場合はそれを表示
     if (message.content && message.content.trim() !== '') {
       return message.content
     }
     
-    // テキストがなくてファイルがある場合
     if (message.file_type) {
       switch (message.file_type) {
         case 'image':
@@ -834,22 +944,18 @@ export default function ChatRoomPage() {
     }
   }
 
-  // 右クリックハンドラー
   const handleRoomContextMenu = (e: React.MouseEvent, room: ChatRoom) => {
     e.preventDefault()
     
-    // メニューのサイズを考慮して位置を調整
     const menuWidth = 180
     const menuHeight = 100
     let x = e.clientX
     let y = e.clientY
     
-    // 画面の右端を超える場合は左に表示
     if (x + menuWidth > window.innerWidth) {
       x = window.innerWidth - menuWidth - 10
     }
     
-    // 画面の下端を超える場合は上に表示
     if (y + menuHeight > window.innerHeight) {
       y = window.innerHeight - menuHeight - 10
     }
@@ -864,25 +970,21 @@ export default function ChatRoomPage() {
   }
 
   const handleMessageContextMenu = (e: React.MouseEvent, message: Message) => {
-    // 自分が送信したメッセージのみ削除可能
     if (message.sender_id !== currentProfileId) {
       return
     }
     
     e.preventDefault()
     
-    // メニューのサイズを考慮して位置を調整
     const menuWidth = 180
     const menuHeight = 60
     let x = e.clientX
     let y = e.clientY
     
-    // 画面の右端を超える場合は左に表示
     if (x + menuWidth > window.innerWidth) {
       x = window.innerWidth - menuWidth - 10
     }
     
-    // 画面の下端を超える場合は上に表示
     if (y + menuHeight > window.innerHeight) {
       y = window.innerHeight - menuHeight - 10
     }
@@ -895,7 +997,6 @@ export default function ChatRoomPage() {
     })
   }
 
-  // トークのピン止め/解除
   const handleTogglePin = async (roomId: string, isPinned: boolean) => {
     await supabase
       .from('chat_room_participants')
@@ -909,7 +1010,6 @@ export default function ChatRoomPage() {
     setContextMenu(null)
   }
 
-  // トークの削除（非表示）
   const handleHideRoom = async (roomId: string) => {
     if (!confirm('このトークを削除しますか？（相手からは引き続き見えます）')) {
       setContextMenu(null)
@@ -926,7 +1026,6 @@ export default function ChatRoomPage() {
       fetchChatRooms(currentProfileId)
     }
     
-    // 現在開いているトークを削除した場合、メッセージ一覧に戻る
     if (roomId === params.id) {
       router.push('/messages')
     }
@@ -934,7 +1033,6 @@ export default function ChatRoomPage() {
     setContextMenu(null)
   }
 
-  // メッセージの削除
   const handleDeleteMessage = async (messageId: string) => {
     if (!confirm('このメッセージを削除しますか？（お互いに見えなくなります）')) {
       setContextMenu(null)
@@ -963,7 +1061,6 @@ export default function ChatRoomPage() {
         height: 'calc(100vh - 64px)',
         backgroundColor: '#FFFFFF'
       }}>
-        {/* 左サイドバー */}
         <aside 
           className="hidden-mobile"
           style={{
@@ -1091,14 +1188,12 @@ export default function ChatRoomPage() {
           )}
         </aside>
 
-        {/* チャットエリア */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           backgroundColor: '#FFFFFF'
         }}>
-          {/* ヘッダー(モバイルのみ) */}
           <div 
             className="hidden-desktop"
             style={{
@@ -1165,7 +1260,60 @@ export default function ChatRoomPage() {
             )}
           </div>
 
-          {/* メッセージエリア */}
+          {relatedRequests.length > 0 && (
+            <div style={{
+              position: 'sticky',
+              top: '60px',
+              zIndex: 10,
+              backgroundColor: '#FFFFFF',
+              borderBottom: '1px solid #E5E5E5',
+              overflow: 'hidden'
+            }}>
+              {relatedRequests.map((req, index) => (
+                <Link
+                  key={req.id}
+                  href={`/requests/${req.id}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 20px',
+                    textDecoration: 'none',
+                    color: '#1A1A1A',
+                    borderBottom: index < relatedRequests.length - 1 ? '1px solid #E5E5E5' : 'none',
+                    backgroundColor: '#FFFFFF',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9F9F9'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                >
+                  <i className="fas fa-clipboard-list" style={{ color: '#6B6B6B', fontSize: '13px', flexShrink: 0 }}></i>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '11px', color: '#6B6B6B', marginBottom: '2px' }}>
+                      お仕事の依頼
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {req.title}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {(req.budget_min || req.budget_max) && (
+                      <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '2px' }}>
+                        {req.budget_min?.toLocaleString()}〜{req.budget_max?.toLocaleString()}円
+                      </div>
+                    )}
+                    {req.deadline && (
+                      <div style={{ fontSize: '11px', color: '#9E9E9E' }}>
+                        {new Date(req.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+                  <i className="fas fa-chevron-right" style={{ color: '#CCCCCC', fontSize: '10px', flexShrink: 0 }}></i>
+                </Link>
+              ))}
+            </div>
+          )}
+
           <div 
             ref={messagesContainerRef}
             style={{
@@ -1268,7 +1416,10 @@ export default function ChatRoomPage() {
                       alignItems: isCurrentUser ? 'flex-end' : 'flex-start',
                       gap: '4px'
                     }}>
-                      {/* 画像・動画（吹き出しなし） */}
+                      {message.request_card_id && requestCards[message.request_card_id] && (
+                        <RequestCardComponent request={requestCards[message.request_card_id]} />
+                      )}
+
                       {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
                         <div 
                           onContextMenu={(e) => handleMessageContextMenu(e, message)}
@@ -1327,7 +1478,6 @@ export default function ChatRoomPage() {
                         </div>
                       )}
 
-                      {/* ファイル（PDF・ZIP）（吹き出しなし） */}
                       {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
                         <div 
                           onContextMenu={(e) => handleMessageContextMenu(e, message)}
@@ -1371,7 +1521,6 @@ export default function ChatRoomPage() {
                         </div>
                       )}
 
-                      {/* テキストメッセージ（吹き出しあり） */}
                       {message.content && (
                         <div 
                           onContextMenu={(e) => handleMessageContextMenu(e, message)}
@@ -1389,7 +1538,6 @@ export default function ChatRoomPage() {
                         </div>
                       )}
 
-                      {/* 時刻・既読 */}
                       <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -1412,7 +1560,6 @@ export default function ChatRoomPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* 入力エリア */}
           <div style={{
             borderTop: '1px solid #E5E5E5',
             backgroundColor: '#FFFFFF'
@@ -1597,7 +1744,6 @@ export default function ChatRoomPage() {
         </div>
       </div>
 
-      {/* コンテキストメニュー */}
       {contextMenu && (
         <div
           style={{
@@ -1691,7 +1837,6 @@ export default function ChatRoomPage() {
         </div>
       )}
 
-      {/* 画像・動画拡大表示モーダル */}
       {enlargedMedia && (
         <div
           onClick={() => setEnlargedMedia(null)}
@@ -1763,7 +1908,6 @@ export default function ChatRoomPage() {
         </div>
       )}
 
-      {/* プロフィールモーダル */}
       {showProfileModal && otherUser && (
         <div
           onClick={() => setShowProfileModal(false)}

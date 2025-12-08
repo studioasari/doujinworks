@@ -71,6 +71,7 @@ type Creator = {
   username: string
   display_name: string
   account_type: string | null
+  job_title: string | null
   can_receive_work: boolean
   can_request_work: boolean
   avatar_url: string | null
@@ -78,6 +79,8 @@ type Creator = {
   website_url: string | null
   twitter_url: string | null
   pixiv_url: string | null
+  instagram_url: string | null
+  youtube_url: string | null
   header_url: string | null
   created_at: string
   updated_at: string
@@ -174,7 +177,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement
-      // 共有ドロップダウン内をクリックした場合は閉じない
       if (isShareDropdownOpen && !target.closest('.share-dropdown-container')) {
         setIsShareDropdownOpen(false)
       }
@@ -191,14 +193,9 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   async function loadData() {
     setLoading(true)
     try {
-      // 現在のユーザーIDを取得
       const userId = await getCurrentUserId()
       setCurrentUserId(userId)
-
-      // 作品データを取得
       await loadWorkData(userId)
-      
-      // 閲覧数をインクリメント（ログイン不要）
       await incrementViewCount()
     } catch (error) {
       console.error('データ読み込みエラー:', error)
@@ -208,25 +205,17 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function loadWorkData(userId: string | null) {
-    console.log('🔍 作品ID:', unwrappedParams.id)
-    
-    // 1. 作品の基本情報を取得
     const { data: workData, error: workError } = await supabase
       .from('portfolio_items')
       .select('*')
       .eq('id', unwrappedParams.id)
       .single()
 
-    console.log('📊 取得結果:', { workData, workError })
-
     if (workError || !workData) {
-      console.error('❌ 作品取得エラー:', workError)
+      console.error('作品取得エラー:', workError)
       return
     }
-    
-    console.log('✅ 作品データ取得成功:', workData.title)
 
-    // 2-4. いいね数、コメント数、自分のいいね状態を並列取得
     const [
       { count: likeCount },
       { count: commentCount },
@@ -257,7 +246,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     setWork(workWithStats)
 
-    // 5-8. 残りのデータを並列取得
     await Promise.all([
       loadCreatorData(workData.creator_id, userId),
       loadComments(userId),
@@ -267,7 +255,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function loadCreatorData(creatorId: string, userId: string | null) {
-    // プロフィール情報とカウント情報を並列取得
     const [
       { data: profileData, error: profileError },
       { count: followerCount },
@@ -314,6 +301,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         username: 'unknown',
         display_name: '不明なクリエイター',
         account_type: null,
+        job_title: null,
         can_receive_work: false,
         can_request_work: false,
         avatar_url: null,
@@ -321,6 +309,8 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         website_url: null,
         twitter_url: null,
         pixiv_url: null,
+        instagram_url: null,
+        youtube_url: null,
         header_url: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -344,7 +334,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function loadComments(userId: string | null) {
-    // 1. コメント一覧＋ユーザー情報を一括取得
     const { data: commentsData, error: commentsError } = await supabase
       .from('comments')
       .select(`
@@ -363,7 +352,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       return
     }
 
-    // 2. 全コメントIDを抽出
     const commentIds = (commentsData || []).map(c => c.id)
 
     if (commentIds.length === 0) {
@@ -371,7 +359,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       return
     }
 
-    // 3. likeCount & isLiked をまとめて取得（N+1解消）
     const [{ data: likeRows }, { data: userLikes }] = await Promise.all([
       supabase
         .from('comment_likes')
@@ -387,16 +374,13 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         : Promise.resolve({ data: [] })
     ])
 
-    // likeCount を集計
     const likeCountMap = new Map<string, number>()
     likeRows?.forEach(row => {
       likeCountMap.set(row.comment_id, (likeCountMap.get(row.comment_id) || 0) + 1)
     })
 
-    // 自分が like したコメントの集合
     const likedSet = new Set(userLikes?.map(l => l.comment_id) || [])
 
-    // 4. コメントに追加情報を合体
     const commentsWithStats = commentsData.map(comment => ({
       ...comment,
       likeCount: likeCountMap.get(comment.id) || 0,
@@ -404,7 +388,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       replies: [] as Comment[]
     }))
 
-    // 5. ネスト構造を構築
     const commentsMap = new Map<string, Comment>()
     commentsWithStats.forEach(comment => {
       commentsMap.set(comment.id, comment)
@@ -426,7 +409,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       }
     })
 
-    // トップレベルコメントを新しい順にソート
     topLevelComments.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
@@ -435,7 +417,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   async function loadAuthorWorks(creatorId: string, userId: string | null) {
-    // この作者の他の作品を取得（現在の作品を除く、最大6件）
     const { data: worksData } = await supabase
       .from('portfolio_items')
       .select('*')
@@ -447,7 +428,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     if (!worksData) return
 
-    // N+1解消：統計情報を一括取得
     const worksWithStats = await attachStatsToWorks(worksData, userId)
     setAuthorWorks(worksWithStats)
   }
@@ -458,7 +438,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       return
     }
 
-    // タグが一致する他の作者の作品を取得（最大6件）
     const { data: worksData } = await supabase
       .from('portfolio_items')
       .select('*')
@@ -471,13 +450,11 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     if (!worksData) return
 
-    // N+1解消：統計情報を一括取得
     const worksWithStats = await attachStatsToWorks(worksData, userId)
     setRelatedWorks(worksWithStats)
   }
 
   async function incrementViewCount() {
-    // 閲覧数をインクリメント
     await supabase.rpc('increment_view_count', { item_id: unwrappedParams.id })
   }
 
@@ -493,7 +470,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     try {
       if (work.isLiked) {
-        // いいね解除
         await supabase
           .from('portfolio_likes')
           .delete()
@@ -506,7 +482,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
           likeCount: work.likeCount - 1
         })
       } else {
-        // いいね追加
         await supabase
           .from('portfolio_likes')
           .insert({ portfolio_item_id: work.id, user_id: currentUserId })
@@ -534,7 +509,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     try {
       if (creator.isFollowing) {
-        // フォロー解除
         await supabase
           .from('follows')
           .delete()
@@ -547,7 +521,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
           followerCount: creator.followerCount - 1
         })
       } else {
-        // フォロー追加
         await supabase
           .from('follows')
           .insert({ follower_id: currentUserId, following_id: creator.user_id })
@@ -578,30 +551,25 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text + ' ' + url)}`, '_blank')
         break
       case 'copy':
-        // navigator.clipboardが使える場合
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(() => {
             alert('URLをコピーしました')
             setIsShareDropdownOpen(false)
           }).catch((err) => {
             console.error('URLのコピーに失敗しました:', err)
-            // フォールバック: 古い方法
             fallbackCopyToClipboard(url)
           })
         } else {
-          // フォールバック: 古い方法
           fallbackCopyToClipboard(url)
         }
         break
     }
     
-    // Twitter, Facebook, LINEの場合もドロップダウンを閉じる
     if (platform !== 'copy') {
       setIsShareDropdownOpen(false)
     }
   }
 
-  // フォールバック用のコピー関数
   function fallbackCopyToClipboard(text: string) {
     const textArea = document.createElement('textarea')
     textArea.value = text
@@ -637,7 +605,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
     if (!commentText.trim() || !work) return
 
     try {
-      // コメントを投稿
       const { data: newComment, error } = await supabase
         .from('comments')
         .insert({
@@ -658,10 +625,8 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
       if (error) throw error
 
-      // コメントリストを再読み込み
       await loadComments(currentUserId)
 
-      // コメント数を更新
       setWork({
         ...work,
         commentCount: work.commentCount + 1
@@ -684,7 +649,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       return
     }
 
-    // 再帰的にコメントを検索する関数
     const findComment = (comments: Comment[], id: string): Comment | null => {
       for (const comment of comments) {
         if (comment.id === id) return comment
@@ -701,20 +665,17 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
     try {
       if (comment.isLiked) {
-        // いいね解除
         await supabase
           .from('comment_likes')
           .delete()
           .eq('comment_id', commentId)
           .eq('user_id', currentUserId)
       } else {
-        // いいね追加
         await supabase
           .from('comment_likes')
           .insert({ comment_id: commentId, user_id: currentUserId })
       }
 
-      // コメントリストを再読み込み
       await loadComments(currentUserId)
     } catch (error) {
       console.error('コメントいいねエラー:', error)
@@ -730,7 +691,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     try {
-      // コメントを削除（ON DELETE CASCADEで返信も自動削除される）
       const { error } = await supabase
         .from('comments')
         .delete()
@@ -739,10 +699,8 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
       if (error) throw error
 
-      // コメントリストを再読み込み
       await loadComments(currentUserId)
 
-      // コメント数を再取得（CASCADEで複数削除される可能性があるため）
       if (work) {
         const { count } = await supabase
           .from('comments')
@@ -780,16 +738,13 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  // 表示用の画像配列を取得
   function getDisplayImages(): string[] {
     if (!work) return []
     
-    // image_urls があればそれを使用（複数画像）
     if (work.image_urls && work.image_urls.length > 0) {
       return work.image_urls
     }
     
-    // なければ image_url を使用（単一画像）
     if (work.image_url) {
       return [work.image_url]
     }
@@ -833,7 +788,24 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
       <div className="portfolio-detail-layout">
         {/* 左サイドバー：作者情報（PC only） */}
         <aside className="creator-sidebar">
-          <div className="card-no-hover p-24" style={{ marginBottom: '24px' }}>
+          <div className="card-no-hover" style={{ padding: '24px', marginBottom: '24px', position: 'relative' }}>
+            {/* アカウント種別バッジ - 右上 */}
+            {creator.account_type && (
+              <span style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                padding: '4px 12px',
+                fontSize: '11px',
+                backgroundColor: '#000000',
+                color: '#FFFFFF',
+                borderRadius: '12px',
+                fontWeight: '500'
+              }}>
+                {creator.account_type === 'casual' ? '一般' : 'ビジネス'}
+              </span>
+            )}
+
             {/* アバター */}
             <div style={{
               width: '120px',
@@ -842,7 +814,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
               margin: '0 auto 16px',
               overflow: 'hidden',
               backgroundColor: '#E5E5E5',
-              border: '1px solid #E5E5E5',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -861,69 +832,129 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
             
+            {/* 職業・肩書き */}
+            {creator.job_title && (
+              <p style={{
+                fontSize: '13px',
+                color: '#9B9B9B',
+                fontWeight: '500',
+                textAlign: 'center',
+                marginBottom: '4px'
+              }}>
+                {creator.job_title}
+              </p>
+            )}
+            
             {/* 名前 */}
-            <h1 className="card-title mb-8" style={{ textAlign: 'center' }}>
+            <h1 style={{ 
+              fontSize: '20px',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              marginBottom: '4px'
+            }}>
               {creator.display_name}
             </h1>
             
             {/* Username */}
-            <p className="text-small text-gray mb-16" style={{ textAlign: 'center' }}>
+            <p style={{ 
+              fontSize: '14px',
+              color: '#6B6B6B',
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
               @{creator.username}
             </p>
-            
-            {/* アカウント種別バッジ */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <span className="badge badge-category" style={{
-                padding: '6px 16px',
-                fontSize: '13px'
-              }}>
-                {creator.account_type === 'casual' ? '一般利用' : 'ビジネス利用'}
-              </span>
-            </div>
 
-            {/* フォローボタン */}
+            {/* メッセージボタン・フォローボタン */}
             {currentUserId !== creator.user_id && (
-              <button
-                onClick={handleFollow}
-                className={creator.isFollowing ? 'btn-secondary' : 'btn-primary'}
-                style={{ width: '100%', marginBottom: '24px' }}
-              >
-                <i className={creator.isFollowing ? 'fas fa-check' : 'fas fa-plus'}></i>
-                <span style={{ marginLeft: '8px' }}>
-                  {creator.isFollowing ? 'フォロー中' : 'フォローする'}
-                </span>
-              </button>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                marginBottom: '24px'
+              }}>
+                <button
+                  onClick={() => router.push(`/messages/${creator.username}`)}
+                  className="btn-secondary"
+                  style={{ 
+                    width: '100%',
+                    fontSize: '13px',
+                    padding: '10px 16px'
+                  }}
+                >
+                  <i className="fas fa-envelope" style={{ fontSize: '12px' }}></i>
+                  <span style={{ marginLeft: '6px' }}>メッセージ</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (creator.isFollowing) {
+                      if (confirm(`${creator.display_name}のフォローを解除しますか？`)) {
+                        handleFollow()
+                      }
+                    } else {
+                      handleFollow()
+                    }
+                  }}
+                  className={creator.isFollowing ? 'btn-secondary' : 'btn-primary'}
+                  style={{ 
+                    width: '100%',
+                    fontSize: '13px',
+                    padding: '10px 16px'
+                  }}
+                >
+                  <i className={creator.isFollowing ? 'fas fa-check' : 'fas fa-plus'} style={{ fontSize: '12px' }}></i>
+                  <span style={{ marginLeft: '6px' }}>
+                    {creator.isFollowing ? 'フォロー中' : 'フォロー'}
+                  </span>
+                </button>
+              </div>
             )}
 
-            {/* 統計情報 */}
-            <div className="info-box mb-24">
-              <div className="info-row">
-                <span className="text-gray">作品</span>
-                <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                  {creator.workCount}点
-                </span>
+            {/* 統計情報 - シンプルな横並び */}
+            <div style={{ 
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '0',
+              fontSize: '14px',
+              color: '#1A1A1A',
+              marginBottom: '24px',
+              paddingBottom: '24px',
+              borderBottom: '1px solid #E5E5E5',
+              textAlign: 'center'
+            }}>
+              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '4px' }}>
+                  {creator.workCount}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B6B6B' }}>作品</div>
               </div>
-              <div className="info-row">
-                <span className="text-gray">フォロワー</span>
-                <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                  {creator.followerCount.toLocaleString()}
-                </span>
+              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '4px' }}>
+                  {creator.followingCount}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B6B6B' }}>フォロー</div>
               </div>
-              <div className="info-row">
-                <span className="text-gray">フォロー中</span>
-                <span className="text-small" style={{ color: '#1A1A1A', fontWeight: '600' }}>
-                  {creator.followingCount.toLocaleString()}
-                </span>
+              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '4px' }}>
+                  {creator.followerCount}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B6B6B' }}>フォロワー</div>
               </div>
             </div>
 
             {/* 自己紹介 */}
             {creator.bio && (
-              <div className="mb-24">
-                <h2 className="text-small mb-8" style={{ fontWeight: '600' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ 
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  color: '#1A1A1A'
+                }}>
                   自己紹介
                 </h2>
-                <p className="text-small" style={{
+                <p style={{
+                  fontSize: '13px',
                   lineHeight: '1.7',
                   whiteSpace: 'pre-wrap',
                   color: '#6B6B6B'
@@ -934,18 +965,24 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             )}
 
             {/* SNSリンク */}
-            {(creator.twitter_url || creator.pixiv_url || creator.website_url) && (
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+            {(creator.twitter_url || creator.pixiv_url || creator.instagram_url || creator.youtube_url || creator.website_url) && (
+              <div style={{ 
+                display: 'flex', 
+                gap: '12px', 
+                justifyContent: 'center', 
+                marginBottom: '24px',
+                flexWrap: 'wrap'
+              }}>
                 {creator.twitter_url && (
                   <a
                     href={creator.twitter_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
-                      border: '1px solid #E5E5E5',
+                      backgroundColor: '#F5F5F5',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -955,12 +992,10 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                       fontSize: '16px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#1A1A1A'
-                      e.currentTarget.style.color = '#1A1A1A'
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E5E5'
-                      e.currentTarget.style.color = '#6B6B6B'
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
                     }}
                   >
                     <i className="fab fa-twitter"></i>
@@ -972,10 +1007,10 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
-                      border: '1px solid #E5E5E5',
+                      backgroundColor: '#F5F5F5',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -985,15 +1020,69 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                       fontSize: '16px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#1A1A1A'
-                      e.currentTarget.style.color = '#1A1A1A'
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E5E5'
-                      e.currentTarget.style.color = '#6B6B6B'
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
                     }}
                   >
                     <i className="fas fa-palette"></i>
+                  </a>
+                )}
+                {creator.instagram_url && (
+                  <a
+                    href={creator.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: '#F5F5F5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#6B6B6B',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                      fontSize: '16px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
+                    }}
+                  >
+                    <i className="fab fa-instagram"></i>
+                  </a>
+                )}
+                {creator.youtube_url && (
+                  <a
+                    href={creator.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: '#F5F5F5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#6B6B6B',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                      fontSize: '16px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
+                    }}
+                  >
+                    <i className="fab fa-youtube"></i>
                   </a>
                 )}
                 {creator.website_url && (
@@ -1002,10 +1091,10 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      width: '40px',
-                      height: '40px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
-                      border: '1px solid #E5E5E5',
+                      backgroundColor: '#F5F5F5',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1015,12 +1104,10 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                       fontSize: '16px'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#1A1A1A'
-                      e.currentTarget.style.color = '#1A1A1A'
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E5E5'
-                      e.currentTarget.style.color = '#6B6B6B'
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
                     }}
                   >
                     <i className="fas fa-link"></i>
@@ -1107,29 +1194,90 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </Link>
 
-              {/* フォローボタン（自分以外に表示） */}
+              {/* メッセージアイコンボタン・フォローボタン（自分以外に表示） */}
               {currentUserId !== creator.user_id && (
-                <button
-                  onClick={handleFollow}
-                  className={creator.isFollowing ? 'btn-secondary' : 'btn-primary'}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0
-                  }}
-                >
-                  {creator.isFollowing ? 'フォロー中' : 'フォロー'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => router.push(`/messages/${creator.username}`)}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: '1px solid #E5E5E5',
+                      backgroundColor: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      color: '#1A1A1A',
+                      padding: '0'
+                    }}
+                  >
+                    <i className="fas fa-envelope"></i>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (creator.isFollowing) {
+                        if (confirm(`${creator.display_name}のフォローを解除しますか？`)) {
+                          handleFollow()
+                        }
+                      } else {
+                        handleFollow()
+                      }
+                    }}
+                    className={creator.isFollowing ? 'btn-secondary' : 'btn-primary'}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      whiteSpace: 'nowrap',
+                      borderRadius: '20px'
+                    }}
+                  >
+                    {creator.isFollowing ? 'フォロー中' : 'フォロー'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
 
           {/* 作品コンテンツ - 画像部分 */}
           <div style={{ marginBottom: '24px', overflow: 'hidden', borderRadius: '12px' }}>
-            {(work.category === 'illustration' || work.category === 'manga') && displayImages.length > 0 ? (
+            {work.category === 'manga' && displayImages.length > 0 ? (
+              /* マンガ：縦スクロール形式 */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {displayImages.map((image, index) => (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setCurrentImageIndex(index)
+                      setIsImageModalOpen(true)
+                    }}
+                    style={{
+                      width: '100%',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
+                  >
+                    <Image
+                      src={image}
+                      alt={`${work.title} - ${index + 1}`}
+                      width={1000}
+                      height={1414}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        display: 'block'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : work.category === 'illustration' && displayImages.length > 0 ? (
+              /* イラスト：カルーセル形式 */
               <div>
-                {/* サムネイル画像（クリックで拡大）- 背景色削除 */}
+                {/* サムネイル画像（クリックで拡大） */}
                 <div 
                   onClick={() => setIsImageModalOpen(true)}
                   style={{
@@ -1295,15 +1443,43 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                 )}
               </div>
             ) : work.category === 'novel' ? (
-              <div style={{ padding: '40px', backgroundColor: '#FFFFFF' }}>
-                {work.text_content && (
-                  <div style={{ 
-                    fontSize: '16px', 
-                    lineHeight: '2',
-                    whiteSpace: 'pre-wrap',
+              <div style={{ padding: '0' }}>
+                {/* 小説タイトル */}
+                <div style={{
+                  padding: '40px 40px 32px',
+                  borderBottom: '1px solid #E5E5E5',
+                  marginBottom: '24px'
+                }}>
+                  <h1 style={{
+                    fontSize: '28px',
+                    fontWeight: 'bold',
+                    lineHeight: '1.4',
                     fontFamily: '"Noto Serif JP", serif'
                   }}>
-                    {work.text_content}
+                    {work.title}
+                  </h1>
+                </div>
+
+                {/* 本文 */}
+                {work.text_content && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {work.text_content.split('───').map((page, index, array) => (
+                      <div 
+                        key={index}
+                        style={{ 
+                          fontSize: '16px', 
+                          lineHeight: '2',
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: '"Noto Serif JP", serif',
+                          padding: '40px',
+                          border: '1px solid #E5E5E5',
+                          borderRadius: '12px',
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      >
+                        {page.trim()}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1555,76 +1731,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
-          {/* この作者の他の作品 */}
-          {authorWorks.length > 0 && (
-            <div style={{ marginBottom: '40px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
-                {creator.display_name}の他の作品
-              </h2>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '20px'
-              }}>
-                {authorWorks.map(authorWork => {
-                  const workImages = authorWork.image_urls || (authorWork.image_url ? [authorWork.image_url] : [])
-                  return (
-                    <Link
-                      key={authorWork.id}
-                      href={`/portfolio/${authorWork.id}`}
-                      className="card"
-                      style={{ padding: '0', overflow: 'hidden', textDecoration: 'none', color: '#1A1A1A' }}
-                    >
-                      <div style={{
-                        position: 'relative',
-                        paddingBottom: '100%',
-                        backgroundColor: '#F5F5F5'
-                      }}>
-                        {workImages[0] && (
-                          <Image
-                            src={workImages[0]}
-                            alt={authorWork.title}
-                            fill
-                            loading="lazy"
-                            style={{ objectFit: 'cover' }}
-                          />
-                        )}
-                      </div>
-                      <div style={{ padding: '16px' }}>
-                        <h3 style={{
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          marginBottom: '8px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {authorWork.title}
-                        </h3>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '12px',
-                          fontSize: '12px',
-                          color: '#6B6B6B'
-                        }}>
-                          <span>
-                            <i className="far fa-heart" style={{ marginRight: '4px' }}></i>
-                            {authorWork.likeCount}
-                          </span>
-                          <span>
-                            <i className="far fa-comment" style={{ marginRight: '4px' }}></i>
-                            {authorWork.commentCount}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
           {/* コメント欄 */}
           <div className="card-no-hover" style={{ padding: '32px', marginBottom: '40px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
@@ -1647,7 +1753,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     onReply={(commentId, username) => {
                       setReplyingTo(commentId)
                       setReplyingToUsername(username)
-                      // フォームまでスクロール
                       document.querySelector('#comment-form')?.scrollIntoView({ behavior: 'smooth' })
                     }}
                     currentUserId={currentUserId}
@@ -1739,6 +1844,115 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
 
+          {/* この作者の他の作品 */}
+          {authorWorks.length > 0 && (
+            <div style={{ marginBottom: '40px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px' }}>
+                {creator.display_name}の他の作品
+              </h2>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '20px'
+              }}>
+                {authorWorks.map(authorWork => {
+                  const workImages = authorWork.image_urls || (authorWork.image_url ? [authorWork.image_url] : [])
+                  const categoryLabels: { [key: string]: string } = {
+                    illustration: 'イラスト',
+                    manga: 'マンガ',
+                    novel: '小説',
+                    music: '音楽',
+                    voice: 'ボイス',
+                    video: '動画'
+                  }
+                  return (
+                    <Link
+                      key={authorWork.id}
+                      href={`/portfolio/${authorWork.id}`}
+                      style={{ textDecoration: 'none', color: '#1A1A1A', display: 'block' }}
+                    >
+                      <div 
+                        className="portfolio-work-card"
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          border: '1px solid #E5E5E5'
+                        }}>
+                        <div style={{
+                          position: 'relative',
+                          paddingBottom: '100%',
+                          backgroundColor: '#F5F5F5',
+                          overflow: 'hidden'
+                        }}>
+                          {workImages[0] && (
+                            <Image
+                              src={workImages[0]}
+                              alt={authorWork.title}
+                              fill
+                              loading="lazy"
+                              style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                            />
+                          )}
+                          {/* カテゴリーバッジ */}
+                          {authorWork.category && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              padding: '4px 10px',
+                              fontSize: '11px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontWeight: '600',
+                              backdropFilter: 'blur(4px)'
+                            }}>
+                              {categoryLabels[authorWork.category] || authorWork.category}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ padding: '14px' }}>
+                          <h3 style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            marginBottom: '8px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            margin: 0,
+                            lineHeight: '1.4',
+                            color: '#1A1A1A'
+                          }}>
+                            {authorWork.title}
+                          </h3>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px',
+                            fontSize: '12px',
+                            color: '#6B6B6B'
+                          }}>
+                            <span>
+                              <i className="far fa-heart" style={{ marginRight: '4px' }}></i>
+                              {authorWork.likeCount}
+                            </span>
+                            <span>
+                              <i className="far fa-comment" style={{ marginRight: '4px' }}></i>
+                              {authorWork.commentCount}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* 関連作品 */}
           {relatedWorks.length > 0 && (
             <div style={{ marginBottom: '40px' }}>
@@ -1752,54 +1966,93 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
               }}>
                 {relatedWorks.map(relatedWork => {
                   const workImages = relatedWork.image_urls || (relatedWork.image_url ? [relatedWork.image_url] : [])
+                  const categoryLabels: { [key: string]: string } = {
+                    illustration: 'イラスト',
+                    manga: 'マンガ',
+                    novel: '小説',
+                    music: '音楽',
+                    voice: 'ボイス',
+                    video: '動画'
+                  }
                   return (
                     <Link
                       key={relatedWork.id}
                       href={`/portfolio/${relatedWork.id}`}
-                      className="card"
-                      style={{ padding: '0', overflow: 'hidden', textDecoration: 'none', color: '#1A1A1A' }}
+                      style={{ textDecoration: 'none', color: '#1A1A1A', display: 'block' }}
                     >
-                      <div style={{
-                        position: 'relative',
-                        paddingBottom: '100%',
-                        backgroundColor: '#F5F5F5'
-                      }}>
-                        {workImages[0] && (
-                          <Image
-                            src={workImages[0]}
-                            alt={relatedWork.title}
-                            fill
-                            loading="lazy"
-                            style={{ objectFit: 'cover' }}
-                          />
-                        )}
-                      </div>
-                      <div style={{ padding: '16px' }}>
-                        <h3 style={{
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          marginBottom: '8px',
+                      <div 
+                        className="portfolio-work-card"
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: '12px',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          border: '1px solid #E5E5E5'
                         }}>
-                          {relatedWork.title}
-                        </h3>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '12px',
-                          fontSize: '12px',
-                          color: '#6B6B6B'
+                        <div style={{
+                          position: 'relative',
+                          paddingBottom: '100%',
+                          backgroundColor: '#F5F5F5',
+                          overflow: 'hidden'
                         }}>
-                          <span>
-                            <i className="far fa-heart" style={{ marginRight: '4px' }}></i>
-                            {relatedWork.likeCount}
-                          </span>
-                          <span>
-                            <i className="far fa-comment" style={{ marginRight: '4px' }}></i>
-                            {relatedWork.commentCount}
-                          </span>
+                          {workImages[0] && (
+                            <Image
+                              src={workImages[0]}
+                              alt={relatedWork.title}
+                              fill
+                              loading="lazy"
+                              style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                            />
+                          )}
+                          {/* カテゴリーバッジ */}
+                          {relatedWork.category && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              padding: '4px 10px',
+                              fontSize: '11px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontWeight: '600',
+                              backdropFilter: 'blur(4px)'
+                            }}>
+                              {categoryLabels[relatedWork.category] || relatedWork.category}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ padding: '14px' }}>
+                          <h3 style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            marginBottom: '8px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            margin: 0,
+                            lineHeight: '1.4',
+                            color: '#1A1A1A'
+                          }}>
+                            {relatedWork.title}
+                          </h3>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px',
+                            fontSize: '12px',
+                            color: '#6B6B6B'
+                          }}>
+                            <span>
+                              <i className="far fa-heart" style={{ marginRight: '4px' }}></i>
+                              {relatedWork.likeCount}
+                            </span>
+                            <span>
+                              <i className="far fa-comment" style={{ marginRight: '4px' }}></i>
+                              {relatedWork.commentCount}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -1830,7 +2083,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             cursor: 'zoom-out'
           }}
         >
-          {/* 閉じるボタン */}
           <button
             onClick={() => setIsImageModalOpen(false)}
             style={{
@@ -1853,7 +2105,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             <i className="fas fa-times"></i>
           </button>
 
-          {/* 拡大画像 */}
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -1879,7 +2130,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             />
           </div>
 
-          {/* ナビゲーションボタン（モーダル内） */}
           {displayImages.length > 1 && (
             <>
               {currentImageIndex > 0 && (
@@ -1939,7 +2189,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                 </button>
               )}
 
-              {/* ページインジケーター */}
               <div style={{
                 position: 'absolute',
                 bottom: '30px',
@@ -1959,7 +2208,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       )}
 
-      {/* スタイル */}
       <style jsx>{`
         .portfolio-detail-layout {
           max-width: 1400px;
@@ -1971,7 +2219,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
         }
 
         .creator-sidebar {
-          /* 通常のスクロールに追従 */
         }
 
         .mobile-creator-profile {
@@ -1982,7 +2229,6 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
           min-width: 0;
         }
 
-        /* タブレット・モバイル対応 */
         @media (max-width: 768px) {
           .portfolio-detail-layout {
             display: block !important;
@@ -2002,28 +2248,38 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
             width: 100% !important;
           }
 
-          /* カードのパディング調整 */
           .card-no-hover {
             border-radius: 8px !important;
             padding: 16px !important;
           }
 
-          /* 画像の高さ調整 */
           .main-content img {
             max-height: 400px !important;
           }
         }
 
-        /* 超小型デバイス対応 */
         @media (max-width: 480px) {
           .portfolio-detail-layout {
             padding: 12px 8px;
           }
 
-          /* さらにパディングを減らす */
           .card-no-hover {
             padding: 12px !important;
           }
+        }
+
+        /* ホバーエフェクト */
+        .portfolio-work-card:hover {
+          transform: translateY(-4px);
+          border-color: #D0D0D0;
+        }
+
+        .portfolio-work-card img {
+          transition: transform 0.3s ease;
+        }
+
+        .portfolio-work-card:hover img {
+          transform: scale(1.05);
         }
       `}</style>
     </div>
@@ -2032,7 +2288,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
   )
 }
 
-// コメントアイテムコンポーネント（インデント最大1階層）
+// コメントアイテムコンポーネント
 function CommentItem({ 
   comment, 
   onLike,
@@ -2061,7 +2317,6 @@ function CommentItem({
   const hasBorder = depth === 1
   const isMenuOpen = openMenuId === comment.id
 
-  // 外側クリックでメニューを閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement
@@ -2170,7 +2425,6 @@ function CommentItem({
           </p>
           
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* いいねボタン */}
             <button
               onClick={() => onLike(comment.id)}
               style={{
@@ -2200,7 +2454,6 @@ function CommentItem({
               <span>{comment.likeCount}</span>
             </button>
 
-            {/* 返信ボタン（常に表示） */}
             {currentUserId && (
               <button
                 onClick={() => onReply(comment.id, comment.user.username)}
@@ -2233,7 +2486,6 @@ function CommentItem({
           </div>
         </div>
 
-        {/* メニューボタン（本人のみ表示） */}
         {currentUserId === comment.user_id && (
           <div className="comment-menu-container" style={{ position: 'relative', alignSelf: 'flex-start' }}>
             <button
@@ -2262,7 +2514,6 @@ function CommentItem({
               <i className="fas fa-ellipsis-v"></i>
             </button>
 
-            {/* メニュードロップダウン */}
             {isMenuOpen && (
               <div
                 style={{
@@ -2311,7 +2562,6 @@ function CommentItem({
         )}
       </div>
 
-      {/* 返信を表示 - 親のusernameを渡す */}
       {comment.replies && comment.replies.length > 0 && (
         <div style={{ marginTop: '12px' }}>
           {comment.replies.map(reply => (

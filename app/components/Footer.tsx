@@ -59,24 +59,34 @@ export default function Footer() {
               lineHeight: '2.4'
             }}>
               <li>
-                <Link href="/creators" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  クリエイター一覧
+                <Link href="/creators" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  クリエイターを探す
                 </Link>
               </li>
               <li>
-                <Link href="/portfolio" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  ポートフォリオ
+                <Link href="/portfolio" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  作品を見る
                 </Link>
               </li>
               <li>
-                <Link href="/portfolio/upload" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  作品をアップロード
+                <Link href="/portfolio/upload" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  作品を投稿
+                </Link>
+              </li>
+              <li>
+                <Link href="/earnings" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  売上管理
+                </Link>
+              </li>
+              <li>
+                <Link href="/profile/edit" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  プロフィール編集
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* クライアント向け */}
+          {/* 依頼者向け */}
           <div>
             <h4 style={{ 
               color: '#1A1A1A', 
@@ -93,19 +103,29 @@ export default function Footer() {
               lineHeight: '2.4'
             }}>
               <li>
-                <Link href="/requests" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  依頼一覧
+                <Link href="/requests" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  依頼を探す
                 </Link>
               </li>
               <li>
-                <Link href="/requests/create" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  依頼を作成
+                <Link href="/requests/create" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  依頼を投稿
+                </Link>
+              </li>
+              <li>
+                <Link href="/requests/manage" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  依頼管理
+                </Link>
+              </li>
+              <li>
+                <Link href="/messages" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  メッセージ
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* コミュニティ */}
+          {/* サポート */}
           <div>
             <h4 style={{ 
               color: '#1A1A1A', 
@@ -113,7 +133,7 @@ export default function Footer() {
               fontWeight: '600',
               marginBottom: '16px'
             }}>
-              コミュニティ
+              サポート
             </h4>
             <ul style={{ 
               listStyle: 'none', 
@@ -122,17 +142,56 @@ export default function Footer() {
               lineHeight: '2.4'
             }}>
               <li>
-                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  ヘルプセンター
+                </a>
+              </li>
+              <li>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  よくある質問
+                </a>
+              </li>
+              <li>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  お問い合わせ
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* 会社情報 */}
+          <div>
+            <h4 style={{ 
+              color: '#1A1A1A', 
+              fontSize: '14px',
+              fontWeight: '600',
+              marginBottom: '16px'
+            }}>
+              会社情報
+            </h4>
+            <ul style={{ 
+              listStyle: 'none', 
+              padding: 0, 
+              fontSize: '14px',
+              lineHeight: '2.4'
+            }}>
+              <li>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  運営会社
+                </a>
+              </li>
+              <li>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  採用情報
+                </a>
+              </li>
+              <li>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
                   ブログ
                 </a>
               </li>
               <li>
-                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-                  Discord
-                </a>
-              </li>
-              <li>
-                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
+                <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
                   お知らせ
                 </a>
               </li>
@@ -168,7 +227,7 @@ export default function Footer() {
                 transition: 'color 0.2s'
               }}
             >
-              <i className="fab fa-x-twitter"></i>
+              <i className="fab fa-twitter"></i>
             </a>
             <a 
               href="https://discord.com" 
@@ -215,21 +274,18 @@ export default function Footer() {
             flexWrap: 'wrap',
             fontSize: '13px'
           }}>
-            <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
+            <Link href="/terms" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
               利用規約
-            </a>
-            <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
+            </Link>
+            <Link href="/privacy" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
               プライバシーポリシー
-            </a>
-            <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
+            </Link>
+            <Link href="/cookie_policy" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+              外部送信ポリシー
+            </Link>
+            <Link href="/law" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
               特定商取引法
-            </a>
-            <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-              運営会社
-            </a>
-            <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s' }}>
-              お問い合わせ
-            </a>
+            </Link>
           </div>
         </div>
       </div>

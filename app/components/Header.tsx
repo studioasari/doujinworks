@@ -4,12 +4,23 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
+import { getUnreadCount, markAsRead } from '@/utils/notifications'
 
 type UnreadMessage = {
   chat_room_id: string
   sender_name: string
   sender_avatar: string | null
   content: string
+  created_at: string
+}
+
+type Notification = {
+  id: string
+  type: string
+  title: string
+  message: string
+  link: string | null
+  read: boolean
   created_at: string
 }
 
@@ -25,6 +36,11 @@ export default function Header() {
   const [recentMessages, setRecentMessages] = useState<UnreadMessage[]>([])
   const [isMobile, setIsMobile] = useState(false)
   const [draftCount, setDraftCount] = useState(0)
+  
+  // 通知関連
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -49,7 +65,6 @@ export default function Header() {
           const saved = localStorage.getItem(genre)
           if (saved) {
             const allDrafts = JSON.parse(saved)
-            // 全ての下書きをカウント（autosave含む）
             const count = Object.keys(allDrafts).length
             totalCount += count
           }
@@ -63,8 +78,6 @@ export default function Header() {
     }
 
     countDrafts()
-    
-    // 定期的に更新（5秒ごと）
     const interval = setInterval(countDrafts, 5000)
     
     return () => clearInterval(interval)
@@ -94,6 +107,8 @@ export default function Header() {
         setProfile(null)
         setUnreadCount(0)
         setRecentMessages([])
+        setNotificationUnreadCount(0)
+        setNotifications([])
       }
     })
 
@@ -104,6 +119,8 @@ export default function Header() {
     if (profile?.id) {
       loadUnreadMessages()
       subscribeToMessages()
+      loadNotifications()
+      subscribeToNotifications()
     }
   }, [profile])
 
@@ -149,6 +166,85 @@ export default function Header() {
       .single()
     
     setProfile(data)
+  }
+
+  // 通知を読み込む
+  const loadNotifications = async () => {
+    if (!profile?.id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.error('通知取得エラー:', error)
+        return
+      }
+
+      setNotifications(data || [])
+      
+      // 未読数を取得
+      const count = await getUnreadCount(profile.id)
+      setNotificationUnreadCount(count)
+    } catch (error) {
+      console.error('通知読み込みエラー:', error)
+    }
+  }
+
+  // 通知のリアルタイム購読
+  const subscribeToNotifications = () => {
+    if (!profile?.id) return
+
+    const channel = supabase
+      .channel('header_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `profile_id=eq.${profile.id}`
+        },
+        () => {
+          loadNotifications()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `profile_id=eq.${profile.id}`
+        },
+        () => {
+          loadNotifications()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  // 通知クリック時の処理
+  const handleNotificationClick = async (notification: Notification) => {
+    // 既読にする
+    if (!notification.read) {
+      await markAsRead(notification.id)
+      await loadNotifications()
+    }
+
+    // リンク先に遷移
+    if (notification.link) {
+      setIsNotificationMenuOpen(false)
+      router.push(notification.link)
+    }
   }
 
   const loadUnreadMessages = async () => {
@@ -327,6 +423,18 @@ export default function Header() {
     return text.substring(0, maxLength) + '...'
   }
 
+  const getNotificationIcon = (type: string) => {
+    const icons: { [key: string]: string } = {
+      application: 'fa-paper-plane',
+      accepted: 'fa-check-circle',
+      paid: 'fa-credit-card',
+      delivered: 'fa-box',
+      completed: 'fa-flag-checkered',
+      review: 'fa-star'
+    }
+    return icons[type] || 'fa-bell'
+  }
+
   const MessageIcon = () => (
     <div className="message-menu-container" style={{ position: 'relative' }}>
       <button
@@ -337,7 +445,7 @@ export default function Header() {
         }}
         style={{
           color: '#6B6B6B',
-          fontSize: '20px',
+          fontSize: '22px',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
@@ -581,7 +689,7 @@ export default function Header() {
         }}
         style={{
           color: '#6B6B6B',
-          fontSize: '20px',
+          fontSize: '22px',
           backgroundColor: 'transparent',
           border: 'none',
           cursor: 'pointer',
@@ -590,6 +698,26 @@ export default function Header() {
         }}
       >
         <i className="far fa-bell"></i>
+        {notificationUnreadCount > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '-6px',
+            right: '-6px',
+            backgroundColor: '#FF4444',
+            color: '#FFFFFF',
+            borderRadius: '10px',
+            minWidth: '18px',
+            height: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            padding: '0 5px'
+          }}>
+            {notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}
+          </div>
+        )}
       </button>
 
       {isNotificationMenuOpen && (
@@ -678,14 +806,88 @@ export default function Header() {
               WebkitOverflowScrolling: 'touch'
             } : undefined}>
               {notificationTab === 'notifications' ? (
-                <div style={{
-                  padding: '32px 16px',
-                  textAlign: 'center',
-                  color: '#6B6B6B',
-                  fontSize: '14px'
-                }}>
-                  新しい通知はありません
-                </div>
+                notifications.length === 0 ? (
+                  <div style={{
+                    padding: '32px 16px',
+                    textAlign: 'center',
+                    color: '#6B6B6B',
+                    fontSize: '14px'
+                  }}>
+                    新しい通知はありません
+                  </div>
+                ) : (
+                  <div>
+                    {notifications.map((notification, index) => (
+                      <div
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          cursor: notification.link ? 'pointer' : 'default',
+                          backgroundColor: notification.read ? 'transparent' : '#F9F9F9',
+                          borderBottom: index < notifications.length - 1 ? '1px solid #F0F0F0' : 'none'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (notification.link) {
+                            e.currentTarget.style.backgroundColor = '#F5F5F5'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = notification.read ? 'transparent' : '#F9F9F9'
+                        }}
+                      >
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          backgroundColor: '#E5E5E5',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <i className={`fas ${getNotificationIcon(notification.type)}`} style={{ fontSize: '16px', color: '#6B6B6B' }}></i>
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'baseline',
+                            marginBottom: '4px'
+                          }}>
+                            <div style={{
+                              fontWeight: '600',
+                              fontSize: '14px',
+                              color: '#1A1A1A'
+                            }}>
+                              {notification.title}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: '#6B6B6B',
+                              flexShrink: 0,
+                              marginLeft: '8px'
+                            }}>
+                              {formatMessageTime(notification.created_at)}
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: '13px',
+                            color: '#6B6B6B',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {notification.message}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
                 <div style={{
                   padding: '32px 16px',
@@ -876,7 +1078,7 @@ export default function Header() {
 
   return (
     <>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .header-container {
           padding: 16px 40px;
           height: 64px;
@@ -899,7 +1101,7 @@ export default function Header() {
             display: none !important;
           }
         }
-      `}</style>
+      `}} />
 
       <header className="header-container" style={{
         display: 'flex',
@@ -912,499 +1114,509 @@ export default function Header() {
         zIndex: 100,
         gap: '20px'
       }}>
-        <Link href="/" style={{ 
-          textDecoration: 'none',
+        <div style={{
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          flexShrink: 0
+          width: '100%',
+          maxWidth: '1400px',
+          margin: '0 auto',
+          gap: '20px'
         }}>
-          <img 
-            src="/logotype.png" 
-            alt="同人ワークス" 
-            style={{ 
-              height: '20px',
-              display: 'block'
-            }} 
-          />
-        </Link>
-        
-        {/* デスクトップ検索ボックス */}
-        <div className="desktop-search" style={{ 
-          position: 'relative', 
-          flex: 1,
-          maxWidth: '500px'
-        }}>
-          <i className="fas fa-search" style={{ 
-            position: 'absolute',
-            left: '16px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#9B9B9B',
-            fontSize: '14px'
-          }}></i>
-          <input
-            type="text"
-            placeholder="作品やクリエイターを検索"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                const query = (e.target as HTMLInputElement).value
-                if (query.trim()) {
-                  router.push(`/search?q=${encodeURIComponent(query)}`)
+          <Link href="/" style={{ 
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            flexShrink: 0
+          }}>
+            <img 
+              src="/logotype.png" 
+              alt="同人ワークス" 
+              style={{ 
+                height: '20px',
+                display: 'block'
+              }} 
+            />
+          </Link>
+          
+          {/* デスクトップ検索ボックス */}
+          <div className="desktop-search" style={{ 
+            position: 'relative', 
+            flex: 1,
+            maxWidth: '500px'
+          }}>
+            <i className="fas fa-search" style={{ 
+              position: 'absolute',
+              left: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#9B9B9B',
+              fontSize: '14px'
+            }}></i>
+            <input
+              type="text"
+              placeholder="作品やクリエイターを検索"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const query = (e.target as HTMLInputElement).value
+                  if (query.trim()) {
+                    router.push(`/search?q=${encodeURIComponent(query)}`)
+                  }
                 }
-              }
-            }}
-            style={{
-              width: '100%',
-              padding: '10px 16px 10px 44px',
-              border: '1px solid #E5E5E5',
-              borderRadius: '24px',
-              fontSize: '14px',
-              outline: 'none',
-              backgroundColor: '#F9F9F9',
-              transition: 'all 0.2s'
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.backgroundColor = '#FFFFFF'
-              e.currentTarget.style.borderColor = '#1A1A1A'
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.backgroundColor = '#F9F9F9'
-              e.currentTarget.style.borderColor = '#E5E5E5'
-            }}
-          />
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 16px 10px 44px',
+                border: '1px solid #E5E5E5',
+                borderRadius: '24px',
+                fontSize: '14px',
+                outline: 'none',
+                backgroundColor: '#F9F9F9',
+                transition: 'all 0.2s'
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFFFFF'
+                e.currentTarget.style.borderColor = '#1A1A1A'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = '#F9F9F9'
+                e.currentTarget.style.borderColor = '#E5E5E5'
+              }}
+            />
+          </div>
+
+          {/* 右側のアイコン群（デスクトップ） */}
+          <nav className="desktop-nav" style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
+            {user ? (
+              <>
+                <MessageIcon />
+                <NotificationIcon />
+
+                <div className="profile-menu-container" style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => {
+                      setIsMessageMenuOpen(false)
+                      setIsNotificationMenuOpen(false)
+                      setIsUploadMenuOpen(false)
+                      setIsMenuOpen(!isMenuOpen)
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: '#E5E5E5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
+                    }}>
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile.display_name || 'プロフィール'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <i className="fas fa-user" style={{ 
+                          fontSize: '16px', 
+                          color: '#6B6B6B' 
+                        }}></i>
+                      )}
+                    </div>
+                  </button>
+
+                  {isMenuOpen && (
+                    <>
+                      <div 
+                        className="profile-overlay"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: '60px',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          zIndex: 998,
+                          display: isMobile ? 'block' : 'none'
+                        }}
+                      />
+                      
+                      <div style={isMobile ? {
+                        position: 'fixed',
+                        top: '60px',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 0,
+                        zIndex: 999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '16px'
+                      } : {
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        right: 0,
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        minWidth: '200px',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setIsMenuOpen(false)}
+                          style={isMobile ? {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '16px',
+                            backgroundColor: '#F5F5F5',
+                            borderRadius: '8px',
+                            marginBottom: '12px'
+                          } : {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '14px',
+                            borderBottom: '1px solid #E5E5E5'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = '#F9F9F9'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                          ダッシュボード
+                        </Link>
+
+                        <button
+                          onClick={handleLogout}
+                          style={isMobile ? {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            width: '100%',
+                            backgroundColor: '#F5F5F5',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '16px',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          } : {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            width: '100%',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = '#F9F9F9'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                          ログアウト
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <UploadButton />
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={{ 
+                  color: '#1A1A1A',
+                  backgroundColor: 'transparent',
+                  padding: '8px 20px',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '24px',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}>
+                  ログイン
+                </Link>
+
+                <Link href="/signup" style={{ 
+                  color: '#FFFFFF',
+                  backgroundColor: '#1A1A1A',
+                  padding: '8px 20px',
+                  borderRadius: '24px',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}>
+                  会員登録
+                </Link>
+              </>
+            )}
+          </nav>
+
+          {/* モバイルナビゲーション */}
+          <nav className="mobile-nav" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {user ? (
+              <>
+                <MessageIcon />
+                <NotificationIcon />
+
+                <div className="profile-menu-container" style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => {
+                      setIsMessageMenuOpen(false)
+                      setIsNotificationMenuOpen(false)
+                      setIsUploadMenuOpen(false)
+                      setIsMenuOpen(!isMenuOpen)
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: '#E5E5E5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
+                    }}>
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile.display_name || 'プロフィール'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <i className="fas fa-user" style={{ 
+                          fontSize: '16px', 
+                          color: '#6B6B6B' 
+                        }}></i>
+                      )}
+                    </div>
+                  </button>
+
+                  {isMenuOpen && (
+                    <>
+                      <div 
+                        className="profile-overlay"
+                        onClick={() => setIsMenuOpen(false)}
+                        style={{
+                          position: 'fixed',
+                          top: '60px',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          zIndex: 998,
+                          display: isMobile ? 'block' : 'none'
+                        }}
+                      />
+                      
+                      <div style={isMobile ? {
+                        position: 'fixed',
+                        top: '60px',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 0,
+                        zIndex: 999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '16px'
+                      } : {
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        right: 0,
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        minWidth: '200px',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setIsMenuOpen(false)}
+                          style={isMobile ? {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '16px',
+                            backgroundColor: '#F5F5F5',
+                            borderRadius: '8px',
+                            marginBottom: '12px'
+                          } : {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '14px',
+                            borderBottom: '1px solid #E5E5E5'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = '#F9F9F9'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                          ダッシュボード
+                        </Link>
+
+                        <button
+                          onClick={handleLogout}
+                          style={isMobile ? {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            width: '100%',
+                            backgroundColor: '#F5F5F5',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '16px',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          } : {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px 16px',
+                            width: '100%',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#1A1A1A',
+                            textDecoration: 'none',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = '#F9F9F9'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isMobile) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                            }
+                          }}
+                        >
+                          <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
+                          ログアウト
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <UploadButton />
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={{ 
+                  color: '#1A1A1A',
+                  backgroundColor: 'transparent',
+                  padding: '8px 16px',
+                  border: '1px solid #E5E5E5',
+                  borderRadius: '24px',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}>
+                  ログイン
+                </Link>
+
+                <Link href="/signup" style={{ 
+                  color: '#FFFFFF',
+                  backgroundColor: '#1A1A1A',
+                  padding: '8px 16px',
+                  borderRadius: '24px',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}>
+                  会員登録
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
-
-        {/* 右側のアイコン群（デスクトップ） */}
-        <nav className="desktop-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
-          {user ? (
-            <>
-              <MessageIcon />
-              <NotificationIcon />
-
-              <div className="profile-menu-container" style={{ position: 'relative' }}>
-                <button
-                  onClick={() => {
-                    setIsMessageMenuOpen(false)
-                    setIsNotificationMenuOpen(false)
-                    setIsUploadMenuOpen(false)
-                    setIsMenuOpen(!isMenuOpen)
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    textDecoration: 'none',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                >
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: '#E5E5E5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
-                  }}>
-                    {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.display_name || 'プロフィール'}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <i className="fas fa-user" style={{ 
-                        fontSize: '16px', 
-                        color: '#6B6B6B' 
-                      }}></i>
-                    )}
-                  </div>
-                </button>
-
-                {isMenuOpen && (
-                  <>
-                    <div 
-                      className="profile-overlay"
-                      onClick={() => setIsMenuOpen(false)}
-                      style={{
-                        position: 'fixed',
-                        top: '60px',
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        zIndex: 998,
-                        display: isMobile ? 'block' : 'none'
-                      }}
-                    />
-                    
-                    <div style={isMobile ? {
-                      position: 'fixed',
-                      top: '60px',
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: 0,
-                      zIndex: 999,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      padding: '16px'
-                    } : {
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      right: 0,
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E5E5E5',
-                      borderRadius: '8px',
-                      minWidth: '200px',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                    }}>
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setIsMenuOpen(false)}
-                        style={isMobile ? {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '16px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '16px',
-                          backgroundColor: '#F5F5F5',
-                          borderRadius: '8px',
-                          marginBottom: '12px'
-                        } : {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '14px',
-                          borderBottom: '1px solid #E5E5E5'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = '#F9F9F9'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                        ダッシュボード
-                      </Link>
-
-                      <button
-                        onClick={handleLogout}
-                        style={isMobile ? {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '16px',
-                          width: '100%',
-                          backgroundColor: '#F5F5F5',
-                          border: 'none',
-                          borderRadius: '8px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '16px',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        } : {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          width: '100%',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = '#F9F9F9'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                        ログアウト
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <UploadButton />
-            </>
-          ) : (
-            <>
-              <Link href="/login" style={{ 
-                color: '#1A1A1A',
-                backgroundColor: 'transparent',
-                padding: '8px 20px',
-                border: '1px solid #E5E5E5',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                ログイン
-              </Link>
-
-              <Link href="/signup" style={{ 
-                color: '#FFFFFF',
-                backgroundColor: '#1A1A1A',
-                padding: '8px 20px',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                会員登録
-              </Link>
-            </>
-          )}
-        </nav>
-
-        {/* モバイルナビゲーション */}
-        <nav className="mobile-nav" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {user ? (
-            <>
-              <MessageIcon />
-              <NotificationIcon />
-
-              <div className="profile-menu-container" style={{ position: 'relative' }}>
-                <button
-                  onClick={() => {
-                    setIsMessageMenuOpen(false)
-                    setIsNotificationMenuOpen(false)
-                    setIsUploadMenuOpen(false)
-                    setIsMenuOpen(!isMenuOpen)
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    textDecoration: 'none',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0
-                  }}
-                >
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: '#E5E5E5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    border: `2px solid ${isMenuOpen ? '#1A1A1A' : '#E5E5E5'}`
-                  }}>
-                    {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={profile.display_name || 'プロフィール'}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <i className="fas fa-user" style={{ 
-                        fontSize: '16px', 
-                        color: '#6B6B6B' 
-                      }}></i>
-                    )}
-                  </div>
-                </button>
-
-                {isMenuOpen && (
-                  <>
-                    <div 
-                      className="profile-overlay"
-                      onClick={() => setIsMenuOpen(false)}
-                      style={{
-                        position: 'fixed',
-                        top: '60px',
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        zIndex: 998,
-                        display: isMobile ? 'block' : 'none'
-                      }}
-                    />
-                    
-                    <div style={isMobile ? {
-                      position: 'fixed',
-                      top: '60px',
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundColor: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: 0,
-                      zIndex: 999,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      padding: '16px'
-                    } : {
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      right: 0,
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E5E5E5',
-                      borderRadius: '8px',
-                      minWidth: '200px',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                    }}>
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setIsMenuOpen(false)}
-                        style={isMobile ? {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '16px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '16px',
-                          backgroundColor: '#F5F5F5',
-                          borderRadius: '8px',
-                          marginBottom: '12px'
-                        } : {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '14px',
-                          borderBottom: '1px solid #E5E5E5'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = '#F9F9F9'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        <i className="fas fa-th-large" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                        ダッシュボード
-                      </Link>
-
-                      <button
-                        onClick={handleLogout}
-                        style={isMobile ? {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '16px',
-                          width: '100%',
-                          backgroundColor: '#F5F5F5',
-                          border: 'none',
-                          borderRadius: '8px',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '16px',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        } : {
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px 16px',
-                          width: '100%',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          color: '#1A1A1A',
-                          textDecoration: 'none',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = '#F9F9F9'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isMobile) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                          }
-                        }}
-                      >
-                        <i className="fas fa-sign-out-alt" style={{ color: '#6B6B6B', width: '16px' }}></i>
-                        ログアウト
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <UploadButton />
-            </>
-          ) : (
-            <>
-              <Link href="/login" style={{ 
-                color: '#1A1A1A',
-                backgroundColor: 'transparent',
-                padding: '8px 16px',
-                border: '1px solid #E5E5E5',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                ログイン
-              </Link>
-
-              <Link href="/signup" style={{ 
-                color: '#FFFFFF',
-                backgroundColor: '#1A1A1A',
-                padding: '8px 16px',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontWeight: '600',
-                fontSize: '14px'
-              }}>
-                会員登録
-              </Link>
-            </>
-          )}
-        </nav>
       </header>
     </>
   )

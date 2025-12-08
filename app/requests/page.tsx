@@ -7,29 +7,31 @@ import Link from 'next/link'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
-type Request = {
+type WorkRequest = {
   id: string
   title: string
   description: string
   budget_min: number | null
   budget_max: number | null
   deadline: string | null
-  category: string | null
+  category: string
   status: string
+  request_type: string
   created_at: string
-  client_id: string
+  requester_id: string
   profiles: {
+    id: string
     display_name: string | null
     avatar_url: string | null
   }
 }
 
 export default function RequestsPage() {
-  const [requests, setRequests] = useState<Request[]>([])
+  const [requests, setRequests] = useState<WorkRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'my'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
-  const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
@@ -37,26 +39,26 @@ export default function RequestsPage() {
   }, [])
 
   useEffect(() => {
-    if (currentUserId) {
+    if (currentProfileId) {
       fetchRequests()
     }
-  }, [filter, categoryFilter, currentUserId])
+  }, [filter, categoryFilter, currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-    } else {
-      // profilesテーブルから profile.id を取得
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (profile) {
-        setCurrentUserId(profile.id)
-      }
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (profile) {
+      setCurrentProfileId(profile.id)
     }
   }
 
@@ -64,16 +66,17 @@ export default function RequestsPage() {
     setLoading(true)
 
     let query = supabase
-      .from('requests')
-      .select('*, profiles!requests_client_id_fkey(display_name, avatar_url)')
+      .from('work_requests')
+      .select('*, profiles!work_requests_requester_id_fkey(id, display_name, avatar_url)')
+      .eq('request_type', 'public')
       .order('created_at', { ascending: false })
 
     // フィルター適用
     if (filter === 'my') {
-      query = query.eq('client_id', currentUserId)
+      query = query.eq('requester_id', currentProfileId)
     } else {
-      // 公開中の依頼のみ表示（自分の依頼は全て表示）
-      query = query.or(`status.eq.open,client_id.eq.${currentUserId}`)
+      // 公開中の依頼のみ表示
+      query = query.eq('status', 'open')
     }
 
     if (categoryFilter !== 'all') {
@@ -91,26 +94,24 @@ export default function RequestsPage() {
     setLoading(false)
   }
 
-  function getCategoryLabel(category: string | null) {
+  function getCategoryLabel(category: string) {
     const categories: { [key: string]: string } = {
       illustration: 'イラスト',
-      manga: '漫画',
+      manga: 'マンガ',
       novel: '小説',
       music: '音楽',
       voice: 'ボイス',
       video: '動画',
-      game: 'ゲーム',
+      logo: 'ロゴ',
+      design: 'デザイン',
       other: 'その他'
     }
-    return category ? categories[category] || category : '未設定'
+    return categories[category] || category
   }
 
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
-      pending: '交渉中',
-      accepted: '受付済み',
-      rejected: '辞退',
       in_progress: '進行中',
       completed: '完了',
       cancelled: 'キャンセル'
@@ -121,10 +122,7 @@ export default function RequestsPage() {
   function getStatusColor(status: string) {
     const colors: { [key: string]: string } = {
       open: '#4CAF50',
-      pending: '#FF9800',
-      accepted: '#2196F3',
-      rejected: '#F44336',
-      in_progress: '#9C27B0',
+      in_progress: '#2196F3',
       completed: '#607D8B',
       cancelled: '#9E9E9E'
     }
@@ -133,7 +131,15 @@ export default function RequestsPage() {
 
   function formatDate(dateString: string) {
     const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (days === 0) return '今日'
+    if (days === 1) return '昨日'
+    if (days < 7) return `${days}日前`
+    
+    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
   }
 
   return (
@@ -142,15 +148,19 @@ export default function RequestsPage() {
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
           {/* ヘッダー */}
-          <div className="flex-between mb-40">
+          <div className="flex-between mb-40" style={{ 
+            flexWrap: 'wrap', 
+            gap: '16px' 
+          }}>
             <h1 className="page-title">依頼一覧</h1>
             <Link href="/requests/create" className="btn-primary">
-              + 新規依頼を作成
+              <i className="fas fa-plus" style={{ marginRight: '8px' }}></i>
+              新規依頼を作成
             </Link>
           </div>
 
           {/* フィルター */}
-          <div className="filter-box">
+          <div className="filter-box mb-32">
             <div className="mb-24">
               <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
                 表示する依頼
@@ -158,15 +168,33 @@ export default function RequestsPage() {
               <div className="flex gap-12">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`filter-button ${filter === 'all' ? 'active' : ''}`}
-                  style={{ borderRadius: '4px' }}
+                  style={{
+                    padding: '8px 20px',
+                    border: filter === 'all' ? 'none' : '1px solid #E5E5E5',
+                    borderRadius: '20px',
+                    backgroundColor: filter === 'all' ? '#1A1A1A' : '#FFFFFF',
+                    color: filter === 'all' ? '#FFFFFF' : '#6B6B6B',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
                 >
-                  すべて
+                  すべての公開依頼
                 </button>
                 <button
                   onClick={() => setFilter('my')}
-                  className={`filter-button ${filter === 'my' ? 'active' : ''}`}
-                  style={{ borderRadius: '4px' }}
+                  style={{
+                    padding: '8px 20px',
+                    border: filter === 'my' ? 'none' : '1px solid #E5E5E5',
+                    borderRadius: '20px',
+                    backgroundColor: filter === 'my' ? '#1A1A1A' : '#FFFFFF',
+                    color: filter === 'my' ? '#FFFFFF' : '#6B6B6B',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
                 >
                   自分の依頼
                 </button>
@@ -185,12 +213,13 @@ export default function RequestsPage() {
               >
                 <option value="all">すべて</option>
                 <option value="illustration">イラスト</option>
-                <option value="manga">漫画</option>
+                <option value="manga">マンガ</option>
                 <option value="novel">小説</option>
                 <option value="music">音楽</option>
                 <option value="voice">ボイス</option>
                 <option value="video">動画</option>
-                <option value="game">ゲーム</option>
+                <option value="logo">ロゴ</option>
+                <option value="design">デザイン</option>
                 <option value="other">その他</option>
               </select>
             </div>
@@ -203,13 +232,22 @@ export default function RequestsPage() {
             </div>
           )}
 
-          {/* 依頼一覧 */}
+          {/* 空の状態 */}
           {!loading && requests.length === 0 && (
             <div className="empty-state">
-              依頼が見つかりませんでした
+              <i className="fas fa-inbox" style={{ fontSize: '48px', color: '#E5E5E5', marginBottom: '16px' }}></i>
+              <p className="text-gray mb-24">
+                {filter === 'my' ? '依頼を作成していません' : '依頼が見つかりませんでした'}
+              </p>
+              {filter === 'my' && (
+                <Link href="/requests/create" className="btn-primary">
+                  最初の依頼を作成
+                </Link>
+              )}
             </div>
           )}
 
+          {/* 依頼一覧 */}
           {!loading && requests.length > 0 && (
             <div className="flex flex-col gap-20">
               {requests.map((request) => (
@@ -217,10 +255,12 @@ export default function RequestsPage() {
                   key={request.id}
                   href={`/requests/${request.id}`}
                   className="card p-24"
+                  style={{ textDecoration: 'none' }}
                 >
                   {/* ステータスとカテゴリ */}
-                  <div className="flex gap-8 mb-12">
-                    <span className={`badge-status ${request.status}`} style={{
+                  <div className="flex gap-8 mb-12" style={{ flexWrap: 'wrap' }}>
+                    <span style={{
+                      display: 'inline-block',
                       padding: '4px 12px',
                       borderRadius: '4px',
                       fontSize: '12px',
@@ -230,11 +270,9 @@ export default function RequestsPage() {
                     }}>
                       {getStatusLabel(request.status)}
                     </span>
-                    {request.category && (
-                      <span className="badge badge-category">
-                        {getCategoryLabel(request.category)}
-                      </span>
-                    )}
+                    <span className="badge badge-category">
+                      {getCategoryLabel(request.category)}
+                    </span>
                   </div>
 
                   {/* タイトル */}
@@ -243,24 +281,49 @@ export default function RequestsPage() {
                   </h2>
 
                   {/* 説明 */}
-                  <p className="text-small text-gray text-clamp-2 mb-16" style={{ lineHeight: '1.6' }}>
+                  <p className="text-small text-gray mb-16" style={{ 
+                    lineHeight: '1.6',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>
                     {request.description}
                   </p>
 
                   {/* 詳細情報 */}
-                  <div className="flex gap-24 text-small text-gray">
+                  <div className="flex gap-20 text-small text-gray" style={{ 
+                    flexWrap: 'wrap',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #F5F5F5'
+                  }}>
                     {(request.budget_min || request.budget_max) && (
-                      <div>
-                        <strong>予算:</strong> {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fas fa-yen-sign" style={{ fontSize: '12px' }}></i>
+                        <span>
+                          {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円
+                        </span>
                       </div>
                     )}
                     {request.deadline && (
-                      <div>
-                        <strong>納期:</strong> {formatDate(request.deadline)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="fas fa-calendar" style={{ fontSize: '12px' }}></i>
+                        <span>
+                          {new Date(request.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                        </span>
                       </div>
                     )}
-                    <div>
-                      <strong>依頼者:</strong> {request.profiles?.display_name || '名前未設定'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-user" style={{ fontSize: '12px' }}></i>
+                      <span>
+                        {request.profiles?.display_name || '名前未設定'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-clock" style={{ fontSize: '12px' }}></i>
+                      <span>
+                        {formatDate(request.created_at)}
+                      </span>
                     </div>
                   </div>
                 </Link>

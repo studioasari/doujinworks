@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-11-17.clover'
+})
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const signature = request.headers.get('stripe-signature')!
+
+  let event: Stripe.Event
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+  } catch (err: any) {
+    console.error('Webhook署名検証エラー:', err.message)
+    return NextResponse.json({ error: 'Webhook Error' }, { status: 400 })
+  }
+
+  // 決済完了イベント
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session
+
+    const requestId = session.metadata?.request_id
+
+    if (requestId) {
+      // データベース更新
+      const { error } = await supabase
+        .from('work_requests')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          escrow_transaction_id: session.payment_intent as string,
+        })
+        .eq('id', requestId)
+
+      if (error) {
+        console.error('DB更新エラー:', error)
+        return NextResponse.json({ error: 'Database Error' }, { status: 500 })
+      }
+
+      console.log('仮払い完了:', requestId)
+    }
+  }
+
+  return NextResponse.json({ received: true })
+}

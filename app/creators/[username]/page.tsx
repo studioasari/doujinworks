@@ -177,6 +177,7 @@ export default function CreatorDetailPage() {
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false)
 
   // カテゴリ一覧をメモ化（高速化）
   const categories = useMemo(() => {
@@ -210,6 +211,24 @@ export default function CreatorDetailPage() {
       fetchCreator()
     }
   }, [username])
+
+  // 外側クリックで共有メニューを閉じる
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement
+      // 共有ドロップダウン内をクリックした場合は閉じない
+      if (isShareDropdownOpen && !target.closest('.share-dropdown-container')) {
+        setIsShareDropdownOpen(false)
+      }
+    }
+
+    if (isShareDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => {
+        document.removeEventListener('click', handleClickOutside)
+      }
+    }
+  }, [isShareDropdownOpen])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -418,20 +437,68 @@ export default function CreatorDetailPage() {
     setSendingMessage(false)
   }, [currentUserId, currentProfileId, creator, router])
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback((platform: 'twitter' | 'facebook' | 'line' | 'copy') => {
     const url = `${window.location.origin}/creators/${username}`
-    
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(() => {
-        alert('プロフィールURLをコピーしました！')
-      }).catch((err) => {
-        console.error('URLのコピーに失敗しました:', err)
-        prompt('URLをコピーしてください:', url)
-      })
-    } else {
-      prompt('URLをコピーしてください:', url)
+    const text = creator ? `${creator.display_name}さんのプロフィール` : 'クリエイタープロフィール'
+
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank')
+        break
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank')
+        break
+      case 'line':
+        window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text + ' ' + url)}`, '_blank')
+        break
+      case 'copy':
+        // navigator.clipboardが使える場合
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            alert('プロフィールURLをコピーしました！')
+            setIsShareDropdownOpen(false)
+          }).catch((err) => {
+            console.error('URLのコピーに失敗しました:', err)
+            // フォールバック: 古い方法
+            fallbackCopyToClipboard(url)
+          })
+        } else {
+          // フォールバック: 古い方法
+          fallbackCopyToClipboard(url)
+        }
+        break
     }
-  }, [username])
+    
+    // Twitter, Facebook, LINEの場合もドロップダウンを閉じる
+    if (platform !== 'copy') {
+      setIsShareDropdownOpen(false)
+    }
+  }, [username, creator])
+
+  // フォールバック用のコピー関数
+  function fallbackCopyToClipboard(text: string) {
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-999999px'
+    textArea.style.top = '-999999px'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
+    try {
+      const successful = document.execCommand('copy')
+      if (successful) {
+        alert('プロフィールURLをコピーしました！')
+        setIsShareDropdownOpen(false)
+      } else {
+        alert('URLのコピーに失敗しました')
+      }
+    } catch (err) {
+      console.error('コピーエラー:', err)
+      alert('URLのコピーに失敗しました')
+    }
+    document.body.removeChild(textArea)
+  }
 
   if (loading) {
     return <LoadingScreen message="読み込み中..." />
@@ -478,8 +545,9 @@ export default function CreatorDetailPage() {
             backgroundColor: '#FFFFFF',
             borderRadius: '12px',
             border: '1px solid #E5E5E5',
-            overflow: 'hidden',
-            marginBottom: '40px'
+            overflow: 'visible',
+            marginBottom: '40px',
+            position: 'relative'
           }}
           className="profile-section">
             {/* ヘッダー画像 */}
@@ -488,7 +556,10 @@ export default function CreatorDetailPage() {
               height: '200px',
               backgroundColor: '#F5F5F5',
               position: 'relative',
-              borderBottom: '1px solid #E5E5E5'
+              borderBottom: '1px solid #E5E5E5',
+              zIndex: 1,
+              borderTopLeftRadius: '12px',
+              borderTopRightRadius: '12px'
             }}>
               {creator.header_url && (
                 <Image
@@ -498,8 +569,32 @@ export default function CreatorDetailPage() {
                   sizes="100vw"
                   quality={75}
                   priority
-                  style={{ objectFit: 'cover' }}
+                  style={{ 
+                    objectFit: 'cover',
+                    borderTopLeftRadius: '12px',
+                    borderTopRightRadius: '12px'
+                  }}
                 />
+              )}
+              
+              {/* アカウント種別バッジ（右上） */}
+              {creator.account_type && (
+                <div style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  zIndex: 5
+                }}>
+                  <span className="badge badge-category" style={{
+                    padding: '4px 12px',
+                    fontSize: '11px',
+                    backgroundColor: '#000000',
+                    color: '#FFFFFF',
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                    {creator.account_type === 'casual' ? '一般' : 'ビジネス'}
+                  </span>
+                </div>
               )}
               
               {/* アクションボタン（ヘッダー右下） */}
@@ -507,12 +602,12 @@ export default function CreatorDetailPage() {
                 <div style={{
                   position: 'absolute',
                   bottom: '-20px',
-                  right: '40px',
                   display: 'flex',
                   gap: '8px',
                   zIndex: 10
                 }}
                 className="header-action-buttons">
+                  {/* メッセージボタン */}
                   <button
                     onClick={handleSendMessage}
                     disabled={sendingMessage}
@@ -540,6 +635,8 @@ export default function CreatorDetailPage() {
                   >
                     <i className="fas fa-envelope"></i>
                   </button>
+                  
+                  {/* フォローボタン */}
                   <button
                     onClick={handleFollow}
                     style={{
@@ -579,7 +676,6 @@ export default function CreatorDetailPage() {
                   style={{
                     position: 'absolute',
                     bottom: '-20px',
-                    right: '40px',
                     width: '140px',
                     height: '40px',
                     border: '1px solid #E5E5E5',
@@ -612,7 +708,8 @@ export default function CreatorDetailPage() {
             {/* プロフィール情報 */}
             <div style={{
               padding: '0 40px 40px 40px',
-              position: 'relative'
+              position: 'relative',
+              zIndex: 20
             }}
             className="profile-content">
               {/* アバター（ヘッダーに重なる） */}
@@ -628,7 +725,8 @@ export default function CreatorDetailPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                position: 'relative'
+                position: 'relative',
+                zIndex: 15
               }}
               className="profile-avatar">
                 {creator.avatar_url ? (
@@ -648,6 +746,18 @@ export default function CreatorDetailPage() {
 
               {/* 名前とユーザーID */}
               <div style={{ marginBottom: '12px' }}>
+                {/* 職業・肩書き（名前の上） */}
+                {creator.job_title && (
+                  <div style={{
+                    fontSize: '13px',
+                    color: '#9B9B9B',
+                    marginBottom: '4px',
+                    fontWeight: '500'
+                  }}>
+                    {creator.job_title}
+                  </div>
+                )}
+
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'baseline', 
@@ -720,7 +830,9 @@ export default function CreatorDetailPage() {
                 display: 'flex',
                 gap: '12px',
                 alignItems: 'center',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                position: 'relative',
+                zIndex: 50
               }}>
                 {creator.twitter_url && (
                   <a
@@ -827,34 +939,168 @@ export default function CreatorDetailPage() {
                     <i className="fas fa-link"></i>
                   </a>
                 )}
-                {/* シェアボタン */}
-                <button
-                  onClick={handleShare}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    backgroundColor: '#F5F5F5',
-                    color: '#1A1A1A',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                    border: 'none'
-                  }}
-                  title="プロフィールを共有"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#E5E5E5'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F5F5F5'
-                  }}
+                {/* シェアボタン（ドロップダウン付き） */}
+                <div 
+                  className="share-dropdown-container"
+                  style={{ position: 'relative', zIndex: 100 }}
                 >
-                  <i className="fas fa-share-alt"></i>
-                </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsShareDropdownOpen(!isShareDropdownOpen)
+                    }}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: '#F5F5F5',
+                      color: '#1A1A1A',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      border: 'none'
+                    }}
+                    title="プロフィールを共有"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#E5E5E5'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F5F5F5'
+                    }}
+                  >
+                    <i className="fas fa-share-alt"></i>
+                  </button>
+
+                  {/* ドロップダウンメニュー */}
+                  {isShareDropdownOpen && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: '0',
+                        marginTop: '8px',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        minWidth: '200px',
+                        maxWidth: '100vw',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 1000
+                      }}
+                    >
+                      <button
+                        onClick={() => handleShare('twitter')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <i className="fab fa-twitter" style={{ color: '#1DA1F2', fontSize: '18px' }}></i>
+                        Twitter
+                      </button>
+                      <button
+                        onClick={() => handleShare('facebook')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <i className="fab fa-facebook" style={{ color: '#1877F2', fontSize: '18px' }}></i>
+                        Facebook
+                      </button>
+                      <button
+                        onClick={() => handleShare('line')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <i className="fab fa-line" style={{ color: '#00B900', fontSize: '18px' }}></i>
+                        LINE
+                      </button>
+                      <button
+                        onClick={() => handleShare('copy')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F5'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <i className="fas fa-link" style={{ color: '#6B6B6B', fontSize: '18px' }}></i>
+                        URLをコピー
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* 依頼を送るボタン（他人のプロフィールの場合のみ表示） */}
+              {!isOwnProfile && (
+                <div style={{ marginTop: '16px' }}>
+                  <Link
+                    href={`/requests/create?to=${username}`}
+                    className="btn-primary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <i className="fas fa-paper-plane"></i>
+                    依頼を送る
+                  </Link>
+                </div>
+              )}
           </div>
         </div>
 
@@ -947,7 +1193,11 @@ export default function CreatorDetailPage() {
       </div>
 
       {/* スタイル */}
-      <style jsx>{`
+      <style jsx global>{`
+        .header-action-buttons {
+          right: 40px;
+        }
+
         @media (max-width: 1024px) {
           .works-grid {
             grid-template-columns: repeat(3, 1fr) !important;
