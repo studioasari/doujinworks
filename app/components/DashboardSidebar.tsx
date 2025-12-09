@@ -8,6 +8,7 @@ import { supabase } from '@/utils/supabase'
 export default function DashboardSidebar() {
   const pathname = usePathname()
   const [accountType, setAccountType] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     checkAccountType()
@@ -19,26 +20,63 @@ export default function DashboardSidebar() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_type')
+      .select('account_type, is_admin')
       .eq('user_id', user.id)
       .single()
 
     if (profile) {
       setAccountType(profile.account_type)
+      setIsAdmin(profile.is_admin || false)
     }
   }
 
-  const menuItems = [
-    { href: '/dashboard', label: 'ダッシュボード', icon: 'fa-th-large' },
-    { href: '/profile', label: 'プロフィール編集', icon: 'fa-user-edit' },
-    { href: '/portfolio/manage', label: '作品管理', icon: 'fa-folder-open' },
-    { href: '/requests', label: '依頼管理', icon: 'fa-clipboard-list' },
-    { href: '/messages', label: 'メッセージ', icon: 'fa-comments' },
-  ]
+  const isActive = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard'
+    }
+    if (href === '/portfolio/manage') {
+      return pathname.startsWith('/portfolio/')
+    }
+    if (href.startsWith('/settings/')) {
+      return pathname === href || pathname.startsWith(href + '/')
+    }
+    if (href === '/admin') {
+      return pathname === '/admin'
+    }
+    return pathname === href || pathname.startsWith(href + '/')
+  }
 
-  // ビジネスアカウントの場合のみ追加
-  if (accountType === 'business') {
-    menuItems.push({ href: '/settings', label: 'ビジネス情報', icon: 'fa-briefcase' })
+  const MenuItem = ({ href, children }: { href: string, children: React.ReactNode }) => {
+    const active = isActive(href)
+    return (
+      <Link
+        href={href}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          border: 'none',
+          background: active ? '#F5F5F5' : 'transparent',
+          fontSize: '15px',
+          fontWeight: active ? '600' : '400',
+          color: '#1A1A1A',
+          cursor: 'pointer',
+          textAlign: 'left',
+          borderRadius: '6px',
+          marginBottom: '4px',
+          transition: 'background-color 0.2s',
+          display: 'block',
+          textDecoration: 'none'
+        }}
+        onMouseEnter={(e) => {
+          if (!active) e.currentTarget.style.backgroundColor = '#FAFAFA'
+        }}
+        onMouseLeave={(e) => {
+          if (!active) e.currentTarget.style.backgroundColor = 'transparent'
+        }}
+      >
+        {children}
+      </Link>
+    )
   }
 
   return (
@@ -47,13 +85,14 @@ export default function DashboardSidebar() {
         .sidebar {
           width: 240px;
           border-right: 1px solid #E5E5E5;
-          padding: 40px 0;
+          padding: 20px;
           flex-shrink: 0;
           position: sticky;
           top: 64px;
           height: calc(100vh - 64px);
           overflow-y: auto;
           align-self: flex-start;
+          background-color: white;
         }
 
         @media (max-width: 768px) {
@@ -64,54 +103,44 @@ export default function DashboardSidebar() {
       `}</style>
 
       <aside className="sidebar">
-        <nav style={{ padding: '0 20px' }}>
-          {menuItems.map((item) => {
-            // /portfolio/manage と /portfolio/upload の両方で作品管理をアクティブに
-            let isActive = pathname === item.href
-            if (item.href === '/portfolio/manage' && pathname.startsWith('/portfolio/')) {
-              isActive = true
-            } else if (item.href !== '/portfolio/manage') {
-              isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-            }
+        <nav>
+          <MenuItem href="/dashboard">ダッシュボード</MenuItem>
+          
+          <MenuItem href="/settings/profile">プロフィール編集</MenuItem>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 20px',
-                  marginBottom: '4px',
-                  backgroundColor: isActive ? '#1A1A1A' : 'transparent',
-                  color: isActive ? '#FFFFFF' : '#6B6B6B',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: isActive ? '600' : '400',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = '#F9F9F9'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }
-                }}
-              >
-                <i className={`fas ${item.icon}`} style={{ 
-                  width: '16px',
-                  fontSize: '14px',
-                  textAlign: 'center'
-                }}></i>
-                {item.label}
-              </Link>
-            )
-          })}
+          <MenuItem href="/portfolio/manage">作品管理</MenuItem>
+
+          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+
+          <MenuItem href="/requests">依頼管理</MenuItem>
+
+          <MenuItem href="/requests/manage">受注管理</MenuItem>
+
+          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+
+          <MenuItem href="/earnings">売上管理</MenuItem>
+
+          <MenuItem href="/settings/bank">振込先設定</MenuItem>
+
+          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+
+          <MenuItem href="/messages">メッセージ</MenuItem>
+
+          {accountType === 'business' && (
+            <MenuItem href="/settings/business">ビジネス情報</MenuItem>
+          )}
+
+          {isAdmin && (
+            <>
+              <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+              
+              <MenuItem href="/admin">管理ダッシュボード</MenuItem>
+
+              <MenuItem href="/admin/payments">振込管理</MenuItem>
+
+              <MenuItem href="/admin/users">ユーザー管理</MenuItem>
+            </>
+          )}
         </nav>
       </aside>
     </>

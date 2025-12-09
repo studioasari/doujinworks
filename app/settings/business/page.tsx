@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import DashboardSidebar from '../components/DashboardSidebar'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import DashboardSidebar from '@/app/components/DashboardSidebar'
 
 type Profile = {
   id: string

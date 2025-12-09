@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import DashboardSidebar from '../components/DashboardSidebar'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import DashboardSidebar from '@/app/components/DashboardSidebar'
 import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
 
 export default function ProfilePage() {
@@ -36,14 +36,31 @@ export default function ProfilePage() {
   const [pixivUrl, setPixivUrl] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
   
-  // ビジネスアカウント切り替え確認
-  const [showBusinessUpgrade, setShowBusinessUpgrade] = useState(false)
+  // ビジネス情報
+  const [businessAccountType, setBusinessAccountType] = useState<'individual' | 'corporate'>('individual')
+  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastNameKana, setLastNameKana] = useState('')
+  const [firstNameKana, setFirstNameKana] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [prefecture, setPrefecture] = useState('')
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
+  
+  // バリデーションエラー
+  const [lastNameKanaError, setLastNameKanaError] = useState('')
+  const [firstNameKanaError, setFirstNameKanaError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
+  const [postalCodeError, setPostalCodeError] = useState('')
   
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const headerInputRef = useRef<HTMLInputElement>(null)
+  const businessSectionRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   // ログイン確認
@@ -81,9 +98,105 @@ export default function ProfilePage() {
       setTwitterUrl(profileData.twitter_url || '')
       setPixivUrl(profileData.pixiv_url || '')
       setWebsiteUrl(profileData.website_url || '')
+
+      // ビジネス情報を取得
+      if (profileData.account_type === 'business') {
+        const { data: businessData } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('profile_id', profileData.id)
+          .single()
+
+        if (businessData) {
+          setBusinessAccountType(businessData.account_type || 'individual')
+          setLastName(businessData.last_name || '')
+          setFirstName(businessData.first_name || '')
+          setLastNameKana(businessData.last_name_kana || '')
+          setFirstNameKana(businessData.first_name_kana || '')
+          setCompanyName(businessData.company_name || '')
+          setPhone(businessData.phone || '')
+          setPostalCode(businessData.postal_code || '')
+          setPrefecture(businessData.prefecture || '')
+          setAddress1(businessData.address1 || '')
+          setAddress2(businessData.address2 || '')
+        }
+      }
     }
 
     setLoading(false)
+  }
+
+  // ビジネス利用を選択した時にスクロール
+  useEffect(() => {
+    if (accountType === 'business' && currentAccountType === 'casual' && businessSectionRef.current) {
+      setTimeout(() => {
+        businessSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    }
+  }, [accountType])
+
+  // バリデーション関数
+  const validateKana = (value: string, setError: (error: string) => void) => {
+    if (!value) {
+      setError('')
+      return true
+    }
+    const hiraganaRegex = /^[\u3040-\u309F\s]*$/
+    if (!hiraganaRegex.test(value)) {
+      setError('ひらがなで入力してください')
+      return false
+    }
+    setError('')
+    return true
+  }
+
+  const validatePhone = (value: string) => {
+    if (!value) {
+      setPhoneError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPhoneError('数字のみで入力してください')
+      return false
+    }
+    setPhoneError('')
+    return true
+  }
+
+  const validatePostalCode = (value: string) => {
+    if (!value) {
+      setPostalCodeError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPostalCodeError('数字のみで入力してください')
+      return false
+    }
+    setPostalCodeError('')
+    return true
+  }
+
+  // ビジネス情報の入力チェック
+  const isBusinessInfoComplete = () => {
+    const basicComplete = lastName && 
+                         firstName &&
+                         lastNameKana && 
+                         firstNameKana &&
+                         phone && 
+                         postalCode && 
+                         prefecture && 
+                         address1 &&
+                         !lastNameKanaError &&
+                         !firstNameKanaError &&
+                         !phoneError &&
+                         !postalCodeError
+    
+    if (businessAccountType === 'corporate') {
+      return basicComplete && companyName
+    }
+    return basicComplete
   }
 
   // ファイル処理共通関数
@@ -259,22 +372,9 @@ export default function ProfilePage() {
     }
   }
 
-  // ビジネスアカウントへの切り替え確認
+  // アカウント種別変更
   const handleAccountTypeChange = (newType: 'casual' | 'business') => {
-    // 一般→ビジネスへの切り替えのみ確認
-    if (currentAccountType === 'casual' && newType === 'business') {
-      setShowBusinessUpgrade(true)
-    } else {
-      setAccountType(newType)
-    }
-  }
-
-  // ビジネスアカウント切り替え実行
-  const confirmBusinessUpgrade = () => {
-    setAccountType('business')
-    setShowBusinessUpgrade(false)
-    setSuccess('ビジネスアカウントに切り替えます。保存してください。')
-    setTimeout(() => setSuccess(''), 3000)
+    setAccountType(newType)
   }
 
   // プロフィール保存
@@ -285,6 +385,16 @@ export default function ProfilePage() {
     setError('')
     setSuccess('')
 
+    // ビジネスアカウントの場合、ビジネス情報のバリデーション
+    if (accountType === 'business' && !isBusinessInfoComplete()) {
+      setError('ビジネス情報を全て入力してください')
+      setSaving(false)
+      // ビジネス情報セクションにスクロール
+      businessSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    // プロフィール保存
     const profileData: any = {
       user_id: user.id,
       display_name: displayName,
@@ -299,35 +409,56 @@ export default function ProfilePage() {
       website_url: websiteUrl,
     }
 
-    // username が存在する場合のみ含める（変更はしない）
     if (profile?.username) {
       profileData.username = profile.username
     }
 
-    // upsert（存在すれば更新、なければ作成）
-    const { error } = await supabase
+    const { error: profileError } = await supabase
       .from('profiles')
       .upsert(profileData, { onConflict: 'user_id' })
 
-    if (error) {
-      setError(error.message)
+    if (profileError) {
+      setError(profileError.message)
       setSaving(false)
-    } else {
-      // ビジネスアカウントに切り替えた場合、settings画面へ誘導
-      if (currentAccountType === 'casual' && accountType === 'business') {
-        setSuccess('ビジネスアカウントに切り替えました。ビジネス情報を入力してください。')
+      return
+    }
+
+    // ビジネス情報保存（ビジネスアカウントの場合）
+    if (accountType === 'business') {
+      const businessData: any = {
+        profile_id: profile.id,
+        account_type: businessAccountType,
+        last_name: lastName,
+        first_name: firstName,
+        last_name_kana: lastNameKana,
+        first_name_kana: firstNameKana,
+        phone,
+        postal_code: postalCode,
+        prefecture,
+        address1,
+      }
+
+      if (address2) businessData.address2 = address2
+      if (businessAccountType === 'corporate' && companyName) {
+        businessData.company_name = companyName
+      }
+
+      const { error: businessError } = await supabase
+        .from('business_profiles')
+        .upsert(businessData, { onConflict: 'profile_id' })
+
+      if (businessError) {
+        setError(businessError.message)
         setSaving(false)
-        setTimeout(() => {
-          router.push('/settings')
-        }, 2000)
-      } else {
-        setSuccess('プロフィールを保存しました')
-        setSaving(false)
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 1500)
+        return
       }
     }
+
+    setSuccess('プロフィールを保存しました')
+    setSaving(false)
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1500)
   }
 
   if (loading) {
@@ -630,6 +761,304 @@ export default function ProfilePage() {
                 )}
               </div>
 
+              {/* ビジネス情報（ビジネス利用選択時のみ表示） */}
+              {accountType === 'business' && (
+                <div 
+                  ref={businessSectionRef}
+                  style={{
+                    marginBottom: '32px',
+                    padding: '24px',
+                    backgroundColor: '#FAFAFA',
+                    borderRadius: '12px',
+                    border: '2px solid #E5E5E5',
+                    scrollMarginTop: '80px'
+                  }}
+                >
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>
+                    ビジネス情報
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#6B6B6B', marginBottom: '20px' }}>
+                    取引に必要な情報を入力してください
+                  </p>
+
+                  {/* 個人/法人 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label mb-12">
+                      個人/法人 <span className="form-required">*</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setBusinessAccountType('individual')}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: businessAccountType === 'individual' ? '#FFFFFF' : '#6B6B6B',
+                          backgroundColor: businessAccountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
+                          border: `1px solid ${businessAccountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        個人
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBusinessAccountType('corporate')}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: businessAccountType === 'corporate' ? '#FFFFFF' : '#6B6B6B',
+                          backgroundColor: businessAccountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
+                          border: `1px solid ${businessAccountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        法人
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 氏名 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      氏名 <span className="form-required">*</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="姓"
+                        required
+                        className="input-field"
+                        style={{ flex: 1 }}
+                      />
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="名"
+                        required
+                        className="input-field"
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 氏名かな */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      氏名(かな) <span className="form-required">*</span>
+                    </label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={lastNameKana}
+                          onChange={(e) => {
+                            setLastNameKana(e.target.value)
+                            validateKana(e.target.value, setLastNameKanaError)
+                          }}
+                          placeholder="せい"
+                          required
+                          className="input-field"
+                          style={{ borderColor: lastNameKanaError ? '#EF4444' : undefined }}
+                        />
+                        {lastNameKanaError && (
+                          <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                            {lastNameKanaError}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={firstNameKana}
+                          onChange={(e) => {
+                            setFirstNameKana(e.target.value)
+                            validateKana(e.target.value, setFirstNameKanaError)
+                          }}
+                          placeholder="めい"
+                          required
+                          className="input-field"
+                          style={{ borderColor: firstNameKanaError ? '#EF4444' : undefined }}
+                        />
+                        {firstNameKanaError && (
+                          <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                            {firstNameKanaError}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 会社名（法人のみ） */}
+                  {businessAccountType === 'corporate' && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <label className="form-label">
+                        会社名 <span className="form-required">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="株式会社○○"
+                        required
+                        className="input-field"
+                      />
+                    </div>
+                  )}
+
+                  {/* 電話番号 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      電話番号 <span className="form-required">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(e.target.value)
+                        validatePhone(e.target.value)
+                      }}
+                      placeholder="09012345678"
+                      required
+                      maxLength={11}
+                      className="input-field"
+                      style={{ borderColor: phoneError ? '#EF4444' : undefined }}
+                    />
+                    {phoneError && (
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                        {phoneError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 郵便番号 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      郵便番号 <span className="form-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={postalCode}
+                      onChange={(e) => {
+                        setPostalCode(e.target.value)
+                        validatePostalCode(e.target.value)
+                      }}
+                      placeholder="1234567"
+                      required
+                      maxLength={7}
+                      className="input-field"
+                      style={{ borderColor: postalCodeError ? '#EF4444' : undefined }}
+                    />
+                    {postalCodeError && (
+                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                        {postalCodeError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 都道府県 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      都道府県 <span className="form-required">*</span>
+                    </label>
+                    <select
+                      value={prefecture}
+                      onChange={(e) => setPrefecture(e.target.value)}
+                      required
+                      className="select-field"
+                    >
+                      <option value="">選択してください</option>
+                      <option value="北海道">北海道</option>
+                      <option value="青森県">青森県</option>
+                      <option value="岩手県">岩手県</option>
+                      <option value="宮城県">宮城県</option>
+                      <option value="秋田県">秋田県</option>
+                      <option value="山形県">山形県</option>
+                      <option value="福島県">福島県</option>
+                      <option value="茨城県">茨城県</option>
+                      <option value="栃木県">栃木県</option>
+                      <option value="群馬県">群馬県</option>
+                      <option value="埼玉県">埼玉県</option>
+                      <option value="千葉県">千葉県</option>
+                      <option value="東京都">東京都</option>
+                      <option value="神奈川県">神奈川県</option>
+                      <option value="新潟県">新潟県</option>
+                      <option value="富山県">富山県</option>
+                      <option value="石川県">石川県</option>
+                      <option value="福井県">福井県</option>
+                      <option value="山梨県">山梨県</option>
+                      <option value="長野県">長野県</option>
+                      <option value="岐阜県">岐阜県</option>
+                      <option value="静岡県">静岡県</option>
+                      <option value="愛知県">愛知県</option>
+                      <option value="三重県">三重県</option>
+                      <option value="滋賀県">滋賀県</option>
+                      <option value="京都府">京都府</option>
+                      <option value="大阪府">大阪府</option>
+                      <option value="兵庫県">兵庫県</option>
+                      <option value="奈良県">奈良県</option>
+                      <option value="和歌山県">和歌山県</option>
+                      <option value="鳥取県">鳥取県</option>
+                      <option value="島根県">島根県</option>
+                      <option value="岡山県">岡山県</option>
+                      <option value="広島県">広島県</option>
+                      <option value="山口県">山口県</option>
+                      <option value="徳島県">徳島県</option>
+                      <option value="香川県">香川県</option>
+                      <option value="愛媛県">愛媛県</option>
+                      <option value="高知県">高知県</option>
+                      <option value="福岡県">福岡県</option>
+                      <option value="佐賀県">佐賀県</option>
+                      <option value="長崎県">長崎県</option>
+                      <option value="熊本県">熊本県</option>
+                      <option value="大分県">大分県</option>
+                      <option value="宮崎県">宮崎県</option>
+                      <option value="鹿児島県">鹿児島県</option>
+                      <option value="沖縄県">沖縄県</option>
+                    </select>
+                  </div>
+
+                  {/* 住所 */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="form-label">
+                      住所(番地まで) <span className="form-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={address1}
+                      onChange={(e) => setAddress1(e.target.value)}
+                      placeholder="○○市○○町1-2-3"
+                      required
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '0' }}>
+                    <label className="form-label">
+                      住所(建物名など)
+                    </label>
+                    <input
+                      type="text"
+                      value={address2}
+                      onChange={(e) => setAddress2(e.target.value)}
+                      placeholder="○○マンション101号室"
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* エラー・成功メッセージ */}
               {error && (
                 <div style={{
@@ -681,64 +1110,6 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
-
-      {/* ビジネスアカウント切り替え確認モーダル */}
-      {showBusinessUpgrade && (
-        <>
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }} onClick={() => setShowBusinessUpgrade(false)}>
-            <div style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              padding: '32px',
-              maxWidth: '500px',
-              width: '100%'
-            }} onClick={(e) => e.stopPropagation()}>
-              <h2 className="card-title mb-16">ビジネスアカウントに切り替えますか？</h2>
-              
-              <div className="text-small text-gray mb-24">
-                ビジネスアカウントに切り替えると、以下の機能が利用できるようになります。
-                <ul style={{ marginTop: '12px', paddingLeft: '20px' }}>
-                  <li>仕事の受発注</li>
-                  <li>報酬の受け取り</li>
-                  <li>請求書の発行</li>
-                </ul>
-                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#FFF5F5', border: '1px solid #FECACA', borderRadius: '8px', fontSize: '13px', color: '#7F1D1D' }}>
-                  ※ 一度ビジネスアカウントに切り替えると、一般アカウントには戻せません
-                </div>
-              </div>
-
-              <div className="flex gap-12">
-                <button
-                  onClick={() => setShowBusinessUpgrade(false)}
-                  className="btn-secondary"
-                  style={{ flex: 1 }}
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={confirmBusinessUpgrade}
-                  className="btn-primary"
-                  style={{ flex: 1 }}
-                >
-                  切り替える
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
 
       <Footer />
     </>
