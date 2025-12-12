@@ -1,523 +1,587 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
+'use client'
 
-const execPromise = promisify(exec)
+import { useState, useEffect } from 'react'
+import { supabase } from '@/utils/supabase'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Header from '../components/Header'
+import Footer from '../components/Footer'
+import DashboardSidebar from '../components/DashboardSidebar'
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const { requestId, title, addressee, amount, paidAt, requesterId, creatorId } = body
+type Profile = {
+  id: string
+  user_id: string
+  username: string | null
+  display_name: string | null
+  account_type: string | null
+}
 
-    if (!requestId || !title || !amount || !paidAt || !requesterId || !creatorId) {
-      console.error('Missing fields:', { requestId, title, amount, paidAt, requesterId, creatorId })
-      return NextResponse.json(
-        { 
-          error: 'Missing required fields',
-          missing: {
-            requestId: !requestId,
-            title: !title,
-            amount: !amount,
-            paidAt: !paidAt,
-            requesterId: !requesterId,
-            creatorId: !creatorId
-          }
-        },
-        { status: 400 }
-      )
-    }
+type BusinessProfile = {
+  id: string
+  profile_id: string
+  account_type: string | null
+  full_name: string | null
+  full_name_kana: string | null
+  company_name: string | null
+  phone: string | null
+  postal_code: string | null
+  prefecture: string | null
+  address1: string | null
+  address2: string | null
+  birth_date: string | null
+  gender: string | null
+}
 
-    if (!addressee || addressee.trim() === '') {
-      console.error('Addressee is empty')
-      return NextResponse.json(
-        { error: 'Addressee is required' },
-        { status: 400 }
-      )
-    }
+export default function SettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null)
+  
+  // ビジネス情報
+  const [businessAccountType, setBusinessAccountType] = useState<'individual' | 'corporate'>('individual')
+  const [fullName, setFullName] = useState('')
+  const [fullNameKana, setFullNameKana] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+  const [prefecture, setPrefecture] = useState('')
+  const [address1, setAddress1] = useState('')
+  const [address2, setAddress2] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [gender, setGender] = useState('')
+  
+  // バリデーションエラー
+  const [fullNameKanaError, setFullNameKanaError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
+  const [postalCodeError, setPostalCodeError] = useState('')
+  
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  
+  const router = useRouter()
 
-    // 環境変数チェック
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      return NextResponse.json(
-        { error: 'Supabase URL not configured' },
-        { status: 500 }
-      )
-    }
+  useEffect(() => {
+    checkUser()
+  }, [])
 
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!supabaseKey) {
-      return NextResponse.json(
-        { error: 'Supabase key not configured' },
-        { status: 500 }
-      )
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseKey
-    )
-
-    // Requester（宛名）のビジネス情報取得
-    const { data: requesterBusiness, error: requesterError } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .eq('profile_id', requesterId)
-      .single()
-
-    if (requesterError) {
-      console.error('Requester business profile error:', requesterError)
-      return NextResponse.json(
-        { 
-          error: 'Requester business profile not found',
-          details: requesterError.message,
-          requesterId
-        },
-        { status: 404 }
-      )
-    }
-
-    if (!requesterBusiness) {
-      console.error('Requester business is null for requesterId:', requesterId)
-      return NextResponse.json(
-        { error: 'Requester business profile not found', requesterId },
-        { status: 404 }
-      )
-    }
-
-    // Creator（発行者）のビジネス情報取得
-    const { data: creatorBusiness, error: creatorError } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .eq('profile_id', creatorId)
-      .single()
-
-    if (creatorError) {
-      console.error('Creator business profile error:', creatorError)
-      return NextResponse.json(
-        { 
-          error: 'Creator business profile not found',
-          details: creatorError.message,
-          creatorId
-        },
-        { status: 404 }
-      )
-    }
-
-    if (!creatorBusiness) {
-      console.error('Creator business is null for creatorId:', creatorId)
-      return NextResponse.json(
-        { error: 'Creator business profile not found', creatorId },
-        { status: 404 }
-      )
-    }
-
-    // 必須項目のチェック
-    const missingFields = []
-    if (!creatorBusiness.last_name) missingFields.push('last_name')
-    if (!creatorBusiness.first_name) missingFields.push('first_name')
-    if (!creatorBusiness.postal_code) missingFields.push('postal_code')
-    if (!creatorBusiness.prefecture) missingFields.push('prefecture')
-    if (!creatorBusiness.address1) missingFields.push('address1')
-    if (!creatorBusiness.phone) missingFields.push('phone')
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
     
-    if (missingFields.length > 0) {
-      console.error('Missing creator business fields:', missingFields)
-      return NextResponse.json(
-        { 
-          error: 'Incomplete creator business profile',
-          missingFields
-        },
-        { status: 400 }
-      )
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+      return
     }
 
-    // PDFに渡すデータを準備
-    const receiptData = {
-      requestId,
-      title,
-      addressee,
-      requester_account_type: requesterBusiness.account_type,
-      amount,
-      paidAt,
-      creator: {
-        last_name: creatorBusiness.last_name,
-        first_name: creatorBusiness.first_name,
-        company_name: creatorBusiness.company_name || '',
-        postal_code: creatorBusiness.postal_code,
-        prefecture: creatorBusiness.prefecture,
-        address1: creatorBusiness.address1,
-        address2: creatorBusiness.address2 || '',
-        phone: creatorBusiness.phone
+    setUser(user)
+
+    // プロフィール取得
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileData) {
+      setProfile(profileData)
+
+      // ビジネスプロフィール取得
+      const { data: businessData } = await supabase
+        .from('business_profiles')
+        .select('*')
+        .eq('profile_id', profileData.id)
+        .single()
+
+      if (businessData) {
+        setBusinessProfile(businessData)
+        setBusinessAccountType(businessData.account_type || 'individual')
+        setFullName(businessData.full_name || '')
+        setFullNameKana(businessData.full_name_kana || '')
+        setCompanyName(businessData.company_name || '')
+        setPhone(businessData.phone || '')
+        setPostalCode(businessData.postal_code || '')
+        setPrefecture(businessData.prefecture || '')
+        setAddress1(businessData.address1 || '')
+        setAddress2(businessData.address2 || '')
+        setBirthDate(businessData.birth_date || '')
+        setGender(businessData.gender || '')
       }
     }
 
-    // 一時ファイル
-    const tmpDir = os.tmpdir()
-    const timestamp = Date.now()
-    const scriptPath = path.join(tmpDir, 'generate_receipt.py')
-    const jsonPath = path.join(tmpDir, 'receipt_data_' + timestamp + '.json')
-    const pdfPath = path.join(tmpDir, 'receipt_' + timestamp + '.pdf')
+    setLoading(false)
+  }
 
-    // Pythonスクリプト
-    const pythonScript = `import sys
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-from datetime import datetime
-import json
+  // バリデーション関数
+  const validateFullNameKana = (value: string) => {
+    if (!value) {
+      setFullNameKanaError('')
+      return true
+    }
+    const hiraganaRegex = /^[\u3040-\u309F\s]*$/
+    if (!hiraganaRegex.test(value)) {
+      setFullNameKanaError('ひらがなで入力してください')
+      return false
+    }
+    setFullNameKanaError('')
+    return true
+  }
 
-def create_receipt(output_path, data):
-    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
-    c = canvas.Canvas(output_path, pagesize=A4)
-    width, height = A4
-    black = (0, 0, 0)
-    gray = (0.5, 0.5, 0.5)
-    light_gray = (0.9, 0.9, 0.9)
-    margin = 50
-    y = height - 60
-    
-    request_id = data.get("requestId", "")
-    receipt_number = "領収書番号: DW-" + request_id[:8] if request_id else "領収書番号: DW-00000000"
-    paid_at = data.get("paidAt", "")
-    if paid_at:
-        paid_date = datetime.fromisoformat(paid_at.replace('Z', '+00:00'))
-        issue_date = paid_date.strftime("%Y年%m月%d日")
-    else:
-        issue_date = ""
-    
-    c.setFont('HeiseiMin-W3', 9)
-    c.setFillColorRGB(*black)
-    c.drawRightString(width - margin, y, issue_date)
-    y -= 14
-    c.drawRightString(width - margin, y, receipt_number)
-    y -= 40
-    
-    c.setFont('HeiseiMin-W3', 28)
-    c.drawCentredString(width / 2, y, '領 収 書')
-    y -= 60
-    
-    left_x = margin
-    right_x = width / 2 + 50
-    addressee_y = y
-    addressee_text = data.get("addressee", "")
-    requester_account_type = data.get("requester_account_type", "individual")
-    
-    # 既存の「様」「御中」を削除
-    if addressee_text:
-        addressee_text = addressee_text.replace(' 様', '').replace('様', '').replace(' 御中', '').replace('御中', '')
-        
-        # account_typeに基づいて判定
-        if requester_account_type == 'corporate':
-            addressee_text = addressee_text + ' 御中'
-        else:
-            addressee_text = addressee_text + ' 様'
-    
-    addressee_lines = addressee_text.split('\\n')
-    c.setFont('HeiseiMin-W3', 14)
-    for line in addressee_lines:
-        c.drawString(left_x, addressee_y, line.strip())
-        addressee_y -= 20
-    
-    info_y = y
-    creator = data.get('creator', {})
-    creator_company = creator.get('company_name')
-    if creator_company:
-        c.setFont('HeiseiMin-W3', 12)
-        c.setFillColorRGB(*black)
-        c.drawString(right_x, info_y, creator_company)
-        info_y -= 16
-    
-    creator_last_name = creator.get('last_name', '')
-    creator_first_name = creator.get('first_name', '')
-    creator_name = creator_last_name + ' ' + creator_first_name if creator_last_name or creator_first_name else ''
-    if creator_name.strip():
-        c.setFont('HeiseiMin-W3', 12)
-        c.setFillColorRGB(*black)
-        c.drawString(right_x, info_y, creator_name)
-        info_y -= 16
-    
-    c.setFont('HeiseiMin-W3', 9)
-    c.setFillColorRGB(*gray)
-    creator_postal = creator.get('postal_code', '')
-    creator_pref = creator.get('prefecture', '')
-    creator_addr1 = creator.get('address1', '')
-    creator_addr2 = creator.get('address2', '')
-    c.drawString(right_x, info_y, "〒" + creator_postal)
-    info_y -= 13
-    c.drawString(right_x, info_y, creator_pref + creator_addr1)
-    if creator_addr2:
-        info_y -= 13
-        c.drawString(right_x, info_y, creator_addr2)
-    
-    info_y -= 13
-    phone = creator.get('phone', '')
-    if phone and len(phone) >= 10:
-        if len(phone) == 11:
-            formatted_phone = phone[:3] + '-' + phone[3:7] + '-' + phone[7:]
-        else:
-            formatted_phone = phone[:2] + '-' + phone[2:6] + '-' + phone[6:]
-        c.drawString(right_x, info_y, "TEL: " + formatted_phone)
-    
-    y = min(addressee_y, info_y) - 20
-    amount = data.get("amount", 0)
-    c.setFont('HeiseiMin-W3', 12)
-    c.setFillColorRGB(*black)
-    c.drawString(left_x, y, '金額')
-    y -= 20
-    c.setFont('HeiseiMin-W3', 24)
-    amount_text = '¥ {:,} -'.format(amount)
-    
-    # 金額を右寄せで表示（アンダーラインの右端）
-    amount_box_width = 250
-    c.drawRightString(left_x + amount_box_width, y, amount_text)
-    
-    c.setLineWidth(1)
-    c.line(left_x, y - 5, left_x + amount_box_width, y - 5)
-    
-    if amount >= 50000:
-        stamp_x = width - margin - 100
-        stamp_y = y - 5
-        c.setLineWidth(0.5)
-        c.setStrokeColorRGB(*light_gray)
-        c.rect(stamp_x, stamp_y, 70, 35, fill=0, stroke=1)
-        c.setFont('HeiseiMin-W3', 8)
-        c.setFillColorRGB(*gray)
-        c.drawCentredString(stamp_x + 35, stamp_y + 24, '収入印紙')
-        stamp_amount = '¥400' if amount >= 1000000 else '¥200'
-        c.setFont('HeiseiMin-W3', 11)
-        c.setFillColorRGB(*black)
-        c.drawCentredString(stamp_x + 35, stamp_y + 10, stamp_amount)
-    
-    y -= 35
-    
-    # 但し書き（先に表示、文字サイズ大きく）
-    title = data.get("title", "")
-    c.setFont('HeiseiMin-W3', 11)
-    c.setFillColorRGB(*black)
-    c.drawString(left_x, y, '但し　' + title + 'として')
-    
-    y -= 20
-    
-    # 領収文言
-    c.setFont('HeiseiMin-W3', 9)
-    c.drawString(left_x, y, '上記金額を正に領収いたしました')
-    
-    y -= 30
-    
-    table_x = margin
-    table_width = width - margin * 2
-    row_height = 22
-    num_data_rows = 10
-    col1_width = table_width * 0.5
-    col2_width = table_width * 0.15
-    col3_width = table_width * 0.15
-    col4_width = table_width * 0.2
-    table_height = row_height * (num_data_rows + 1 + 3)
-    table_top = y
-    table_bottom = y - table_height
-    
-    # ヘッダー背景を先に描画
-    c.setFillColorRGB(*light_gray)
-    c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=0)
-    
-    # 外枠を描画
-    c.setLineWidth(1)
-    c.setStrokeColorRGB(*black)
-    c.rect(table_x, table_bottom, table_width, table_height, stroke=1, fill=0)
-    
-    # ヘッダーテキスト
-    c.setFont('HeiseiMin-W3', 9)
-    c.setFillColorRGB(*black)
-    c.drawCentredString(table_x + col1_width / 2, y - 15, '品名')
-    c.drawCentredString(table_x + col1_width + col2_width / 2, y - 15, '数量')
-    c.drawCentredString(table_x + col1_width + col2_width + col3_width / 2, y - 15, '単価')
-    c.drawCentredString(table_x + col1_width + col2_width + col3_width + col4_width / 2, y - 15, '金額')
-    
-    # ヘッダー下の横線を再描画
-    c.setLineWidth(1)
-    c.setStrokeColorRGB(*black)
-    c.line(table_x, y - row_height, table_x + table_width, y - row_height)
-    
-    current_y = y - row_height
-    
-    # 税込み金額から逆算
-    subtotal = int(amount / 1.1)
-    tax = amount - subtotal
-    
-    for i in range(num_data_rows):
-        current_y -= row_height
-        c.line(table_x, current_y, table_x + table_width, current_y)
-        
-        # 1行目にデータを表示（税抜き金額）
-        if i == 0:
-            c.setFont('HeiseiMin-W3', 9)
-            c.setFillColorRGB(*black)
-            # 品名
-            c.drawString(table_x + 5, current_y + 5, title)
-            # 数量
-            c.drawCentredString(table_x + col1_width + col2_width / 2, current_y + 5, '1')
-            # 単価（税抜き）
-            c.drawRightString(table_x + col1_width + col2_width + col3_width - 5, current_y + 5, '¥{:,}'.format(subtotal))
-            # 金額（税抜き）
-            c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(subtotal))
-    
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.setFont('HeiseiMin-W3', 9)
-    
-    # 税込み金額から逆算
-    subtotal = int(amount / 1.1)
-    tax = amount - subtotal
-    
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '小計')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(subtotal))
-    
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '消費税(10%)')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(tax))
-    
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '合計金額')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(amount))
-    
-    # 縦線を描画
-    c.setLineWidth(1)
-    c.setStrokeColorRGB(*black)
-    c.line(table_x + col1_width, table_top, table_x + col1_width, table_bottom)
-    c.line(table_x + col1_width + col2_width, table_top, table_x + col1_width + col2_width, table_bottom)
-    c.line(table_x + col1_width + col2_width + col3_width, table_top, table_x + col1_width + col2_width + col3_width, table_bottom)
-    
-    y = table_bottom - 20
-    c.setLineWidth(0.5)
-    c.setStrokeColorRGB(*light_gray)
-    c.line(margin, y, width - margin, y)
-    y -= 15
-    c.setFont('HeiseiMin-W3', 7)
-    c.setFillColorRGB(*gray)
-    c.drawString(margin, y, 'この領収書は同人ワークスを通じた取引の証明として発行されます')
-    y -= 12
-    c.drawString(margin, y, '取引ID: ' + request_id)
-    y -= 15
-    c.setFont('HeiseiMin-W3', 8)
-    c.setFillColorRGB(*black)
-    c.drawString(margin, y, '運営: 合同会社スタジオアサリ')
-    
-    # 運営会社の印鑑
-    seal_x = margin + 150
-    seal_y = y + 5
-    c.setStrokeColorRGB(*light_gray)
-    c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 20, fill=0, stroke=1)
-    c.setFont('HeiseiMin-W3', 6)
-    c.setFillColorRGB(*gray)
-    c.drawCentredString(seal_x, seal_y, '【印鑑】')
-    
-    y -= 12
-    c.setFont('HeiseiMin-W3', 7)
-    c.setFillColorRGB(*gray)
-    c.drawString(margin, y, '〒450-0002 愛知県名古屋市中村区名駅3丁目4-10 アルティメイト名駅1st 2階')
-    c.save()
+  const validatePhone = (value: string) => {
+    if (!value) {
+      setPhoneError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPhoneError('数字のみで入力してください')
+      return false
+    }
+    setPhoneError('')
+    return true
+  }
 
-try:
-    with open(sys.argv[1], 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    create_receipt(sys.argv[2], data)
-    print('SUCCESS')
-except Exception as e:
-    import traceback
-    print('ERROR:', str(e), file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-    sys.exit(1)
-`
+  const validatePostalCode = (value: string) => {
+    if (!value) {
+      setPostalCodeError('')
+      return true
+    }
+    const numberRegex = /^[0-9]*$/
+    if (!numberRegex.test(value)) {
+      setPostalCodeError('数字のみで入力してください')
+      return false
+    }
+    setPostalCodeError('')
+    return true
+  }
 
-    fs.writeFileSync(scriptPath, pythonScript)
-    fs.writeFileSync(jsonPath, JSON.stringify(receiptData, null, 2))
+  // 入力チェック
+  const isBusinessInfoComplete = () => {
+    const basicComplete = fullName && 
+                         fullNameKana && 
+                         phone && 
+                         postalCode && 
+                         prefecture && 
+                         address1 &&
+                         !fullNameKanaError &&
+                         !phoneError &&
+                         !postalCodeError
+    
+    if (businessAccountType === 'corporate') {
+      return basicComplete && companyName
+    }
+    return basicComplete
+  }
 
-    // デバッグ用ログ
-    console.log('Receipt data saved to:', jsonPath)
+  // ビジネス情報保存
+  const handleSave = async () => {
+    if (!profile) return
     
-    // WindowsとLinux/macOSの両方に対応
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
-    const command = pythonCmd + ' "' + scriptPath + '" "' + jsonPath + '" "' + pdfPath + '"'
-    
-    console.log('Executing command:', command)
-    
-    let stdout, stderr
-    try {
-      const result = await execPromise(command, {
-        maxBuffer: 10 * 1024 * 1024
-      })
-      stdout = result.stdout
-      stderr = result.stderr
-    } catch (execError: any) {
-      console.error('Python execution error:', execError)
-      return NextResponse.json(
-        { 
-          error: 'Python execution failed',
-          details: execError.message,
-          stdout: execError.stdout,
-          stderr: execError.stderr
-        },
-        { status: 500 }
-      )
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    const businessData: any = {
+      profile_id: profile.id,
+      account_type: businessAccountType,
+      full_name: fullName,
+      full_name_kana: fullNameKana,
+      phone,
+      postal_code: postalCode,
+      prefecture,
+      address1,
     }
 
-    console.log('Python stdout:', stdout)
-    if (stderr) {
-      console.log('Python stderr:', stderr)
+    if (address2) businessData.address2 = address2
+    if (businessAccountType === 'individual') {
+      if (birthDate) businessData.birth_date = birthDate
+      if (gender) businessData.gender = gender
+    }
+    if (businessAccountType === 'corporate' && companyName) {
+      businessData.company_name = companyName
     }
 
-    if (stderr && stderr.includes('Traceback')) {
-      return NextResponse.json(
-        { 
-          error: 'Python script error',
-          details: stderr
-        },
-        { status: 500 }
-      )
+    const { error } = await supabase
+      .from('business_profiles')
+      .upsert(businessData, { onConflict: 'profile_id' })
+
+    if (error) {
+      setError(error.message)
+      setSaving(false)
+    } else {
+      setSuccess('ビジネス情報を保存しました')
+      setSaving(false)
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1500)
     }
+  }
 
-    if (!fs.existsSync(pdfPath)) {
-      return NextResponse.json(
-        { error: 'PDF file was not created', stdout, stderr },
-        { status: 500 }
-      )
-    }
-
-    const pdfBuffer = fs.readFileSync(pdfPath)
-
-    // 一時ファイル削除
-    try {
-      fs.unlinkSync(scriptPath)
-      fs.unlinkSync(jsonPath)
-      fs.unlinkSync(pdfPath)
-    } catch (e) {
-      console.error('Failed to delete temp files:', e)
-    }
-
-    // PDFを返す
-    return new NextResponse(pdfBuffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="receipt_' + requestId + '.pdf"',
-      },
-    })
-  } catch (error) {
-    console.error('PDF生成エラー（詳細）:', error)
-    console.error('エラースタック:', error instanceof Error ? error.stack : 'No stack')
-    return NextResponse.json(
-      { 
-        error: 'PDF生成に失敗しました',
-        details: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
+          <div className="loading-state">
+            読み込み中...
+          </div>
+        </div>
+        <Footer />
+      </>
     )
   }
+
+  // 一般アカウントの場合は設定がない旨を表示
+  if (profile?.account_type !== 'business') {
+    return (
+      <>
+        <Header />
+        <div style={{ 
+          minHeight: '100vh', 
+          backgroundColor: '#FFFFFF',
+          display: 'flex'
+        }}>
+          <DashboardSidebar />
+
+          <main style={{ flex: 1, padding: '40px' }}>
+            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <h1 className="page-title mb-40">設定</h1>
+
+              <div className="card-no-hover p-40">
+                <div className="empty-state">
+                  <p className="text-small text-gray mb-16">
+                    ビジネスアカウントに切り替えると、ビジネス情報の設定が可能になります。
+                  </p>
+                  <Link href="/profile" className="btn-primary">
+                    プロフィール編集へ
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Header />
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#FFFFFF',
+        display: 'flex'
+      }}>
+        <DashboardSidebar />
+
+        <main style={{ flex: 1, padding: '40px' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <h1 className="page-title mb-40">設定</h1>
+
+            <div className="card-no-hover p-40">
+              <h2 className="section-title mb-32">ビジネス情報</h2>
+
+              {/* 個人/法人 */}
+              <div className="mb-24">
+                <label className="form-label mb-12">
+                  個人/法人 <span className="form-required">*</span>
+                </label>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBusinessAccountType('individual')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: businessAccountType === 'individual' ? '#FFFFFF' : '#6B6B6B',
+                      backgroundColor: businessAccountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
+                      border: `1px solid ${businessAccountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    個人
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBusinessAccountType('corporate')}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: businessAccountType === 'corporate' ? '#FFFFFF' : '#6B6B6B',
+                      backgroundColor: businessAccountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
+                      border: `1px solid ${businessAccountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    法人
+                  </button>
+                </div>
+              </div>
+
+              {/* 氏名 */}
+              <div className="mb-24">
+                <label className="form-label">
+                  氏名 <span className="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="山田 太郎"
+                  required
+                  className="input-field"
+                />
+              </div>
+
+              {/* 氏名(かな) */}
+              <div className="mb-24">
+                <label className="form-label">
+                  氏名(かな) <span className="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={fullNameKana}
+                  onChange={(e) => {
+                    setFullNameKana(e.target.value)
+                    validateFullNameKana(e.target.value)
+                  }}
+                  placeholder="やまだ たろう"
+                  required
+                  className="input-field"
+                  style={{
+                    borderColor: fullNameKanaError ? '#EF4444' : undefined
+                  }}
+                />
+                {fullNameKanaError && (
+                  <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
+                    {fullNameKanaError}
+                  </div>
+                )}
+              </div>
+
+              {/* 会社名（法人のみ） */}
+              {businessAccountType === 'corporate' && (
+                <div className="mb-24">
+                  <label className="form-label">
+                    会社名 <span className="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="株式会社○○"
+                    required
+                    className="input-field"
+                  />
+                </div>
+              )}
+
+              {/* 電話番号 */}
+              <div className="mb-24">
+                <label className="form-label">
+                  電話番号 <span className="form-required">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value)
+                    validatePhone(e.target.value)
+                  }}
+                  placeholder="09012345678"
+                  required
+                  maxLength={11}
+                  className="input-field"
+                  style={{
+                    borderColor: phoneError ? '#EF4444' : undefined
+                  }}
+                />
+                {phoneError && (
+                  <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
+                    {phoneError}
+                  </div>
+                )}
+              </div>
+
+              {/* 郵便番号 */}
+              <div className="mb-24">
+                <label className="form-label">
+                  郵便番号 <span className="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={postalCode}
+                  onChange={(e) => {
+                    setPostalCode(e.target.value)
+                    validatePostalCode(e.target.value)
+                  }}
+                  placeholder="1234567"
+                  required
+                  maxLength={7}
+                  className="input-field"
+                  style={{
+                    borderColor: postalCodeError ? '#EF4444' : undefined
+                  }}
+                />
+                {postalCodeError && (
+                  <div className="text-tiny" style={{ marginTop: '6px', color: '#EF4444' }}>
+                    {postalCodeError}
+                  </div>
+                )}
+              </div>
+
+              {/* 都道府県 */}
+              <div className="mb-24">
+                <label className="form-label">
+                  都道府県 <span className="form-required">*</span>
+                </label>
+                <select
+                  value={prefecture}
+                  onChange={(e) => setPrefecture(e.target.value)}
+                  required
+                  className="select-field"
+                >
+                  <option value="">選択してください</option>
+                  <option value="北海道">北海道</option>
+                  <option value="青森県">青森県</option>
+                  <option value="岩手県">岩手県</option>
+                  <option value="宮城県">宮城県</option>
+                  <option value="秋田県">秋田県</option>
+                  <option value="山形県">山形県</option>
+                  <option value="福島県">福島県</option>
+                  <option value="茨城県">茨城県</option>
+                  <option value="栃木県">栃木県</option>
+                  <option value="群馬県">群馬県</option>
+                  <option value="埼玉県">埼玉県</option>
+                  <option value="千葉県">千葉県</option>
+                  <option value="東京都">東京都</option>
+                  <option value="神奈川県">神奈川県</option>
+                  <option value="新潟県">新潟県</option>
+                  <option value="富山県">富山県</option>
+                  <option value="石川県">石川県</option>
+                  <option value="福井県">福井県</option>
+                  <option value="山梨県">山梨県</option>
+                  <option value="長野県">長野県</option>
+                  <option value="岐阜県">岐阜県</option>
+                  <option value="静岡県">静岡県</option>
+                  <option value="愛知県">愛知県</option>
+                  <option value="三重県">三重県</option>
+                  <option value="滋賀県">滋賀県</option>
+                  <option value="京都府">京都府</option>
+                  <option value="大阪府">大阪府</option>
+                  <option value="兵庫県">兵庫県</option>
+                  <option value="奈良県">奈良県</option>
+                  <option value="和歌山県">和歌山県</option>
+                  <option value="鳥取県">鳥取県</option>
+                  <option value="島根県">島根県</option>
+                  <option value="岡山県">岡山県</option>
+                  <option value="広島県">広島県</option>
+                  <option value="山口県">山口県</option>
+                  <option value="徳島県">徳島県</option>
+                  <option value="香川県">香川県</option>
+                  <option value="愛媛県">愛媛県</option>
+                  <option value="高知県">高知県</option>
+                  <option value="福岡県">福岡県</option>
+                  <option value="佐賀県">佐賀県</option>
+                  <option value="長崎県">長崎県</option>
+                  <option value="熊本県">熊本県</option>
+                  <option value="大分県">大分県</option>
+                  <option value="宮崎県">宮崎県</option>
+                  <option value="鹿児島県">鹿児島県</option>
+                  <option value="沖縄県">沖縄県</option>
+                </select>
+              </div>
+
+              {/* 住所(番地まで) */}
+              <div className="mb-24">
+                <label className="form-label">
+                  住所(番地まで) <span className="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={address1}
+                  onChange={(e) => setAddress1(e.target.value)}
+                  placeholder="○○市○○町1-2-3"
+                  required
+                  className="input-field"
+                />
+              </div>
+
+              {/* 住所(建物名など) */}
+              <div className="mb-32">
+                <label className="form-label">
+                  住所(建物名など)
+                </label>
+                <input
+                  type="text"
+                  value={address2}
+                  onChange={(e) => setAddress2(e.target.value)}
+                  placeholder="○○マンション101号室"
+                  className="input-field"
+                />
+              </div>
+
+              {/* エラー・成功メッセージ */}
+              {error && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#FFF5F5',
+                  border: '1px solid #FECACA',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  color: '#7F1D1D',
+                  fontSize: '14px'
+                }}>
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#F0F9F0',
+                  border: '1px solid #C6E7C6',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                  color: '#1A5D1A',
+                  fontSize: '14px'
+                }}>
+                  {success}
+                </div>
+              )}
+
+              {/* ボタン */}
+              <div className="flex gap-12">
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !isBusinessInfoComplete()}
+                  className="btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  {saving ? '保存中...' : '変更を保存'}
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="btn-secondary"
+                  style={{ flex: 1, textAlign: 'center', lineHeight: '48px' }}
+                >
+                  キャンセル
+                </Link>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      <Footer />
+    </>
+  )
 }
