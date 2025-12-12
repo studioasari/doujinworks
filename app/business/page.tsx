@@ -32,7 +32,7 @@ type BusinessProfile = {
   gender: string | null
 }
 
-export default function SettingsPage() {
+export default function BusinessPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [user, setUser] = useState<any>(null)
@@ -245,7 +245,7 @@ export default function SettingsPage() {
 
           <main style={{ flex: 1, padding: '40px' }}>
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-              <h1 className="page-title mb-40">設定</h1>
+              <h1 className="page-title mb-40">ビジネス設定</h1>
 
               <div className="card-no-hover p-40">
                 <div className="empty-state">
@@ -277,7 +277,7 @@ export default function SettingsPage() {
 
         <main style={{ flex: 1, padding: '40px' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h1 className="page-title mb-40">設定</h1>
+            <h1 className="page-title mb-40">ビジネス設定</h1>
 
             <div className="card-no-hover p-40">
               <h2 className="section-title mb-32">ビジネス情報</h2>
@@ -560,19 +560,19 @@ export default function SettingsPage() {
               )}
 
               {/* ボタン */}
-              <div className="flex gap-12">
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={handleSave}
                   disabled={saving || !isBusinessInfoComplete()}
                   className="btn-primary"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, padding: '10px 20px' }}
                 >
                   {saving ? '保存中...' : '変更を保存'}
                 </button>
                 <Link
                   href="/dashboard"
                   className="btn-secondary"
-                  style={{ flex: 1, textAlign: 'center', lineHeight: '48px' }}
+                  style={{ flex: 1, textAlign: 'center', padding: '10px 20px', display: 'inline-block' }}
                 >
                   キャンセル
                 </Link>
