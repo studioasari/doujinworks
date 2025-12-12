@@ -2,33 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/utils/supabase'
 
-export default function DashboardSidebar() {
+type DashboardSidebarProps = {
+  accountType?: string | null
+  isAdmin?: boolean
+}
+
+export default function DashboardSidebar({ accountType = null, isAdmin = false }: DashboardSidebarProps) {
   const pathname = usePathname()
-  const [accountType, setAccountType] = useState<string | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  useEffect(() => {
-    checkAccountType()
-  }, [])
-
-  const checkAccountType = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('account_type, is_admin')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profile) {
-      setAccountType(profile.account_type)
-      setIsAdmin(profile.is_admin || false)
-    }
-  }
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -39,6 +20,9 @@ export default function DashboardSidebar() {
     }
     if (href.startsWith('/settings/')) {
       return pathname === href || pathname.startsWith(href + '/')
+    }
+    if (href === '/wallet/earnings') {
+      return pathname.startsWith('/wallet/')
     }
     if (href === '/admin') {
       return pathname === '/admin'
@@ -118,9 +102,11 @@ export default function DashboardSidebar() {
 
           <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
 
-          <MenuItem href="/earnings">売上管理</MenuItem>
+          <MenuItem href="/wallet/earnings">売上管理</MenuItem>
 
-          <MenuItem href="/settings/bank">振込先設定</MenuItem>
+          <MenuItem href="/wallet/payments">支払い管理</MenuItem>
+
+          <MenuItem href="/wallet/bank-account">振込先設定</MenuItem>
 
           <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
 

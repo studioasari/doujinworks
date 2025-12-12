@@ -8,7 +8,7 @@ import '../../globals.css'
 import { supabase } from '@/utils/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
-import LoadingScreen from '../../components/LoadingScreen'
+import LoadingSkeleton from './LoadingSkeleton'
 
 // プロフィール情報の型定義
 type Creator = {
@@ -501,7 +501,13 @@ export default function CreatorDetailPage() {
   }
 
   if (loading) {
-    return <LoadingScreen message="読み込み中..." />
+    return (
+      <>
+        <Header />
+        <LoadingSkeleton />
+        <Footer />
+      </>
+    )
   }
 
   if (!creator) {

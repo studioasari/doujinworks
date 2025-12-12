@@ -166,12 +166,40 @@ export async function POST(request: Request) {
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 import json
+import os
 
 def create_receipt(output_path, data):
-    pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+    # Noto Sans JPフォントを登録（埋め込み）
+    # フォントファイルのパスを探す
+    font_paths = [
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
+        'C:\\Windows\\Fonts\\msgothic.ttc',  # Windows MS Gothic
+        'C:\\Windows\\Fonts\\YuGothM.ttc',   # Windows Yu Gothic Medium
+    ]
+    
+    font_registered = False
+    for font_path in font_paths:
+        if os.path.exists(font_path):
+            try:
+                pdfmetrics.registerFont(TTFont('JapaneseFont', font_path))
+                font_registered = True
+                break
+            except:
+                continue
+    
+    # フォントが見つからない場合はデフォルトのCIDフォントを使用
+    if not font_registered:
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+        pdfmetrics.registerFont(UnicodeCIDFont('HeiseiMin-W3'))
+        font_name = 'HeiseiMin-W3'
+    else:
+        font_name = 'JapaneseFont'
+    
     c = canvas.Canvas(output_path, pagesize=A4)
     width, height = A4
     black = (0, 0, 0)
@@ -189,14 +217,14 @@ def create_receipt(output_path, data):
     else:
         issue_date = ""
     
-    c.setFont('HeiseiMin-W3', 9)
+    c.setFont(font_name, 10)
     c.setFillColorRGB(*black)
     c.drawRightString(width - margin, y, issue_date)
     y -= 14
     c.drawRightString(width - margin, y, receipt_number)
     y -= 40
     
-    c.setFont('HeiseiMin-W3', 28)
+    c.setFont(font_name, 28)
     c.drawCentredString(width / 2, y, '領 収 書')
     y -= 60
     
@@ -217,7 +245,7 @@ def create_receipt(output_path, data):
             addressee_text = addressee_text + ' 様'
     
     addressee_lines = addressee_text.split('\\n')
-    c.setFont('HeiseiMin-W3', 14)
+    c.setFont(font_name, 14)
     for line in addressee_lines:
         c.drawString(left_x, addressee_y, line.strip())
         addressee_y -= 20
@@ -226,7 +254,7 @@ def create_receipt(output_path, data):
     creator = data.get('creator', {})
     creator_company = creator.get('company_name')
     if creator_company:
-        c.setFont('HeiseiMin-W3', 12)
+        c.setFont(font_name, 12)
         c.setFillColorRGB(*black)
         c.drawString(right_x, info_y, creator_company)
         info_y -= 16
@@ -235,12 +263,12 @@ def create_receipt(output_path, data):
     creator_first_name = creator.get('first_name', '')
     creator_name = creator_last_name + ' ' + creator_first_name if creator_last_name or creator_first_name else ''
     if creator_name.strip():
-        c.setFont('HeiseiMin-W3', 12)
+        c.setFont(font_name, 12)
         c.setFillColorRGB(*black)
         c.drawString(right_x, info_y, creator_name)
         info_y -= 16
     
-    c.setFont('HeiseiMin-W3', 9)
+    c.setFont(font_name, 10)
     c.setFillColorRGB(*gray)
     creator_postal = creator.get('postal_code', '')
     creator_pref = creator.get('prefecture', '')
@@ -262,13 +290,13 @@ def create_receipt(output_path, data):
             formatted_phone = phone[:2] + '-' + phone[2:6] + '-' + phone[6:]
         c.drawString(right_x, info_y, "TEL: " + formatted_phone)
     
-    y = min(addressee_y, info_y) - 20
+    y = min(addressee_y, info_y) - 5
     amount = data.get("amount", 0)
-    c.setFont('HeiseiMin-W3', 12)
+    c.setFont(font_name, 12)
     c.setFillColorRGB(*black)
     c.drawString(left_x, y, '金額')
     y -= 20
-    c.setFont('HeiseiMin-W3', 24)
+    c.setFont(font_name, 24)
     amount_text = '¥ {:,} -'.format(amount)
     
     # 金額を右寄せで表示（アンダーラインの右端）
@@ -284,11 +312,11 @@ def create_receipt(output_path, data):
         c.setLineWidth(0.5)
         c.setStrokeColorRGB(*light_gray)
         c.rect(stamp_x, stamp_y, 70, 35, fill=0, stroke=1)
-        c.setFont('HeiseiMin-W3', 8)
+        c.setFont(font_name, 8)
         c.setFillColorRGB(*gray)
         c.drawCentredString(stamp_x + 35, stamp_y + 24, '収入印紙')
         stamp_amount = '¥400' if amount >= 1000000 else '¥200'
-        c.setFont('HeiseiMin-W3', 11)
+        c.setFont(font_name, 11)
         c.setFillColorRGB(*black)
         c.drawCentredString(stamp_x + 35, stamp_y + 10, stamp_amount)
     
@@ -296,14 +324,14 @@ def create_receipt(output_path, data):
     
     # 但し書き（先に表示、文字サイズ大きく）
     title = data.get("title", "")
-    c.setFont('HeiseiMin-W3', 11)
+    c.setFont(font_name, 11)
     c.setFillColorRGB(*black)
     c.drawString(left_x, y, '但し　' + title + 'として')
     
     y -= 20
     
     # 領収文言
-    c.setFont('HeiseiMin-W3', 9)
+    c.setFont(font_name, 10)
     c.drawString(left_x, y, '上記金額を正に領収いたしました')
     
     y -= 30
@@ -316,7 +344,7 @@ def create_receipt(output_path, data):
     col2_width = table_width * 0.15
     col3_width = table_width * 0.15
     col4_width = table_width * 0.2
-    table_height = row_height * (num_data_rows + 1 + 3)
+    table_height = row_height * (num_data_rows + 1)  # ヘッダー + データ行のみ
     table_top = y
     table_bottom = y - table_height
     
@@ -324,13 +352,13 @@ def create_receipt(output_path, data):
     c.setFillColorRGB(*light_gray)
     c.rect(table_x, y - row_height, table_width, row_height, fill=1, stroke=0)
     
-    # 外枠を描画
-    c.setLineWidth(1)
+    # 外枠を描画（細い線）
+    c.setLineWidth(0.5)
     c.setStrokeColorRGB(*black)
     c.rect(table_x, table_bottom, table_width, table_height, stroke=1, fill=0)
     
     # ヘッダーテキスト
-    c.setFont('HeiseiMin-W3', 9)
+    c.setFont(font_name, 10)
     c.setFillColorRGB(*black)
     c.drawCentredString(table_x + col1_width / 2, y - 15, '品名')
     c.drawCentredString(table_x + col1_width + col2_width / 2, y - 15, '数量')
@@ -338,7 +366,7 @@ def create_receipt(output_path, data):
     c.drawCentredString(table_x + col1_width + col2_width + col3_width + col4_width / 2, y - 15, '金額')
     
     # ヘッダー下の横線を再描画
-    c.setLineWidth(1)
+    c.setLineWidth(0.5)
     c.setStrokeColorRGB(*black)
     c.line(table_x, y - row_height, table_x + table_width, y - row_height)
     
@@ -350,11 +378,12 @@ def create_receipt(output_path, data):
     
     for i in range(num_data_rows):
         current_y -= row_height
+        c.setLineWidth(0.5)
         c.line(table_x, current_y, table_x + table_width, current_y)
         
         # 1行目にデータを表示（税抜き金額）
         if i == 0:
-            c.setFont('HeiseiMin-W3', 9)
+            c.setFont(font_name, 10)
             c.setFillColorRGB(*black)
             # 品名
             c.drawString(table_x + 5, current_y + 5, title)
@@ -365,46 +394,51 @@ def create_receipt(output_path, data):
             # 金額（税抜き）
             c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(subtotal))
     
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.setFont('HeiseiMin-W3', 9)
-    
-    # 税込み金額から逆算
-    subtotal = int(amount / 1.1)
-    tax = amount - subtotal
-    
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '小計')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(subtotal))
-    
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '消費税(10%)')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(tax))
-    
-    current_y -= row_height
-    c.line(table_x, current_y, table_x + table_width, current_y)
-    c.drawString(table_x + col1_width + col2_width + 5, current_y + 5, '合計金額')
-    c.drawRightString(table_x + col1_width + col2_width + col3_width + col4_width - 5, current_y + 5, '¥{:,}'.format(amount))
-    
-    # 縦線を描画
-    c.setLineWidth(1)
+    # 縦線を描画（細い線）
+    c.setLineWidth(0.5)
     c.setStrokeColorRGB(*black)
     c.line(table_x + col1_width, table_top, table_x + col1_width, table_bottom)
     c.line(table_x + col1_width + col2_width, table_top, table_x + col1_width + col2_width, table_bottom)
     c.line(table_x + col1_width + col2_width + col3_width, table_top, table_x + col1_width + col2_width + col3_width, table_bottom)
     
-    y = table_bottom - 20
+    # 表の外に小計・消費税・合計を表示（アンダーラインのみ）
+    y = table_bottom - 35
+    summary_right = table_x + table_width
+    summary_left = summary_right - 150
+    
+    c.setFont(font_name, 10)
+    c.setFillColorRGB(*black)
+    
+    # 小計
+    c.drawString(summary_left, y, '小計')
+    c.drawRightString(summary_right, y, '¥{:,}'.format(subtotal))
+    c.setLineWidth(0.3)
+    c.line(summary_left, y - 3, summary_right, y - 3)
+    
+    y -= 22
+    # 消費税
+    c.drawString(summary_left, y, '消費税(10%)')
+    c.drawRightString(summary_right, y, '¥{:,}'.format(tax))
+    c.line(summary_left, y - 3, summary_right, y - 3)
+    
+    y -= 22
+    # 合計金額
+    c.drawString(summary_left, y, '合計金額')
+    c.drawRightString(summary_right, y, '¥{:,}'.format(amount))
+    c.line(summary_left, y - 3, summary_right, y - 3)
+    
+    y -= 30
     c.setLineWidth(0.5)
     c.setStrokeColorRGB(*light_gray)
     c.line(margin, y, width - margin, y)
     y -= 15
-    c.setFont('HeiseiMin-W3', 7)
+    c.setFont(font_name, 8)
     c.setFillColorRGB(*gray)
     c.drawString(margin, y, 'この領収書は同人ワークスを通じた取引の証明として発行されます')
     y -= 12
     c.drawString(margin, y, '取引ID: ' + request_id)
     y -= 15
-    c.setFont('HeiseiMin-W3', 8)
+    c.setFont(font_name, 9)
     c.setFillColorRGB(*black)
     c.drawString(margin, y, '運営: 合同会社スタジオアサリ')
     
@@ -414,12 +448,12 @@ def create_receipt(output_path, data):
     c.setStrokeColorRGB(*light_gray)
     c.setLineWidth(0.5)
     c.circle(seal_x, seal_y, 20, fill=0, stroke=1)
-    c.setFont('HeiseiMin-W3', 6)
+    c.setFont(font_name, 6)
     c.setFillColorRGB(*gray)
     c.drawCentredString(seal_x, seal_y, '【印鑑】')
     
     y -= 12
-    c.setFont('HeiseiMin-W3', 7)
+    c.setFont(font_name, 8)
     c.setFillColorRGB(*gray)
     c.drawString(margin, y, '〒450-0002 愛知県名古屋市中村区名駅3丁目4-10 アルティメイト名駅1st 2階')
     c.save()
