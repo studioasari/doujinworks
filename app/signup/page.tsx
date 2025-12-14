@@ -31,7 +31,7 @@ export default function SignupPage() {
         email,
         password: tempPassword,
         options: {
-          emailRedirectTo: 'https://www.dojinworks.com/signup/complete',
+          emailRedirectTo: 'https://www.doujinworks.jp/signup/complete',
           data: {
             registration_step: 'email_confirmed',
           }
@@ -72,7 +72,7 @@ export default function SignupPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: 'https://www.dojinworks.com/signup/complete',
+          redirectTo: 'https://www.doujinworks.jp/signup/complete',
         },
       })
 

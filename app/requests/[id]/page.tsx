@@ -67,6 +67,7 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [proposedPrice, setProposedPrice] = useState('')
@@ -98,7 +99,7 @@ export default function RequestDetailPage() {
   }, [])
 
   useEffect(() => {
-    if (currentProfileId && requestId) {
+    if (requestId) {
       fetchRequest()
       fetchApplications()
       fetchReviews()
@@ -107,16 +108,6 @@ export default function RequestDetailPage() {
       const urlParams = new URLSearchParams(window.location.search)
       if (urlParams.get('payment') === 'success') {
         handlePaymentSuccess()
-      }
-      
-      // 自動仮払い処理
-      if (urlParams.get('auto_payment') === 'true') {
-        // URLパラメータを削除
-        window.history.replaceState({}, '', `/requests/${requestId}`)
-        // 少し待ってから仮払い処理を実行
-        setTimeout(() => {
-          handlePayment()
-        }, 500)
       }
     }
   }, [currentProfileId, requestId])
@@ -138,11 +129,11 @@ export default function RequestDetailPage() {
     const { error } = await supabase
       .from('work_requests')
       .update({
-        status: 'paid',
+        status: 'in_progress',
         paid_at: new Date().toISOString(),
       })
       .eq('id', requestId)
-      .eq('status', 'contracted') // 契約確定状態の時のみ更新
+      .eq('status', 'awaiting_payment')
 
     if (!error) {
       // クリエイターに通知を送信
@@ -163,19 +154,21 @@ export default function RequestDetailPage() {
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
     
-    if (profile) {
-      setCurrentProfileId(profile.id)
+    if (user) {
+      setIsLoggedIn(true)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      
+      if (profile) {
+        setCurrentProfileId(profile.id)
+      }
+    } else {
+      setIsLoggedIn(false)
+      // 未ログインでも閲覧可能
     }
   }
 
@@ -379,11 +372,11 @@ export default function RequestDetailPage() {
         .update({ updated_at: new Date().toISOString() })
         .eq('id', targetRoomId)
 
-      // 4. 依頼のステータスを「contracted（契約確定）」に更新
+      // 4. 依頼のステータスを「awaiting_payment（仮払い待ち）」に更新
       await supabase
         .from('work_requests')
         .update({
-          status: 'contracted',
+          status: 'awaiting_payment',
           selected_applicant_id: selectedApplicantId,
           final_price: parseInt(contractPrice),
           deadline: contractDeadline || null,
@@ -413,17 +406,17 @@ export default function RequestDetailPage() {
         `/requests/${requestId}`
       )
 
-      alert('契約を確定しました！仮払いページに移動します。')
+      alert('契約を確定しました！仮払いを行ってください。')
       setShowContractModal(false)
-      
-      // 仮払いページに自動遷移するためのフラグ付きでリダイレクト
-      window.location.href = `/requests/${requestId}?auto_payment=true`
+      fetchRequest()
+      fetchApplications()
 
     } catch (error) {
       console.error('契約確定エラー:', error)
       alert('契約の確定に失敗しました')
-      setProcessing(false)
     }
+    
+    setProcessing(false)
   }
 
   async function handleRejectApplication(applicationId: string) {
@@ -652,8 +645,8 @@ export default function RequestDetailPage() {
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
-      contracted: '契約確定',
-      paid: '作業中',
+      awaiting_payment: '仮払い待ち',
+      in_progress: '作業中',
       delivered: '納品済み',
       completed: '完了',
       cancelled: 'キャンセル'
@@ -664,9 +657,9 @@ export default function RequestDetailPage() {
   function getStatusColor(status: string) {
     const colors: { [key: string]: string } = {
       open: '#1A1A1A',
-      contracted: '#4A4A4A',
-      paid: '#6B6B6B',
-      delivered: '#9E9E9E',
+      awaiting_payment: '#FF9800',
+      in_progress: '#2196F3',
+      delivered: '#9C27B0',
       completed: '#1A1A1A',
       cancelled: '#CCCCCC'
     }
@@ -709,7 +702,8 @@ export default function RequestDetailPage() {
 
   const isRequester = request.requester_id === currentProfileId
   const isCreator = request.selected_applicant_id === currentProfileId
-  const canApply = request.status === 'open' && !isRequester && !hasApplied
+  const canApply = request.status === 'open' && !isRequester && !hasApplied && isLoggedIn
+  const canViewApplyButton = request.status === 'open' && !isRequester && !hasApplied
 
   return (
     <>
@@ -722,10 +716,10 @@ export default function RequestDetailPage() {
           </Link>
 
           {/* ステータス別アクション */}
-          {isRequester && request.status === 'contracted' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5' }}>
+          {isRequester && isLoggedIn && request.status === 'awaiting_payment' && (
+            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#FFF3E0', border: '1px solid #FFE0B2' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-credit-card" style={{ marginRight: '8px' }}></i>
+                <i className="fas fa-credit-card" style={{ marginRight: '8px', color: '#FF9800' }}></i>
                 次のステップ: 仮払い
               </h3>
               <p style={{ fontSize: '14px', marginBottom: '8px', color: '#4A4A4A' }}>
@@ -740,10 +734,10 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {isCreator && request.status === 'paid' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5' }}>
+          {isCreator && isLoggedIn && request.status === 'in_progress' && (
+            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#E3F2FD', border: '1px solid #BBDEFB' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-paint-brush" style={{ marginRight: '8px' }}></i>
+                <i className="fas fa-paint-brush" style={{ marginRight: '8px', color: '#2196F3' }}></i>
                 作業中
               </h3>
               <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
@@ -755,10 +749,10 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {isRequester && request.status === 'delivered' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5' }}>
+          {isRequester && isLoggedIn && request.status === 'delivered' && (
+            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F3E5F5', border: '1px solid #E1BEE7' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
+                <i className="fas fa-check-circle" style={{ marginRight: '8px', color: '#9C27B0' }}></i>
                 次のステップ: 検収
               </h3>
               <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
@@ -770,10 +764,10 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {request.status === 'completed' && !hasReviewed && (
+          {isLoggedIn && request.status === 'completed' && !hasReviewed && (
             <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-star" style={{ marginRight: '8px' }}></i>
+                <i className="fas fa-star" style={{ marginRight: '8px', color: '#F59E0B' }}></i>
                 評価をお願いします
               </h3>
               <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
@@ -894,16 +888,28 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {canApply && (
+          {canViewApplyButton && (
             <div className="mb-32">
-              <button onClick={() => setShowApplicationForm(!showApplicationForm)} className="btn-primary" style={{ width: '100%' }}>
-                <i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i>
-                この依頼に応募する
-              </button>
+              {isLoggedIn ? (
+                <button onClick={() => setShowApplicationForm(!showApplicationForm)} className="btn-primary" style={{ width: '100%' }}>
+                  <i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i>
+                  この依頼に応募する
+                </button>
+              ) : (
+                <div>
+                  <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+                    <i className="fas fa-sign-in-alt" style={{ marginRight: '8px' }}></i>
+                    ログインして応募する
+                  </Link>
+                  <p className="text-small text-gray" style={{ textAlign: 'center', marginTop: '12px' }}>
+                    応募するにはアカウントが必要です
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {hasApplied && !isRequester && (
+          {hasApplied && !isRequester && isLoggedIn && (
             <div className="mb-32" style={{ padding: '16px', backgroundColor: '#F5F5F5', borderRadius: '8px', border: '1px solid #E5E5E5', color: '#1A1A1A', textAlign: 'center' }}>
               <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
               応募済みです
@@ -941,7 +947,7 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {isRequester && applications.length > 0 && request.status === 'open' && (
+          {isRequester && isLoggedIn && applications.length > 0 && request.status === 'open' && (
             <div className="card-no-hover p-40">
               <h2 className="card-title mb-24">応募一覧 ({applications.length}件)</h2>
 
@@ -996,7 +1002,7 @@ export default function RequestDetailPage() {
             </div>
           )}
 
-          {isRequester && request.status === 'open' && (
+          {isRequester && isLoggedIn && request.status === 'open' && (
             <div className="flex gap-16 mt-24" style={{ justifyContent: 'flex-end' }}>
               <button onClick={handleCancelRequest} disabled={processing} className="btn-danger">依頼をキャンセル</button>
             </div>

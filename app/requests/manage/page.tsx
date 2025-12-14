@@ -199,8 +199,8 @@ export default function DashboardPage() {
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
-      contracted: '契約確定',
-      paid: '作業中',
+      awaiting_payment: '仮払い待ち',
+      in_progress: '作業中',
       delivered: '納品済み',
       completed: '完了',
       cancelled: 'キャンセル',
@@ -214,9 +214,9 @@ export default function DashboardPage() {
   function getStatusColor(status: string) {
     const colors: { [key: string]: string } = {
       open: '#1A1A1A',
-      contracted: '#4A4A4A',
-      paid: '#6B6B6B',
-      delivered: '#9E9E9E',
+      awaiting_payment: '#FF9800',
+      in_progress: '#2196F3',
+      delivered: '#9C27B0',
       completed: '#1A1A1A',
       cancelled: '#CCCCCC',
       pending: '#4A4A4A',
@@ -249,7 +249,7 @@ export default function DashboardPage() {
   // 統計情報
   const requestStats = {
     open: myRequests.filter(r => r.status === 'open').length,
-    active: myRequests.filter(r => ['contracted', 'paid', 'delivered'].includes(r.status)).length,
+    active: myRequests.filter(r => ['awaiting_payment', 'in_progress', 'delivered'].includes(r.status)).length,
     completed: myRequests.filter(r => r.status === 'completed').length,
     total: myRequests.length
   }
@@ -264,7 +264,7 @@ export default function DashboardPage() {
   // フィルタリング
   const filteredRequests = myRequests.filter(r => {
     if (requestTab === 'open') return r.status === 'open'
-    if (requestTab === 'active') return ['contracted', 'paid', 'delivered'].includes(r.status)
+    if (requestTab === 'active') return ['awaiting_payment', 'in_progress', 'delivered'].includes(r.status)
     if (requestTab === 'completed') return r.status === 'completed'
     return true
   })
@@ -395,7 +395,7 @@ export default function DashboardPage() {
               {filteredRequests.length === 0 ? (
                 <div className="empty-state">
                   <p className="text-gray mb-24">該当する依頼がありません</p>
-                  <Link href="/requests/new" className="btn-primary">新しい依頼を作成</Link>
+                  <Link href="/requests/create" className="btn-primary">新しい依頼を作成</Link>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

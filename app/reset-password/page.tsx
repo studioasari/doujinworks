@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://www.dojinworks.com/reset-password/update',
+        redirectTo: 'https://www.doujinworks.jp/reset-password/update',
       })
 
       if (error) throw error
