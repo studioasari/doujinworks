@@ -41,7 +41,7 @@ function VerifyContent() {
         email,
         password: tempPassword,
         options: {
-          emailRedirectTo: 'https://www.doujinworks.jp/signup/complete',
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/signup/complete`,
           data: {
             registration_step: 'email_confirmed',
           }
