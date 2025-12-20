@@ -8,6 +8,7 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
 
 // 画像圧縮関数
 async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
@@ -1087,45 +1088,57 @@ function UploadVoicePageContent() {
       let videoUrl: string | null = null
       let thumbnailUrl: string | null = null
 
+      // ✨ 1. 音声ファイルをR2にアップロード
       if (uploadMethod === 'file' && videoFile) {
-        const fileExt = videoFile.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('portfolio-audio')
-          .upload(fileName, videoFile)
-
-        if (uploadError) {
-          throw uploadError
+        try {
+          // R2署名付きURL取得（音声）
+          const { uploadUrl, fileUrl } = await getUploadUrl(
+            'voice',      // カテゴリ
+            'audio',      // ファイルタイプ
+            videoFile.name,
+            videoFile.type,
+            user.id
+          )
+          
+          // R2に直接アップロード
+          await uploadToR2(videoFile, uploadUrl)
+          
+          videoUrl = fileUrl
+          
+          console.log(`✅ 音声ファイルアップロード完了: ${videoFile.name}`)
+          
+        } catch (uploadError) {
+          console.error('❌ 音声ファイルエラー:', uploadError)
+          throw new Error('音声ファイルのアップロードに失敗しました')
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio-audio')
-          .getPublicUrl(fileName)
-
-        videoUrl = publicUrl
       }
 
+      // ✨ 2. サムネイル画像をR2にアップロード（任意）
       if (thumbnailFile) {
-        const fileExt = thumbnailFile.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('portfolio-images')
-          .upload(fileName, thumbnailFile)
-
-        if (uploadError) {
-          throw uploadError
+        try {
+          // R2署名付きURL取得（サムネイル）
+          const { uploadUrl, fileUrl } = await getUploadUrl(
+            'voice',      // カテゴリ
+            'image',      // ファイルタイプ
+            thumbnailFile.name,
+            thumbnailFile.type,
+            user.id
+          )
+          
+          // R2に直接アップロード
+          await uploadToR2(thumbnailFile, uploadUrl)
+          
+          thumbnailUrl = fileUrl
+          
+          console.log(`✅ サムネイルアップロード完了: ${thumbnailFile.name}`)
+          
+        } catch (uploadError) {
+          console.error('❌ サムネイルエラー:', uploadError)
+          throw new Error('サムネイルのアップロードに失敗しました')
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio-images')
-          .getPublicUrl(fileName)
-
-        thumbnailUrl = publicUrl
       }
 
-      // データベースに保存
+      // ✨ 3. データベースに保存
       const insertData: any = {
         creator_id: currentUserId,
         title: title.trim(),
@@ -1162,9 +1175,13 @@ function UploadVoicePageContent() {
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
+      
     } catch (error) {
       console.error('アップロードエラー:', error)
-      setToast({ message: 'アップロードに失敗しました', type: 'error' })
+      setToast({ 
+        message: error instanceof Error ? error.message : 'アップロードに失敗しました',
+        type: 'error' 
+      })
     } finally {
       setUploading(false)
     }

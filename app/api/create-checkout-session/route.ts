@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'jpy',
             product_data: {
-              name: `依頼: ${workRequest.title}`,
+              name: `仮払い: ${workRequest.title}`,
               description: `依頼者: ${workRequest.profiles.display_name || '名前未設定'}`,
             },
             unit_amount: workRequest.final_price,
@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/requests/${requestId}?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/requests/${requestId}?payment=cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/requests/${requestId}/status?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/requests/${requestId}/status?payment=cancel`,
       metadata: {
         request_id: requestId,
       },

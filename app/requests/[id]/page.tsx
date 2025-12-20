@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../utils/supabase'
-import { useRouter, useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
-import { createNotification } from '../../../utils/notifications'
 
 type WorkRequest = {
   id: string
@@ -17,16 +16,20 @@ type WorkRequest = {
   deadline: string | null
   category: string
   status: string
-  request_type: string
   created_at: string
   requester_id: string
   selected_applicant_id: string | null
-  final_price: number | null
-  contracted_at: string | null
-  paid_at: string | null
-  delivered_at: string | null
-  completed_at: string | null
-  delivery_message: string | null
+  reference_urls: string[] | null
+  required_skills: string[] | null
+  attached_file_urls: string[] | null
+  payment_type: string | null
+  hourly_rate_min: number | null
+  hourly_rate_max: number | null
+  estimated_hours: number | null
+  job_features: string[] | null
+  number_of_positions: number | null
+  application_deadline: string | null
+  price_negotiable: boolean | null
   profiles: {
     id: string
     username: string | null
@@ -37,61 +40,26 @@ type WorkRequest = {
 
 type Application = {
   id: string
-  message: string
-  proposed_price: number | null
-  proposed_deadline: string | null
-  status: string
-  created_at: string
   applicant_id: string
-  profiles: {
-    id: string
-    username: string | null
-    display_name: string | null
-    avatar_url: string | null
-  }
-}
-
-type Review = {
-  id: string
-  rating: number
-  comment: string | null
-  reviewer_id: string
-  reviewee_id: string
-  created_at: string
+  status: string
 }
 
 export default function RequestDetailPage() {
   const [request, setRequest] = useState<WorkRequest | null>(null)
-  const [applications, setApplications] = useState<Application[]>([])
-  const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
-  const [processing, setProcessing] = useState(false)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [hasApplied, setHasApplied] = useState(false)
+  const [applicationCount, setApplicationCount] = useState(0)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [proposedPrice, setProposedPrice] = useState('')
-  const [hasApplied, setHasApplied] = useState(false)
-  
-  // 採用時の契約確定用
-  const [showContractModal, setShowContractModal] = useState(false)
-  const [contractPrice, setContractPrice] = useState('')
-  const [contractDeadline, setContractDeadline] = useState('')
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
-  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null)
-  
-  // 納品用
-  const [showDeliveryModal, setShowDeliveryModal] = useState(false)
-  const [deliveryMessage, setDeliveryMessage] = useState('')
-  
-  // 評価用
-  const [showReviewModal, setShowReviewModal] = useState(false)
-  const [rating, setRating] = useState(5)
-  const [reviewComment, setReviewComment] = useState('')
-  const [hasReviewed, setHasReviewed] = useState(false)
+  const [processing, setProcessing] = useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
 
-  const router = useRouter()
   const params = useParams()
+  const router = useRouter()
   const requestId = params.id as string
 
   useEffect(() => {
@@ -101,56 +69,9 @@ export default function RequestDetailPage() {
   useEffect(() => {
     if (requestId) {
       fetchRequest()
-      fetchApplications()
-      fetchReviews()
-      
-      // 決済成功時の処理
-      const urlParams = new URLSearchParams(window.location.search)
-      if (urlParams.get('payment') === 'success') {
-        handlePaymentSuccess()
-      }
+      checkApplication()
     }
-  }, [currentProfileId, requestId])
-
-  async function handlePaymentSuccess() {
-    // URLパラメータを削除
-    window.history.replaceState({}, '', `/requests/${requestId}`)
-    
-    // requestIdだけで動作させる
-    const { data: currentRequest } = await supabase
-      .from('work_requests')
-      .select('*, profiles!work_requests_requester_id_fkey(id, username, display_name, avatar_url)')
-      .eq('id', requestId)
-      .single()
-    
-    if (!currentRequest) return
-    
-    // ステータスを更新
-    const { error } = await supabase
-      .from('work_requests')
-      .update({
-        status: 'in_progress',
-        paid_at: new Date().toISOString(),
-      })
-      .eq('id', requestId)
-      .eq('status', 'awaiting_payment')
-
-    if (!error) {
-      // クリエイターに通知を送信
-      if (currentRequest.selected_applicant_id) {
-        await createNotification(
-          currentRequest.selected_applicant_id,
-          'paid',
-          '仮払いが完了しました',
-          `「${currentRequest.title}」の仮払いが完了しました。作業を開始してください。`,
-          `/requests/${requestId}`
-        )
-      }
-
-      alert('仮払いが完了しました！クリエイターが作業を開始できます。')
-      fetchRequest()
-    }
-  }
+  }, [requestId, currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -166,9 +87,6 @@ export default function RequestDetailPage() {
       if (profile) {
         setCurrentProfileId(profile.id)
       }
-    } else {
-      setIsLoggedIn(false)
-      // 未ログインでも閲覧可能
     }
   }
 
@@ -190,36 +108,19 @@ export default function RequestDetailPage() {
     setLoading(false)
   }
 
-  async function fetchApplications() {
+  async function checkApplication() {
     const { data, error } = await supabase
       .from('work_request_applications')
-      .select('*, profiles!work_request_applications_applicant_id_fkey(id, username, display_name, avatar_url)')
-      .eq('work_request_id', requestId)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('応募取得エラー:', error)
-    } else {
-      setApplications(data || [])
-      
-      const myApplication = data?.find(app => app.applicant_id === currentProfileId)
-      setHasApplied(!!myApplication)
-    }
-  }
-
-  async function fetchReviews() {
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*')
+      .select('id, applicant_id, status')
       .eq('work_request_id', requestId)
 
-    if (error) {
-      console.error('評価取得エラー:', error)
-    } else {
-      setReviews(data || [])
+    if (!error && data) {
+      setApplicationCount(data.length)
       
-      const myReview = data?.find(r => r.reviewer_id === currentProfileId)
-      setHasReviewed(!!myReview)
+      if (currentProfileId) {
+        const myApp = data.find(app => app.applicant_id === currentProfileId)
+        setHasApplied(!!myApp)
+      }
     }
   }
 
@@ -251,50 +152,39 @@ export default function RequestDetailPage() {
         alert('応募に失敗しました')
       }
     } else {
-      // 依頼者に通知を送信
-      await createNotification(
-        request!.requester_id,
-        'application',
-        '新しい応募が届きました',
-        `「${request!.title}」に応募がありました`,
-        `/requests/${requestId}`
-      )
-
       alert('応募しました！')
       setShowApplicationForm(false)
       setApplicationMessage('')
       setProposedPrice('')
-      fetchApplications()
+      checkApplication()
     }
 
     setProcessing(false)
   }
 
-  // 採用ボタンクリック → モーダル表示
-  function handleAcceptApplicationClick(applicationId: string, applicantId: string, proposedPrice: number | null) {
-    setSelectedApplicationId(applicationId)
-    setSelectedApplicantId(applicantId)
-    setContractPrice(proposedPrice?.toString() || request?.budget_max?.toString() || '')
-    setContractDeadline(request?.deadline || '')
-    setShowContractModal(true)
-  }
+  async function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault()
 
-  // 契約確定（採用処理）
-  async function handleConfirmContract() {
-    if (!contractPrice) {
-      alert('金額を入力してください')
+    if (!request) {
+      alert('依頼情報が見つかりません')
       return
     }
 
-    if (!selectedApplicationId || !selectedApplicantId) {
-      alert('エラー: 応募情報が見つかりません')
+    if (!messageText.trim()) {
+      alert('メッセージを入力してください')
       return
     }
 
-    setProcessing(true)
+    if (!isLoggedIn) {
+      alert('ログインが必要です')
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+      return
+    }
+
+    setSendingMessage(true)
 
     try {
-      // 1. 既存のチャットルームをチェック
+      // 既存のチャットルームをチェック
       const { data: existingRooms } = await supabase
         .from('chat_room_participants')
         .select('chat_room_id')
@@ -311,14 +201,14 @@ export default function RequestDetailPage() {
 
           const profileIds = participants?.map(p => p.profile_id) || []
           
-          if (profileIds.length === 2 && profileIds.includes(selectedApplicantId)) {
+          if (profileIds.length === 2 && profileIds.includes(request.requester_id)) {
             targetRoomId = room.chat_room_id
             break
           }
         }
       }
 
-      // 2. ルームがなければ新規作成
+      // ルームがなければ新規作成
       if (!targetRoomId) {
         const { data: newRoom, error: roomError } = await supabase
           .from('chat_rooms')
@@ -332,299 +222,61 @@ export default function RequestDetailPage() {
 
         if (roomError) {
           console.error('チャットルーム作成エラー:', roomError)
-          alert(`チャットルーム作成エラー: ${roomError.message}`)
-          setProcessing(false)
+          alert('メッセージの送信に失敗しました')
+          setSendingMessage(false)
           return
         }
 
         targetRoomId = newRoom.id
 
-        await supabase.from('chat_room_participants').insert([
-          {
-            chat_room_id: targetRoomId,
-            profile_id: currentProfileId,
-            last_read_at: new Date().toISOString(),
-            pinned: false,
-            hidden: false
-          },
-          {
-            chat_room_id: targetRoomId,
-            profile_id: selectedApplicantId,
-            last_read_at: new Date().toISOString(),
-            pinned: false,
-            hidden: false
-          }
-        ])
+        // 参加者を追加
+        await supabase
+          .from('chat_room_participants')
+          .insert([
+            {
+              chat_room_id: targetRoomId,
+              profile_id: currentProfileId,
+              last_read_at: new Date().toISOString(),
+              pinned: false,
+              hidden: false
+            },
+            {
+              chat_room_id: targetRoomId,
+              profile_id: request.requester_id,
+              last_read_at: new Date().toISOString(),
+              pinned: false,
+              hidden: false
+            }
+          ])
       }
 
-      // 3. 依頼カードメッセージを送信
-      await supabase.from('messages').insert({
-        chat_room_id: targetRoomId,
-        sender_id: currentProfileId,
-        content: '',
-        request_card_id: requestId,
-        deleted: false,
-        created_at: new Date().toISOString()
-      })
+      // メッセージを送信
+      await supabase
+        .from('messages')
+        .insert({
+          chat_room_id: targetRoomId,
+          sender_id: currentProfileId,
+          content: messageText.trim(),
+          deleted: false,
+          created_at: new Date().toISOString()
+        })
 
+      // updated_at更新
       await supabase
         .from('chat_rooms')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', targetRoomId)
 
-      // 4. 依頼のステータスを「awaiting_payment（仮払い待ち）」に更新
-      await supabase
-        .from('work_requests')
-        .update({
-          status: 'awaiting_payment',
-          selected_applicant_id: selectedApplicantId,
-          final_price: parseInt(contractPrice),
-          deadline: contractDeadline || null,
-          contracted_at: new Date().toISOString()
-        })
-        .eq('id', requestId)
-
-      // 5. 応募のステータスを更新
-      await supabase
-        .from('work_request_applications')
-        .update({ status: 'accepted' })
-        .eq('id', selectedApplicationId)
-
-      // 6. 他の応募を却下
-      await supabase
-        .from('work_request_applications')
-        .update({ status: 'rejected' })
-        .eq('work_request_id', requestId)
-        .neq('id', selectedApplicationId)
-
-      // クリエイターに通知を送信
-      await createNotification(
-        selectedApplicantId,
-        'accepted',
-        '応募が採用されました',
-        `「${request!.title}」の応募が採用されました。仮払いをお待ちください。`,
-        `/requests/${requestId}`
-      )
-
-      alert('契約を確定しました！仮払いを行ってください。')
-      setShowContractModal(false)
-      fetchRequest()
-      fetchApplications()
+      alert('メッセージを送信しました！')
+      setMessageText('')
+      router.push(`/messages/${targetRoomId}`)
 
     } catch (error) {
-      console.error('契約確定エラー:', error)
-      alert('契約の確定に失敗しました')
-    }
-    
-    setProcessing(false)
-  }
-
-  async function handleRejectApplication(applicationId: string) {
-    if (!confirm('この応募を却下しますか？')) return
-
-    setProcessing(true)
-
-    const { error } = await supabase
-      .from('work_request_applications')
-      .update({ status: 'rejected' })
-      .eq('id', applicationId)
-
-    if (error) {
-      console.error('却下エラー:', error)
-      alert('却下に失敗しました')
-    } else {
-      alert('応募を却下しました')
-      fetchApplications()
+      console.error('メッセージ送信エラー:', error)
+      alert('メッセージの送信に失敗しました')
     }
 
-    setProcessing(false)
-  }
-
-  // 仮払い（Stripe Checkout）
-  async function handlePayment() {
-    setProcessing(true)
-
-    try {
-      // Stripe Checkout Session作成
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ requestId }),
-      })
-
-      const data = await response.json()
-
-      if (data.error) {
-        alert(data.error)
-        setProcessing(false)
-        return
-      }
-
-      // Stripe CheckoutのURLに遷移
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        alert('決済URLの取得に失敗しました')
-        setProcessing(false)
-      }
-    } catch (error) {
-      console.error('仮払いエラー:', error)
-      alert('仮払いに失敗しました')
-      setProcessing(false)
-    }
-  }
-
-  // 納品
-  async function handleDelivery() {
-    if (!deliveryMessage.trim()) {
-      alert('納品メッセージを入力してください')
-      return
-    }
-
-    setProcessing(true)
-
-    try {
-      // 依頼ステータス更新（ファイルアップロードなし）
-      const { error } = await supabase
-        .from('work_requests')
-        .update({
-          status: 'delivered',
-          delivered_at: new Date().toISOString(),
-          delivery_message: deliveryMessage.trim()
-        })
-        .eq('id', requestId)
-
-      if (error) {
-        console.error('納品エラー:', error)
-        alert('納品に失敗しました')
-      } else {
-        // 依頼者に通知を送信
-        await createNotification(
-          request!.requester_id,
-          'delivered',
-          '納品されました',
-          `「${request!.title}」が納品されました。検収をお願いします。`,
-          `/requests/${requestId}`
-        )
-
-        alert('納品しました！依頼者の検収をお待ちください。')
-        setShowDeliveryModal(false)
-        setDeliveryMessage('')
-        fetchRequest()
-      }
-
-    } catch (error) {
-      console.error('納品処理エラー:', error)
-      alert('納品処理に失敗しました')
-    }
-
-    setProcessing(false)
-  }
-
-  // 検収
-  async function handleAcceptDelivery() {
-    if (!confirm('納品物を確認して検収しますか？検収後、クリエイターへ入金されます。')) return
-
-    setProcessing(true)
-
-    const { error } = await supabase
-      .from('work_requests')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-
-    if (error) {
-      console.error('検収エラー:', error)
-      alert('検収に失敗しました')
-    } else {
-      // クリエイターに通知を送信
-      if (request?.selected_applicant_id) {
-        await createNotification(
-          request.selected_applicant_id,
-          'completed',
-          '検収が完了しました',
-          `「${request.title}」の検収が完了しました。お疲れ様でした！`,
-          `/requests/${requestId}`
-        )
-      }
-
-      alert('検収完了しました！お互いに評価をお願いします。')
-      fetchRequest()
-    }
-
-    setProcessing(false)
-  }
-
-  // 評価
-  async function handleSubmitReview() {
-    if (!reviewComment.trim()) {
-      alert('コメントを入力してください')
-      return
-    }
-
-    setProcessing(true)
-
-    const revieweeId = request?.requester_id === currentProfileId 
-      ? request?.selected_applicant_id 
-      : request?.requester_id
-
-    const { error } = await supabase
-      .from('reviews')
-      .insert({
-        work_request_id: requestId,
-        reviewer_id: currentProfileId,
-        reviewee_id: revieweeId,
-        rating: rating,
-        comment: reviewComment.trim()
-      })
-
-    if (error) {
-      console.error('評価エラー:', error)
-      alert('評価の投稿に失敗しました')
-    } else {
-      // 相手に通知を送信
-      if (revieweeId) {
-        await createNotification(
-          revieweeId,
-          'review',
-          '評価が投稿されました',
-          `「${request!.title}」の評価が投稿されました（★${rating}）`,
-          `/requests/${requestId}`
-        )
-      }
-
-      alert('評価を投稿しました！')
-      setShowReviewModal(false)
-      setReviewComment('')
-      fetchReviews()
-    }
-
-    setProcessing(false)
-  }
-
-  async function handleCancelRequest() {
-    if (!confirm('この依頼をキャンセルしますか？')) return
-
-    setProcessing(true)
-
-    const { error } = await supabase
-      .from('work_requests')
-      .update({ status: 'cancelled' })
-      .eq('id', requestId)
-
-    if (error) {
-      console.error('キャンセルエラー:', error)
-      alert('キャンセルに失敗しました')
-    } else {
-      alert('依頼をキャンセルしました')
-      router.push('/requests')
-    }
-
-    setProcessing(false)
+    setSendingMessage(false)
   }
 
   function getCategoryLabel(category: string) {
@@ -645,30 +297,29 @@ export default function RequestDetailPage() {
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
-      awaiting_payment: '仮払い待ち',
-      in_progress: '作業中',
+      contracted: '仮払い待ち',
+      paid: '作業中',
       delivered: '納品済み',
       completed: '完了',
       cancelled: 'キャンセル'
     }
-    return statuses[status] || '不明'
-  }
-
-  function getStatusColor(status: string) {
-    const colors: { [key: string]: string } = {
-      open: '#1A1A1A',
-      awaiting_payment: '#FF9800',
-      in_progress: '#2196F3',
-      delivered: '#9C27B0',
-      completed: '#1A1A1A',
-      cancelled: '#CCCCCC'
-    }
-    return colors[status] || '#9E9E9E'
+    return statuses[status] || status
   }
 
   function formatDate(dateString: string) {
     const date = new Date(dateString)
     return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+  }
+
+  function getJobFeatureLabel(feature: string) {
+    const labels: { [key: string]: string } = {
+      no_skill: 'スキル不要',
+      skill_welcome: '専門スキル歓迎',
+      one_time: '単発',
+      continuous: '継続あり',
+      flexible_time: 'スキマ時間歓迎'
+    }
+    return labels[feature] || feature
   }
 
   if (loading) {
@@ -701,451 +352,753 @@ export default function RequestDetailPage() {
   }
 
   const isRequester = request.requester_id === currentProfileId
-  const isCreator = request.selected_applicant_id === currentProfileId
-  const canApply = request.status === 'open' && !isRequester && !hasApplied && isLoggedIn
-  const canViewApplyButton = request.status === 'open' && !isRequester && !hasApplied
+  const canApply = request.status === 'open' && !isRequester && !hasApplied
 
   return (
     <>
+      <style jsx>{`
+        .detail-container {
+          display: grid;
+          grid-template-columns: 1fr 340px;
+          gap: 24px;
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 32px 20px;
+        }
+
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .info-table td {
+          padding: 14px 16px;
+          border-bottom: 1px solid #E5E5E5;
+          font-size: 14px;
+        }
+
+        .info-table td:first-child {
+          width: 120px;
+          font-weight: 600;
+          color: #4A4A4A;
+          background-color: #F9F9F9;
+        }
+
+        .detail-section {
+          margin-bottom: 28px;
+          padding-bottom: 28px;
+          border-bottom: 1px solid #E5E5E5;
+        }
+
+        .detail-section:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        .detail-section-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1A1A1A;
+          margin-bottom: 14px;
+        }
+
+        .sidebar {
+          position: sticky;
+          top: 80px;
+          height: fit-content;
+        }
+
+        @media (max-width: 1024px) {
+          .detail-container {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+
+          .sidebar {
+            position: static;
+            order: -1;
+          }
+
+          .info-table td:first-child {
+            width: 120px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .detail-container {
+            padding: 20px 16px;
+          }
+
+          .info-table td {
+            padding: 12px;
+            font-size: 14px;
+          }
+
+          .info-table td:first-child {
+            width: 100px;
+            font-size: 13px;
+          }
+        }
+      `}</style>
+
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow" style={{ padding: '40px 20px' }}>
-          <Link href="/requests" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginBottom: '32px', fontSize: '14px', color: '#6B6B6B' }}>
-            <i className="fas fa-arrow-left"></i>
-            依頼一覧に戻る
-          </Link>
+        <div className="detail-container">
+          {/* メインコンテンツ */}
+          <div>
+            {/* タイトル */}
+            <h1 style={{ 
+              fontSize: '24px', 
+              fontWeight: '700', 
+              color: '#1A1A1A', 
+              marginBottom: '14px',
+              lineHeight: '1.4'
+            }}>
+              {request.title}
+            </h1>
 
-          {/* ステータス別アクション */}
-          {isRequester && isLoggedIn && request.status === 'awaiting_payment' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#FFF3E0', border: '1px solid #FFE0B2' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-credit-card" style={{ marginRight: '8px', color: '#FF9800' }}></i>
-                次のステップ: 仮払い
-              </h3>
-              <p style={{ fontSize: '14px', marginBottom: '8px', color: '#4A4A4A' }}>
-                契約金額: <strong>{request.final_price?.toLocaleString()}円</strong>
-              </p>
-              <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
-                仮払いを行うと、クリエイターが作業を開始できます。
-              </p>
-              <button onClick={handlePayment} disabled={processing} className="btn-primary">
-                {processing ? '処理中...' : '仮払いする'}
-              </button>
-            </div>
-          )}
-
-          {isCreator && isLoggedIn && request.status === 'in_progress' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#E3F2FD', border: '1px solid #BBDEFB' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-paint-brush" style={{ marginRight: '8px', color: '#2196F3' }}></i>
-                作業中
-              </h3>
-              <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
-                仮払いが完了しています。作業が完了したら納品してください。
-              </p>
-              <button onClick={() => setShowDeliveryModal(true)} className="btn-primary">
-                納品する
-              </button>
-            </div>
-          )}
-
-          {isRequester && isLoggedIn && request.status === 'delivered' && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F3E5F5', border: '1px solid #E1BEE7' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-check-circle" style={{ marginRight: '8px', color: '#9C27B0' }}></i>
-                次のステップ: 検収
-              </h3>
-              <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
-                納品物を確認して、問題なければ検収してください。
-              </p>
-              <button onClick={handleAcceptDelivery} disabled={processing} className="btn-primary">
-                {processing ? '処理中...' : '検収する'}
-              </button>
-            </div>
-          )}
-
-          {isLoggedIn && request.status === 'completed' && !hasReviewed && (
-            <div className="card-no-hover p-24 mb-24" style={{ backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#1A1A1A' }}>
-                <i className="fas fa-star" style={{ marginRight: '8px', color: '#F59E0B' }}></i>
-                評価をお願いします
-              </h3>
-              <p style={{ fontSize: '14px', marginBottom: '16px', color: '#4A4A4A' }}>
-                お仕事が完了しました。相手の評価をお願いします。
-              </p>
-              <button onClick={() => setShowReviewModal(true)} className="btn-primary">
-                評価する
-              </button>
-            </div>
-          )}
-
-          {/* 依頼詳細 */}
-          <div className="card-no-hover p-40 mb-24">
-            <div className="flex gap-8 mb-24" style={{ flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: '4px', fontSize: '14px', fontWeight: '600', backgroundColor: getStatusColor(request.status), color: '#FFFFFF' }}>
-                {getStatusLabel(request.status)}
-              </span>
-              <span className="badge badge-category" style={{ padding: '6px 16px', fontSize: '14px' }}>
+            {/* カテゴリとステータス */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <span className="badge badge-category">
                 {getCategoryLabel(request.category)}
               </span>
+              <span className="badge" style={{ backgroundColor: '#1A1A1A', color: '#FFFFFF' }}>
+                {getStatusLabel(request.status)}
+              </span>
             </div>
 
-            <h1 className="section-title mb-24">{request.title}</h1>
+            {/* 仕事の概要 */}
+            <div className="detail-section">
+              <h2 className="detail-section-title">仕事の概要</h2>
+              <table className="info-table">
+                <tbody>
+                  <tr>
+                    <td>支払い方式</td>
+                    <td>
+                      {request.payment_type === 'hourly' ? '時間単価制' : '固定報酬制'}
+                      {request.payment_type === 'hourly' ? (
+                        <>
+                          <br />
+                          <strong style={{ fontSize: '18px', color: '#1A1A1A' }}>
+                            {request.hourly_rate_min && request.hourly_rate_max ? (
+                              `${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}円/時`
+                            ) : request.hourly_rate_min ? (
+                              `${request.hourly_rate_min.toLocaleString()}円/時〜`
+                            ) : request.hourly_rate_max ? (
+                              `〜${request.hourly_rate_max.toLocaleString()}円/時`
+                            ) : (
+                              '応相談'
+                            )}
+                          </strong>
+                          {request.estimated_hours && (
+                            <div style={{ fontSize: '13px', color: '#6B6B6B', marginTop: '4px' }}>
+                              想定作業時間: {request.estimated_hours}時間
+                            </div>
+                          )}
+                        </>
+                      ) : request.price_negotiable ? (
+                        <>
+                          <br />
+                          <span style={{ color: '#6B6B6B' }}>相談して決める</span>
+                        </>
+                      ) : (request.budget_min || request.budget_max) ? (
+                        <>
+                          <br />
+                          <strong style={{ fontSize: '18px', color: '#1A1A1A' }}>
+                            {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円
+                          </strong>
+                        </>
+                      ) : (
+                        <>
+                          <br />
+                          <span style={{ color: '#6B6B6B' }}>金額未設定</span>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                  {request.deadline && (
+                    <tr>
+                      <td>納品希望日</td>
+                      <td>{formatDate(request.deadline)}</td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td>掲載日</td>
+                    <td>{formatDate(request.created_at)}</td>
+                  </tr>
+                  {request.application_deadline && (
+                    <tr>
+                      <td>応募期限</td>
+                      <td>
+                        {formatDate(request.application_deadline)}
+                        {(() => {
+                          const daysUntil = Math.ceil(
+                            (new Date(request.application_deadline).getTime() - new Date().getTime()) / 
+                            (1000 * 60 * 60 * 24)
+                          )
+                          if (daysUntil > 0) {
+                            return (
+                              <span style={{ marginLeft: '8px', color: '#E65100', fontWeight: '600' }}>
+                                （あと{daysUntil}日）
+                              </span>
+                            )
+                          } else if (daysUntil === 0) {
+                            return <span style={{ marginLeft: '8px', color: '#D32F2F', fontWeight: '600' }}>（本日締切）</span>
+                          }
+                          return null
+                        })()}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-            <div className="flex gap-12 mb-32" style={{ alignItems: 'center', paddingBottom: '24px', borderBottom: '1px solid #E5E5E5' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#E5E5E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#6B6B6B', overflow: 'hidden', flexShrink: 0 }}>
-                {request.profiles?.avatar_url ? (
-                  <img src={request.profiles.avatar_url} alt={request.profiles.display_name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  request.profiles?.display_name?.charAt(0) || '?'
-                )}
-              </div>
-              <div>
-                <div className="text-tiny text-gray">依頼者</div>
-                {request.profiles?.username ? (
-                  <Link href={`/creators/${request.profiles.username}`} style={{ textDecoration: 'none', fontSize: '15px', fontWeight: '600', color: '#1A1A1A' }}>
-                    {request.profiles.display_name || '名前未設定'}
-                  </Link>
-                ) : (
-                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1A1A' }}>
-                    {request.profiles?.display_name || '名前未設定'}
+            {/* 応募状況 */}
+            <div className="detail-section">
+              <h2 className="detail-section-title">応募状況</h2>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '16px',
+                padding: '16px',
+                backgroundColor: '#F9F9F9',
+                borderRadius: '6px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>応募した人</div>
+                  <div style={{ fontSize: '22px', fontWeight: '700', color: '#1A1A1A' }}>
+                    {applicationCount}<span style={{ fontSize: '14px', fontWeight: '400' }}>人</span>
                   </div>
-                )}
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#6B6B6B', marginBottom: '8px' }}>募集人数</div>
+                  <div style={{ fontSize: '22px', fontWeight: '700', color: '#1A1A1A' }}>
+                    {request.number_of_positions || 1}<span style={{ fontSize: '14px', fontWeight: '400' }}>人</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="mb-32">
-              <h2 className="card-title mb-12">依頼内容</h2>
-              <p className="text-small" style={{ lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>
+            {/* 仕事の詳細 */}
+            <div className="detail-section">
+              <h2 className="detail-section-title">仕事の詳細</h2>
+              <div style={{ 
+                padding: '16px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E5E5E5',
+                borderRadius: '6px',
+                lineHeight: '1.8',
+                whiteSpace: 'pre-wrap',
+                fontSize: '14px',
+                color: '#1A1A1A'
+              }}>
                 {request.description}
-              </p>
+              </div>
             </div>
 
-            {request.delivery_message && (
-              <div className="mb-32">
-                <h2 className="card-title mb-12">納品メッセージ</h2>
-                <div style={{ padding: '16px', backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5', borderRadius: '8px' }}>
-                  <p className="text-small" style={{ lineHeight: '1.7', whiteSpace: 'pre-wrap', color: '#1A1A1A' }}>
-                    {request.delivery_message}
-                  </p>
-                  <div className="text-tiny" style={{ marginTop: '12px', color: '#6B6B6B' }}>
-                    <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
-                    納品ファイルはチャットをご確認ください
-                  </div>
+            {/* 参考URL */}
+            {request.reference_urls && request.reference_urls.length > 0 && (
+              <div className="detail-section">
+                <h2 className="detail-section-title">参考URL</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {request.reference_urls.map((url, index) => (
+                    <a 
+                      key={index}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ 
+                        color: '#1A1A1A',
+                        textDecoration: 'underline',
+                        wordBreak: 'break-all',
+                        fontSize: '14px'
+                      }}
+                    >
+                      {url}
+                    </a>
+                  ))}
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', padding: '24px', backgroundColor: '#F9F9F9', borderRadius: '8px' }}>
-              {request.final_price ? (
-                <div>
-                  <div className="text-tiny text-gray" style={{ marginBottom: '4px' }}>確定金額</div>
-                  <div className="card-subtitle">{request.final_price.toLocaleString()}円</div>
+            {/* 添付ファイル */}
+            {request.attached_file_urls && request.attached_file_urls.length > 0 && (
+              <div className="detail-section">
+                <h2 className="detail-section-title">添付ファイル</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {request.attached_file_urls.map((fileUrl, index) => {
+                    const fileName = fileUrl.split('/').pop() || `file_${index + 1}`
+                    return (
+                      <a 
+                        key={index}
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 12px',
+                          backgroundColor: '#F9F9F9',
+                          borderRadius: '6px',
+                          textDecoration: 'none',
+                          border: '1px solid #E5E5E5',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F0F0F0'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#F9F9F9'}
+                      >
+                        <i className="fas fa-file-download" style={{ color: '#1A1A1A', fontSize: '16px' }}></i>
+                        <span style={{ color: '#1A1A1A', fontSize: '14px', flex: 1 }}>
+                          {fileName}
+                        </span>
+                        <i className="fas fa-external-link-alt" style={{ fontSize: '12px', color: '#9E9E9E' }}></i>
+                      </a>
+                    )
+                  })}
                 </div>
-              ) : (request.budget_min || request.budget_max) && (
-                <div>
-                  <div className="text-tiny text-gray" style={{ marginBottom: '4px' }}>予算</div>
-                  <div className="card-subtitle">
-                    {request.budget_min?.toLocaleString() || '未設定'}円 〜 {request.budget_max?.toLocaleString() || '未設定'}円
+              </div>
+            )}
+
+            {/* 求めるスキル */}
+            {request.required_skills && request.required_skills.length > 0 && (
+              <div className="detail-section">
+                <h2 className="detail-section-title">求めるスキル</h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {request.required_skills.map((skill, index) => (
+                    <span key={index} className="badge" style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#F5F5F5',
+                      color: '#1A1A1A',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}>
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* この仕事の特徴 */}
+            {request.job_features && request.job_features.length > 0 && (
+              <div className="detail-section">
+                <h2 className="detail-section-title">この仕事の特徴</h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {request.job_features.map((feature, index) => (
+                    <span key={index} className="badge" style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#E8E8E8',
+                      color: '#1A1A1A',
+                      fontSize: '13px',
+                      fontWeight: '600'
+                    }}>
+                      {getJobFeatureLabel(feature)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* クライアント情報 */}
+            <div className="detail-section">
+              <h2 className="detail-section-title">クライアント情報</h2>
+              <div style={{
+                padding: '16px',
+                border: '1px solid #E5E5E5',
+                borderRadius: '6px',
+                backgroundColor: '#FFFFFF'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    backgroundColor: '#E5E5E5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    fontSize: '20px',
+                    color: '#6B6B6B'
+                  }}>
+                    {request.profiles?.avatar_url ? (
+                      <img 
+                        src={request.profiles.avatar_url} 
+                        alt={request.profiles.display_name || ''} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      request.profiles?.display_name?.charAt(0) || '?'
+                    )}
+                  </div>
+                  <div>
+                    {request.profiles?.username ? (
+                      <Link 
+                        href={`/creators/${request.profiles.username}`}
+                        style={{ 
+                          textDecoration: 'none', 
+                          fontSize: '16px', 
+                          fontWeight: '700', 
+                          color: '#1A1A1A',
+                          display: 'block',
+                          marginBottom: '2px'
+                        }}
+                      >
+                        {request.profiles.display_name || '名前未設定'}
+                      </Link>
+                    ) : (
+                      <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '700', 
+                        color: '#1A1A1A',
+                        marginBottom: '2px'
+                      }}>
+                        {request.profiles?.display_name || '名前未設定'}
+                      </div>
+                    )}
+                    {request.profiles?.username && (
+                      <Link
+                        href={`/creators/${request.profiles.username}`}
+                        style={{
+                          fontSize: '13px',
+                          color: '#1A1A1A',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        プロフィールを見る →
+                      </Link>
+                    )}
                   </div>
                 </div>
-              )}
-              {request.deadline && (
-                <div>
-                  <div className="text-tiny text-gray" style={{ marginBottom: '4px' }}>納期</div>
-                  <div className="card-subtitle">{formatDate(request.deadline)}</div>
-                </div>
-              )}
-              <div>
-                <div className="text-tiny text-gray" style={{ marginBottom: '4px' }}>投稿日</div>
-                <div className="card-subtitle">{formatDate(request.created_at)}</div>
               </div>
             </div>
           </div>
 
-          {/* 評価表示 */}
-          {reviews.length > 0 && (
-            <div className="card-no-hover p-40 mb-24">
-              <h2 className="card-title mb-24">評価</h2>
-              <div className="flex flex-col gap-16">
-                {reviews.map((review) => (
-                  <div key={review.id} style={{ padding: '16px', border: '1px solid #E5E5E5', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <i 
-                          key={star} 
-                          className={star <= review.rating ? 'fas fa-star' : 'far fa-star'}
-                          style={{ color: '#F59E0B', fontSize: '16px' }}
-                        ></i>
-                      ))}
+          {/* サイドバー */}
+          <div className="sidebar">
+            {/* 応募ボタン */}
+            {request.status === 'open' && !isRequester && (
+              <div style={{ marginBottom: '16px' }}>
+                {isLoggedIn ? (
+                  hasApplied ? (
+                    <div style={{
+                      padding: '14px',
+                      backgroundColor: '#F5F5F5',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E5E5',
+                      textAlign: 'center',
+                      color: '#1A1A1A',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}>
+                      <i className="fas fa-check-circle" style={{ marginRight: '8px', color: '#1A1A1A' }}></i>
+                      応募済みです
                     </div>
-                    <p className="text-small" style={{ lineHeight: '1.7' }}>
-                      {review.comment}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {canViewApplyButton && (
-            <div className="mb-32">
-              {isLoggedIn ? (
-                <button onClick={() => setShowApplicationForm(!showApplicationForm)} className="btn-primary" style={{ width: '100%' }}>
-                  <i className="fas fa-paper-plane" style={{ marginRight: '8px' }}></i>
-                  この依頼に応募する
-                </button>
-              ) : (
-                <div>
-                  <Link href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-                    <i className="fas fa-sign-in-alt" style={{ marginRight: '8px' }}></i>
+                  ) : (
+                    <button
+                      onClick={() => setShowApplicationForm(!showApplicationForm)}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        backgroundColor: '#1A1A1A',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#333333'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1A1A1A'}
+                    >
+                      応募画面へ
+                    </button>
+                  )
+                ) : (
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '14px',
+                      backgroundColor: '#1A1A1A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  >
                     ログインして応募する
                   </Link>
-                  <p className="text-small text-gray" style={{ textAlign: 'center', marginTop: '12px' }}>
-                    応募するにはアカウントが必要です
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
-          {hasApplied && !isRequester && isLoggedIn && (
-            <div className="mb-32" style={{ padding: '16px', backgroundColor: '#F5F5F5', borderRadius: '8px', border: '1px solid #E5E5E5', color: '#1A1A1A', textAlign: 'center' }}>
-              <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i>
-              応募済みです
-            </div>
-          )}
+            {/* 依頼者向けリンク */}
+            {isRequester && (
+              <div style={{ marginBottom: '16px' }}>
+                {request.status === 'open' ? (
+                  <Link
+                    href={`/requests/${requestId}/manage`}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '14px',
+                      backgroundColor: '#1A1A1A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <i className="fas fa-cog" style={{ marginRight: '8px' }}></i>
+                    応募を管理する
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/requests/${requestId}/status`}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '14px',
+                      backgroundColor: '#1A73E8',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <i className="fas fa-tasks" style={{ marginRight: '8px' }}></i>
+                    契約進捗を確認
+                  </Link>
+                )}
+              </div>
+            )}
 
-          {showApplicationForm && (
-            <div className="card-no-hover p-40 mb-32">
-              <h2 className="card-title mb-24">応募する</h2>
+            {/* クリエイター向けリンク（契約済み） */}
+            {!isRequester && currentProfileId && request.selected_applicant_id === currentProfileId && request.status !== 'open' && (
+              <div style={{ marginBottom: '16px' }}>
+                <Link
+                  href={`/requests/${requestId}/status`}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: '#1A73E8',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '15px',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <i className="fas fa-tasks" style={{ marginRight: '8px' }}></i>
+                  契約進捗を確認
+                </Link>
+              </div>
+            )}
+
+            {/* メッセージ */}
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#F9F9F9',
+              borderRadius: '6px',
+              border: '1px solid #E5E5E5'
+            }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '10px', color: '#1A1A1A' }}>
+                メッセージ
+              </h3>
+              <form onSubmit={handleSendMessage}>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="このお仕事に少しでも疑問があるときは、気軽に相談してみましょう"
+                  rows={4}
+                  disabled={sendingMessage}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #E5E5E5',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={sendingMessage || !messageText.trim()}
+                  style={{
+                    width: '100%',
+                    marginTop: '10px',
+                    padding: '10px',
+                    backgroundColor: '#FFFFFF',
+                    color: '#1A1A1A',
+                    border: '2px solid #1A1A1A',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: sendingMessage || !messageText.trim() ? 'not-allowed' : 'pointer',
+                    opacity: sendingMessage || !messageText.trim() ? 0.5 : 1
+                  }}
+                >
+                  {sendingMessage ? '送信中...' : 'メッセージを送る'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* 応募フォームモーダル */}
+        {showApplicationForm && (
+          <div 
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              backgroundColor: 'rgba(0,0,0,0.5)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              zIndex: 1000,
+              padding: '20px'
+            }} 
+            onClick={() => setShowApplicationForm(false)}
+          >
+            <div 
+              style={{ 
+                backgroundColor: '#FFFFFF', 
+                borderRadius: '12px', 
+                maxWidth: '600px', 
+                width: '100%', 
+                padding: '32px',
+                maxHeight: '90vh',
+                overflowY: 'auto'
+              }} 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '24px' }}>
+                この依頼に応募する
+              </h2>
+
               <form onSubmit={handleSubmitApplication}>
-                <div className="mb-24">
-                  <label className="form-label">
-                    応募メッセージ <span className="form-required">*</span>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    marginBottom: '8px',
+                    color: '#1A1A1A'
+                  }}>
+                    応募メッセージ <span style={{ color: '#D32F2F' }}>*</span>
                   </label>
-                  <textarea value={applicationMessage} onChange={(e) => setApplicationMessage(e.target.value)} placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください" required rows={6} className="textarea-field" />
+                  <textarea
+                    value={applicationMessage}
+                    onChange={(e) => setApplicationMessage(e.target.value)}
+                    placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください"
+                    required
+                    rows={8}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                  />
                 </div>
 
-                <div className="mb-32">
-                  <label className="form-label">希望金額</label>
+                <div style={{ marginBottom: '32px' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    marginBottom: '8px',
+                    color: '#1A1A1A'
+                  }}>
+                    希望金額
+                  </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input type="number" value={proposedPrice} onChange={(e) => setProposedPrice(e.target.value)} placeholder="希望する金額" min="0" className="input-field" style={{ flex: 1 }} />
-                    <span className="text-gray">円</span>
+                    <input
+                      type="number"
+                      value={proposedPrice}
+                      onChange={(e) => setProposedPrice(e.target.value)}
+                      placeholder="希望する金額"
+                      min="0"
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: '1px solid #E5E5E5',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <span style={{ color: '#6B6B6B', fontSize: '14px' }}>円</span>
                   </div>
                 </div>
 
-                <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setShowApplicationForm(false)} disabled={processing} className="btn-secondary">
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowApplicationForm(false)}
+                    disabled={processing}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      border: '2px solid #E5E5E5',
+                      borderRadius: '8px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#1A1A1A',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: processing ? 'not-allowed' : 'pointer'
+                    }}
+                  >
                     キャンセル
                   </button>
-                  <button type="submit" disabled={processing} className="btn-primary">
+                  <button
+                    type="submit"
+                    disabled={processing}
+                    style={{
+                      flex: 1,
+                      padding: '14px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      backgroundColor: processing ? '#CCCCCC' : '#1A1A1A',
+                      color: '#FFFFFF',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: processing ? 'not-allowed' : 'pointer'
+                    }}
+                  >
                     {processing ? '送信中...' : '応募する'}
                   </button>
                 </div>
               </form>
             </div>
-          )}
-
-          {isRequester && isLoggedIn && applications.length > 0 && request.status === 'open' && (
-            <div className="card-no-hover p-40">
-              <h2 className="card-title mb-24">応募一覧 ({applications.length}件)</h2>
-
-              <div className="flex flex-col gap-24">
-                {applications.map((app) => (
-                  <div key={app.id} style={{ padding: '24px', border: '1px solid #E5E5E5', borderRadius: '8px', backgroundColor: app.status === 'accepted' ? '#F9F9F9' : '#FFFFFF' }}>
-                    <div className="flex gap-12 mb-16" style={{ alignItems: 'center' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#E5E5E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', color: '#6B6B6B', overflow: 'hidden', flexShrink: 0 }}>
-                        {app.profiles?.avatar_url ? (
-                          <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          app.profiles?.display_name?.charAt(0) || '?'
-                        )}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        {app.profiles?.username ? (
-                          <Link href={`/creators/${app.profiles.username}`} style={{ textDecoration: 'none', fontSize: '15px', fontWeight: '600', color: '#1A1A1A' }}>
-                            {app.profiles.display_name || '名前未設定'}
-                          </Link>
-                        ) : (
-                          <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1A1A' }}>
-                            {app.profiles?.display_name || '名前未設定'}
-                          </div>
-                        )}
-                        <div className="text-tiny text-gray">{formatDate(app.created_at)}</div>
-                      </div>
-                      {app.status === 'accepted' && (
-                        <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', backgroundColor: '#1A1A1A', color: '#FFFFFF' }}>採用済み</span>
-                      )}
-                      {app.status === 'rejected' && (
-                        <span style={{ padding: '4px 12px', borderRadius: '4px', fontSize: '12px', fontWeight: '600', backgroundColor: '#CCCCCC', color: '#6B6B6B' }}>却下済み</span>
-                      )}
-                    </div>
-
-                    <p className="text-small mb-16" style={{ lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>{app.message}</p>
-
-                    {app.proposed_price && (
-                      <div className="mb-12 text-small">
-                        <strong>希望金額:</strong> {app.proposed_price.toLocaleString()}円
-                      </div>
-                    )}
-
-                    {app.status === 'pending' && (
-                      <div className="flex gap-12" style={{ justifyContent: 'flex-end' }}>
-                        <button onClick={() => handleRejectApplication(app.id)} disabled={processing} className="btn-secondary" style={{ fontSize: '14px', padding: '8px 16px' }}>却下</button>
-                        <button onClick={() => handleAcceptApplicationClick(app.id, app.applicant_id, app.proposed_price)} disabled={processing} className="btn-primary" style={{ fontSize: '14px', padding: '8px 16px' }}>採用する</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isRequester && isLoggedIn && request.status === 'open' && (
-            <div className="flex gap-16 mt-24" style={{ justifyContent: 'flex-end' }}>
-              <button onClick={handleCancelRequest} disabled={processing} className="btn-danger">依頼をキャンセル</button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* 契約確定モーダル（採用時に使用） */}
-      {showContractModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowContractModal(false)}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '24px' }}>契約を確定</h2>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label className="form-label">
-                確定金額 <span className="form-required">*</span>
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input type="number" value={contractPrice} onChange={(e) => setContractPrice(e.target.value)} placeholder="金額を入力" min="0" required className="input-field" style={{ flex: 1 }} />
-                <span>円</span>
-              </div>
-              {contractPrice && parseInt(contractPrice) > 0 && (
-                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#F9F9F9', borderRadius: '8px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#6B6B6B' }}>
-                    <span>依頼者支払額</span>
-                    <span>{parseInt(contractPrice).toLocaleString()}円</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#6B6B6B' }}>
-                    <span>プラットフォーム手数料（12%）</span>
-                    <span>-{Math.floor(parseInt(contractPrice) * 0.12).toLocaleString()}円</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#6B6B6B' }}>
-                    <span>振込手数料</span>
-                    <span>-330円</span>
-                  </div>
-                  <div style={{ borderTop: '1px solid #E5E5E5', marginTop: '6px', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: '600', color: '#1A1A1A' }}>
-                    <span>クリエイター実受取額</span>
-                    <span>{Math.floor(parseInt(contractPrice) * 0.88) - 330 >= 0 ? (Math.floor(parseInt(contractPrice) * 0.88) - 330).toLocaleString() : 0}円</span>
-                  </div>
-                  <div style={{ marginTop: '8px', fontSize: '11px', color: '#6B6B6B' }}>
-                    ※1,000円未満の場合は翌月に繰越されます
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label className="form-label">納期</label>
-              <input type="date" value={contractDeadline} onChange={(e) => setContractDeadline(e.target.value)} min={new Date().toISOString().split('T')[0]} className="input-field" />
-            </div>
-
-            <div style={{ padding: '12px', backgroundColor: '#F9F9F9', borderRadius: '8px', marginBottom: '24px', fontSize: '14px', lineHeight: '1.6', color: '#4A4A4A' }}>
-              <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#6B6B6B' }}></i>
-              契約確定後、仮払いを行うとクリエイターが作業を開始できます。
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setShowContractModal(false)} className="btn-secondary" style={{ flex: 1 }}>
-                キャンセル
-              </button>
-              <button onClick={handleConfirmContract} disabled={processing} className="btn-primary" style={{ flex: 1 }}>
-                {processing ? '処理中...' : '採用して契約確定'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 納品モーダル */}
-      {showDeliveryModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowDeliveryModal(false)}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', maxWidth: '600px', width: '100%', padding: '32px', maxHeight: '80vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '24px' }}>納品する</h2>
-
-            <div style={{ padding: '16px', backgroundColor: '#F5F5F5', border: '1px solid #E5E5E5', borderRadius: '8px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>
-                <i className="fas fa-info-circle" style={{ marginRight: '8px' }}></i>
-                ファイルについて
-              </div>
-              <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#4A4A4A', margin: 0 }}>
-                納品ファイルは<strong>チャットで送信</strong>してください。<br />
-                こちらのフォームでは納品の報告のみ行います。
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label className="form-label">
-                納品メッセージ <span className="form-required">*</span>
-              </label>
-              <textarea value={deliveryMessage} onChange={(e) => setDeliveryMessage(e.target.value)} placeholder="納品物についての説明や、チャットで送信したファイルについて記入してください" required rows={5} className="textarea-field" />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setShowDeliveryModal(false)} className="btn-secondary" style={{ flex: 1 }}>
-                キャンセル
-              </button>
-              <button onClick={handleDelivery} disabled={processing} className="btn-primary" style={{ flex: 1 }}>
-                {processing ? '納品中...' : '納品する'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 評価モーダル */}
-      {showReviewModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => setShowReviewModal(false)}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', maxWidth: '500px', width: '100%', padding: '32px' }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '24px' }}>評価する</h2>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label className="form-label">評価</label>
-              <div style={{ display: 'flex', gap: '8px', fontSize: '32px' }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <i 
-                    key={star}
-                    className={star <= rating ? 'fas fa-star' : 'far fa-star'}
-                    onClick={() => setRating(star)}
-                    style={{ color: '#F59E0B', cursor: 'pointer' }}
-                  ></i>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <label className="form-label">
-                コメント <span className="form-required">*</span>
-              </label>
-              <textarea value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} placeholder="お仕事の感想をお願いします" required rows={4} className="textarea-field" />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setShowReviewModal(false)} className="btn-secondary" style={{ flex: 1 }}>
-                キャンセル
-              </button>
-              <button onClick={handleSubmitReview} disabled={processing} className="btn-primary" style={{ flex: 1 }}>
-                {processing ? '送信中...' : '評価を投稿'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <Footer />
     </>
   )

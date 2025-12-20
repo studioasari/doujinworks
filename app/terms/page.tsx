@@ -13,7 +13,7 @@ export default function TermsPage() {
 
           <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#4A4A4A' }}>
             <p style={{ marginBottom: '24px', color: '#6B6B6B' }}>
-              最終更新日: 2024年12月8日
+              最終更新日: 2024年12月16日
             </p>
 
             <section style={{ marginBottom: '32px' }}>
@@ -207,10 +207,13 @@ export default function TermsPage() {
                 3. クリエイターは、仮払いの確認後、作業を開始するものとします。
               </p>
               <p style={{ marginBottom: '12px' }}>
-                4. 納品物の検収完了後、当社は仮払い金額からプラットフォーム手数料を差し引いた金額をクリエイターへ支払うものとします。
+                4. 納品物の検収完了後、当社は仮払い金額からプラットフォーム手数料及び振込手数料を差し引いた金額をクリエイターへ支払うものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                5. 仮払い金は、取引が完了するまで当社が管理し、依頼者又はクリエイターのいずれにも帰属しないものとします。
               </p>
               <p>
-                5. 仮払い金は、取引が完了するまで当社が管理し、依頼者又はクリエイターのいずれにも帰属しないものとします。
+                6. 報酬の支払事務は、当社がクリエイターに代わって依頼者から報酬を受領し、これをクリエイターに引き渡すことにより行われるものとします。クリエイターは当社に対して、依頼者に対する報酬請求権の代理受領権を授与するものとします。
               </p>
             </section>
 
@@ -220,59 +223,130 @@ export default function TermsPage() {
                 1. クリエイターは、取引において合意された納期までに、成果物を納品するものとします。
               </p>
               <p style={{ marginBottom: '12px' }}>
-                2. 依頼者は、納品後、当社が定める期間内に成果物を検収し、合格又は修正依頼の通知を行うものとします。
+                2. 依頼者は、納品後7日以内に成果物を検収し、承認又は差戻しの通知を行うものとします。
               </p>
               <p style={{ marginBottom: '12px' }}>
-                3. 依頼者が前項の期間内に検収結果を通知しない場合、成果物は合格したものとみなします。
+                3. 依頼者が前項の期間内に合理的な理由なく検収結果を通知しない場合、成果物は承認されたものとみなします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                4. 前項により成果物が承認されたものとみなされた場合、依頼者は異議を申し立てることができないものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                5. 当社は、検収期限の3日前に、依頼者に対して検収期限が近づいている旨の通知を送信するものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                6. 差戻しの回数は、原則として3回までとします。但し、依頼者とクリエイターの合意により、これを変更することができます。
               </p>
               <p>
-                4. 修正依頼の回数は、原則として3回までとします。但し、依頼者とクリエイターの合意により、これを変更することができます。
+                7. 依頼者が差戻しを行う場合、具体的な修正内容を明示するものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第9条（キャンセル・返金）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第9条（取引の中断・解除）</h3>
               <p style={{ marginBottom: '12px' }}>
-                1. 取引のキャンセルは、以下の場合に限り認められるものとします。
+                1. 取引の中断・解除は、以下の場合に限り認められるものとします。
               </p>
               <div style={{ marginLeft: '20px' }}>
                 <p style={{ marginBottom: '8px' }}>
                   (1) 仮払い前: 依頼者は自由にキャンセルできる
                 </p>
                 <p style={{ marginBottom: '8px' }}>
-                  (2) 仮払い後、作業開始前: 依頼者とクリエイターの協議により決定
+                  (2) 仮払い後、作業開始前: 依頼者とクリエイターの双方の合意がある場合
                 </p>
                 <p style={{ marginBottom: '8px' }}>
-                  (3) 作業開始後: 原則としてキャンセル不可。但し、以下の場合を除く
+                  (3) 作業開始後: 原則として解除不可。但し、以下の場合を除く
                 </p>
                 <div style={{ marginLeft: '20px' }}>
                   <p style={{ marginBottom: '4px' }}>
-                    ① クリエイターが納期を30日以上遅延し、依頼者の催告後7日以内に納品しない場合
+                    ① 依頼者とクリエイターの双方の合意がある場合
                   </p>
                   <p style={{ marginBottom: '4px' }}>
-                    ② クリエイターが連絡不能となり、依頼者の連絡後14日以上応答がない場合
+                    ② いずれかの当事者が義務を履行せず、相手方が7日以上の期間を定めて催告したにもかかわらず、当該期間内に履行しない場合
+                  </p>
+                  <p style={{ marginBottom: '4px' }}>
+                    ③ いずれかの当事者が7日以上連絡不能となり、相手方からの連絡に応答しない場合
+                  </p>
+                  <p style={{ marginBottom: '4px' }}>
+                    ④ クリエイターが納期を7日以上遅延した場合
                   </p>
                   <p>
-                    ③ その他当社が特別に認めた場合
+                    ⑤ その他当社が特別に認めた場合
                   </p>
                 </div>
               </div>
               <p style={{ marginBottom: '12px', marginTop: '12px' }}>
-                2. 前項第2号又は第3号によりキャンセルが認められた場合、返金額は以下のとおりとします。
+                2. 前項第3号②から④により取引が解除された場合、当社は以下のとおり処理するものとします。
               </p>
               <div style={{ marginLeft: '20px' }}>
                 <p style={{ marginBottom: '8px' }}>
-                  (1) 依頼者都合のキャンセル: 作業進捗に応じた金額を協議により決定
+                  (1) クリエイターの責めに帰すべき事由による解除: 仮払金を依頼者に全額返金
                 </p>
                 <p style={{ marginBottom: '8px' }}>
-                  (2) クリエイター都合のキャンセル: 全額返金
+                  (2) 依頼者の責めに帰すべき事由による解除: 作業進捗に応じた金額を当事者間で協議の上決定し、当社が支払処理を行う
                 </p>
                 <p>
-                  (3) その他の場合: 当社が状況を判断し、適切な返金額を決定
+                  (3) その他の場合: 当社が状況を判断し、適切な処理を決定
+                </p>
+              </div>
+              <p style={{ marginBottom: '12px', marginTop: '12px' }}>
+                3. 契約成立後（仮払い前を含む）、当事者の一方が契約を解除したい場合は、相手方にキャンセル申請を行い、双方の合意が必要となります。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                4. キャンセル申請を受けた当事者は、申請から7日以内に同意または拒否の意思表示を行うものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                5. 前項の期間内に応答がない場合、キャンセル申請に同意したものとみなし、契約は自動的に解除されます。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                6. 仮払い済みの場合、キャンセルが成立した時点で返金処理を行います。ただし、決済手数料は返金されません。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                7. 以下の場合は、キャンセル申請が可能です。
+              </p>
+              <div style={{ marginLeft: '20px' }}>
+                <p style={{ marginBottom: '8px' }}>
+                  (1) 納期から7日以上経過しても納品がない場合
+                </p>
+                <p style={{ marginBottom: '8px' }}>
+                  (2) 相手方と7日以上連絡が取れない場合
+                </p>
+                <p>
+                  (3) その他、当社が認める正当な理由がある場合
+                </p>
+              </div>
+              <p style={{ marginBottom: '12px', marginTop: '12px' }}>
+                8. いずれかの当事者が取引の中断・解除を希望する場合、速やかに相手方及び当社に通知するものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                9. 取引の中断・解除に関して当事者間で争いがある場合、当社が状況を確認し、適切な処理を決定できるものとします。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                10. 返金処理にかかる決済手数料は、取引解除の原因を作った側の負担とします。但し、双方の合意による解除の場合は、依頼者の負担とします。
+              </p>
+              <p>
+                11. 本条第1項第3号②から④の催告は、本サービス内のメッセージ機能又は電子メールにより行うものとします。
+              </p>
+            </section>
+
+            <section style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第10条（時効）</h3>
+              <p style={{ marginBottom: '12px' }}>
+                1. 以下の各号に該当する場合、仮払金又は確定した報酬について、依頼者又はクリエイターは、当該金員に係る返還請求権、支払請求権その他一切の権利を失い、当該金員は当社に帰属するものとします。
+              </p>
+              <div style={{ marginLeft: '20px' }}>
+                <p style={{ marginBottom: '8px' }}>
+                  (1) 第9条第2項各号に該当すると当社が判断した日から、仮払金が処理されないまま180日が経過した場合
+                </p>
+                <p style={{ marginBottom: '8px' }}>
+                  (2) 報酬が確定した日から、クリエイターへの支払いが行われないまま180日が経過した場合
+                </p>
+                <p>
+                  (3) 第17条第2項に定める処置が必要と当社が判断した日から、180日経過した場合
                 </p>
               </div>
               <p style={{ marginTop: '12px' }}>
-                3. 返金にかかる決済手数料は、キャンセルの原因を作った側の負担とします。
+                2. 前項の期間内に、当事者から当社に対して何らの連絡もない場合、当該当事者は権利を放棄したものとみなします。
               </p>
             </section>
 
@@ -281,7 +355,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第10条（手数料）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第11条（手数料）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. クリエイターは、取引成立時の報酬額に対し、12%のプラットフォーム手数料を当社に支払うものとします。
               </p>
@@ -297,7 +371,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第11条（支払）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第12条（支払）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. クリエイターへの報酬は、月末締め、翌月20日払いとします。
               </p>
@@ -310,13 +384,16 @@ export default function TermsPage() {
               <p style={{ marginBottom: '12px' }}>
                 4. 振込先口座に誤りがあった場合、組戻し手数料はクリエイターの負担とします。
               </p>
+              <p style={{ marginBottom: '12px' }}>
+                5. 当社は、クリエイターへの報酬の支払いにあたり、プラットフォーム手数料及び振込手数料を控除した金額を支払うものとします。
+              </p>
               <p>
-                5. 報酬の支払いに関する事務は、当社がクリエイターに代わって依頼者から報酬を受領し、これをクリエイターに引き渡すことにより行われるものとします。
+                6. 振込先として指定できる口座は、日本国内の銀行、ゆうちょ銀行、信用金庫、労働金庫、信用農業協同組合連合会、信用漁業協同組合連合会、農業協同組合のいずれかとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第12条（税務処理）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第13条（税務処理）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 利用者は、自己の責任において税務処理を行うものとします。
               </p>
@@ -333,7 +410,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第13条（成果物の権利帰属）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第14条（成果物の権利帰属）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 成果物に関する著作権その他の知的財産権は、取引において別途合意がない限り、作成したクリエイターに帰属するものとします。
               </p>
@@ -344,12 +421,12 @@ export default function TermsPage() {
                 3. クリエイターは、取引において知的財産権を依頼者に譲渡した成果物について、依頼者又は依頼者の取引先に対し、著作者人格権を行使しないものとします。
               </p>
               <p>
-                4. クリエイターは、第三者の知的財産権を侵害していない成果物を納品することを保証するものとします。
+                4. クリエイターは、第三者の知的財産権を侵害していない成果物を納品することを保証するものとします。第三者の知的財産権を侵害したことにより依頼者又は当社に損害が生じた場合、クリエイターは当該損害を賠償する責任を負うものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第14条（ポートフォリオ掲載）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第15条（ポートフォリオ掲載）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. クリエイターは、成果物をポートフォリオとして自己のプロフィールページ又は外部のポートフォリオサイトに掲載できるものとします。
               </p>
@@ -366,7 +443,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第15条（禁止事項）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第16条（禁止事項）</h3>
               <p style={{ marginBottom: '12px' }}>
                 利用者は、本サービスの利用にあたり、以下の行為を行ってはならないものとします。
               </p>
@@ -441,9 +518,9 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第16条（違約金）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第17条（違約金）</h3>
               <p style={{ marginBottom: '12px' }}>
-                1. 利用者が第15条第4号に違反し、本サービスを介さずに直接取引を行った場合、当該利用者は、当社に対し、違約金として以下のいずれか高い方の金額を支払うものとします。
+                1. 利用者が第16条第4号に違反し、本サービスを介さずに直接取引を行った場合、当該利用者は、当社に対し、違約金として以下のいずれか高い方の金額を支払うものとします。
               </p>
               <div style={{ marginLeft: '20px' }}>
                 <p style={{ marginBottom: '8px' }}>
@@ -466,7 +543,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第17条（利用停止及び登録抹消）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第18条（利用停止及び登録抹消）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 当社は、利用者が以下のいずれかに該当する場合、事前に通知することなく、当該利用者について本サービスの利用を一時停止し、又は会員登録を抹消できるものとします。
               </p>
@@ -509,13 +586,16 @@ export default function TermsPage() {
                 </p>
               </div>
               <p style={{ marginBottom: '12px', marginTop: '12px' }}>
-                2. 利用者は、当社所定の方法により、いつでも会員登録を抹消できるものとします。但し、未完了の取引がある場合、当該取引の完了後でなければ抹消できません。
+                2. 前項に基づき当社が利用停止又は登録抹消の措置を講じた場合、当社は、当該利用者が出金できる状態にある金銭及び今後支払われる予定であった金銭について、支払留保その他当社が適切と判断する処置を行うことができるものとします。
               </p>
               <p style={{ marginBottom: '12px' }}>
-                3. 会員登録の抹消後も、利用者は、本規約に基づき負担する義務及び債務を免れないものとします。
+                3. 利用者は、当社所定の方法により、いつでも会員登録を抹消できるものとします。但し、未完了の取引がある場合、当該取引の完了後でなければ抹消できません。
+              </p>
+              <p style={{ marginBottom: '12px' }}>
+                4. 会員登録の抹消後も、利用者は、本規約に基づき負担する義務及び債務を免れないものとします。
               </p>
               <p>
-                4. 当社は、本条に基づき利用停止又は登録抹消を行ったことにより利用者に生じた損害について、当社の責めに帰すべき事由がある場合を除き、一切の責任を負いません。
+                5. 当社は、本条に基づき利用停止又は登録抹消を行ったことにより利用者に生じた損害について、当社の責めに帰すべき事由がある場合を除き、一切の責任を負いません。
               </p>
             </section>
 
@@ -524,7 +604,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第18条（反社会的勢力の排除）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第19条（反社会的勢力の排除）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 利用者は、現在及び将来にわたり、自己が反社会的勢力に該当しないこと、反社会的勢力と関係を有しないことを表明し、保証するものとします。
               </p>
@@ -558,7 +638,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第19条（免責）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第20条（免責）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 当社は、利用者間の取引に関して一切の責任を負いません。
               </p>
@@ -574,7 +654,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第20条（損害賠償）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第21条（損害賠償）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 利用者が本規約に違反し、当社に損害を与えた場合、当該利用者は、当社に対し、その一切の損害（弁護士費用を含みます）を賠償するものとします。
               </p>
@@ -591,7 +671,7 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第21条（秘密保持）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第22条（秘密保持）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 利用者は、本サービスの利用に関連して知り得た他の利用者の秘密情報を、事前の書面による承諾なく、第三者に開示又は漏洩してはならず、本サービスの利用目的以外で使用してはならないものとします。
               </p>
@@ -601,14 +681,14 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第22条（個人情報の取扱い）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第23条（個人情報の取扱い）</h3>
               <p>
                 当社は、利用者の個人情報を、当社が別途定めるプライバシーポリシーに従い、適切に取り扱うものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第23条（通知）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第24条（通知）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 当社から利用者への通知は、本サービス上への表示、登録された電子メールアドレスへの送信その他当社が適当と認める方法により行うものとします。
               </p>
@@ -618,21 +698,21 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第24条（権利義務の譲渡禁止）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第25条（権利義務の譲渡禁止）</h3>
               <p>
                 利用者は、当社の書面による事前の承諾なく、本規約に基づく権利義務の全部又は一部を第三者に譲渡し、又は担保に供してはならないものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第25条（分離可能性）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第26条（分離可能性）</h3>
               <p>
                 本規約のいずれかの条項又はその一部が、消費者契約法その他の法令により無効又は執行不能と判断された場合であっても、本規約の残りの規定及び一部が無効又は執行不能と判断された規定の残りの部分は、継続して完全に効力を有するものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第26条（準拠法及び合意管轄）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第27条（準拠法及び合意管轄）</h3>
               <p style={{ marginBottom: '12px' }}>
                 1. 本規約の準拠法は日本法とします。
               </p>
@@ -642,14 +722,14 @@ export default function TermsPage() {
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第27条（協議解決）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第28条（協議解決）</h3>
               <p>
                 本規約に定めのない事項又は本規約の解釈に疑義が生じた場合、当社及び利用者は、誠実に協議の上、これを解決するものとします。
               </p>
             </section>
 
             <section style={{ marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第28条（お問い合わせ）</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>第29条（お問い合わせ）</h3>
               <p style={{ marginBottom: '12px' }}>
                 本規約に関するお問い合わせは、以下までご連絡ください。
               </p>
@@ -669,6 +749,7 @@ export default function TermsPage() {
 
             <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #E0E0E0', textAlign: 'center', color: '#999', fontSize: '12px' }}>
               <p>2024年12月8日 制定</p>
+              <p>2024年12月16日 改定</p>
             </div>
           </div>
         </div>

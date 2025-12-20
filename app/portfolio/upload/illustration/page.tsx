@@ -8,6 +8,7 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
 
 // 画像圧縮関数
 async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
@@ -1106,28 +1107,33 @@ function UploadIllustrationPageContent() {
         return
       }
 
-      // 1. 画像をStorageにアップロード
+      // 1. 画像をR2にアップロード
       const uploadedUrls: string[] = []
       
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`
         
-        const { error: uploadError } = await supabase.storage
-          .from('portfolio-images')
-          .upload(fileName, file)
-
-        if (uploadError) {
-          throw uploadError
+        try {
+          // R2署名付きURL取得
+          const { uploadUrl, fileUrl } = await getUploadUrl(
+            'illustration',
+            'image',
+            file.name,
+            file.type,
+            user.id
+          )
+          
+          // R2に直接アップロード
+          await uploadToR2(file, uploadUrl)
+          
+          uploadedUrls.push(fileUrl)
+          
+          console.log(`✅ ${i + 1}/${imageFiles.length}枚目完了`)
+          
+        } catch (uploadError) {
+          console.error(`❌ ${i + 1}枚目エラー:`, uploadError)
+          throw new Error(`${i + 1}枚目の画像アップロードに失敗しました`)
         }
-
-        // 公開URLを取得
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio-images')
-          .getPublicUrl(fileName)
-
-        uploadedUrls.push(publicUrl)
       }
 
       // 2. データベースに保存
@@ -1142,9 +1148,9 @@ function UploadIllustrationPageContent() {
           is_original: isOriginal,
           allow_comments: allowComments,
           tags: selectedTags,
-          image_url: uploadedUrls[0], // メイン画像（1枚目）
+          image_url: uploadedUrls[0],
           thumbnail_url: uploadedUrls[0],
-          image_urls: uploadedUrls.length > 1 ? uploadedUrls : null, // 複数枚の場合のみ
+          image_urls: uploadedUrls.length > 1 ? uploadedUrls : null,
           is_public: visibility === 'public'
         })
 
@@ -1154,13 +1160,15 @@ function UploadIllustrationPageContent() {
 
       setToast({ message: 'イラストをアップロードしました！', type: 'success' })
       
-      // 少し待ってから遷移（トーストを見せるため）
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
     } catch (error) {
       console.error('アップロードエラー:', error)
-      setToast({ message: 'アップロードに失敗しました', type: 'error' })
+      setToast({ 
+        message: error instanceof Error ? error.message : 'アップロードに失敗しました',
+        type: 'error' 
+      })
     } finally {
       setUploading(false)
     }

@@ -343,21 +343,21 @@ export default function ChatRoomPage() {
     for (const message of messages) {
       if (message.file_url && !signedUrls[message.file_url]) {
         try {
-          let filePath = message.file_url
+          // R2署名付きURL生成（APIルート経由）
+          const response = await fetch('/api/r2-signed-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              bucket: 'chats',
+              key: message.file_url
+            })
+          })
           
-          if (filePath.includes('supabase.co/storage/v1/object/')) {
-            const matches = filePath.match(/chat-files\/(.+)/)
-            if (matches) {
-              filePath = matches[1]
+          if (response.ok) {
+            const data = await response.json()
+            if (data.signedUrl) {
+              urlsToGenerate[message.file_url] = data.signedUrl
             }
-          }
-          
-          const { data, error } = await supabase.storage
-            .from('chat-files')
-            .createSignedUrl(filePath, 3600)
-          
-          if (!error && data) {
-            urlsToGenerate[message.file_url] = data.signedUrl
           }
         } catch (error) {
           console.error('署名付きURL生成エラー:', error)
@@ -637,19 +637,25 @@ export default function ChatRoomPage() {
 
   const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `${roomId}/${fileName}`
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('bucket', 'chats')
+      formData.append('category', roomId)
+      formData.append('userId', currentProfileId)
 
-      const { error: uploadError } = await supabase.storage
-        .from('chat-files')
-        .upload(filePath, file)
+      const response = await fetch('/api/upload-chat', {
+        method: 'POST',
+        body: formData
+      })
 
-      if (uploadError) throw uploadError
+      if (!response.ok) {
+        throw new Error('アップロードに失敗しました')
+      }
 
+      const data = await response.json()
       const fileType = getFileType(file)
 
-      return { url: filePath, type: fileType }
+      return { url: data.key, type: fileType }
     } catch (error) {
       console.error('ファイルアップロードエラー:', error)
       return null

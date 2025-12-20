@@ -1,7 +1,17 @@
 // utils/notifications.ts
 import { supabase } from './supabase'
 
-export type NotificationType = 'application' | 'accepted' | 'paid' | 'delivered' | 'completed' | 'review'
+export type NotificationType = 
+  | 'application' 
+  | 'accepted' 
+  | 'paid' 
+  | 'delivered' 
+  | 'completed' 
+  | 'review' 
+  | 'delivery_rejected'
+  | 'cancellation_request'  // キャンセル申請
+  | 'cancelled'              // キャンセル完了
+  | 'auto_approval_warning'  // 自動承認警告（3日前）
 
 export async function createNotification(
   profileId: string,

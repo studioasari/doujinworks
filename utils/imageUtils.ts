@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
 
 /**
  * 画像をリサイズ・圧縮する関数
@@ -67,34 +67,27 @@ export const resizeImage = (
 
 /**
  * アバター画像をアップロードする関数（400x400px）
+ * ✨ R2対応版
  */
 export const uploadAvatar = async (userId: string, file: File): Promise<string> => {
   try {
     // 画像をリサイズ（400x400px、品質90%）
     const resizedFile = await resizeImage(file, 400, 400, 0.9)
 
-    // ファイル名を生成
-    const fileName = `${userId}-${Date.now()}.jpg`
-    const filePath = `${userId}/${fileName}`
+    // ✨ R2署名付きURL取得
+    const { uploadUrl, fileUrl } = await getUploadUrl(
+      'avatar',      // カテゴリ
+      'image',       // ファイルタイプ
+      resizedFile.name,
+      'image/jpeg',
+      userId,
+      'profiles'     // ✨ バケット指定
+    )
 
-    // Supabase Storageにアップロード
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, resizedFile, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    // ✨ R2に直接アップロード
+    await uploadToR2(resizedFile, uploadUrl)
 
-    if (uploadError) {
-      throw uploadError
-    }
-
-    // 公開URLを取得
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath)
-
-    return data.publicUrl
+    return fileUrl
   } catch (error) {
     console.error('アバターアップロードエラー:', error)
     throw error
@@ -103,34 +96,27 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string> 
 
 /**
  * ヘッダー画像をアップロードする関数（1500x500px）
+ * ✨ R2対応版
  */
 export const uploadHeader = async (userId: string, file: File): Promise<string> => {
   try {
     // 画像をリサイズ（1500x500px、品質85%）
     const resizedFile = await resizeImage(file, 1500, 500, 0.85)
 
-    // ファイル名を生成
-    const fileName = `${userId}-${Date.now()}.jpg`
-    const filePath = `${userId}/${fileName}`
+    // ✨ R2署名付きURL取得
+    const { uploadUrl, fileUrl } = await getUploadUrl(
+      'header',      // カテゴリ
+      'image',       // ファイルタイプ
+      resizedFile.name,
+      'image/jpeg',
+      userId,
+      'profiles'     // ✨ バケット指定
+    )
 
-    // Supabase Storageにアップロード
-    const { error: uploadError } = await supabase.storage
-      .from('headers')
-      .upload(filePath, resizedFile, {
-        cacheControl: '3600',
-        upsert: false
-      })
+    // ✨ R2に直接アップロード
+    await uploadToR2(resizedFile, uploadUrl)
 
-    if (uploadError) {
-      throw uploadError
-    }
-
-    // 公開URLを取得
-    const { data } = supabase.storage
-      .from('headers')
-      .getPublicUrl(filePath)
-
-    return data.publicUrl
+    return fileUrl
   } catch (error) {
     console.error('ヘッダーアップロードエラー:', error)
     throw error
@@ -139,26 +125,25 @@ export const uploadHeader = async (userId: string, file: File): Promise<string> 
 
 /**
  * 画像を削除する関数
+ * ✨ R2対応版
  */
 export const deleteImage = async (imageUrl: string | null, bucketName: 'avatars' | 'headers'): Promise<void> => {
   if (!imageUrl) return
 
   try {
-    // URLからファイルパスを抽出
+    // R2のファイルパスを抽出
     const url = new URL(imageUrl)
-    const pathParts = url.pathname.split(`/${bucketName}/`)
-    if (pathParts.length < 2) return
-
-    const filePath = pathParts[1]
-
-    // Supabase Storageから削除
-    const { error } = await supabase.storage
-      .from(bucketName)
-      .remove([filePath])
-
-    if (error) {
-      console.error('削除エラー:', error)
-    }
+    const pathParts = url.pathname.split('/')
+    
+    // パスの最後の2つの部分を取得（userId/filename）
+    const filePath = pathParts.slice(-2).join('/')
+    
+    console.log(`削除対象: ${bucketName}/${filePath}`)
+    
+    // ✨ 注意: R2のファイル削除はバックエンドAPIが必要
+    // 現時点では削除機能はスキップ（将来的にAPIエンドポイント実装）
+    console.warn('R2ファイル削除はバックエンドAPIが必要です')
+    
   } catch (error) {
     console.error('削除エラー:', error)
   }

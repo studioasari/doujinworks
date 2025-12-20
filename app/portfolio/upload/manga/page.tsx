@@ -8,6 +8,7 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
 
 // 画像圧縮関数
 async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
@@ -1106,61 +1107,74 @@ function UploadMangaPageContent() {
         return
       }
 
-      // 1. 画像をStorageにアップロード
+      // ✨ 1. 複数画像をR2にアップロード
       const uploadedUrls: string[] = []
       
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i]
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`
         
-        const { error: uploadError } = await supabase.storage
-          .from('portfolio-images')
-          .upload(fileName, file)
-
-        if (uploadError) {
-          throw uploadError
+        try {
+          // R2署名付きURL取得（画像）
+          const { uploadUrl, fileUrl } = await getUploadUrl(
+            'manga',      // カテゴリ
+            'image',      // ファイルタイプ
+            file.name,
+            file.type,
+            user.id
+          )
+          
+          // R2に直接アップロード
+          await uploadToR2(file, uploadUrl)
+          
+          uploadedUrls.push(fileUrl)
+          
+          console.log(`✅ 画像${i + 1}/${imageFiles.length}アップロード完了: ${file.name}`)
+          
+        } catch (uploadError) {
+          console.error(`❌ 画像${i + 1}エラー:`, uploadError)
+          throw new Error(`${i + 1}ページ目のアップロードに失敗しました`)
         }
-
-        // 公開URLを取得
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio-images')
-          .getPublicUrl(fileName)
-
-        uploadedUrls.push(publicUrl)
       }
 
-      // 2. データベースに保存
+      // ✨ 2. データベースに保存
+      const insertData = {
+        creator_id: currentUserId,
+        title: title.trim(),
+        description: description.trim() || null,
+        category: 'manga',
+        rating: rating,
+        is_original: isOriginal,
+        allow_comments: allowComments,
+        tags: selectedTags,
+        image_url: uploadedUrls[0],        // メイン画像（1ページ目）
+        thumbnail_url: uploadedUrls[0],    // サムネイル（1ページ目）
+        image_urls: uploadedUrls,          // 全ページ
+        is_public: visibility === 'public'
+      }
+
+      console.log('送信データ:', insertData)
+
       const { error: dbError } = await supabase
         .from('portfolio_items')
-        .insert({
-          creator_id: currentUserId,
-          title: title.trim(),
-          description: description.trim() || null,
-          category: 'manga',
-          rating: rating,
-          is_original: isOriginal,
-          allow_comments: allowComments,
-          tags: selectedTags,
-          image_url: uploadedUrls[0], // メイン画像（1ページ目）
-          thumbnail_url: uploadedUrls[0],
-          image_urls: uploadedUrls, // マンガは必ず複数ページとして保存
-          is_public: visibility === 'public'
-        })
+        .insert(insertData)
 
       if (dbError) {
+        console.error('データベースエラー詳細:', dbError)
         throw dbError
       }
 
       setToast({ message: 'マンガをアップロードしました！', type: 'success' })
       
-      // 少し待ってから遷移（トーストを見せるため）
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
+      
     } catch (error) {
       console.error('アップロードエラー:', error)
-      setToast({ message: 'アップロードに失敗しました', type: 'error' })
+      setToast({ 
+        message: error instanceof Error ? error.message : 'アップロードに失敗しました',
+        type: 'error' 
+      })
     } finally {
       setUploading(false)
     }

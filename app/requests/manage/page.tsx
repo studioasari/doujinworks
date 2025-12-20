@@ -199,8 +199,8 @@ export default function DashboardPage() {
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
-      awaiting_payment: '仮払い待ち',
-      in_progress: '作業中',
+      contracted: '仮払い待ち',
+      paid: '作業中',
       delivered: '納品済み',
       completed: '完了',
       cancelled: 'キャンセル',
@@ -214,8 +214,8 @@ export default function DashboardPage() {
   function getStatusColor(status: string) {
     const colors: { [key: string]: string } = {
       open: '#1A1A1A',
-      awaiting_payment: '#FF9800',
-      in_progress: '#2196F3',
+      contracted: '#FF9800',
+      paid: '#2196F3',
       delivered: '#9C27B0',
       completed: '#1A1A1A',
       cancelled: '#CCCCCC',
@@ -249,7 +249,7 @@ export default function DashboardPage() {
   // 統計情報
   const requestStats = {
     open: myRequests.filter(r => r.status === 'open').length,
-    active: myRequests.filter(r => ['awaiting_payment', 'in_progress', 'delivered'].includes(r.status)).length,
+    active: myRequests.filter(r => ['contracted', 'paid', 'delivered'].includes(r.status)).length,
     completed: myRequests.filter(r => r.status === 'completed').length,
     total: myRequests.length
   }
@@ -264,7 +264,7 @@ export default function DashboardPage() {
   // フィルタリング
   const filteredRequests = myRequests.filter(r => {
     if (requestTab === 'open') return r.status === 'open'
-    if (requestTab === 'active') return ['awaiting_payment', 'in_progress', 'delivered'].includes(r.status)
+    if (requestTab === 'active') return ['contracted', 'paid', 'delivered'].includes(r.status)
     if (requestTab === 'completed') return r.status === 'completed'
     return true
   })
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                   {filteredRequests.map((request, index) => (
                     <Link
                       key={request.id}
-                      href={`/requests/${request.id}`}
+                      href={request.status === 'open' ? `/requests/${request.id}/manage` : `/requests/${request.id}/status`}
                       className="card-hover p-24"
                       style={{ 
                         textDecoration: 'none',
@@ -528,7 +528,7 @@ export default function DashboardPage() {
                   {filteredApplications.map((application, index) => (
                     <Link
                       key={application.id}
-                      href={`/requests/${application.work_request?.id}`}
+                      href={application.status === 'accepted' ? `/requests/${application.work_request?.id}/status` : `/requests/${application.work_request?.id}`}
                       className="card-hover p-24"
                       style={{ 
                         textDecoration: 'none',

@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.954.0",
+    "@aws-sdk/s3-request-presigner": "^3.954.0",
     "@stripe/stripe-js": "^8.5.3",
     "@supabase/supabase-js": "^2.81.1",
     "next": "^16.0.7",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "stripe": "^20.0.0"
+    "stripe": "^20.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

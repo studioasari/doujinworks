@@ -8,6 +8,7 @@ import Header from '../../../components/Header'
 import Footer from '../../../components/Footer'
 import LoadingScreen from '../../../components/LoadingScreen'
 import DashboardSidebar from '../../../components/DashboardSidebar'
+import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
 
 // 画像圧縮関数
 async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
@@ -1318,47 +1319,57 @@ function UploadNovelPageContent() {
         return
       }
 
-      // 1. サムネイルをStorageにアップロード（あれば）
+      // ✨ 1. サムネイル画像をR2にアップロード（任意）
       let thumbnailUrl: string | null = null
       
       if (thumbnailFile) {
-        const fileExt = thumbnailFile.name.split('.').pop()
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('portfolio-images')
-          .upload(fileName, thumbnailFile)
-
-        if (uploadError) {
-          throw uploadError
+        try {
+          // R2署名付きURL取得（サムネイル）
+          const { uploadUrl, fileUrl } = await getUploadUrl(
+            'novel',      // カテゴリ
+            'image',      // ファイルタイプ
+            thumbnailFile.name,
+            thumbnailFile.type,
+            user.id
+          )
+          
+          // R2に直接アップロード
+          await uploadToR2(thumbnailFile, uploadUrl)
+          
+          thumbnailUrl = fileUrl
+          
+          console.log(`✅ サムネイルアップロード完了: ${thumbnailFile.name}`)
+          
+        } catch (uploadError) {
+          console.error('❌ サムネイルエラー:', uploadError)
+          throw new Error('サムネイルのアップロードに失敗しました')
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio-images')
-          .getPublicUrl(fileName)
-
-        thumbnailUrl = publicUrl
       }
 
-      // 2. データベースに保存
+      // ✨ 2. データベースに保存（本文はDBに直接保存）
+      const insertData = {
+        creator_id: currentUserId,
+        title: title.trim(),
+        description: synopsis.trim() || null,
+        category: 'novel',
+        rating: rating,
+        is_original: isOriginal,
+        allow_comments: allowComments,
+        tags: selectedTags,
+        text_content: content.trim(),      // ✅ 本文はDBに保存
+        image_url: thumbnailUrl,           // サムネイル（任意）
+        thumbnail_url: thumbnailUrl,
+        is_public: visibility === 'public'
+      }
+
+      console.log('送信データ:', insertData)
+
       const { error: dbError } = await supabase
         .from('portfolio_items')
-        .insert({
-          creator_id: currentUserId,
-          title: title.trim(),
-          description: synopsis.trim() || null,
-          category: 'novel',
-          rating: rating,
-          is_original: isOriginal,
-          allow_comments: allowComments,
-          tags: selectedTags,
-          text_content: content.trim(),
-          image_url: thumbnailUrl,
-          thumbnail_url: thumbnailUrl,
-          is_public: visibility === 'public'
-        })
+        .insert(insertData)
 
       if (dbError) {
+        console.error('データベースエラー詳細:', dbError)
         throw dbError
       }
 
@@ -1367,9 +1378,13 @@ function UploadNovelPageContent() {
       setTimeout(() => {
         router.push('/portfolio/manage')
       }, 1500)
+      
     } catch (error) {
       console.error('アップロードエラー:', error)
-      setToast({ message: 'アップロードに失敗しました', type: 'error' })
+      setToast({ 
+        message: error instanceof Error ? error.message : 'アップロードに失敗しました',
+        type: 'error' 
+      })
     } finally {
       setUploading(false)
     }

@@ -10,6 +10,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.doujinworks.jp',
+          },
+        ],
+        destination: 'https://doujinworks.jp/:path*',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;
