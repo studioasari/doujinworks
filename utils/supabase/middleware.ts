@@ -75,6 +75,7 @@ export async function updateSession(request: NextRequest) {
 
   // 除外パス（認証・登録関連、公開ページ）
   const publicPaths = [
+    '/',
     '/login',
     '/signup',
     '/signup/complete',
@@ -82,7 +83,10 @@ export async function updateSession(request: NextRequest) {
     '/auth',
     '/about',
     '/terms',
-    '/privacy'
+    '/privacy',
+    '/portfolio',
+    '/creators',
+    '/requests'
   ]
   
   if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
