@@ -109,15 +109,12 @@ function LoginForm() {
 
     startTransition(async () => {
       try {
-        // auth/callback に統一
-        const redirectUrl = `${window.location.origin}/auth/callback`
-
         const supabase = createClient()
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: redirectUrl,
+            redirectTo: 'https://doujinworks.jp/auth/callback',
           },
         })
 
