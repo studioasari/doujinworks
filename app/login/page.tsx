@@ -114,7 +114,7 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider as any,
         options: {
-          scopes: 'users.read tweet.read',
+          scopes: 'users.read',
           redirectTo: `${window.location.origin}/auth/callback`,  // ← 動的に取得
           skipBrowserRedirect: false,
         },
