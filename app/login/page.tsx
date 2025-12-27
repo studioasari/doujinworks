@@ -115,7 +115,7 @@ function LoginForm() {
           provider: 'x' as any,
           options: {
             queryParams: {
-              // 💡 offline.access を追加してください。これがないと400になるケースが多いです。
+              // 💡 offline.access を含め、余計なものを送らない最小構成です
               scope: 'users.read tweet.read offline.access',
             },
             redirectTo: `${window.location.origin}/auth/callback`,
