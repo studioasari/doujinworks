@@ -112,12 +112,11 @@ function LoginForm() {
         const supabase = createClient()
 
         const { error } = await supabase.auth.signInWithOAuth({
-          // 💡 'x' as any にすることで TypeScript のエラーを消せます
-          provider: 'x' as any, 
+          provider: 'x' as any,
           options: {
-            // 💡 400エラーを防ぐために、余計な権限（email等）を送らない設定を強制します
             queryParams: {
-              scope: 'users.read tweet.read',
+              // 💡 offline.access を追加してください。これがないと400になるケースが多いです。
+              scope: 'users.read tweet.read offline.access',
             },
             redirectTo: `${window.location.origin}/auth/callback`,
             skipBrowserRedirect: false,
