@@ -95,11 +95,10 @@ export default function SignupPage() {
           provider: 'x' as any,
           options: {
             queryParams: {
-              // 💡 offline.access を含め、余計なものを送らない最小構成です
-              // scope: 'users.read tweet.read offline.access',
-              scope: 'users.read',
+              scope: 'users.read', // 最小限
             },
-            // redirectTo: `${window.location.origin}/auth/callback`,
+            // 💡 redirectTo をコメントアウトではなく「削除」してください
+            // 指定しない場合、Supabase の Site URL が自動的に使われます
             skipBrowserRedirect: false,
           },
         })
