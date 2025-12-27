@@ -92,9 +92,10 @@ export default function SignupPage() {
         const supabase = createClient()
         
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: provider as any,  // ← 型アサーション追加
+          provider: provider as any,
           options: {
-            redirectTo: 'https://doujinworks.jp/auth/callback',
+            redirectTo: `${window.location.origin}/auth/callback`,  // ← 動的に取得
+            skipBrowserRedirect: false,
           },
         })
 
