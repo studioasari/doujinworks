@@ -84,19 +84,17 @@ export default function SignupPage() {
     })
   }
 
-  const handleSocialSignup = async (provider: 'google' | 'twitter' | 'discord') => {
+  const handleSocialSignup = async (provider: 'google' | 'x' | 'discord') => {  // ← 'twitter' → 'x'
     setError('')
 
     startTransition(async () => {
       try {
-        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
-        
         const supabase = createClient()
         
         const { error } = await supabase.auth.signInWithOAuth({
-          provider,
+          provider: provider as any,  // ← 型アサーション追加
           options: {
-            redirectTo: redirectUrl,
+            redirectTo: 'https://doujinworks.jp/auth/callback',  // ← 直接指定
           },
         })
 
@@ -492,7 +490,7 @@ export default function SignupPage() {
                 </button>
                 <button
                   className="btn-secondary"
-                  onClick={() => handleSocialSignup('twitter')}
+                  onClick={() => handleSocialSignup('x')}
                   disabled={isPending}
                   style={{ 
                     width: '100%', 
