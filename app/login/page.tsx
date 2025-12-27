@@ -322,7 +322,7 @@ function LoginForm() {
             cursor: isPending ? 'not-allowed' : 'pointer'
           }}
         >
-          <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
+          <img src="/icons/google.svg" alt="Google" width={20} height={20} />
           Googleでログイン
         </button>
         <button
@@ -339,10 +339,10 @@ function LoginForm() {
             cursor: isPending ? 'not-allowed' : 'pointer'
           }}
         >
-          <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
-          Twitterでログイン
+          <img src="/icons/x.svg" alt="X" width={20} height={20} />
+          Xでログイン
         </button>
-        <button
+        {/* <button
           className="btn-secondary"
           onClick={() => handleSocialLogin('discord')}
           disabled={isPending}
@@ -358,7 +358,7 @@ function LoginForm() {
         >
           <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
           Discordでログイン
-        </button>
+        </button> */}
       </div>
 
       {/* グレーの線 */}

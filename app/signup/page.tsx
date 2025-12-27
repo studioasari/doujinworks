@@ -84,7 +84,7 @@ export default function SignupPage() {
     })
   }
 
-  const handleSocialSignup = async (provider: 'google' | 'x' | 'discord') => {  // ← 'twitter' → 'x'
+  const handleSocialSignup = async (provider: 'google' | 'x' | 'discord') => {
     setError('')
 
     startTransition(async () => {
@@ -94,7 +94,7 @@ export default function SignupPage() {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: provider as any,  // ← 型アサーション追加
           options: {
-            redirectTo: 'https://doujinworks.jp/auth/callback',  // ← 直接指定
+            redirectTo: 'https://doujinworks.jp/auth/callback',
           },
         })
 
@@ -485,7 +485,7 @@ export default function SignupPage() {
                     cursor: isPending ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
+                  <img src="/icons/google.svg" alt="Google" width={20} height={20} />
                   Googleで登録
                 </button>
                 <button
@@ -502,10 +502,10 @@ export default function SignupPage() {
                     cursor: isPending ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
-                  Twitterで登録
+                  <img src="/icons/x.svg" alt="X" width={20} height={20} />
+                  Xで登録
                 </button>
-                <button
+                {/* <button
                   className="btn-secondary"
                   onClick={() => handleSocialSignup('discord')}
                   disabled={isPending}
@@ -521,7 +521,7 @@ export default function SignupPage() {
                 >
                   <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
                   Discordで登録
-                </button>
+                </button> */}
               </div>
 
               <div style={{
