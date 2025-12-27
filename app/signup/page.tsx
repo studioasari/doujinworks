@@ -92,12 +92,14 @@ export default function SignupPage() {
         const supabase = createClient()
         
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: provider as any,
+          // 💡 'x' as any にすることで TypeScript のエラーを消せます
+          provider: 'x' as any, 
           options: {
+            // 💡 400エラーを防ぐために、余計な権限（email等）を送らない設定を強制します
             queryParams: {
-              scope: 'users.read',
+              scope: 'users.read tweet.read',
             },
-            redirectTo: `${window.location.origin}/auth/callback`,  // ← 動的に取得
+            redirectTo: `${window.location.origin}/auth/callback`,
             skipBrowserRedirect: false,
           },
         })
