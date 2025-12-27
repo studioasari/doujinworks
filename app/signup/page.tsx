@@ -1,133 +1,123 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase } from '@/utils/supabase'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { signupAction } from '@/app/actions/auth'
+import { createClient } from '../../utils/supabase/client'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState('')
+  const [passwordTouched, setPasswordTouched] = useState(false)
+  const [passwordConfirmTouched, setPasswordConfirmTouched] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
-  const handleEmailSignup = async (e: React.FormEvent) => {
+  // パスワードバリデーション関数
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return 'パスワードは8文字以上で入力してください'
+    }
+    if (!/[a-z]/.test(password)) {
+      return 'パスワードには小文字を含めてください'
+    }
+    if (!/[0-9]/.test(password)) {
+      return 'パスワードには数字を含めてください'
+    }
+    return ''
+  }
+
+  // 全ての条件が満たされているかチェック
+  const isFormValid = email && 
+                      password && 
+                      passwordConfirm && 
+                      password === passwordConfirm && 
+                      password.length >= 8 &&
+                      /[a-z]/.test(password) &&
+                      /[0-9]/.test(password) &&
+                      agreedToTerms
+
+  const handleEmailSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
 
-    try {
-      // メールアドレスが既に登録されているかチェック
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single()
+    // パスワード確認
+    if (password !== passwordConfirm) {
+      setError('パスワードが一致しません')
+      return
+    }
 
-      // より確実な方法：signUpを試してエラーをキャッチ
-      const tempPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36)
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: tempPassword,
-        options: {
-          emailRedirectTo: 'https://www.doujinworks.jp/signup/complete',
-          data: {
-            registration_step: 'email_confirmed',
-          }
-        },
-      })
+    // パスワードバリデーション
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setError(passwordError)
+      return
+    }
 
-      if (error) {
-        // Supabaseのエラーメッセージをチェック
-        if (error.message.includes('User already registered') || 
-            error.message.includes('already been registered')) {
-          setError('このメールアドレスは既に登録されています。')
-          return
-        }
-        throw error
-      }
+    // 利用規約同意チェック
+    if (!agreedToTerms) {
+      setError('利用規約とプライバシーポリシーに同意してください')
+      return
+    }
 
-      // signUpが成功したが、ユーザーが既に存在する場合
-      // (メール確認がOFFの開発環境では data.user が null になる)
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        setError('このメールアドレスは既に登録されています。')
+    // Server Action を使用
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append('email', email)
+      formData.append('password', password)
+
+      const result = await signupAction(formData)
+
+      if (!result.success) {
+        setError(result.error || '登録に失敗しました')
         return
       }
 
-      // 新規登録成功
+      // 成功したら認証メール確認画面へ
       router.push(`/signup/verify?email=${encodeURIComponent(email)}`)
-    } catch (error: any) {
-      setError(error.message || '登録に失敗しました')
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   const handleSocialSignup = async (provider: 'google' | 'twitter' | 'discord') => {
-    setLoading(true)
     setError('')
 
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: 'https://www.doujinworks.jp/signup/complete',
-        },
-      })
+    startTransition(async () => {
+      try {
+        const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+        
+        const supabase = createClient()
+        
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: redirectUrl,
+          },
+        })
 
-      if (error) throw error
-    } catch (error: any) {
-      setError(error.message || '登録に失敗しました')
-      setLoading(false)
-    }
+        if (error) throw error
+      } catch (error: any) {
+        setError(error.message || '登録に失敗しました')
+      }
+    })
   }
 
   return (
     <>
-      <style jsx>{`
-        .signup-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          padding: 40px 20px;
-        }
-        
-        .signup-wrapper {
-          display: flex;
-          width: 100%;
-          max-width: 1200px;
-          align-items: center;
-          gap: 60px;
-        }
-        
-        .welcome-text {
-          flex: 1;
-        }
-        
-        .form-wrapper {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        @media (max-width: 1024px) {
-          .welcome-text {
-            display: none;
-          }
-        }
-      `}</style>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
       <div className="signup-container">
         <div className="signup-wrapper">
-          {/* 左側：説明文（画面幅1024px以上で表示） */}
           <div className="welcome-text">
             <h1 style={{
               fontSize: '48px',
               fontWeight: 'bold',
-              color: '#1A1A1A',
+              color: '#222222',
               marginBottom: '32px',
               lineHeight: 1.3,
               whiteSpace: 'nowrap'
@@ -136,15 +126,15 @@ export default function SignupPage() {
             </h1>
             <p style={{
               fontSize: '18px',
-              color: '#6B6B6B',
+              color: '#555555',
               lineHeight: 1.8,
               marginBottom: '24px'
             }}>
-              同人ワークスは、創作する人も、それを楽しむ人も、“好き”を気軽に持ち寄れる街のような場所です。   
+              同人ワークスは、創作する人も、それを楽しむ人も、"好き"を気軽に持ち寄れる街のような場所です。   
             </p>
             <p style={{
               fontSize: '18px',
-              color: '#6B6B6B',
+              color: '#555555',
               lineHeight: 1.8,
               marginBottom: '24px'
             }}>
@@ -152,19 +142,18 @@ export default function SignupPage() {
             </p>
             <p style={{
               fontSize: '18px',
-              color: '#6B6B6B',
+              color: '#555555',
               lineHeight: 1.8
             }}>
               ここでのつながりが、あなたの創作や活動をもっと広げるきっかけになりますように。
             </p>
           </div>
 
-          {/* 右側：サインアップフォーム */}
           <div className="form-wrapper">
             <div style={{ 
               width: '100%', 
               maxWidth: '400px',
-              border: '1px solid #E5E5E5',
+              border: '1px solid #D0D5DA',
               borderRadius: '8px',
               padding: '40px',
               backgroundColor: '#FFFFFF'
@@ -172,60 +161,295 @@ export default function SignupPage() {
               <h2 className="page-title" style={{ 
                 marginBottom: '40px', 
                 textAlign: 'center',
-                fontSize: '24px'
+                fontSize: '24px',
+                color: '#222222'
               }}>
                 新規会員登録
               </h2>
 
               <form onSubmit={handleEmailSignup} style={{ marginBottom: '32px' }}>
+                {/* メールアドレス */}
                 <div style={{ marginBottom: '16px' }}>
+                  <label style={{ 
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#555555',
+                    marginBottom: '6px'
+                  }}>
+                    メールアドレス
+                  </label>
                   <input
                     type="email"
+                    name="email"
                     className="input-field"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="メールアドレス"
+                    placeholder="example@email.com"
                     required
+                    disabled={isPending}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #D0D5DA',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'border-color 0.15s',
+                      color: '#222222',
+                      backgroundColor: '#FFFFFF',
+                      opacity: isPending ? 0.6 : 1
+                    }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
                   />
                 </div>
 
+                {/* パスワード */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ 
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#555555',
+                    marginBottom: '6px'
+                  }}>
+                    パスワード <span style={{ color: '#888888', fontSize: '12px', fontWeight: '400' }}>（8文字以上、小文字・数字を含む）</span>
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      className="input-field"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="password123"
+                      required
+                      minLength={8}
+                      disabled={isPending}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        paddingRight: '40px',
+                        fontSize: '14px',
+                        border: `1px solid ${passwordTouched && password && validatePassword(password) ? '#C05656' : '#D0D5DA'}`,
+                        borderRadius: '8px',
+                        outline: 'none',
+                        transition: 'border-color 0.15s',
+                        color: '#222222',
+                        backgroundColor: '#FFFFFF',
+                        opacity: isPending ? 0.6 : 1
+                      }}
+                      onFocus={(e) => {
+                        if (!(passwordTouched && password && validatePassword(password))) {
+                          e.currentTarget.style.borderColor = '#5B7C99'
+                        }
+                      }}
+                      onBlur={(e) => {
+                        setPasswordTouched(true)
+                        if (!(password && validatePassword(password))) {
+                          e.currentTarget.style.borderColor = '#D0D5DA'
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isPending}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: isPending ? 'not-allowed' : 'pointer',
+                        color: '#888888',
+                        fontSize: '14px',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: isPending ? 0.6 : 1
+                      }}
+                      onMouseEnter={(e) => !isPending && (e.currentTarget.style.color = '#555555')}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
+                    >
+                      <i className={showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
+                    </button>
+                  </div>
+                  {passwordTouched && password && validatePassword(password) && (
+                    <div style={{ marginTop: '6px', fontSize: '13px', color: '#C05656', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fas fa-times-circle"></i>
+                      {validatePassword(password)}
+                    </div>
+                  )}
+                </div>
+
+                {/* パスワード（確認） */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ 
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#555555',
+                    marginBottom: '6px'
+                  }}>
+                    パスワード（確認）
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPasswordConfirm ? 'text' : 'password'}
+                      className="input-field"
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      placeholder="もう一度入力"
+                      required
+                      minLength={8}
+                      disabled={isPending}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        paddingRight: passwordConfirm && password === passwordConfirm ? '70px' : '40px',
+                        fontSize: '14px',
+                        border: `1px solid ${passwordConfirmTouched && passwordConfirm && password !== passwordConfirm ? '#C05656' : '#D0D5DA'}`,
+                        borderRadius: '8px',
+                        outline: 'none',
+                        transition: 'border-color 0.15s, padding-right 0.15s',
+                        color: '#222222',
+                        backgroundColor: '#FFFFFF',
+                        opacity: isPending ? 0.6 : 1
+                      }}
+                      onFocus={(e) => {
+                        if (!(passwordConfirmTouched && passwordConfirm && password !== passwordConfirm)) {
+                          e.currentTarget.style.borderColor = '#5B7C99'
+                        }
+                      }}
+                      onBlur={(e) => {
+                        setPasswordConfirmTouched(true)
+                        if (!(passwordConfirm && password !== passwordConfirm)) {
+                          e.currentTarget.style.borderColor = '#D0D5DA'
+                        }
+                      }}
+                    />
+                    
+                    {passwordConfirm && password === passwordConfirm && (
+                      <div style={{
+                        position: 'absolute',
+                        right: '42px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#4F8A6B',
+                        fontSize: '16px',
+                        pointerEvents: 'none'
+                      }}>
+                        <i className="fas fa-check-circle"></i>
+                      </div>
+                    )}
+                    
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                      disabled={isPending}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: isPending ? 'not-allowed' : 'pointer',
+                        color: '#888888',
+                        fontSize: '14px',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: isPending ? 0.6 : 1
+                      }}
+                      onMouseEnter={(e) => !isPending && (e.currentTarget.style.color = '#555555')}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
+                    >
+                      <i className={showPasswordConfirm ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
+                    </button>
+                  </div>
+                  
+                  {passwordConfirmTouched && passwordConfirm && password !== passwordConfirm && (
+                    <div style={{ marginTop: '6px', fontSize: '13px', color: '#C05656', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fas fa-times-circle"></i>
+                      パスワードが一致しません
+                    </div>
+                  )}
+                </div>
+
+                {/* 利用規約への同意 */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    cursor: isPending ? 'not-allowed' : 'pointer',
+                    fontSize: '13px',
+                    color: '#555555',
+                    lineHeight: '1.6',
+                    opacity: isPending ? 0.6 : 1
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      disabled={isPending}
+                      style={{
+                        marginTop: '4px',
+                        cursor: isPending ? 'not-allowed' : 'pointer',
+                        flexShrink: 0,
+                        accentColor: '#5B7C99'
+                      }}
+                    />
+                    <span>
+                      <Link href="/terms" target="_blank" style={{ color: '#5B7C99', textDecoration: 'underline' }}>
+                        利用規約
+                      </Link>
+                      {' '}と{' '}
+                      <Link href="/privacy" target="_blank" style={{ color: '#5B7C99', textDecoration: 'underline' }}>
+                        プライバシーポリシー
+                      </Link>
+                      に同意します
+                    </span>
+                  </label>
+                </div>
+
                 {error && (
-                  <div className="info-box" style={{ 
-                    marginBottom: '16px', 
-                    padding: '12px', 
-                    backgroundColor: '#FEE', 
-                    color: '#C33',
-                    border: '1px solid #FCC',
+                  <div className="alert alert-error" style={{ 
+                    marginBottom: '16px',
                     fontSize: '14px'
                   }}>
                     {error}
-                    {error.includes('既に登録されています') && (
-                      <div style={{ marginTop: '8px' }}>
-                        <Link href="/login" style={{ 
-                          color: '#C33', 
-                          textDecoration: 'underline',
-                          fontWeight: 'bold'
-                        }}>
-                          ログインページはこちら
-                        </Link>
-                      </div>
-                    )}
                   </div>
                 )}
 
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={loading}
+                  disabled={isPending || !isFormValid}
                   style={{ 
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '8px',
+                    backgroundColor: (isFormValid && !isPending) ? '#5B7C99' : '#D0D5DA',
+                    color: (isFormValid && !isPending) ? '#FFFFFF' : '#888888',
+                    border: 'none',
+                    cursor: (isFormValid && !isPending) ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s ease',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600'
                   }}
                 >
-                  {loading ? (
+                  {isPending ? (
                     '送信中...'
                   ) : (
                     <>
@@ -236,11 +460,10 @@ export default function SignupPage() {
                 </button>
               </form>
 
-              {/* グレーの線 */}
               <div style={{
                 width: '100%',
                 height: '1px',
-                backgroundColor: '#E5E5E5',
+                backgroundColor: '#D0D5DA',
                 margin: '32px 0'
               }}></div>
 
@@ -253,13 +476,15 @@ export default function SignupPage() {
                 <button
                   className="btn-secondary"
                   onClick={() => handleSocialSignup('google')}
-                  disabled={loading}
+                  disabled={isPending}
                   style={{ 
                     width: '100%', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    gap: '8px' 
+                    gap: '8px',
+                    opacity: isPending ? 0.6 : 1,
+                    cursor: isPending ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
@@ -268,13 +493,15 @@ export default function SignupPage() {
                 <button
                   className="btn-secondary"
                   onClick={() => handleSocialSignup('twitter')}
-                  disabled={loading}
+                  disabled={isPending}
                   style={{ 
                     width: '100%', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    gap: '8px' 
+                    gap: '8px',
+                    opacity: isPending ? 0.6 : 1,
+                    cursor: isPending ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
@@ -283,13 +510,15 @@ export default function SignupPage() {
                 <button
                   className="btn-secondary"
                   onClick={() => handleSocialSignup('discord')}
-                  disabled={loading}
+                  disabled={isPending}
                   style={{ 
                     width: '100%', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    gap: '8px' 
+                    gap: '8px',
+                    opacity: isPending ? 0.6 : 1,
+                    cursor: isPending ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
@@ -297,17 +526,16 @@ export default function SignupPage() {
                 </button>
               </div>
 
-              {/* グレーの線 */}
               <div style={{
                 width: '100%',
                 height: '1px',
-                backgroundColor: '#E5E5E5',
+                backgroundColor: '#D0D5DA',
                 margin: '32px 0'
               }}></div>
 
               <div style={{ textAlign: 'center' }}>
                 <Link href="/login" style={{ 
-                  color: '#1A1A1A', 
+                  color: '#5B7C99', 
                   textDecoration: 'underline',
                   fontSize: '14px'
                 }}>

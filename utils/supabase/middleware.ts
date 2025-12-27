@@ -1,0 +1,117 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function updateSession(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          // 🔒 セッション有効期限の統一: 7日間
+          const cookieOptions: CookieOptions = {
+            ...options,
+            maxAge: 60 * 60 * 24 * 7, // 7日間（秒単位）
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+          }
+
+          request.cookies.set({
+            name,
+            value,
+            ...cookieOptions,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...cookieOptions,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          const cookieOptions: CookieOptions = {
+            ...options,
+            maxAge: 0,
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            path: '/',
+          }
+
+          request.cookies.set({
+            name,
+            value: '',
+            ...cookieOptions,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...cookieOptions,
+          })
+        },
+      },
+    }
+  )
+
+  // 除外パス（認証・登録関連、公開ページ）
+  const publicPaths = [
+    '/login',
+    '/signup',
+    '/signup/complete',
+    '/reset-password',
+    '/auth',
+    '/about',
+    '/terms',
+    '/privacy'
+  ]
+  
+  if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+    return response
+  }
+
+  // セッション取得
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // 未認証ユーザーはログインページへ
+  if (!user) {
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // プロフィールチェック
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, account_type')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  // プロフィール未完成の場合は /signup/complete にリダイレクト
+  if (!profile || !profile.username || !profile.account_type) {
+    return NextResponse.redirect(new URL('/signup/complete', request.url))
+  }
+
+  return response
+}

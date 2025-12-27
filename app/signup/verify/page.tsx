@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { supabase } from '@/utils/supabase'
+import { useState, useEffect, Suspense, useTransition } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { resendEmailAction } from '@/app/actions/auth'
 
 function VerifyContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email') || ''
   
-  const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(0)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (countdown > 0) {
@@ -29,34 +29,23 @@ function VerifyContent() {
       return
     }
 
-    setLoading(true)
     setError('')
     setMessage('')
 
-    try {
-      // ランダムな仮パスワードを生成
-      const tempPassword = Math.random().toString(36).slice(-12) + Date.now().toString(36)
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password: tempPassword,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/signup/complete`,
-          data: {
-            registration_step: 'email_confirmed',
-          }
-        },
-      })
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append('email', email)
 
-      if (error) throw error
+      const result = await resendEmailAction(formData)
+
+      if (!result.success) {
+        setError(result.error || '再送信に失敗しました')
+        return
+      }
 
       setMessage('認証メールを再送信しました。メールボックスをご確認ください。')
       setCountdown(60) // 60秒のクールダウン
-    } catch (error: any) {
-      setError(error.message || '再送信に失敗しました')
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   return (
@@ -65,12 +54,15 @@ function VerifyContent() {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      padding: '40px 20px'
+      padding: '40px 20px',
+      backgroundColor: '#F5F6F8'
     }}>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+      
       <div style={{ 
         width: '100%', 
         maxWidth: '500px',
-        border: '1px solid #E5E5E5',
+        border: '1px solid #D0D5DA',
         borderRadius: '8px',
         padding: '40px',
         backgroundColor: '#FFFFFF',
@@ -80,20 +72,21 @@ function VerifyContent() {
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          backgroundColor: '#FAFAFA',
+          backgroundColor: '#EEF0F3',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 24px',
           fontSize: '32px',
-          color: '#1A1A1A'
+          color: '#5B7C99'
         }}>
           <i className="fas fa-envelope"></i>
         </div>
         
         <h2 className="page-title" style={{ 
           marginBottom: '16px',
-          fontSize: '24px'
+          fontSize: '24px',
+          color: '#222222'
         }}>
           認証メールを送信しました
         </h2>
@@ -101,12 +94,12 @@ function VerifyContent() {
         <p style={{ 
           marginBottom: '32px',
           fontSize: '14px',
-          color: '#6B6B6B',
+          color: '#555555',
           lineHeight: '1.6'
         }}>
           {email ? (
             <>
-              <strong style={{ color: '#1A1A1A' }}>{email}</strong> に認証リンクを送信しました。<br />
+              <strong style={{ color: '#222222' }}>{email}</strong> に認証リンクを送信しました。<br />
             </>
           ) : (
             <>ご登録いただいたメールアドレスに認証リンクを送信しました。<br /></>
@@ -115,13 +108,8 @@ function VerifyContent() {
         </p>
 
         {message && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: '#F0FDF4',
-            border: '1px solid #86EFAC',
-            borderRadius: '8px',
+          <div className="alert alert-success" style={{
             marginBottom: '24px',
-            color: '#166534',
             fontSize: '14px'
           }}>
             {message}
@@ -129,12 +117,8 @@ function VerifyContent() {
         )}
 
         {error && (
-          <div className="info-box" style={{ 
-            marginBottom: '24px', 
-            padding: '12px', 
-            backgroundColor: '#FEE', 
-            color: '#C33',
-            border: '1px solid #FCC',
+          <div className="alert alert-error" style={{ 
+            marginBottom: '24px',
             fontSize: '14px'
           }}>
             {error}
@@ -144,17 +128,17 @@ function VerifyContent() {
         <div style={{ 
           marginBottom: '24px',
           padding: '16px',
-          backgroundColor: '#FAFAFA',
+          backgroundColor: '#EEF0F3',
           borderRadius: '8px',
           textAlign: 'left'
         }}>
-          <p style={{ marginBottom: '12px', fontWeight: '600', fontSize: '14px', color: '#1A1A1A' }}>
+          <p style={{ marginBottom: '12px', fontWeight: '600', fontSize: '14px', color: '#222222' }}>
             メールが届かない場合
           </p>
           <ul style={{ 
             marginLeft: '20px', 
             fontSize: '14px',
-            color: '#6B6B6B',
+            color: '#555555',
             lineHeight: '1.8'
           }}>
             <li>迷惑メールフォルダをご確認ください</li>
@@ -167,20 +151,20 @@ function VerifyContent() {
           <div style={{ marginBottom: '24px' }}>
             <button
               onClick={handleResend}
-              disabled={loading || countdown > 0}
+              disabled={isPending || countdown > 0}
               style={{
                 background: 'none',
                 border: 'none',
-                color: (loading || countdown > 0) ? '#6B6B6B' : '#1A1A1A',
+                color: (isPending || countdown > 0) ? '#888888' : '#5B7C99',
                 textDecoration: 'underline',
-                cursor: (loading || countdown > 0) ? 'not-allowed' : 'pointer',
+                cursor: (isPending || countdown > 0) ? 'not-allowed' : 'pointer',
                 padding: 0,
                 fontSize: '14px'
               }}
             >
               {countdown > 0 
                 ? `認証メールを再送信（${countdown}秒後に再送信可能）`
-                : loading 
+                : isPending 
                 ? '送信中...' 
                 : '認証メールを再送信'}
             </button>
@@ -191,14 +175,15 @@ function VerifyContent() {
         <div style={{
           width: '100%',
           height: '1px',
-          backgroundColor: '#E5E5E5',
+          backgroundColor: '#D0D5DA',
           margin: '32px 0'
         }}></div>
 
         <Link href="/login" className="btn-primary" style={{
           display: 'inline-block',
           width: '100%',
-          textAlign: 'center'
+          textAlign: 'center',
+          color: '#FFFFFF'
         }}>
           ログイン画面に戻る
         </Link>
@@ -215,9 +200,10 @@ export default function VerifyPage() {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        padding: '40px 20px'
+        padding: '40px 20px',
+        backgroundColor: '#F5F6F8'
       }}>
-        <div style={{ textAlign: 'center', color: '#6B6B6B' }}>読み込み中...</div>
+        <div style={{ textAlign: 'center', color: '#888888' }}>読み込み中...</div>
       </div>
     }>
       <VerifyContent />

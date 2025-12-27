@@ -1,117 +1,138 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { supabase } from '@/utils/supabase'
+import { Suspense, useState, useTransition, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { loginAction, resendEmailAction } from '@/app/actions/auth'
+import { createClient } from '../../utils/supabase/client'
 
 function LoginForm() {
   const [emailOrUsername, setEmailOrUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isEmailUnconfirmed, setIsEmailUnconfirmed] = useState(false)
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState('')
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [isResending, startResendTransition] = useTransition()
   const router = useRouter()
   const searchParams = useSearchParams()
   
   // リダイレクト先を取得（デフォルトはダッシュボード）
   const redirectTo = searchParams.get('redirect') || '/dashboard'
 
-  // ログイン処理
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  // 👇 URLパラメータからエラーメッセージを表示
+  useEffect(() => {
+    const urlError = searchParams.get('error')
     
-    try {
-      let loginEmail = emailOrUsername
-
-      // @ が含まれていない場合、ユーザーIDとして扱う
-      if (!emailOrUsername.includes('@')) {
-        // APIを呼び出してユーザーIDからメールアドレスを取得
-        const res = await fetch('/api/get-email-by-username', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: emailOrUsername }),
-        })
-
-        const data = await res.json()
-
-        if (!res.ok) {
-          throw new Error(data.error || 'ユーザーIDが見つかりません')
-        }
-
-        loginEmail = data.email
+    if (urlError) {
+      const errorMessages: Record<string, string> = {
+        'auth_failed': '認証に失敗しました。もう一度お試しください。',
+        'token_expired': '認証リンクの有効期限が切れているか、既に使用済みです。既にログイン済みの場合はそのままご利用ください。',
+        'no_session': 'セッションの確立に失敗しました。もう一度お試しください。',
       }
-
-      // メールアドレスでログイン
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password,
-      })
-
-      if (signInError) {
-        // エラーメッセージを日本語化
-        if (signInError.message.includes('Invalid login credentials')) {
-          throw new Error('メールアドレスまたはパスワードが正しくありません')
-        }
-        throw signInError
-      }
-
-      // ログイン成功後、プロフィールがあるかチェック
-      const { data: { user } } = await supabase.auth.getUser()
       
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
+      setError(errorMessages[urlError] || '予期しないエラーが発生しました。')
+    }
+  }, [searchParams])
+
+  // 全ての条件が満たされているかチェック
+  const isFormValid = emailOrUsername && password && password.length >= 8 && !isLocked
+
+  // ログイン処理
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError('')
+    setIsEmailUnconfirmed(false)
+    setResendSuccess(false)
+
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append('emailOrUsername', emailOrUsername)
+      formData.append('password', password)
+
+      const result = await loginAction(formData)
+
+      if (!result.success) {
+        setError(result.error || 'ログインに失敗しました')
+        setIsLocked(result.locked || false)
         
-        // プロフィールがなければ登録完了画面へ
-        if (!profile || !profile.username) {
-          router.push('/signup/complete')
+        if (result.isEmailUnconfirmed) {
+          setIsEmailUnconfirmed(true)
+          setUnconfirmedEmail(result.unconfirmedEmail || '')
+        }
+        return
+      }
+
+      // ログイン成功
+      if (result.needsProfile) {
+        router.push('/signup/complete')
+      } else {
+        // 特定のページから来た場合はダッシュボードへ
+        const noRedirectPages = ['/login', '/signup', '/reset-password', '/reset-password/update']
+        
+        if (noRedirectPages.includes(redirectTo)) {
+          router.push('/dashboard')
         } else {
-          // 元のページまたはダッシュボードにリダイレクト
           router.push(redirectTo)
         }
       }
-    } catch (error: any) {
-      setError(error.message || 'ログインに失敗しました')
-    } finally {
-      setLoading(false)
-    }
+    })
+  }
+
+  // 認証メール再送
+  const handleResendEmail = async () => {
+    setError('')
+    setResendSuccess(false)
+
+    startResendTransition(async () => {
+      const formData = new FormData()
+      formData.append('email', unconfirmedEmail)
+
+      const result = await resendEmailAction(formData)
+
+      if (!result.success) {
+        setError(`再送信に失敗しました: ${result.error}`)
+        return
+      }
+
+      setResendSuccess(true)
+      setError('')
+    })
   }
 
   // ソーシャルログイン
   const handleSocialLogin = async (provider: 'google' | 'twitter' | 'discord') => {
-    setLoading(true)
     setError('')
 
-    try {
-      // リダイレクト先をクエリパラメータとして保持
-      const redirectUrl = redirectTo !== '/dashboard' 
-        ? `${window.location.origin}/signup/complete?redirect=${encodeURIComponent(redirectTo)}`
-        : `${window.location.origin}/signup/complete`
+    startTransition(async () => {
+      try {
+        // auth/callback に統一
+        const redirectUrl = `${window.location.origin}/auth/callback`
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-        },
-      })
+        const supabase = createClient()
 
-      if (error) throw error
-    } catch (error: any) {
-      setError(error.message || 'ログインに失敗しました')
-      setLoading(false)
-    }
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: redirectUrl,
+          },
+        })
+
+        if (error) throw error
+      } catch (error: any) {
+        setError(error.message || 'ログインに失敗しました')
+      }
+    })
   }
 
   return (
     <div style={{ 
       width: '100%', 
       maxWidth: '400px',
-      border: '1px solid #E5E5E5',
+      border: '1px solid #D0D5DA',
       borderRadius: '8px',
       padding: '40px',
       backgroundColor: '#FFFFFF'
@@ -119,23 +140,32 @@ function LoginForm() {
       <h2 className="page-title" style={{ 
         marginBottom: '40px', 
         textAlign: 'center',
-        fontSize: '24px'
+        fontSize: '24px',
+        color: '#222222'
       }}>
         ログイン
       </h2>
 
       <form onSubmit={handleLogin}>
         <div style={{ marginBottom: '20px' }}>
-          <label className="form-label">
+          <label className="form-label" style={{ color: '#222222' }}>
             メールアドレスまたはユーザーID
           </label>
           <input
             type="text"
+            name="emailOrUsername"
             className="input-field"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
             placeholder="メール or ユーザーID"
             required
+            disabled={isLocked || isPending}
+            style={{
+              borderColor: '#D0D5DA',
+              color: '#222222',
+              opacity: (isLocked || isPending) ? 0.6 : 1,
+              cursor: (isLocked || isPending) ? 'not-allowed' : 'text'
+            }}
           />
         </div>
 
@@ -146,50 +176,124 @@ function LoginForm() {
             alignItems: 'center', 
             marginBottom: '8px' 
           }}>
-            <label className="form-label" style={{ marginBottom: 0 }}>
+            <label className="form-label" style={{ marginBottom: 0, color: '#222222' }}>
               パスワード
             </label>
             <Link href="/reset-password" style={{ 
-              color: '#6B6B6B', 
+              color: '#5B7C99', 
               fontSize: '13px',
               textDecoration: 'none'
             }}>
               パスワードを忘れた
             </Link>
           </div>
-          <input
-            type="password"
-            className="input-field"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder=""
-            required
-            minLength={6}
-          />
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              className="input-field"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder=""
+              required
+              minLength={6}
+              disabled={isLocked || isPending}
+              style={{
+                width: '100%',
+                paddingRight: '40px',
+                borderColor: '#D0D5DA',
+                color: '#222222',
+                opacity: (isLocked || isPending) ? 0.6 : 1,
+                cursor: (isLocked || isPending) ? 'not-allowed' : 'text'
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLocked || isPending}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: (isLocked || isPending) ? 'not-allowed' : 'pointer',
+                color: '#888888',
+                fontSize: '14px',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: (isLocked || isPending) ? 0.6 : 1
+              }}
+              onMouseEnter={(e) => !(isLocked || isPending) && (e.currentTarget.style.color = '#555555')}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
+            >
+              <i className={showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
+            </button>
+          </div>
         </div>
 
-        {error && (
-          <div className="info-box" style={{ 
+        {resendSuccess && (
+          <div className="alert alert-success" style={{ 
             marginBottom: '16px', 
-            padding: '12px', 
-            backgroundColor: '#FEE', 
-            color: '#C33',
-            border: '1px solid #FCC',
+            fontSize: '14px'
+          }}>
+            認証メールを再送信しました。メールボックスをご確認ください。
+          </div>
+        )}
+
+        {error && (
+          <div className="alert alert-error" style={{ 
+            marginBottom: '16px', 
             fontSize: '14px'
           }}>
             {error}
+            {isEmailUnconfirmed && (
+              <div style={{ marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={isResending}
+                  className="btn-secondary btn-small"
+                  style={{
+                    width: '100%',
+                    borderColor: '#C05656',
+                    color: '#C05656',
+                    opacity: isResending ? 0.6 : 1,
+                    cursor: isResending ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isResending ? '送信中...' : '認証メールを再送信'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         <button
           type="submit"
           className="btn-primary"
-          disabled={loading}
+          disabled={isPending || !isFormValid}
           style={{ 
-            width: '100%'
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            backgroundColor: (isFormValid && !isPending) ? '#5B7C99' : '#D0D5DA',
+            color: (isFormValid && !isPending) ? '#FFFFFF' : '#888888',
+            border: 'none',
+            cursor: (isFormValid && !isPending) ? 'pointer' : 'not-allowed',
+            transition: 'all 0.2s ease',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600'
           }}
         >
-          {loading ? 'ログイン中...' : 'ログイン'}
+          {isPending ? 'ログイン中...' : 'ログイン'}
         </button>
       </form>
 
@@ -197,7 +301,7 @@ function LoginForm() {
       <div style={{
         width: '100%',
         height: '1px',
-        backgroundColor: '#E5E5E5',
+        backgroundColor: '#D0D5DA',
         margin: '32px 0'
       }}></div>
 
@@ -210,13 +314,15 @@ function LoginForm() {
         <button
           className="btn-secondary"
           onClick={() => handleSocialLogin('google')}
-          disabled={loading}
+          disabled={isPending}
           style={{ 
             width: '100%', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            gap: '8px' 
+            gap: '8px',
+            opacity: isPending ? 0.6 : 1,
+            cursor: isPending ? 'not-allowed' : 'pointer'
           }}
         >
           <i className="fab fa-google" style={{ color: '#DB4437' }}></i>
@@ -225,13 +331,15 @@ function LoginForm() {
         <button
           className="btn-secondary"
           onClick={() => handleSocialLogin('twitter')}
-          disabled={loading}
+          disabled={isPending}
           style={{ 
             width: '100%', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            gap: '8px' 
+            gap: '8px',
+            opacity: isPending ? 0.6 : 1,
+            cursor: isPending ? 'not-allowed' : 'pointer'
           }}
         >
           <i className="fab fa-twitter" style={{ color: '#1DA1F2' }}></i>
@@ -240,13 +348,15 @@ function LoginForm() {
         <button
           className="btn-secondary"
           onClick={() => handleSocialLogin('discord')}
-          disabled={loading}
+          disabled={isPending}
           style={{ 
             width: '100%', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            gap: '8px' 
+            gap: '8px',
+            opacity: isPending ? 0.6 : 1,
+            cursor: isPending ? 'not-allowed' : 'pointer'
           }}
         >
           <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
@@ -258,13 +368,13 @@ function LoginForm() {
       <div style={{
         width: '100%',
         height: '1px',
-        backgroundColor: '#E5E5E5',
+        backgroundColor: '#D0D5DA',
         margin: '32px 0'
       }}></div>
 
       <div style={{ textAlign: 'center' }}>
         <Link href="/signup" style={{ 
-          color: '#1A1A1A', 
+          color: '#5B7C99', 
           textDecoration: 'underline',
           fontSize: '14px'
         }}>
@@ -282,18 +392,20 @@ export default function LoginPage() {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      padding: '40px 20px'
+      padding: '40px 20px',
+      backgroundColor: '#F5F6F8'
     }}>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Suspense fallback={
         <div style={{ 
           width: '100%', 
           maxWidth: '400px',
-          border: '1px solid #E5E5E5',
+          border: '1px solid #D0D5DA',
           borderRadius: '8px',
           padding: '40px',
           backgroundColor: '#FFFFFF',
-          textAlign: 'center'
+          textAlign: 'center',
+          color: '#888888'
         }}>
           読み込み中...
         </div>

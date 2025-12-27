@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { getUnreadCount, markAsRead } from '@/utils/notifications'
 
 type UnreadMessage = {
@@ -42,6 +42,7 @@ export default function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1373,7 +1374,7 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link href="/login" style={{ 
+                <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} style={{
                   color: '#1A1A1A',
                   backgroundColor: 'transparent',
                   padding: '8px 20px',
@@ -1589,7 +1590,7 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link href="/login" style={{ 
+                <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} style={{ 
                   color: '#1A1A1A',
                   backgroundColor: 'transparent',
                   padding: '8px 16px',

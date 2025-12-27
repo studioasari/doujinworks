@@ -6,14 +6,20 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  background-color: #FFFFFF;
-  color: #1A1A1A;
+  background-color: #F5F6F8;
+  color: #222222;
   line-height: 1.6;
 }
 
 a {
-  color: inherit;
+  color: #5B7C99;
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #4F6D86;
+  text-decoration: underline;
 }
 
 button {
@@ -25,8 +31,9 @@ button {
    ======================================== */
 
 .card {
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: 1px solid #D0D5DA;
+  border-radius: 12px;
+  background-color: #FFFFFF;
   transition: all 0.3s ease;
   cursor: pointer;
   text-decoration: none;
@@ -34,19 +41,21 @@ button {
 }
 
 .card:hover {
-  border-color: #1A1A1A;
-  box-shadow: 0 0 0 2px #1A1A1A;
+  border-color: #5B7C99;
+  box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
 }
 
 .card-no-hover {
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: 1px solid #D0D5DA;
+  border-radius: 12px;
+  background-color: #FFFFFF;
 }
 
 /* ポートフォリオカード（正方形画像用） */
 .portfolio-card {
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: 1px solid #D0D5DA;
+  border-radius: 12px;
+  background-color: #FFFFFF;
   overflow: hidden;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -55,15 +64,15 @@ button {
 }
 
 .portfolio-card:hover {
-  border-color: #1A1A1A;
-  box-shadow: 0 0 0 2px #1A1A1A;
+  border-color: #5B7C99;
+  box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
 }
 
 .portfolio-card-image {
   width: 100%;
   padding-top: 100%;
   position: relative;
-  background-color: #F9F9F9;
+  background-color: #EEF0F3;
 }
 
 .portfolio-card-image img {
@@ -86,63 +95,69 @@ button {
 .btn-primary {
   padding: 12px 24px;
   border: none;
-  border-radius: 4px;
-  background-color: #1A1A1A;
-  color: #FFFFFF;
-  font-size: 16px;
+  border-radius: 8px;
+  background-color: #5B7C99;
+  color: #FFFFFF !important;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s ease;
   display: inline-block;
   text-align: center;
+  text-decoration: none !important;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  background-color: #4F6D86;
+  color: #FFFFFF !important;
+  text-decoration: none !important;
 }
 
 .btn-primary:disabled {
-  background-color: #6B6B6B;
+  background-color: #D0D5DA;
+  color: #888888;
   cursor: not-allowed;
 }
 
 .btn-secondary {
   padding: 12px 24px;
-  border: 1px solid #E5E5E5;
-  border-radius: 4px;
+  border: 1px solid #D0D5DA;
+  border-radius: 8px;
   background-color: #FFFFFF;
-  color: #1A1A1A;
-  font-size: 16px;
+  color: #555555;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
   display: inline-block;
   text-align: center;
 }
 
 .btn-secondary:hover {
-  border-color: #1A1A1A;
+  border-color: #5B7C99;
+  color: #555555;
 }
 
 .btn-secondary:disabled {
-  color: #6B6B6B;
+  border-color: #D0D5DA;
+  color: #888888;
   cursor: not-allowed;
 }
 
 .btn-danger {
   padding: 12px 24px;
-  border: 1px solid #F44336;
-  border-radius: 4px;
+  border: 1px solid #C05656;
+  border-radius: 8px;
   background-color: #FFFFFF;
-  color: #F44336;
-  font-size: 16px;
+  color: #C05656;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
 }
 
 .btn-danger:hover {
-  background-color: #FFF5F5;
+  background-color: #F6EAEA;
 }
 
 .btn-small {
@@ -155,27 +170,27 @@ button {
    ======================================== */
 
 .page-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #1A1A1A;
+  font-size: 28px;
+  font-weight: 700;
+  color: #222222;
 }
 
 .section-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #1A1A1A;
+  font-size: 24px;
+  font-weight: 700;
+  color: #222222;
 }
 
 .card-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #1A1A1A;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222222;
 }
 
 .card-subtitle {
   font-size: 16px;
-  font-weight: bold;
-  color: #1A1A1A;
+  font-weight: 600;
+  color: #222222;
 }
 
 /* ========================================
@@ -184,57 +199,133 @@ button {
 
 .input-field {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 4px;
-  font-size: 16px;
-  color: #1A1A1A;
-  transition: border-color 0.2s;
+  padding: 10px 12px;
+  border: 1px solid #D0D5DA;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #222222;
+  background-color: #FFFFFF;
+  transition: border-color 0.15s;
+  outline: none;
 }
 
 .input-field:focus {
-  outline: none;
-  border-color: #1A1A1A;
+  border-color: #5B7C99;
+}
+
+.input-field:disabled {
+  color: #888888;
+  background-color: #EEF0F3;
+  cursor: not-allowed;
+}
+
+.input-field.error {
+  border-color: #C05656;
 }
 
 .textarea-field {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 4px;
-  font-size: 16px;
-  color: #1A1A1A;
+  padding: 10px 12px;
+  border: 1px solid #D0D5DA;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #222222;
+  background-color: #FFFFFF;
   font-family: inherit;
   resize: vertical;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
+  outline: none;
 }
 
 .textarea-field:focus {
-  outline: none;
-  border-color: #1A1A1A;
+  border-color: #5B7C99;
+}
+
+.textarea-field.error {
+  border-color: #C05656;
 }
 
 .select-field {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #E5E5E5;
-  border-radius: 4px;
-  font-size: 16px;
-  color: #1A1A1A;
+  padding: 10px 12px;
+  border: 1px solid #D0D5DA;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #222222;
   background-color: #FFFFFF;
   cursor: pointer;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.select-field:focus {
+  border-color: #5B7C99;
 }
 
 .form-label {
   display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555555;
+  margin-bottom: 6px;
+}
+
+.form-label-bold {
+  display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #1A1A1A;
+  color: #222222;
   margin-bottom: 8px;
 }
 
 .form-required {
-  color: #FF4444;
+  color: #C05656;
+}
+
+.form-error {
+  font-size: 13px;
+  color: #C05656;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-success {
+  font-size: 13px;
+  color: #4F8A6B;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #888888;
+  margin-top: 6px;
+}
+
+/* パスワード表示/非表示ボタン */
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888888;
+  font-size: 14px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #555555;
 }
 
 /* ========================================
@@ -253,6 +344,18 @@ button {
   padding: 40px 20px;
 }
 
+.container-form {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 48px 20px;
+}
+
+.container-form-wide {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 48px 20px;
+}
+
 .section {
   padding: 80px 40px;
 }
@@ -262,7 +365,7 @@ button {
 }
 
 .section-gray {
-  background-color: #FAFAFA;
+  background-color: #EEF0F3;
 }
 
 /* クリエイター詳細ページ用レイアウト */
@@ -320,11 +423,12 @@ button {
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
+  font-weight: 500;
 }
 
 .badge-category {
-  border: 1px solid #E5E5E5;
-  color: #6B6B6B;
+  border: 1px solid #D0D5DA;
+  color: #555555;
   background-color: #FFFFFF;
 }
 
@@ -333,40 +437,76 @@ button {
   color: #FFFFFF;
 }
 
-.badge-status.open {
-  background-color: #4CAF50;
-}
-
-.badge-status.pending {
-  background-color: #FF9800;
-}
-
+/* 成功系（完了・承認） */
+.badge-status.completed,
 .badge-status.accepted {
-  background-color: #2196F3;
+  background-color: #4F8A6B;
 }
 
-.badge-status.rejected {
-  background-color: #F44336;
+/* 進行中・処理中 */
+.badge-status.in_progress,
+.badge-status.pending {
+  background-color: #5B7C99;
 }
 
-.badge-status.in_progress {
-  background-color: #9C27B0;
+/* 受付中・NEW */
+.badge-status.open,
+.badge-status.new {
+  background-color: #B89B5E;
 }
 
-.badge-status.completed {
-  background-color: #607D8B;
+/* 注意系（保留・確認待ち） */
+.badge-status.on_hold,
+.badge-status.waiting {
+  background-color: #C7A23A;
 }
 
-.badge-status.cancelled {
-  background-color: #9E9E9E;
+/* エラー・却下 */
+.badge-status.rejected,
+.badge-status.failed {
+  background-color: #C05656;
+}
+
+/* キャンセル・無効 */
+.badge-status.cancelled,
+.badge-status.disabled {
+  background-color: #888888;
 }
 
 /* ========================================
    テキスト系
    ======================================== */
 
+.text-primary {
+  color: #222222;
+}
+
+.text-secondary {
+  color: #555555;
+}
+
 .text-gray {
-  color: #6B6B6B;
+  color: #888888;
+}
+
+.text-disabled {
+  color: #AAAAAA;
+}
+
+.text-link {
+  color: #5B7C99;
+}
+
+.text-success {
+  color: #4F8A6B;
+}
+
+.text-warning {
+  color: #C7A23A;
+}
+
+.text-error {
+  color: #C05656;
 }
 
 .text-small {
@@ -397,11 +537,11 @@ button {
 
 .avatar {
   border-radius: 50%;
-  background-color: #E5E5E5;
+  background-color: #D8DEE4;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6B6B6B;
+  color: #888888;
   overflow: hidden;
 }
 
@@ -415,6 +555,12 @@ button {
   width: 48px;
   height: 48px;
   font-size: 20px;
+}
+
+.avatar-large {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
 }
 
 .avatar img {
@@ -444,6 +590,10 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.gap-4 {
+  gap: 4px;
 }
 
 .gap-8 {
@@ -498,6 +648,10 @@ button {
   padding: 24px;
 }
 
+.p-32 {
+  padding: 32px;
+}
+
 .p-40 {
   padding: 40px;
 }
@@ -509,13 +663,18 @@ button {
 .loading-state {
   text-align: center;
   padding: 60px 20px;
-  color: #6B6B6B;
+  color: #888888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #F5F6F8;
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #6B6B6B;
+  color: #888888;
 }
 
 /* ========================================
@@ -524,23 +683,96 @@ button {
 
 .info-box {
   padding: 24px;
-  background-color: #F9F9F9;
+  background-color: #EEF0F3;
   border-radius: 8px;
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #EEF0F3;
   font-size: 14px;
-  color: #6B6B6B;
+  color: #555555;
 }
 
-.info-row:not(:last-child) {
-  margin-bottom: 12px;
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row-label {
+  color: #555555;
 }
 
 .info-row-value {
-  color: #1A1A1A;
+  color: #222222;
+  font-weight: 500;
+}
+
+/* ========================================
+   フィードバック系（成功・注意・エラー）
+   ======================================== */
+
+.alert {
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border-left: 4px solid;
+}
+
+.alert-success {
+  background-color: #E6F2EC;
+  border-color: #4F8A6B;
+  color: #222222;
+}
+
+.alert-warning {
+  background-color: #FAF3D7;
+  border-color: #C7A23A;
+  color: #222222;
+}
+
+.alert-error {
+  background-color: #F6EAEA;
+  border-color: #C05656;
+  color: #222222;
+}
+
+.alert-info {
+  background-color: #EAF0F5;
+  border-color: #5B7C99;
+  color: #222222;
+}
+
+/* ========================================
+   成功画面用アイコン
+   ======================================== */
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #E6F2EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 32px;
+  color: #4F8A6B;
+}
+
+.info-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #EEF0F3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 32px;
+  color: #5B7C99;
 }
 
 /* ========================================
@@ -549,8 +781,9 @@ button {
 
 .filter-box {
   padding: 24px;
-  border: 1px solid #E5E5E5;
+  border: 1px solid #D0D5DA;
   border-radius: 8px;
+  background-color: #FFFFFF;
   margin-bottom: 32px;
 }
 
@@ -562,23 +795,24 @@ button {
 
 .filter-button {
   padding: 8px 20px;
-  border: 1px solid #E5E5E5;
+  border: 1px solid #D0D5DA;
   border-radius: 20px;
   background-color: #FFFFFF;
-  color: #1A1A1A;
+  color: #222222;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .filter-button.active {
-  background-color: #1A1A1A;
+  background-color: #5B7C99;
   color: #FFFFFF;
-  border-color: #1A1A1A;
+  border-color: #5B7C99;
 }
 
 .filter-button:hover:not(.active) {
-  border-color: #1A1A1A;
+  border-color: #5B7C99;
+  color: #5B7C99;
 }
 
 /* ========================================
@@ -589,19 +823,20 @@ button {
   display: flex;
   align-items: center;
   padding: 16px;
-  border: 2px solid #E5E5E5;
+  border: 2px solid #D0D5DA;
   border-radius: 8px;
+  background-color: #FFFFFF;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .radio-card:hover {
-  border-color: #6B6B6B;
+  border-color: #5B7C99;
 }
 
 .radio-card.active {
-  border-color: #1A1A1A;
-  background-color: #FAFAFA;
+  border-color: #5B7C99;
+  background-color: #EAF0F5;
 }
 
 .radio-card input[type="radio"] {
@@ -609,7 +844,7 @@ button {
   height: 20px;
   margin-right: 12px;
   cursor: pointer;
-  accent-color: #1A1A1A;
+  accent-color: #5B7C99;
 }
 
 /* ========================================
@@ -617,9 +852,9 @@ button {
    ======================================== */
 
 .upload-area {
-  border: 2px dashed #E5E5E5;
+  border: 2px dashed #D0D5DA;
   border-radius: 12px;
-  background-color: #FAFAFA;
+  background-color: #EEF0F3;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -627,13 +862,13 @@ button {
 }
 
 .upload-area:hover {
-  border-color: #1A1A1A;
-  background-color: #F5F5F5;
+  border-color: #5B7C99;
+  background-color: #EAF0F5;
 }
 
 .upload-area.dragging {
-  border-color: #1A1A1A;
-  background-color: #F0F0F0;
+  border-color: #5B7C99;
+  background-color: #EAF0F5;
   border-style: solid;
 }
 
@@ -642,25 +877,26 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #6B6B6B;
+  color: #888888;
   text-align: center;
 }
 
 .upload-area-icon {
   font-size: 48px;
   margin-bottom: 12px;
+  color: #5B7C99;
 }
 
 .upload-area-text {
   font-size: 16px;
   font-weight: 600;
-  color: #1A1A1A;
+  color: #222222;
   margin-bottom: 4px;
 }
 
 .upload-area-hint {
   font-size: 12px;
-  color: #6B6B6B;
+  color: #888888;
 }
 
 .upload-area img {
@@ -675,6 +911,41 @@ button {
 .upload-area.uploading {
   pointer-events: none;
   opacity: 0.6;
+}
+
+/* ========================================
+   セパレーター（区切り線）
+   ======================================== */
+
+.separator {
+  width: 100%;
+  height: 1px;
+  background-color: #D0D5DA;
+  margin: 32px 0;
+}
+
+/* ========================================
+   アクセント背景
+   ======================================== */
+
+.bg-accent-blue {
+  background-color: #EAF0F5;
+}
+
+.bg-accent-yellow {
+  background-color: #F3EBD3;
+}
+
+.bg-success {
+  background-color: #E6F2EC;
+}
+
+.bg-warning {
+  background-color: #FAF3D7;
+}
+
+.bg-error {
+  background-color: #F6EAEA;
 }
 
 /* ========================================
@@ -703,11 +974,11 @@ button {
   }
 
   .page-title {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .section-title {
-    font-size: 24px;
+    font-size: 20px;
   }
 }
 
@@ -723,6 +994,14 @@ button {
 
   .container-narrow {
     padding: 24px 16px;
+  }
+
+  .container-form {
+    padding: 32px 20px;
+  }
+
+  .container-form-wide {
+    padding: 32px 20px;
   }
 
   /* 2カラム → 1カラム */
@@ -770,7 +1049,7 @@ button {
   }
 
   .card-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   /* ボタン調整 */
@@ -819,4 +1098,43 @@ button {
   .hidden-desktop {
     display: none !important;
   }
+}
+
+/* ========================================
+   Signup Page
+   ======================================== */
+
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background-color: #F5F6F8;
+}
+
+.signup-wrapper {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  align-items: center;
+  gap: 60px;
+}
+
+.welcome-text {
+  flex: 1;
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  .welcome-text {
+    display: block;
+  }
+}
+
+.form-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
