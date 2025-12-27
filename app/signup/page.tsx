@@ -91,9 +91,11 @@ export default function SignupPage() {
       try {
         const supabase = createClient()
         
+        // providerに応じて適切なプロバイダーを使用
+        const oauthProvider = provider === 'x' ? 'twitter' : provider
+        
         const { error } = await supabase.auth.signInWithOAuth({
-          // 💡 OAuth 2.0 ではなく Legacy を使うので 'twitter' です
-          provider: 'twitter', 
+          provider: oauthProvider, 
           options: {
             redirectTo: `${window.location.origin}/auth/callback`,
             skipBrowserRedirect: false,

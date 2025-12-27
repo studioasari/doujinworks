@@ -167,118 +167,60 @@ export default function Home() {
     { id: 'video', label: '動画' }
   ]
 
-  function PortfolioCard({ item, size = 'normal' }: { item: PortfolioItem, size?: 'normal' | 'large' }) {
+  function PortfolioCard({ item }: { item: PortfolioItem }) {
     return (
-      <Link href={`/portfolio/${item.id}`} className="portfolio-card-link">
-        <div className="portfolio-card-image" style={{ 
-          position: 'relative',
-          width: '100%',
-          paddingTop: '100%',
-          backgroundColor: '#F5F5F5',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          marginBottom: '12px'
-        }}>
+      <Link href={`/portfolio/${item.id}`} className="portfolio-card">
+        <div className="portfolio-card-image">
           <img
             src={item.thumbnail_url || item.image_url}
             alt={item.title}
             loading="lazy"
-            style={{ 
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%', 
-              height: '100%', 
-              objectFit: 'cover' 
-            }}
           />
-          <div style={{
-            position: 'absolute',
-            bottom: '8px',
-            left: '8px',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '4px 10px',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: '600'
-          }}>
+          <div className="category-badge">
             {getCategoryLabel(item.category)}
           </div>
         </div>
 
-        <h3 className="portfolio-card-title" style={{ 
-          fontSize: '15px',
-          fontWeight: '600',
-          color: '#1A1A1A',
-          marginBottom: '8px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          lineHeight: '1.4'
-        }}>
-          {item.title}
-        </h3>
+        <div className="portfolio-card-content">
+          <h3 className="card-subtitle text-ellipsis mb-8">
+            {item.title}
+          </h3>
 
-        <div
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            window.location.href = `/creators/${item.profiles?.username || ''}`
-          }}
-          className="portfolio-card-creator" 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            marginBottom: '10px',
-            cursor: 'pointer'
-          }}
-        >
-          <div style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            backgroundColor: '#E5E5E5',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            {item.profiles?.avatar_url ? (
-              <Image src={item.profiles.avatar_url} alt="" width={24} height={24} style={{ objectFit: 'cover' }} />
-            ) : (
-              <i className="fas fa-user" style={{ fontSize: '10px', color: '#9B9B9B' }}></i>
-            )}
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              window.location.href = `/creators/${item.profiles?.username || ''}`
+            }}
+            className="creator-info mb-12"
+          >
+            <div className="avatar avatar-small">
+              {item.profiles?.avatar_url ? (
+                <Image 
+                  src={item.profiles.avatar_url} 
+                  alt="" 
+                  width={24} 
+                  height={24} 
+                />
+              ) : (
+                <i className="fas fa-user"></i>
+              )}
+            </div>
+            <span className="text-small text-secondary text-ellipsis">
+              {item.profiles?.display_name || '名前未設定'}
+            </span>
           </div>
-          <span style={{ 
-            fontSize: '13px', 
-            color: '#6B6B6B',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-            fontWeight: '500'
-          }}>
-            {item.profiles?.display_name || '名前未設定'}
-          </span>
-        </div>
 
-        <div className="portfolio-card-stats" style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          fontSize: '12px', 
-          color: '#9B9B9B' 
-        }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <i className="far fa-heart"></i>
-            <span>{item.likeCount}</span>
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <i className="far fa-comment"></i>
-            <span>{item.commentCount}</span>
-          </span>
+          <div className="portfolio-stats">
+            <span>
+              <i className="far fa-heart"></i>
+              <span>{item.likeCount}</span>
+            </span>
+            <span>
+              <i className="far fa-comment"></i>
+              <span>{item.commentCount}</span>
+            </span>
+          </div>
         </div>
       </Link>
     )
@@ -289,7 +231,7 @@ export default function Home() {
       display: 'flex', 
       flexDirection: 'column', 
       minHeight: '100vh',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#F5F6F8',
       width: '100vw',
       overflowX: 'hidden'
     }}>
@@ -297,29 +239,126 @@ export default function Home() {
       
       <style dangerouslySetInnerHTML={{
         __html: `
-          .portfolio-card-link {
-            display: block;
+          .portfolio-card {
+            background-color: #FFFFFF;
+            border: 1px solid #D0D5DA;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
             text-decoration: none;
-            transition: background-color 0.2s ease;
-            border-radius: 8px;
-            padding: 8px;
-            margin: -8px;
+            display: block;
           }
           
-          .portfolio-card-link:hover {
-            background-color: #FAFAFA;
+          .portfolio-card:hover {
+            border-color: #5B7C99;
+            box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
           }
           
-          .portfolio-card-link:has(.portfolio-card-creator:hover) {
-            background-color: transparent;
+          .portfolio-card-image {
+            width: 100%;
+            padding-top: 100%;
+            position: relative;
+            background-color: #EEF0F3;
           }
           
-          .portfolio-card-creator {
+          .portfolio-card-image img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+          
+          .category-badge {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background-color: rgba(34, 34, 34, 0.85);
+            color: #FFFFFF;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+          }
+          
+          .portfolio-card-content {
+            padding: 16px;
+          }
+          
+          .creator-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
             transition: opacity 0.2s ease;
           }
           
-          .portfolio-card-creator:hover {
+          .creator-info:hover {
             opacity: 0.7;
+          }
+          
+          .portfolio-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #888888;
+          }
+          
+          .portfolio-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+          
+          .sidebar-nav-button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 400;
+            color: #222222;
+            cursor: pointer;
+            text-align: left;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            display: block;
+          }
+          
+          .sidebar-nav-button:hover {
+            background-color: #EEF0F3;
+          }
+          
+          .sidebar-nav-button.active {
+            background-color: #EAF0F5;
+            font-weight: 600;
+            color: #5B7C99;
+          }
+          
+          .sidebar-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #888888;
+            margin-bottom: 8px;
+            padding: 0 16px;
+          }
+          
+          .featured-creator-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background-color: transparent;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+          }
+          
+          .featured-creator-card:hover {
+            background-color: #EEF0F3;
           }
           
           @media (max-width: 1024px) {
@@ -329,79 +368,33 @@ export default function Home() {
           }
           
           @media (max-width: 768px) {
-            .portfolio-grid {
+            .grid-portfolio {
               grid-template-columns: repeat(2, 1fr) !important;
               gap: 12px !important;
-            }
-            
-            .portfolio-card-image {
-              margin-bottom: 8px !important;
-              border-radius: 6px !important;
-            }
-            
-            .portfolio-card-title {
-              font-size: 13px !important;
-              margin-bottom: 6px !important;
-            }
-            
-            .portfolio-card-creator {
-              margin-bottom: 6px !important;
-              gap: 6px !important;
-            }
-            
-            .portfolio-card-creator span {
-              font-size: 11px !important;
-            }
-            
-            .portfolio-card-creator > div {
-              width: 20px !important;
-              height: 20px !important;
-            }
-            
-            .portfolio-card-stats {
-              font-size: 11px !important;
-              gap: 8px !important;
             }
           }
         `
       }} />
       
       <main style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', width: '100%' }}>
+        {/* サイドバー */}
         <aside style={{
           width: '240px',
           flexShrink: 0,
-          borderRight: '1px solid #E5E5E5',
-          backgroundColor: 'white',
+          borderRight: '1px solid #D0D5DA',
+          backgroundColor: '#FFFFFF',
           padding: '20px',
           minHeight: '100%'
         }}
         className="sidebar-desktop">
-          <nav style={{ marginBottom: '20px' }}>
+          {/* メインナビゲーション */}
+          <nav className="mb-24">
             <button
               onClick={() => {
                 setActiveTab('all')
                 setActiveCategory(null)
               }}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: 'none',
-                background: activeTab === 'all' && !activeCategory ? '#F5F5F5' : 'transparent',
-                fontSize: '15px',
-                fontWeight: activeTab === 'all' && !activeCategory ? '600' : '400',
-                color: '#1A1A1A',
-                cursor: 'pointer',
-                textAlign: 'left',
-                borderRadius: '6px',
-                marginBottom: '4px',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (activeTab !== 'all' || activeCategory) e.currentTarget.style.backgroundColor = '#FAFAFA'
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== 'all' || activeCategory) e.currentTarget.style.backgroundColor = 'transparent'
-              }}
+              className={`sidebar-nav-button ${activeTab === 'all' && !activeCategory ? 'active' : ''}`}
             >
               すべて
             </button>
@@ -411,119 +404,40 @@ export default function Home() {
                   setActiveTab('following')
                   setActiveCategory(null)
                 }}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: activeTab === 'following' ? '#F5F5F5' : 'transparent',
-                  fontSize: '15px',
-                  fontWeight: activeTab === 'following' ? '600' : '400',
-                  color: '#1A1A1A',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  borderRadius: '6px',
-                  marginBottom: '4px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'following') e.currentTarget.style.backgroundColor = '#FAFAFA'
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'following') e.currentTarget.style.backgroundColor = 'transparent'
-                }}
+                className={`sidebar-nav-button ${activeTab === 'following' ? 'active' : ''}`}
               >
                 フォロー中
               </button>
             )}
           </nav>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '0 0 20px 0' }}></div>
+          <div className="separator"></div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#9B9B9B', marginBottom: '12px', padding: '0 16px' }}>
-              仕事
-            </div>
-            <Link
-              href="/requests"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: 'none',
-                background: 'transparent',
-                fontSize: '15px',
-                fontWeight: '400',
-                color: '#1A1A1A',
-                cursor: 'pointer',
-                textAlign: 'left',
-                borderRadius: '6px',
-                transition: 'background-color 0.2s',
-                display: 'block',
-                textDecoration: 'none',
-                marginBottom: '4px'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
+          {/* 仕事セクション */}
+          <div className="mb-24">
+            <div className="sidebar-section-title">仕事</div>
+            <Link href="/requests" className="sidebar-nav-button">
               依頼を探す
             </Link>
             {isLoggedIn && (
-              <Link
-                href="/requests/create"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '15px',
-                  fontWeight: '400',
-                  color: '#1A1A1A',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  borderRadius: '6px',
-                  transition: 'background-color 0.2s',
-                  display: 'block',
-                  textDecoration: 'none'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
+              <Link href="/requests/create" className="sidebar-nav-button">
                 依頼を投稿
               </Link>
             )}
           </div>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '0 0 20px 0' }}></div>
+          <div className="separator"></div>
 
-          <Link
-            href="/creators"
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '15px',
-              fontWeight: '400',
-              color: '#1A1A1A',
-              cursor: 'pointer',
-              textAlign: 'left',
-              borderRadius: '6px',
-              transition: 'background-color 0.2s',
-              display: 'block',
-              textDecoration: 'none',
-              marginBottom: '20px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
+          {/* クリエイター */}
+          <Link href="/creators" className="sidebar-nav-button mb-24">
             クリエイターを探す
           </Link>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '0 0 20px 0' }}></div>
+          <div className="separator"></div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#9B9B9B', marginBottom: '12px', padding: '0 16px' }}>
-              カテゴリ
-            </div>
+          {/* カテゴリ */}
+          <div className="mb-24">
+            <div className="sidebar-section-title">カテゴリ</div>
             {categories.map((cat) => (
               <button
                 key={cat.id}
@@ -531,84 +445,42 @@ export default function Home() {
                   setActiveTab('all')
                   setActiveCategory(activeCategory === cat.id ? null : cat.id)
                 }}
-                style={{
-                  width: '100%',
-                  padding: '10px 16px',
-                  border: 'none',
-                  background: activeCategory === cat.id ? '#F5F5F5' : 'transparent',
-                  fontSize: '14px',
-                  fontWeight: activeCategory === cat.id ? '600' : '400',
-                  color: '#1A1A1A',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  borderRadius: '6px',
-                  marginBottom: '2px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeCategory !== cat.id) e.currentTarget.style.backgroundColor = '#FAFAFA'
-                }}
-                onMouseLeave={(e) => {
-                  if (activeCategory !== cat.id) e.currentTarget.style.backgroundColor = 'transparent'
-                }}
+                className={`sidebar-nav-button ${activeCategory === cat.id ? 'active' : ''}`}
               >
                 {cat.label}
               </button>
             ))}
           </div>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '0 0 20px 0' }}></div>
+          <div className="separator"></div>
 
+          {/* 注目のクリエイター */}
           <div>
-            <div style={{ 
-              fontSize: '12px', 
-              fontWeight: '600', 
-              marginBottom: '12px', 
-              color: '#9B9B9B', 
-              padding: '0 16px'
-            }}>
-              注目のクリエイター
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="sidebar-section-title">注目のクリエイター</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {featuredCreators.slice(0, 8).map((creator) => (
                 <Link 
                   key={creator.user_id}
                   href={`/creators/${creator.username}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '8px',
-                    backgroundColor: 'transparent',
-                    borderRadius: '6px',
-                    textDecoration: 'none',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  className="featured-creator-card"
                 >
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    backgroundColor: '#E5E5E5',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
+                  <div className="avatar avatar-medium">
                     {creator.avatar_url ? (
-                      <Image src={creator.avatar_url} alt="" width={40} height={40} style={{ objectFit: 'cover' }} />
+                      <Image 
+                        src={creator.avatar_url} 
+                        alt="" 
+                        width={48} 
+                        height={48} 
+                      />
                     ) : (
-                      <i className="fas fa-user" style={{ fontSize: '16px', color: '#9B9B9B' }}></i>
+                      <i className="fas fa-user"></i>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="text-small text-primary text-ellipsis" style={{ fontWeight: 600 }}>
                       {creator.display_name}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9B9B9B' }}>
+                    <div className="text-tiny text-gray">
                       {creator.workCount} 作品
                     </div>
                   </div>
@@ -618,53 +490,42 @@ export default function Home() {
           </div>
         </aside>
 
-        <div style={{ flex: 1, minWidth: 0, backgroundColor: 'white' }}>
+        {/* メインコンテンツ */}
+        <div style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF' }}>
           {loading ? (
             <LoadingSkeleton />
           ) : (
             <>
+              {/* カテゴリフィルター適用時 */}
               {activeCategory && (
                 <>
-                  <div style={{ padding: '24px 20px', borderBottom: '1px solid #F5F5F5' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1A1A1A' }}>
+                  <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
+                    <div className="flex-between mb-16">
+                      <h2 className="section-title">
                         {getCategoryLabel(activeCategory)}
                       </h2>
                       <button
                         onClick={() => setActiveCategory(null)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#9B9B9B',
-                          fontSize: '14px',
-                          cursor: 'pointer'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = '#1A1A1A'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = '#9B9B9B'}
+                        className="btn-secondary btn-small"
                       >
                         <i className="fas fa-times"></i> フィルターを解除
                       </button>
                     </div>
                   </div>
 
-                  <div style={{ padding: '24px 20px 20px' }}>
-                    <Link href="/portfolio" style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      fontSize: '18px', 
-                      fontWeight: 'bold', 
-                      marginBottom: '16px', 
-                      color: '#1A1A1A', 
-                      textDecoration: 'none' 
+                  <div className="p-24">
+                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      color: '#222222'
                     }}>
-                      <span>おすすめ作品</span>
-                      <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                      <h3 className="section-title">おすすめ作品</h3>
+                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                     </Link>
-                    <div className="portfolio-grid" style={{
+                    <div className="grid-portfolio" style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                      gap: '16px'
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '20px'
                     }}>
                       {getFilteredWorks(featuredWorks).map((item) => (
                         <PortfolioCard key={item.id} item={item} />
@@ -672,24 +533,19 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '20px 20px' }}>
-                    <Link href="/portfolio" style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      fontSize: '18px', 
-                      fontWeight: 'bold', 
-                      marginBottom: '16px', 
-                      color: '#1A1A1A', 
-                      textDecoration: 'none' 
+                  <div className="p-24">
+                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      color: '#222222'
                     }}>
-                      <span>新着作品</span>
-                      <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                      <h3 className="section-title">新着作品</h3>
+                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                     </Link>
-                    <div className="portfolio-grid" style={{
+                    <div className="grid-portfolio" style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                      gap: '16px'
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '20px'
                     }}>
                       {getFilteredWorks(newWorks).map((item) => (
                         <PortfolioCard key={item.id} item={item} />
@@ -697,24 +553,19 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '20px' }}>
-                    <Link href="/portfolio" style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      fontSize: '18px', 
-                      fontWeight: 'bold', 
-                      marginBottom: '16px', 
-                      color: '#1A1A1A', 
-                      textDecoration: 'none' 
+                  <div className="p-24">
+                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      color: '#222222'
                     }}>
-                      <span>人気作品</span>
-                      <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                      <h3 className="section-title">人気作品</h3>
+                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                     </Link>
-                    <div className="portfolio-grid" style={{
+                    <div className="grid-portfolio" style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                      gap: '16px'
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '20px'
                     }}>
                       {getFilteredWorks(popularWorks).map((item) => (
                         <PortfolioCard key={item.id} item={item} />
@@ -724,27 +575,24 @@ export default function Home() {
                 </>
               )}
 
+              {/* 通常表示 */}
               {!activeCategory && (
                 <>
+                  {/* フォロー中タブ */}
                   {isLoggedIn && activeTab === 'following' && (
-                    <div style={{ padding: '24px 20px', borderBottom: '1px solid #F5F5F5' }}>
-                      <Link href="/portfolio" style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '8px',
-                        fontSize: '18px', 
-                        fontWeight: 'bold', 
-                        marginBottom: '16px', 
-                        color: '#1A1A1A', 
-                        textDecoration: 'none' 
+                    <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
+                      <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
+                        alignItems: 'center',
+                        textDecoration: 'none',
+                        color: '#222222'
                       }}>
-                        <span>フォロー中の新着作品</span>
-                        <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                        <h3 className="section-title">フォロー中の新着作品</h3>
+                        <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                       </Link>
-                      <div className="portfolio-grid" style={{
+                      <div className="grid-portfolio" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                        gap: '16px'
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                        gap: '20px'
                       }}>
                         {newWorks.slice(0, 12).map((item) => (
                           <PortfolioCard key={item.id} item={item} />
@@ -753,24 +601,20 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div style={{ padding: '24px 20px', borderBottom: '1px solid #F5F5F5' }}>
-                    <Link href="/portfolio" style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      fontSize: '18px', 
-                      fontWeight: 'bold', 
-                      marginBottom: '16px', 
-                      color: '#1A1A1A', 
-                      textDecoration: 'none' 
+                  {/* 注目作品 */}
+                  <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
+                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
+                      alignItems: 'center',
+                      textDecoration: 'none',
+                      color: '#222222'
                     }}>
-                      <span>注目作品</span>
-                      <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                      <h3 className="section-title">注目作品</h3>
+                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                     </Link>
-                    <div className="portfolio-grid" style={{
+                    <div className="grid-portfolio" style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                      gap: '16px'
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: '20px'
                     }}>
                       {featuredWorks.map((item) => (
                         <PortfolioCard key={item.id} item={item} />
@@ -778,32 +622,29 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* カテゴリ別セクション */}
                   {categories.map((cat) => {
                     const categoryWorks = newWorks.filter(w => w.category === cat.id).slice(0, 8)
                     if (categoryWorks.length === 0) return null
                     
                     return (
-                      <div key={cat.id} style={{ padding: '24px 20px', borderBottom: '1px solid #F5F5F5' }}>
+                      <div key={cat.id} className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
                         <Link 
                           href={`/portfolio?category=${cat.id}`}
+                          className="flex gap-8 mb-16"
                           style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px',
-                            fontSize: '18px', 
-                            fontWeight: 'bold', 
-                            marginBottom: '16px', 
-                            color: '#1A1A1A', 
-                            textDecoration: 'none' 
+                            alignItems: 'center',
+                            textDecoration: 'none',
+                            color: '#222222'
                           }}
                         >
-                          <span>新着{cat.label}</span>
-                          <i className="fas fa-chevron-right" style={{ fontSize: '14px', color: '#9B9B9B' }}></i>
+                          <h3 className="section-title">新着{cat.label}</h3>
+                          <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
                         </Link>
-                        <div className="portfolio-grid" style={{
+                        <div className="grid-portfolio" style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                          gap: '16px'
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                          gap: '20px'
                         }}>
                           {categoryWorks.map((item) => (
                             <PortfolioCard key={item.id} item={item} />

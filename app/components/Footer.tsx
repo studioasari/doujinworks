@@ -4,6 +4,19 @@ export default function Footer() {
   return (
     <>
       <style jsx>{`
+        footer a {
+          color: #555555 !important;
+          text-decoration: none !important;
+        }
+
+        footer a:hover {
+          color: #222222 !important;
+        }
+
+        .social-links a:hover {
+          color: #5B7C99 !important;
+        }
+
         .footer-grid {
           display: grid;
           grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
@@ -24,11 +37,41 @@ export default function Footer() {
           gap: 20px;
         }
 
+        .social-links a {
+          color: #555555;
+          font-size: 24px;
+          transition: color 0.2s;
+        }
+
+        .social-links a:hover {
+          color: #5B7C99;
+        }
+
         .legal-links {
           display: flex;
           gap: 20px;
           flex-wrap: wrap;
           font-size: 13px;
+        }
+
+        .legal-links a {
+          color: #555555 !important;
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+
+        .legal-links a:hover {
+          color: #222222 !important;
+        }
+
+        .footer-link {
+          color: #555555 !important;
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+          color: #222222 !important;
         }
 
         /* タブレット（768px～1024px） */
@@ -72,9 +115,9 @@ export default function Footer() {
 
       <footer style={{
         backgroundColor: '#FFFFFF',
-        color: '#6B6B6B',
+        color: '#555555',
         marginTop: 'auto',
-        borderTop: '1px solid #E5E5E5'
+        borderTop: '1px solid #D0D5DA'
       }}>
         {/* メインコンテンツエリア */}
         <div style={{
@@ -97,7 +140,7 @@ export default function Footer() {
               <p style={{ 
                 fontSize: '14px', 
                 lineHeight: '1.8', 
-                color: '#6B6B6B',
+                color: '#555555',
                 marginBottom: '20px'
               }}>
                 同人界隈特化の<br />
@@ -108,7 +151,7 @@ export default function Footer() {
             {/* クリエイター向け */}
             <div>
               <h4 style={{ 
-                color: '#1A1A1A', 
+                color: '#222222', 
                 fontSize: '14px',
                 fontWeight: '600',
                 marginBottom: '16px'
@@ -122,27 +165,27 @@ export default function Footer() {
                 lineHeight: '2.4'
               }}>
                 <li>
-                  <Link href="/creators" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/creators" className="footer-link">
                     クリエイターを探す
                   </Link>
                 </li>
                 <li>
-                  <Link href="/portfolio" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/portfolio" className="footer-link">
                     作品を見る
                   </Link>
                 </li>
                 <li>
-                  <Link href="/portfolio/upload" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/portfolio/upload" className="footer-link">
                     作品を投稿
                   </Link>
                 </li>
                 <li>
-                  <Link href="/earnings" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/earnings" className="footer-link">
                     売上管理
                   </Link>
                 </li>
                 <li>
-                  <Link href="/profile/edit" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/profile/edit" className="footer-link">
                     プロフィール編集
                   </Link>
                 </li>
@@ -152,7 +195,7 @@ export default function Footer() {
             {/* 依頼者向け */}
             <div>
               <h4 style={{ 
-                color: '#1A1A1A', 
+                color: '#222222', 
                 fontSize: '14px',
                 fontWeight: '600',
                 marginBottom: '16px'
@@ -166,22 +209,22 @@ export default function Footer() {
                 lineHeight: '2.4'
               }}>
                 <li>
-                  <Link href="/requests" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/requests" className="footer-link">
                     依頼を探す
                   </Link>
                 </li>
                 <li>
-                  <Link href="/requests/create" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/requests/create" className="footer-link">
                     依頼を投稿
                   </Link>
                 </li>
                 <li>
-                  <Link href="/requests/manage" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/requests/manage" className="footer-link">
                     依頼管理
                   </Link>
                 </li>
                 <li>
-                  <Link href="/messages" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <Link href="/messages" className="footer-link">
                     メッセージ
                   </Link>
                 </li>
@@ -191,7 +234,7 @@ export default function Footer() {
             {/* サポート */}
             <div>
               <h4 style={{ 
-                color: '#1A1A1A', 
+                color: '#222222', 
                 fontSize: '14px',
                 fontWeight: '600',
                 marginBottom: '16px'
@@ -205,17 +248,17 @@ export default function Footer() {
                 lineHeight: '2.4'
               }}>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     ヘルプセンター
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     よくある質問
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     お問い合わせ
                   </a>
                 </li>
@@ -225,7 +268,7 @@ export default function Footer() {
             {/* 会社情報 */}
             <div>
               <h4 style={{ 
-                color: '#1A1A1A', 
+                color: '#222222', 
                 fontSize: '14px',
                 fontWeight: '600',
                 marginBottom: '16px'
@@ -239,22 +282,22 @@ export default function Footer() {
                 lineHeight: '2.4'
               }}>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     運営会社
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     採用情報
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     ブログ
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                  <a href="#" className="footer-link">
                     お知らせ
                   </a>
                 </li>
@@ -265,7 +308,7 @@ export default function Footer() {
 
         {/* SNSアイコン + 法的リンク（画面幅いっぱい） */}
         <div style={{
-          borderTop: '1px solid #E5E5E5',
+          borderTop: '1px solid #D0D5DA',
           padding: '20px 0'
         }}>
           <div style={{
@@ -280,11 +323,7 @@ export default function Footer() {
                   href="https://twitter.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style={{
-                    color: '#6B6B6B',
-                    fontSize: '24px',
-                    transition: 'color 0.2s'
-                  }}
+                  aria-label="Twitter"
                 >
                   <i className="fab fa-twitter"></i>
                 </a>
@@ -292,11 +331,7 @@ export default function Footer() {
                   href="https://discord.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style={{
-                    color: '#6B6B6B',
-                    fontSize: '24px',
-                    transition: 'color 0.2s'
-                  }}
+                  aria-label="Discord"
                 >
                   <i className="fab fa-discord"></i>
                 </a>
@@ -304,11 +339,7 @@ export default function Footer() {
                   href="https://instagram.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style={{
-                    color: '#6B6B6B',
-                    fontSize: '24px',
-                    transition: 'color 0.2s'
-                  }}
+                  aria-label="Instagram"
                 >
                   <i className="fab fa-instagram"></i>
                 </a>
@@ -316,11 +347,7 @@ export default function Footer() {
                   href="https://youtube.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style={{
-                    color: '#6B6B6B',
-                    fontSize: '24px',
-                    transition: 'color 0.2s'
-                  }}
+                  aria-label="YouTube"
                 >
                   <i className="fab fa-youtube"></i>
                 </a>
@@ -328,16 +355,16 @@ export default function Footer() {
 
               {/* 法的リンク */}
               <div className="legal-links">
-                <Link href="/terms" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                <Link href="/terms">
                   利用規約
                 </Link>
-                <Link href="/privacy" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                <Link href="/privacy">
                   プライバシーポリシー
                 </Link>
-                <Link href="/cookie_policy" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                <Link href="/cookie_policy">
                   外部送信ポリシー
                 </Link>
-                <Link href="/law" style={{ color: '#6B6B6B', transition: 'color 0.2s', textDecoration: 'none' }}>
+                <Link href="/law">
                   特定商取引法
                 </Link>
               </div>
@@ -347,16 +374,16 @@ export default function Footer() {
 
         {/* 下部：コピーライト */}
         <div style={{
-          backgroundColor: '#FAFAFA',
+          backgroundColor: '#F5F6F8',
           padding: '20px 40px',
-          borderTop: '1px solid #E5E5E5'
+          borderTop: '1px solid #D0D5DA'
         }}>
           <div style={{
             maxWidth: '1400px',
             margin: '0 auto',
             textAlign: 'center',
             fontSize: '13px',
-            color: '#6B6B6B'
+            color: '#555555'
           }}>
             © 2025 Studio Asari. All rights reserved.
           </div>
