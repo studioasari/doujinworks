@@ -104,7 +104,7 @@ function LoginForm() {
   }
 
   // ソーシャルログイン
-  const handleSocialLogin = async (provider: 'google' | 'twitter' | 'discord') => {
+  const handleSocialLogin = async (provider: 'google' | 'x' | 'discord') => {
     setError('')
 
     startTransition(async () => {
@@ -112,7 +112,7 @@ function LoginForm() {
         const supabase = createClient()
 
         const { error } = await supabase.auth.signInWithOAuth({
-          provider,
+          provider: provider as any,  // ← 型アサーション追加
           options: {
             redirectTo: 'https://doujinworks.jp/auth/callback',
           },
@@ -327,7 +327,7 @@ function LoginForm() {
         </button>
         <button
           className="btn-secondary"
-          onClick={() => handleSocialLogin('twitter')}
+          onClick={() => handleSocialLogin('x')}
           disabled={isPending}
           style={{ 
             width: '100%', 
