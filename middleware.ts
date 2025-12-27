@@ -7,11 +7,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // ログイン必須のページのみ指定
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/portfolio/:path*',
-    '/messages/:path*',
-    '/settings/:path*',  // もしあれば
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
