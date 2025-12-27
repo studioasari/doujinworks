@@ -116,7 +116,8 @@ function LoginForm() {
           options: {
             queryParams: {
               // 💡 offline.access を含め、余計なものを送らない最小構成です
-              scope: 'users.read tweet.read offline.access',
+              // scope: 'users.read tweet.read offline.access',
+              scope: 'users.read',
             },
             // redirectTo: `${window.location.origin}/auth/callback`,
             skipBrowserRedirect: false,
