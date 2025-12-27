@@ -94,7 +94,7 @@ export default function SignupPage() {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: provider as any,
           options: {
-            scopes: 'users.read',
+            scopes: 'tweet.read users.read',
             redirectTo: `${window.location.origin}/auth/callback`,  // ← 動的に取得
             skipBrowserRedirect: false,
           },
