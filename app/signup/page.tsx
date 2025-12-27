@@ -92,12 +92,10 @@ export default function SignupPage() {
         const supabase = createClient()
         
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'x' as any,
+          // 💡 OAuth 2.0 ではなく Legacy を使うので 'twitter' です
+          provider: 'twitter', 
           options: {
-            queryParams: {
-              // 💡 「Request email from users」をONにしたなら、emailスコープが必須です
-              scope: 'users.read tweet.read email offline.access',
-            },
+            redirectTo: `${window.location.origin}/auth/callback`,
             skipBrowserRedirect: false,
           },
         })
