@@ -2,6 +2,12 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // ✅ デバッグログ追加(ここから)
+  console.log('=== Middleware Debug ===')
+  console.log('Path:', request.nextUrl.pathname)
+  console.log('URL:', request.url)
+  // ✅ デバッグログ追加(ここまで)
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -85,7 +91,12 @@ export async function updateSession(request: NextRequest) {
     '/privacy'
   ]
   
+  // ✅ デバッグログ追加
+  console.log('Is public path?', publicPaths.some(path => request.nextUrl.pathname.startsWith(path)))
+  
   if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+    // ✅ デバッグログ追加
+    console.log('✅ Public path - skipping auth check')
     return response
   }
 
@@ -94,8 +105,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // ✅ デバッグログ追加
+  console.log('User:', user ? user.email : 'Not authenticated')
+
   // 未認証ユーザーはログインページへ
   if (!user) {
+    // ✅ デバッグログ追加
+    console.log('❌ No user - redirecting to /login')
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
@@ -108,10 +124,17 @@ export async function updateSession(request: NextRequest) {
     .eq('user_id', user.id)
     .maybeSingle()
 
+  // ✅ デバッグログ追加
+  console.log('Profile:', profile)
+
   // プロフィール未完成の場合は /signup/complete にリダイレクト
   if (!profile || !profile.username || !profile.account_type) {
+    // ✅ デバッグログ追加
+    console.log('❌ Incomplete profile - redirecting to /signup/complete')
     return NextResponse.redirect(new URL('/signup/complete', request.url))
   }
 
+  // ✅ デバッグログ追加
+  console.log('✅ Auth check passed')
   return response
 }
