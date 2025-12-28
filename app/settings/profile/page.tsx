@@ -486,7 +486,34 @@ export default function ProfilePage() {
         <DashboardSidebar />
 
         {/* メインコンテンツ */}
-        <main style={{ flex: 1, padding: '40px' }}>
+        <main style={{ 
+          flex: 1, 
+          padding: '40px',
+        }}>
+          <style jsx>{`
+            @media (max-width: 1024px) {
+              main {
+                padding: 32px 24px !important;
+              }
+            }
+            @media (max-width: 768px) {
+              main {
+                padding: 24px 16px !important;
+              }
+              .card-no-hover.p-40 {
+                padding: 24px !important;
+              }
+              .avatar-upload-container {
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+              }
+              .avatar-upload-container > div:last-child {
+                width: 100% !important;
+              }
+            }
+          `}</style>
+
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <h1 className="page-title mb-40">プロフィール編集</h1>
 
@@ -498,31 +525,67 @@ export default function ProfilePage() {
                   ヘッダー画像
                 </label>
                 
-                <div
-                  className={`upload-area ${draggingHeader ? 'dragging' : ''} ${uploadingHeader ? 'uploading' : ''}`}
-                  style={{ width: '100%', height: '200px' }}
-                  onClick={handleHeaderClick}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    setDraggingHeader(true)
-                  }}
-                  onDragLeave={() => setDraggingHeader(false)}
-                  onDrop={handleHeaderDrop}
-                >
-                  {headerPreview ? (
-                    <img src={headerPreview} alt="ヘッダー画像" />
-                  ) : (
-                    <div className="upload-area-content" style={{ height: '100%' }}>
-                      <div className="upload-area-icon">
-                        <i className="fas fa-image"></i>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    className={`upload-area ${draggingHeader ? 'dragging' : ''} ${uploadingHeader ? 'uploading' : ''}`}
+                    style={{ width: '100%', height: '200px' }}
+                    onClick={handleHeaderClick}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setDraggingHeader(true)
+                    }}
+                    onDragLeave={() => setDraggingHeader(false)}
+                    onDrop={handleHeaderDrop}
+                  >
+                    {headerPreview ? (
+                      <img src={headerPreview} alt="ヘッダー画像" />
+                    ) : (
+                      <div className="upload-area-content" style={{ height: '100%' }}>
+                        <div className="upload-area-icon">
+                          <i className="fas fa-image"></i>
+                        </div>
+                        <div className="upload-area-text">
+                          クリックまたはドラッグして<br />ヘッダー画像をアップロード
+                        </div>
+                        <div className="upload-area-hint">
+                          推奨: 1500×500px / JPG, PNG, WebP / 最大10MB
+                        </div>
                       </div>
-                      <div className="upload-area-text">
-                        クリックまたはドラッグして<br />ヘッダー画像をアップロード
-                      </div>
-                      <div className="upload-area-hint">
-                        推奨: 1500×500px / JPG, PNG, WebP / 最大10MB
-                      </div>
-                    </div>
+                    )}
+                  </div>
+
+                  {headerUrl && (
+                    <button
+                      type="button"
+                      onClick={handleHeaderRemove}
+                      disabled={uploadingHeader}
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        zIndex: 10,
+                        fontSize: '16px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+                      }}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
                   )}
                 </div>
 
@@ -533,18 +596,6 @@ export default function ProfilePage() {
                   onChange={handleHeaderSelect}
                   style={{ display: 'none' }}
                 />
-
-                {headerUrl && (
-                  <button
-                    type="button"
-                    onClick={handleHeaderRemove}
-                    disabled={uploadingHeader}
-                    className="btn-danger btn-small"
-                    style={{ marginTop: '12px' }}
-                  >
-                    削除
-                  </button>
-                )}
               </div>
 
               {/* アイコン画像 */}
@@ -553,31 +604,67 @@ export default function ProfilePage() {
                   アイコン画像
                 </label>
                 
-                <div className="flex gap-20" style={{ alignItems: 'flex-start' }}>
-                  <div
-                    className={`upload-area ${draggingAvatar ? 'dragging' : ''} ${uploadingAvatar ? 'uploading' : ''}`}
-                    style={{ 
-                      width: '120px', 
-                      height: '120px', 
-                      borderRadius: '50%',
-                      flexShrink: 0
-                    }}
-                    onClick={handleAvatarClick}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      setDraggingAvatar(true)
-                    }}
-                    onDragLeave={() => setDraggingAvatar(false)}
-                    onDrop={handleAvatarDrop}
-                  >
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="アイコン画像" style={{ borderRadius: '50%' }} />
-                    ) : (
-                      <div className="upload-area-content" style={{ height: '100%' }}>
-                        <div className="upload-area-icon" style={{ fontSize: '48px', marginBottom: 0 }}>
-                          <i className="fas fa-user"></i>
+                <div className="avatar-upload-container flex gap-20" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div
+                      className={`upload-area ${draggingAvatar ? 'dragging' : ''} ${uploadingAvatar ? 'uploading' : ''}`}
+                      style={{ 
+                        width: '120px', 
+                        height: '120px', 
+                        borderRadius: '50%',
+                        flexShrink: 0
+                      }}
+                      onClick={handleAvatarClick}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        setDraggingAvatar(true)
+                      }}
+                      onDragLeave={() => setDraggingAvatar(false)}
+                      onDrop={handleAvatarDrop}
+                    >
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="アイコン画像" style={{ borderRadius: '50%' }} />
+                      ) : (
+                        <div className="upload-area-content" style={{ height: '100%' }}>
+                          <div className="upload-area-icon" style={{ fontSize: '48px', marginBottom: 0 }}>
+                            <i className="fas fa-user"></i>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
+
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={handleAvatarRemove}
+                        disabled={uploadingAvatar}
+                        style={{
+                          position: 'absolute',
+                          top: '0',
+                          right: '0',
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s',
+                          zIndex: 10,
+                          fontSize: '16px'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+                        }}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
                     )}
                   </div>
 
@@ -594,20 +681,9 @@ export default function ProfilePage() {
                       クリックまたはドラッグしてアイコン画像をアップロード
                     </div>
                     
-                    <div className="text-tiny text-gray mb-12">
+                    <div className="text-tiny text-gray">
                       推奨: 400×400px / JPG, PNG, WebP / 最大5MB
                     </div>
-
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAvatarRemove}
-                        disabled={uploadingAvatar}
-                        className="btn-danger btn-small"
-                      >
-                        削除
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -618,17 +694,14 @@ export default function ProfilePage() {
                   <label className="form-label">
                     ユーザーID
                   </label>
-                  <div style={{
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '8px',
-                    backgroundColor: '#F9F9F9',
-                    color: '#6B6B6B'
+                  <div className="input-field" style={{
+                    backgroundColor: '#EEF0F3',
+                    color: '#888888',
+                    cursor: 'not-allowed'
                   }}>
                     @{profile.username}
                   </div>
-                  <div className="text-tiny text-gray" style={{ marginTop: '6px' }}>
+                  <div className="form-hint">
                     ユーザーIDは変更できません
                   </div>
                 </div>
@@ -670,7 +743,7 @@ export default function ProfilePage() {
                 </label>
                 
                 <div className="mb-16">
-                  <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
+                  <label className="text-small text-secondary mb-8" style={{ display: 'block' }}>
                     Twitter (X)
                   </label>
                   <input
@@ -683,7 +756,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mb-16">
-                  <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
+                  <label className="text-small text-secondary mb-8" style={{ display: 'block' }}>
                     Pixiv
                   </label>
                   <input
@@ -696,7 +769,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-small text-gray mb-8" style={{ display: 'block' }}>
+                  <label className="text-small text-secondary mb-8" style={{ display: 'block' }}>
                     ウェブサイト
                   </label>
                   <input
@@ -726,7 +799,7 @@ export default function ProfilePage() {
                       disabled={currentAccountType === 'business'}
                     />
                     <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: '600', color: '#222222', marginBottom: '4px' }}>
                         一般利用
                       </div>
                       <div className="text-tiny text-gray">
@@ -744,7 +817,7 @@ export default function ProfilePage() {
                       onChange={(e) => handleAccountTypeChange(e.target.value as 'business')}
                     />
                     <div>
-                      <div style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: '600', color: '#222222', marginBottom: '4px' }}>
                         ビジネス利用
                       </div>
                       <div className="text-tiny text-gray">
@@ -755,7 +828,7 @@ export default function ProfilePage() {
                 </div>
 
                 {currentAccountType === 'business' && (
-                  <div className="text-tiny text-gray" style={{ marginTop: '12px' }}>
+                  <div className="form-hint" style={{ marginTop: '12px' }}>
                     ※ ビジネスアカウントから一般アカウントへの変更はできません
                   </div>
                 )}
@@ -768,21 +841,21 @@ export default function ProfilePage() {
                   style={{
                     marginBottom: '32px',
                     padding: '24px',
-                    backgroundColor: '#FAFAFA',
+                    backgroundColor: '#EEF0F3',
                     borderRadius: '12px',
-                    border: '2px solid #E5E5E5',
+                    border: '2px solid #D0D5DA',
                     scrollMarginTop: '80px'
                   }}
                 >
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>
+                  <h3 className="card-subtitle mb-8">
                     ビジネス情報
                   </h3>
-                  <p style={{ fontSize: '13px', color: '#6B6B6B', marginBottom: '20px' }}>
+                  <p className="text-small text-secondary mb-24">
                     取引に必要な情報を入力してください
                   </p>
 
                   {/* 個人/法人 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label mb-12">
                       個人/法人 <span className="form-required">*</span>
                     </label>
@@ -790,36 +863,16 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setBusinessAccountType('individual')}
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: businessAccountType === 'individual' ? '#FFFFFF' : '#6B6B6B',
-                          backgroundColor: businessAccountType === 'individual' ? '#1A1A1A' : '#FFFFFF',
-                          border: `1px solid ${businessAccountType === 'individual' ? '#1A1A1A' : '#D1D5DB'}`,
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
+                        className={businessAccountType === 'individual' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1 }}
                       >
                         個人
                       </button>
                       <button
                         type="button"
                         onClick={() => setBusinessAccountType('corporate')}
-                        style={{
-                          flex: 1,
-                          padding: '10px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: businessAccountType === 'corporate' ? '#FFFFFF' : '#6B6B6B',
-                          backgroundColor: businessAccountType === 'corporate' ? '#1A1A1A' : '#FFFFFF',
-                          border: `1px solid ${businessAccountType === 'corporate' ? '#1A1A1A' : '#D1D5DB'}`,
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
+                        className={businessAccountType === 'corporate' ? 'btn-primary' : 'btn-secondary'}
+                        style={{ flex: 1 }}
                       >
                         法人
                       </button>
@@ -827,7 +880,7 @@ export default function ProfilePage() {
                   </div>
 
                   {/* 氏名 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       氏名 <span className="form-required">*</span>
                     </label>
@@ -854,7 +907,7 @@ export default function ProfilePage() {
                   </div>
 
                   {/* 氏名かな */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       氏名(かな) <span className="form-required">*</span>
                     </label>
@@ -869,11 +922,11 @@ export default function ProfilePage() {
                           }}
                           placeholder="せい"
                           required
-                          className="input-field"
-                          style={{ borderColor: lastNameKanaError ? '#EF4444' : undefined }}
+                          className={`input-field ${lastNameKanaError ? 'error' : ''}`}
                         />
                         {lastNameKanaError && (
-                          <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                          <div className="form-error">
+                            <i className="fas fa-times-circle"></i>
                             {lastNameKanaError}
                           </div>
                         )}
@@ -888,11 +941,11 @@ export default function ProfilePage() {
                           }}
                           placeholder="めい"
                           required
-                          className="input-field"
-                          style={{ borderColor: firstNameKanaError ? '#EF4444' : undefined }}
+                          className={`input-field ${firstNameKanaError ? 'error' : ''}`}
                         />
                         {firstNameKanaError && (
-                          <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                          <div className="form-error">
+                            <i className="fas fa-times-circle"></i>
                             {firstNameKanaError}
                           </div>
                         )}
@@ -902,7 +955,7 @@ export default function ProfilePage() {
 
                   {/* 会社名（法人のみ） */}
                   {businessAccountType === 'corporate' && (
-                    <div style={{ marginBottom: '20px' }}>
+                    <div className="mb-24">
                       <label className="form-label">
                         会社名 <span className="form-required">*</span>
                       </label>
@@ -918,7 +971,7 @@ export default function ProfilePage() {
                   )}
 
                   {/* 電話番号 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       電話番号 <span className="form-required">*</span>
                     </label>
@@ -932,18 +985,18 @@ export default function ProfilePage() {
                       placeholder="09012345678"
                       required
                       maxLength={11}
-                      className="input-field"
-                      style={{ borderColor: phoneError ? '#EF4444' : undefined }}
+                      className={`input-field ${phoneError ? 'error' : ''}`}
                     />
                     {phoneError && (
-                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                      <div className="form-error">
+                        <i className="fas fa-times-circle"></i>
                         {phoneError}
                       </div>
                     )}
                   </div>
 
                   {/* 郵便番号 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       郵便番号 <span className="form-required">*</span>
                     </label>
@@ -957,18 +1010,18 @@ export default function ProfilePage() {
                       placeholder="1234567"
                       required
                       maxLength={7}
-                      className="input-field"
-                      style={{ borderColor: postalCodeError ? '#EF4444' : undefined }}
+                      className={`input-field ${postalCodeError ? 'error' : ''}`}
                     />
                     {postalCodeError && (
-                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#EF4444' }}>
+                      <div className="form-error">
+                        <i className="fas fa-times-circle"></i>
                         {postalCodeError}
                       </div>
                     )}
                   </div>
 
                   {/* 都道府県 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       都道府県 <span className="form-required">*</span>
                     </label>
@@ -1030,7 +1083,7 @@ export default function ProfilePage() {
                   </div>
 
                   {/* 住所 */}
-                  <div style={{ marginBottom: '20px' }}>
+                  <div className="mb-24">
                     <label className="form-label">
                       住所(番地まで) <span className="form-required">*</span>
                     </label>
@@ -1044,7 +1097,7 @@ export default function ProfilePage() {
                     />
                   </div>
 
-                  <div style={{ marginBottom: '0' }}>
+                  <div>
                     <label className="form-label">
                       住所(建物名など)
                     </label>
@@ -1061,29 +1114,13 @@ export default function ProfilePage() {
 
               {/* エラー・成功メッセージ */}
               {error && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#FFF5F5',
-                  border: '1px solid #FECACA',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
-                  color: '#7F1D1D',
-                  fontSize: '14px'
-                }}>
+                <div className="alert alert-error">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#F0F9F0',
-                  border: '1px solid #C6E7C6',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
-                  color: '#1A5D1A',
-                  fontSize: '14px'
-                }}>
+                <div className="alert alert-success">
                   {success}
                 </div>
               )}
@@ -1101,7 +1138,7 @@ export default function ProfilePage() {
                 <Link
                   href="/dashboard"
                   className="btn-secondary"
-                  style={{ flex: 1, textAlign: 'center' }}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   キャンセル
                 </Link>
