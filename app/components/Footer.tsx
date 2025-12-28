@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Breadcrumb from './Breadcrumb'
 
 export default function Footer() {
   return (
@@ -112,6 +113,8 @@ export default function Footer() {
           }
         }
       `}</style>
+
+      <Breadcrumb />
 
       <footer style={{
         backgroundColor: '#FFFFFF',

@@ -41,7 +41,14 @@ export default function PortfolioPage() {
 
     let query = supabase
       .from('portfolio_items')
-      .select('*, profiles!portfolio_items_creator_id_fkey(id, display_name, avatar_url)')
+      .select(`
+        *,
+        profiles:creator_id (
+          id,
+          display_name,
+          avatar_url
+        )
+      `)
       .eq('is_public', true)
       .order('created_at', { ascending: false })
 
@@ -53,6 +60,9 @@ export default function PortfolioPage() {
 
     if (error) {
       console.error('作品取得エラー:', error)
+      console.error('エラーメッセージ:', error.message)
+      console.error('エラーコード:', error.code)
+      console.error('エラー詳細:', error.details)
     } else {
       setItems(data || [])
     }

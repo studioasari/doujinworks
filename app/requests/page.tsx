@@ -192,14 +192,14 @@ export default function RequestsPage() {
 
   function getStatusColor(status: string) {
     const colors: { [key: string]: string } = {
-      open: '#4CAF50',
-      awaiting_payment: '#FF9800',
-      in_progress: '#2196F3',
-      delivered: '#9C27B0',
-      completed: '#607D8B',
-      cancelled: '#9E9E9E'
+      open: '#4F8A6B',
+      awaiting_payment: '#C7A23A',
+      in_progress: '#5B7C99',
+      delivered: '#B89B5E',
+      completed: '#888888',
+      cancelled: '#888888'
     }
-    return colors[status] || '#9E9E9E'
+    return colors[status] || '#888888'
   }
 
   function formatDate(dateString: string) {
@@ -245,7 +245,7 @@ export default function RequestsPage() {
           top: 0;
           bottom: 0;
           width: 3px;
-          background: #000000;
+          background: #5B7C99;
           opacity: 0;
           transition: opacity 0.2s;
         }
@@ -256,7 +256,7 @@ export default function RequestsPage() {
         
         .request-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 8px 24px rgba(91, 124, 153, 0.15);
         }
 
         .grid-container {
@@ -267,25 +267,25 @@ export default function RequestsPage() {
 
         .filter-chip {
           padding: 8px 16px;
-          border: 1.5px solid #E0E0E0;
+          border: 1.5px solid #D0D5DA;
           border-radius: 20px;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
           background: #FFFFFF;
-          color: #666666;
+          color: #555555;
         }
 
         .filter-chip:hover {
-          border-color: #000000;
-          background: #F5F5F5;
+          border-color: #5B7C99;
+          background: #EEF0F3;
         }
 
         .filter-chip.active {
-          background: #000000;
+          background: #5B7C99;
           color: #FFFFFF;
-          border-color: #000000;
+          border-color: #5B7C99;
         }
 
         @keyframes spin {
@@ -377,7 +377,7 @@ export default function RequestsPage() {
         }
       `}</style>
       <Header />
-      <div style={{ minHeight: '100vh', backgroundColor: '#F8F8F8' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: '#F5F6F8' }}>
         <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '48px 24px' }}>
           {/* ヘッダー */}
           <div className="header-section" style={{ 
@@ -392,14 +392,14 @@ export default function RequestsPage() {
               <h1 className="page-title" style={{ 
                 fontSize: '36px',
                 fontWeight: '800',
-                color: '#000000',
+                color: '#222222',
                 marginBottom: '8px',
                 letterSpacing: '-0.03em'
               }}>
                 依頼を探す
               </h1>
               {!loading && (
-                <div className="result-count" style={{ fontSize: '15px', color: '#666666', fontWeight: '500' }}>
+                <div className="result-count" style={{ fontSize: '15px', color: '#555555', fontWeight: '500' }}>
                   {filteredRequests.length}件
                 </div>
               )}
@@ -413,7 +413,7 @@ export default function RequestsPage() {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '14px 32px',
-                  backgroundColor: '#000000',
+                  backgroundColor: '#5B7C99',
                   color: '#FFFFFF',
                   borderRadius: '8px',
                   fontSize: '15px',
@@ -422,10 +422,10 @@ export default function RequestsPage() {
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#333333'
+                  e.currentTarget.style.backgroundColor = '#4F6D86'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#000000'
+                  e.currentTarget.style.backgroundColor = '#5B7C99'
                 }}
               >
                 <i className="fas fa-plus"></i>
@@ -448,7 +448,7 @@ export default function RequestsPage() {
                 left: '18px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#999999',
+                color: '#888888',
                 fontSize: '14px'
               }}></i>
               <input
@@ -460,7 +460,7 @@ export default function RequestsPage() {
                 style={{
                   width: '100%',
                   padding: '14.25px 18px 14.25px 48px',
-                  border: '1.5px solid #E0E0E0',
+                  border: '1.5px solid #D0D5DA',
                   borderRadius: '8px',
                   fontSize: '14px',
                   backgroundColor: '#FFFFFF',
@@ -470,10 +470,10 @@ export default function RequestsPage() {
                   height: '50px'
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#000000'
+                  e.currentTarget.style.borderColor = '#5B7C99'
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E0E0E0'
+                  e.currentTarget.style.borderColor = '#D0D5DA'
                 }}
               />
             </div>
@@ -487,10 +487,10 @@ export default function RequestsPage() {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '14.25px 24px',
-                border: `1.5px solid ${showFilters ? '#000000' : '#E0E0E0'}`,
+                border: `1.5px solid ${showFilters ? '#5B7C99' : '#D0D5DA'}`,
                 borderRadius: '8px',
-                backgroundColor: showFilters ? '#000000' : '#FFFFFF',
-                color: showFilters ? '#FFFFFF' : '#666666',
+                backgroundColor: showFilters ? '#5B7C99' : '#FFFFFF',
+                color: showFilters ? '#FFFFFF' : '#555555',
                 fontSize: '14px',
                 fontWeight: '700',
                 cursor: 'pointer',
@@ -501,13 +501,13 @@ export default function RequestsPage() {
               }}
               onMouseEnter={(e) => {
                 if (!showFilters) {
-                  e.currentTarget.style.borderColor = '#000000'
-                  e.currentTarget.style.backgroundColor = '#F5F5F5'
+                  e.currentTarget.style.borderColor = '#5B7C99'
+                  e.currentTarget.style.backgroundColor = '#EEF0F3'
                 }
               }}
               onMouseLeave={(e) => {
                 if (!showFilters) {
-                  e.currentTarget.style.borderColor = '#E0E0E0'
+                  e.currentTarget.style.borderColor = '#D0D5DA'
                   e.currentTarget.style.backgroundColor = '#FFFFFF'
                 }
               }}
@@ -524,7 +524,7 @@ export default function RequestsPage() {
               backgroundColor: '#FFFFFF',
               borderRadius: '12px',
               marginBottom: '20px',
-              border: '1.5px solid #E0E0E0'
+              border: '1.5px solid #D0D5DA'
             }}>
               <div className="filter-grid" style={{
                 display: 'grid',
@@ -537,7 +537,7 @@ export default function RequestsPage() {
                     display: 'block', 
                     fontSize: '12px',
                     fontWeight: '700',
-                    color: '#000000',
+                    color: '#222222',
                     marginBottom: '10px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -550,7 +550,7 @@ export default function RequestsPage() {
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: '1.5px solid #E0E0E0',
+                      border: '1.5px solid #D0D5DA',
                       borderRadius: '8px',
                       fontSize: '14px',
                       backgroundColor: '#FFFFFF',
@@ -558,8 +558,8 @@ export default function RequestsPage() {
                       fontWeight: '600',
                       transition: 'all 0.2s'
                     }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#000000'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E0E0E0'}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
                   >
                     <option value="all">すべて</option>
                     <option value="low">〜3万円</option>
@@ -574,7 +574,7 @@ export default function RequestsPage() {
                     display: 'block', 
                     fontSize: '12px',
                     fontWeight: '700',
-                    color: '#000000',
+                    color: '#222222',
                     marginBottom: '10px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -587,7 +587,7 @@ export default function RequestsPage() {
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: '1.5px solid #E0E0E0',
+                      border: '1.5px solid #D0D5DA',
                       borderRadius: '8px',
                       fontSize: '14px',
                       backgroundColor: '#FFFFFF',
@@ -595,8 +595,8 @@ export default function RequestsPage() {
                       fontWeight: '600',
                       transition: 'all 0.2s'
                     }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#000000'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E0E0E0'}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
                   >
                     <option value="all">すべて</option>
                     <option value="fixed">固定報酬制</option>
@@ -610,7 +610,7 @@ export default function RequestsPage() {
                     display: 'block', 
                     fontSize: '12px',
                     fontWeight: '700',
-                    color: '#000000',
+                    color: '#222222',
                     marginBottom: '10px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em'
@@ -623,7 +623,7 @@ export default function RequestsPage() {
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: '1.5px solid #E0E0E0',
+                      border: '1.5px solid #D0D5DA',
                       borderRadius: '8px',
                       fontSize: '14px',
                       backgroundColor: '#FFFFFF',
@@ -631,8 +631,8 @@ export default function RequestsPage() {
                       fontWeight: '600',
                       transition: 'all 0.2s'
                     }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#000000'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#E0E0E0'}
+                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
+                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
                   >
                     <option value="all">すべて</option>
                     <option value="no_skill">スキル不要</option>
@@ -708,14 +708,14 @@ export default function RequestsPage() {
             <div style={{
               textAlign: 'center',
               padding: '80px 20px',
-              color: '#999999'
+              color: '#888888'
             }}>
               <div style={{ 
                 display: 'inline-block',
                 width: '40px',
                 height: '40px',
-                border: '3px solid #E0E0E0',
-                borderTopColor: '#000000',
+                border: '3px solid #D0D5DA',
+                borderTopColor: '#5B7C99',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite'
               }}></div>
@@ -729,13 +729,13 @@ export default function RequestsPage() {
               padding: '80px 20px',
               backgroundColor: '#FFFFFF',
               borderRadius: '12px',
-              border: '1.5px dashed #D0D0D0'
+              border: '1.5px dashed #D0D5DA'
             }}>
-              <i className="fas fa-search" style={{ fontSize: '56px', color: '#D0D0D0', marginBottom: '20px' }}></i>
-              <p style={{ fontSize: '16px', color: '#666666', marginBottom: '8px', fontWeight: '700' }}>
+              <i className="fas fa-search" style={{ fontSize: '56px', color: '#D0D5DA', marginBottom: '20px' }}></i>
+              <p style={{ fontSize: '16px', color: '#555555', marginBottom: '8px', fontWeight: '700' }}>
                 {searchQuery ? '検索条件に一致する依頼が見つかりませんでした' : '依頼が見つかりませんでした'}
               </p>
-              <p style={{ fontSize: '14px', color: '#999999' }}>
+              <p style={{ fontSize: '14px', color: '#888888' }}>
                 別の条件で検索してみてください
               </p>
             </div>
@@ -757,7 +757,7 @@ export default function RequestsPage() {
                     style={{ 
                       padding: '24px',
                       backgroundColor: '#FFFFFF',
-                      border: '1.5px solid #E0E0E0',
+                      border: '1.5px solid #D0D5DA',
                       borderRadius: '12px',
                       textDecoration: 'none'
                     }}
@@ -772,7 +772,7 @@ export default function RequestsPage() {
                         borderRadius: '6px',
                         fontSize: '11px',
                         fontWeight: '700',
-                        backgroundColor: '#000000',
+                        backgroundColor: '#5B7C99',
                         color: '#FFFFFF',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
@@ -786,7 +786,7 @@ export default function RequestsPage() {
                     <h2 style={{ 
                       fontSize: '18px',
                       fontWeight: '700',
-                      color: '#000000',
+                      color: '#222222',
                       marginBottom: '12px',
                       lineHeight: '1.4',
                       letterSpacing: '-0.02em',
@@ -802,7 +802,7 @@ export default function RequestsPage() {
                     {/* 説明 */}
                     <p style={{ 
                       fontSize: '13px',
-                      color: '#666666',
+                      color: '#555555',
                       lineHeight: '1.6',
                       marginBottom: '20px',
                       display: '-webkit-box',
@@ -817,13 +817,13 @@ export default function RequestsPage() {
                     {/* 予算情報 */}
                     <div style={{
                       padding: '20px',
-                      backgroundColor: '#F8F8F8',
+                      backgroundColor: '#EEF0F3',
                       borderRadius: '10px',
                       marginBottom: '16px'
                     }}>
                       <div style={{ 
                         fontSize: '10px', 
-                        color: '#999999',
+                        color: '#888888',
                         fontWeight: '700',
                         marginBottom: '8px',
                         textTransform: 'uppercase',
@@ -836,60 +836,60 @@ export default function RequestsPage() {
                         <div style={{ 
                           fontSize: '24px', 
                           fontWeight: '700', 
-                          color: '#000000',
+                          color: '#222222',
                           lineHeight: '1.2',
                           letterSpacing: '-0.02em'
                         }}>
                           {request.hourly_rate_min && request.hourly_rate_max ? (
                             <>
                               {request.hourly_rate_min.toLocaleString()}〜{request.hourly_rate_max.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円/時</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円/時</span>
                             </>
                           ) : request.hourly_rate_min ? (
                             <>
                               {request.hourly_rate_min.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円/時〜</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円/時〜</span>
                             </>
                           ) : request.hourly_rate_max ? (
                             <>
                               〜{request.hourly_rate_max.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円/時</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円/時</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: '14px', color: '#999999', fontWeight: '600' }}>応相談</span>
+                            <span style={{ fontSize: '14px', color: '#888888', fontWeight: '600' }}>応相談</span>
                           )}
                         </div>
                       ) : request.price_negotiable ? (
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#000000' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#222222' }}>
                           相談して決める
                         </div>
                       ) : request.budget_min || request.budget_max ? (
                         <div style={{ 
                           fontSize: '24px', 
                           fontWeight: '700', 
-                          color: '#000000',
+                          color: '#222222',
                           lineHeight: '1.2',
                           letterSpacing: '-0.02em'
                         }}>
                           {request.budget_min && request.budget_max ? (
                             <>
                               {request.budget_min.toLocaleString()}〜{request.budget_max.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円</span>
                             </>
                           ) : request.budget_min ? (
                             <>
                               {request.budget_min.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円〜</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円〜</span>
                             </>
                           ) : (
                             <>
                               〜{request.budget_max?.toLocaleString()}
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#666666' }}>円</span>
+                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#555555' }}>円</span>
                             </>
                           )}
                         </div>
                       ) : (
-                        <div style={{ fontSize: '14px', color: '#999999', fontWeight: '600' }}>
+                        <div style={{ fontSize: '14px', color: '#888888', fontWeight: '600' }}>
                           金額未設定
                         </div>
                       )}
@@ -905,15 +905,15 @@ export default function RequestsPage() {
                       {/* 契約数 */}
                       <div style={{
                         padding: '14px',
-                        backgroundColor: '#F8F8F8',
+                        backgroundColor: '#EEF0F3',
                         borderRadius: '8px',
                         textAlign: 'center'
                       }}>
-                        <div style={{ fontSize: '10px', color: '#999999', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <div style={{ fontSize: '10px', color: '#888888', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           契約数
                         </div>
-                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#000000', letterSpacing: '-0.02em' }}>
-                          0<span style={{ fontSize: '12px', fontWeight: '600', color: '#666666' }}> / {request.number_of_positions || 1}</span>
+                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#222222', letterSpacing: '-0.02em' }}>
+                          0<span style={{ fontSize: '12px', fontWeight: '600', color: '#555555' }}> / {request.number_of_positions || 1}</span>
                         </div>
                       </div>
 
@@ -921,24 +921,24 @@ export default function RequestsPage() {
                       {request.application_deadline && daysUntilDeadline !== null && (
                         <div style={{
                           padding: '14px',
-                          backgroundColor: daysUntilDeadline <= 3 ? '#F5F5F5' : '#F8F8F8',
+                          backgroundColor: daysUntilDeadline <= 3 ? '#EEF0F3' : '#EEF0F3',
                           borderRadius: '8px',
                           textAlign: 'center',
-                          border: daysUntilDeadline <= 3 ? '1.5px solid #E0E0E0' : 'none'
+                          border: daysUntilDeadline <= 3 ? '1.5px solid #D0D5DA' : 'none'
                         }}>
-                          <div style={{ fontSize: '10px', color: '#999999', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <div style={{ fontSize: '10px', color: '#888888', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             応募期限
                           </div>
                           {daysUntilDeadline > 0 ? (
-                            <div style={{ fontSize: '18px', fontWeight: '700', color: daysUntilDeadline <= 3 ? '#000000' : '#000000', letterSpacing: '-0.02em' }}>
-                              {daysUntilDeadline}<span style={{ fontSize: '12px', fontWeight: '600', color: '#666666' }}>日</span>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: daysUntilDeadline <= 3 ? '#222222' : '#222222', letterSpacing: '-0.02em' }}>
+                              {daysUntilDeadline}<span style={{ fontSize: '12px', fontWeight: '600', color: '#555555' }}>日</span>
                             </div>
                           ) : daysUntilDeadline === 0 ? (
-                            <div style={{ fontSize: '13px', color: '#000000', fontWeight: '700' }}>
+                            <div style={{ fontSize: '13px', color: '#222222', fontWeight: '700' }}>
                               本日締切
                             </div>
                           ) : (
-                            <div style={{ fontSize: '13px', color: '#999999', fontWeight: '700' }}>
+                            <div style={{ fontSize: '13px', color: '#888888', fontWeight: '700' }}>
                               締切済み
                             </div>
                           )}
@@ -960,8 +960,8 @@ export default function RequestsPage() {
                             <span key={index} style={{
                               display: 'inline-block',
                               padding: '6px 12px',
-                              backgroundColor: '#F0F0F0',
-                              color: '#000000',
+                              backgroundColor: '#EEF0F3',
+                              color: '#222222',
                               borderRadius: '6px',
                               fontSize: '11px',
                               fontWeight: '700'
@@ -972,7 +972,7 @@ export default function RequestsPage() {
                           {request.required_skills.length > 3 && (
                             <span style={{ 
                               fontSize: '11px', 
-                              color: '#999999', 
+                              color: '#888888', 
                               alignSelf: 'center',
                               padding: '6px 0',
                               fontWeight: '700'
@@ -996,8 +996,8 @@ export default function RequestsPage() {
                               alignItems: 'center',
                               gap: '4px',
                               padding: '6px 12px',
-                              backgroundColor: '#E8E8E8',
-                              color: '#333333',
+                              backgroundColor: '#D8DEE4',
+                              color: '#222222',
                               borderRadius: '6px',
                               fontSize: '11px',
                               fontWeight: '700'
@@ -1016,7 +1016,7 @@ export default function RequestsPage() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       paddingTop: '16px',
-                      borderTop: '1.5px solid #F0F0F0',
+                      borderTop: '1.5px solid #EEF0F3',
                       marginTop: 'auto'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1024,7 +1024,7 @@ export default function RequestsPage() {
                           width: '36px',
                           height: '36px',
                           borderRadius: '50%',
-                          backgroundColor: '#E0E0E0',
+                          backgroundColor: '#D0D5DA',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1038,18 +1038,18 @@ export default function RequestsPage() {
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                             />
                           ) : (
-                            <i className="fas fa-user" style={{ color: '#999999', fontSize: '14px' }}></i>
+                            <i className="fas fa-user" style={{ color: '#888888', fontSize: '14px' }}></i>
                           )}
                         </div>
                         <div style={{ 
                           fontSize: '13px', 
                           fontWeight: '700',
-                          color: '#000000'
+                          color: '#222222'
                         }}>
                           {request.profiles?.display_name || '名前未設定'}
                         </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#999999', fontWeight: '600' }}>
+                      <div style={{ fontSize: '11px', color: '#888888', fontWeight: '600' }}>
                         {formatDate(request.created_at)}
                       </div>
                     </div>
