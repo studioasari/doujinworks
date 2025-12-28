@@ -287,6 +287,8 @@ export default function ProfilePage() {
         'アイコン画像をアップロードしました'
       )
     }
+    // input要素をリセット（同じファイルを再選択可能にする）
+    e.target.value = ''
   }
 
   // ヘッダー画像: ドラッグ&ドロップ
@@ -328,6 +330,8 @@ export default function ProfilePage() {
         'ヘッダー画像をアップロードしました'
       )
     }
+    // input要素をリセット（同じファイルを再選択可能にする）
+    e.target.value = ''
   }
 
   // アイコン画像削除
@@ -491,6 +495,28 @@ export default function ProfilePage() {
           padding: '40px',
         }}>
           <style jsx>{`
+            .visually-hidden {
+              position: absolute;
+              width: 1px;
+              height: 1px;
+              padding: 0;
+              margin: -1px;
+              overflow: hidden;
+              clip: rect(0, 0, 0, 0);
+              white-space: nowrap;
+              border-width: 0;
+            }
+            .profile-avatar-wrapper {
+              border: 2px dashed #D0D5DA;
+              border-radius: 50%;
+              transition: all 0.2s;
+            }
+            .profile-avatar-wrapper:hover {
+              border-color: #5b7c99;
+            }
+            .profile-avatar-wrapper.dragging {
+              border-color: #5b7c99;
+            }
             @media (max-width: 1024px) {
               main {
                 padding: 32px 24px !important;
@@ -498,57 +524,64 @@ export default function ProfilePage() {
             }
             @media (max-width: 768px) {
               main {
-                padding: 24px 16px !important;
+                padding: 32px 16px !important;
               }
-              .card-no-hover.p-40 {
-                padding: 24px !important;
+              .card-no-hover {
+                border: none !important;
+                padding: 0 !important;
               }
-              .avatar-upload-container {
-                flex-direction: column !important;
-                align-items: center !important;
-                text-align: center !important;
+              .profile-avatar {
+                width: 80px !important;
+                height: 80px !important;
               }
-              .avatar-upload-container > div:last-child {
-                width: 100% !important;
+              .upload-area-icon {
+                margin-bottom: 0 !important;
+                font-size: 28px !important;
+              }
+              .header-wrapper {
+                margin-bottom: -44px !important;
+              }
+              .remove-image-btn {
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 14px !important;
+              }
+            }
+            @media (min-width: 769px) {
+              .header-wrapper {
+                margin-bottom: -64px !important;
               }
             }
           `}</style>
 
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h1 className="page-title mb-40">プロフィール編集</h1>
+          <h1 className="visually-hidden">プロフィール編集</h1>
 
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div className="card-no-hover p-40">
               
               {/* ヘッダー画像 */}
-              <div className="mb-32">
-                <label className="form-label mb-12">
-                  ヘッダー画像
-                </label>
-                
-                <div style={{ position: 'relative' }}>
-                  <div
-                    className={`upload-area ${draggingHeader ? 'dragging' : ''} ${uploadingHeader ? 'uploading' : ''}`}
-                    style={{ width: '100%', height: '200px' }}
-                    onClick={handleHeaderClick}
-                    onDragOver={(e) => {
-                      e.preventDefault()
-                      setDraggingHeader(true)
-                    }}
-                    onDragLeave={() => setDraggingHeader(false)}
-                    onDrop={handleHeaderDrop}
-                  >
+              <div className="header-wrapper" style={{ position: 'relative' }}>
+                <div
+                  className={`upload-area ${draggingHeader ? 'dragging' : ''} ${uploadingHeader ? 'uploading' : ''}`}
+                  style={{ width: '100%', paddingBottom: '33.33%', position: 'relative' }}
+                  onClick={handleHeaderClick}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setDraggingHeader(true)
+                  }}
+                  onDragLeave={() => setDraggingHeader(false)}
+                  onDrop={handleHeaderDrop}
+                >
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                     {headerPreview ? (
-                      <img src={headerPreview} alt="ヘッダー画像" />
+                      <img src={headerPreview} alt="ヘッダー画像" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div className="upload-area-content" style={{ height: '100%' }}>
-                        <div className="upload-area-icon">
+                        <div className="upload-area-icon" style={{ marginBottom: '8px' }}>
                           <i className="fas fa-image"></i>
                         </div>
-                        <div className="upload-area-text">
-                          クリックまたはドラッグして<br />ヘッダー画像をアップロード
-                        </div>
-                        <div className="upload-area-hint">
-                          推奨: 1500×500px / JPG, PNG, WebP / 最大10MB
+                        <div className="text-tiny text-gray">
+                          推奨: 1500×500px
                         </div>
                       </div>
                     )}
@@ -559,6 +592,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleHeaderRemove}
                       disabled={uploadingHeader}
+                      className="remove-image-btn"
                       style={{
                         position: 'absolute',
                         top: '8px',
@@ -599,93 +633,76 @@ export default function ProfilePage() {
               </div>
 
               {/* アイコン画像 */}
-              <div className="mb-32">
-                <label className="form-label mb-12">
-                  アイコン画像
-                </label>
-                
-                <div className="avatar-upload-container flex gap-20" style={{ alignItems: 'flex-start' }}>
-                  <div style={{ position: 'relative' }}>
-                    <div
-                      className={`upload-area ${draggingAvatar ? 'dragging' : ''} ${uploadingAvatar ? 'uploading' : ''}`}
-                      style={{ 
-                        width: '120px', 
-                        height: '120px', 
-                        borderRadius: '50%',
-                        flexShrink: 0
-                      }}
-                      onClick={handleAvatarClick}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        setDraggingAvatar(true)
-                      }}
-                      onDragLeave={() => setDraggingAvatar(false)}
-                      onDrop={handleAvatarDrop}
-                    >
-                      {avatarPreview ? (
-                        <img src={avatarPreview} alt="アイコン画像" style={{ borderRadius: '50%' }} />
-                      ) : (
-                        <div className="upload-area-content" style={{ height: '100%' }}>
-                          <div className="upload-area-icon" style={{ fontSize: '48px', marginBottom: 0 }}>
-                            <i className="fas fa-user"></i>
-                          </div>
+              <div style={{ paddingLeft: '16px', marginBottom: '24px' }}>
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <div
+                    className={`upload-area profile-avatar profile-avatar-wrapper ${draggingAvatar ? 'dragging' : ''} ${uploadingAvatar ? 'uploading' : ''}`}
+                    style={{ 
+                      width: '120px', 
+                      height: '120px'
+                    }}
+                    onClick={handleAvatarClick}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      setDraggingAvatar(true)
+                    }}
+                    onDragLeave={() => setDraggingAvatar(false)}
+                    onDrop={handleAvatarDrop}
+                  >
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="アイコン画像" style={{ borderRadius: '50%' }} />
+                    ) : (
+                      <div className="upload-area-content" style={{ height: '100%' }}>
+                        <div className="upload-area-icon" style={{ fontSize: '48px', marginBottom: 0 }}>
+                          <i className="fas fa-user"></i>
                         </div>
-                      )}
-                    </div>
-
-                    {avatarUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAvatarRemove}
-                        disabled={uploadingAvatar}
-                        style={{
-                          position: 'absolute',
-                          top: '0',
-                          right: '0',
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s',
-                          zIndex: 10,
-                          fontSize: '16px'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
-                        }}
-                      >
-                        <i className="fas fa-times"></i>
-                      </button>
+                      </div>
                     )}
                   </div>
 
-                  <div style={{ flex: 1 }}>
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
-                      onChange={handleAvatarSelect}
-                      style={{ display: 'none' }}
-                    />
-                    
-                    <div className="text-small mb-8">
-                      クリックまたはドラッグしてアイコン画像をアップロード
-                    </div>
-                    
-                    <div className="text-tiny text-gray">
-                      推奨: 400×400px / JPG, PNG, WebP / 最大5MB
-                    </div>
-                  </div>
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={handleAvatarRemove}
+                      disabled={uploadingAvatar}
+                      className="remove-image-btn"
+                      style={{
+                        position: 'absolute',
+                        top: '0',
+                        right: '0',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        zIndex: 10,
+                        fontSize: '16px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+                      }}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
                 </div>
+
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleAvatarSelect}
+                  style={{ display: 'none' }}
+                />
               </div>
 
               {/* ユーザーID（変更不可） */}
