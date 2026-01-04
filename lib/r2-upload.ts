@@ -13,8 +13,8 @@ export const r2PortfolioClient = new S3Client({
 /**
  * R2にアップロードするための署名付きURLを取得
  * 
- * @param category - カテゴリ (illustration, voice, music, video, manga, novel, avatar, header)
- * @param fileType - ファイルタイプ ('image' | 'audio' | 'video')
+ * @param category - カテゴリ (illustration, voice, music, video, manga, novel, profile, avatar, header, pricing)
+ * @param fileType - ファイルタイプ ('image' | 'audio' | 'video' | 'avatar' | 'header')
  * @param fileName - ファイル名
  * @param contentType - Content-Type
  * @param userId - ユーザーID
@@ -22,12 +22,12 @@ export const r2PortfolioClient = new S3Client({
  * @returns 署名付きURLと公開URL
  */
 export async function getUploadUrl(
-  category: 'illustration' | 'voice' | 'music' | 'video' | 'manga' | 'novel' | 'avatar' | 'header',
-  fileType: 'image' | 'audio' | 'video',
+  category: 'illustration' | 'voice' | 'music' | 'video' | 'manga' | 'novel' | 'profile' | 'avatar' | 'header' | 'pricing',
+  fileType: 'image' | 'audio' | 'video' | 'avatar' | 'header',
   fileName: string,
   contentType: string,
   userId: string,
-  bucket: 'portfolio' | 'deliveries' | 'profiles' = 'portfolio'  // ✨ 追加
+  bucket: 'portfolio' | 'deliveries' | 'profiles' = 'profiles'  // デフォルトをprofilesに変更
 ): Promise<{ uploadUrl: string; fileUrl: string }> {
   
   // ファイルパスの生成
@@ -62,9 +62,14 @@ export async function getUploadUrl(
       filePath = `novel/covers/${userId}/${timestamp}.${fileExt}`
       break
       
-    // ✨ プロフィール画像用
+    case 'pricing':
+      // 料金表: pricing/{userId}/{timestamp}.jpg
+      filePath = `pricing/${userId}/${timestamp}.${fileExt}`
+      break
+      
+    case 'profile':
     case 'avatar':
-      // アバター: avatars/{userId}/{timestamp}.jpg
+      // プロフィール・アバター: avatars/{userId}/{timestamp}.jpg
       filePath = `avatars/${userId}/${timestamp}.${fileExt}`
       break
       
@@ -77,19 +82,28 @@ export async function getUploadUrl(
       throw new Error(`Unknown category: ${category}`)
   }
   
-  // ✨ バケット名を決定
+  // バケット名を決定
   let bucketParam: string
-  switch (bucket) {
-    case 'profiles':
-      bucketParam = 'profiles'
-      break
-    case 'deliveries':
-      bucketParam = 'deliveries'
-      break
-    case 'portfolio':
-    default:
-      bucketParam = 'portfolio'
-      break
+  
+  // category が 'profile', 'avatar', 'header' の場合は自動的に profiles バケット
+  if (category === 'profile' || category === 'avatar' || category === 'header') {
+    bucketParam = 'profiles'
+  } else if (category === 'pricing') {
+    // pricing は専用バケット
+    bucketParam = 'pricing'
+  } else {
+    switch (bucket) {
+      case 'profiles':
+        bucketParam = 'profiles'
+        break
+      case 'deliveries':
+        bucketParam = 'deliveries'
+        break
+      case 'portfolio':
+      default:
+        bucketParam = 'portfolio'
+        break
+    }
   }
   
   // 署名付きURL生成のためのAPIエンドポイントを呼び出す
@@ -101,7 +115,7 @@ export async function getUploadUrl(
     body: JSON.stringify({
       filePath,
       contentType,
-      bucket: bucketParam  // ✨ バケット情報を追加
+      bucket: bucketParam
     })
   })
   
@@ -150,7 +164,7 @@ export async function deleteFromR2(fileUrl: string): Promise<void> {
   const bucketIndex = pathParts.findIndex(part => 
     part === 'doujinworks-portfolio' || 
     part === 'doujinworks-deliveries' ||
-    part === 'doujinworks-profiles'  // ✨ 追加
+    part === 'doujinworks-profiles'
   )
   
   if (bucketIndex === -1) {
