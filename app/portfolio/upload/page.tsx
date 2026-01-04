@@ -119,15 +119,19 @@ export default function UploadSelectPage() {
           padding: '40px',
           width: '100%',
           maxWidth: '100%',
-          minHeight: '100vh'
+          minHeight: '100vh',
+          backgroundColor: '#F5F6F8'
         }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
             {/* ヘッダー */}
-            <div className="mb-32">
+            <div className="mb-40">
               <h1 className="page-title mb-8">
                 作品をアップロード
               </h1>
-              <p className="text-small text-gray">
+              <p style={{
+                fontSize: '14px',
+                color: '#555555'
+              }}>
                 アップロードするジャンルを選択してください
               </p>
             </div>
@@ -135,8 +139,8 @@ export default function UploadSelectPage() {
             {/* ジャンルカード */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '20px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '24px',
               marginBottom: '40px'
             }}>
               {genres.map((genre) => (
@@ -145,42 +149,51 @@ export default function UploadSelectPage() {
                   href={genre.path}
                   className="card"
                   style={{
-                    padding: '24px',
+                    padding: '32px',
                     textDecoration: 'none'
                   }}
                 >
                   {/* アイコン */}
                   <div style={{
-                    fontSize: '28px',
-                    color: '#1A1A1A',
-                    marginBottom: '12px'
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    backgroundColor: '#EAF0F5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '20px'
                   }}>
-                    <i className={genre.icon}></i>
+                    <i 
+                      className={genre.icon}
+                      style={{
+                        fontSize: '24px',
+                        color: '#5B7C99'
+                      }}
+                    ></i>
                   </div>
 
                   {/* ジャンル名 */}
-                  <h2 style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: '#1A1A1A',
-                    marginBottom: '6px'
-                  }}>
+                  <h2 className="card-title mb-8">
                     {genre.name}
                   </h2>
 
                   {/* 説明 */}
                   <p style={{
-                    fontSize: '13px',
-                    color: '#6B6B6B',
-                    marginBottom: '12px'
+                    fontSize: '14px',
+                    color: '#555555',
+                    marginBottom: '16px',
+                    lineHeight: '1.6'
                   }}>
                     {genre.description}
                   </p>
 
                   {/* スペック */}
                   <div style={{
-                    fontSize: '11px',
-                    color: '#999999'
+                    fontSize: '12px',
+                    color: '#888888',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #EEF0F3'
                   }}>
                     {genre.specs}
                   </div>
@@ -189,19 +202,54 @@ export default function UploadSelectPage() {
             </div>
 
             {/* 補足情報 */}
-            <div className="card-no-hover" style={{ padding: '24px' }}>
-              <h3 className="form-label mb-12">
-                アップロードに関する注意事項
-              </h3>
+            <div className="card-no-hover" style={{ padding: '32px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: '#EAF0F5',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <i className="fas fa-info-circle" style={{
+                    fontSize: '18px',
+                    color: '#5B7C99'
+                  }}></i>
+                </div>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#222222',
+                  margin: 0
+                }}>
+                  アップロードに関する注意事項
+                </h3>
+              </div>
               <ul style={{
                 fontSize: '14px',
-                color: '#6B6B6B',
+                color: '#555555',
                 lineHeight: '1.8',
-                paddingLeft: '20px'
+                paddingLeft: '52px',
+                margin: 0,
+                listStyleType: 'disc'
               }}>
-                <li>画像ファイル: JPEG、PNG、GIF形式に対応（最大32MB）</li>
-                <li>音声・動画: ファイルアップロードまたは外部リンクに対応</li>
-                <li>公開設定: 全体公開、フォロワー限定、非公開から選択</li>
+                <li style={{ marginBottom: '8px' }}>
+                  画像ファイル: JPEG、PNG、GIF形式に対応（最大32MB）
+                </li>
+                <li style={{ marginBottom: '8px' }}>
+                  音声・動画: ファイルアップロードまたは外部リンクに対応
+                </li>
+                <li>
+                  公開設定: 全体公開、フォロワー限定、非公開から選択
+                </li>
               </ul>
             </div>
           </div>
@@ -211,52 +259,49 @@ export default function UploadSelectPage() {
       
       <style jsx global>{`
         @media (max-width: 768px) {
-          /* メインレイアウト調整 */
           main[style*="padding: 40px"] {
-            padding: 16px !important;
+            padding: 24px 16px !important;
           }
           
-          /* ページタイトル */
           .page-title {
+            font-size: 24px !important;
+          }
+          
+          .mb-40 {
+            margin-bottom: 24px !important;
+          }
+          
+          div[style*="gridTemplateColumns: repeat(auto-fit, minmax(300px, 1fr))"] {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+            margin-bottom: 24px !important;
+          }
+          
+          .card[style*="padding: 32px"] {
+            padding: 24px !important;
+          }
+          
+          .card div[style*="width: 56px"] {
+            width: 48px !important;
+            height: 48px !important;
+            margin-bottom: 16px !important;
+          }
+          
+          .card div[style*="width: 56px"] i {
             font-size: 20px !important;
           }
           
-          /* ヘッダーセクション */
-          .mb-32 {
-            margin-bottom: 24px !important;
+          .card-no-hover[style*="padding: 32px"] {
+            padding: 24px !important;
           }
           
-          /* グリッドレイアウト - モバイルは1列 */
-          div[style*="gridTemplateColumns: repeat(auto-fit, minmax(280px, 1fr))"] {
-            grid-template-columns: 1fr !important;
-            gap: 12px !important;
-            margin-bottom: 24px !important;
-          }
-          
-          /* カードpadding調整 */
-          .card[style*="padding: 24px"] {
-            padding: 20px !important;
-          }
-          
-          /* カードアイコン */
-          .card div[style*="fontSize: 28px"] {
-            font-size: 24px !important;
-            margin-bottom: 10px !important;
-          }
-          
-          /* カードタイトル */
-          .card h2[style*="fontSize: 18px"] {
-            font-size: 16px !important;
-          }
-          
-          /* 注意事項カード */
-          .card-no-hover[style*="padding: 24px"] {
-            padding: 20px !important;
+          .card-no-hover div[style*="width: 40px"] {
+            width: 36px !important;
+            height: 36px !important;
           }
           
           .card-no-hover ul {
-            font-size: 13px !important;
-            padding-left: 16px !important;
+            padding-left: 48px !important;
           }
         }
       `}</style>

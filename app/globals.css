@@ -41,8 +41,8 @@ button {
 }
 
 .card:hover {
-  border-color: #5B7C99;
-  box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
+  transform: translateY(-4px);
+  /* box-shadow: 0 4px 12px rgba(91, 124, 153, 0.15); */
 }
 
 .card-no-hover {
@@ -65,7 +65,7 @@ button {
 
 .portfolio-card:hover {
   border-color: #5B7C99;
-  box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
+  /* box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15); */
 }
 
 .portfolio-card-image {

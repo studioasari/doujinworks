@@ -94,6 +94,14 @@ export default function RequestStatusPage() {
   const [showCancellationResponseModal, setShowCancellationResponseModal] = useState(false)
   const [cancellationResponseAction, setCancellationResponseAction] = useState<'approve' | 'reject'>('approve')
 
+  // レビュー関連
+  const [myReview, setMyReview] = useState<any>(null)
+  const [partnerReview, setPartnerReview] = useState<any>(null)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewRating, setReviewRating] = useState<number>(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+
   const params = useParams()
   const router = useRouter()
   const requestId = params.id as string
@@ -113,13 +121,25 @@ export default function RequestStatusPage() {
       fetchRequest()
       fetchDeliveries()
       
+      // const urlParams = new URLSearchParams(window.location.search)
+      // if (urlParams.get('payment') === 'success') {
+      //   alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+      //   window.history.replaceState({}, '', `/requests/${requestId}/status`)
+      // }
       const urlParams = new URLSearchParams(window.location.search)
       if (urlParams.get('payment') === 'success') {
-        alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+        // Webhookで既に更新されているか確認してフォールバック
+        handlePaymentSuccessFallback()
         window.history.replaceState({}, '', `/requests/${requestId}/status`)
       }
     }
   }, [requestId, currentProfileId])
+
+  useEffect(() => {
+    if (request?.status === 'completed' && currentProfileId) {
+      fetchReviews()
+    }
+  }, [request?.status, currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -233,6 +253,38 @@ export default function RequestStatusPage() {
       setCancellationRequest(data as any)
     } else {
       setCancellationRequest(null)
+    }
+  }
+
+  async function fetchReviews() {
+    if (!request || request.status !== 'completed') {
+      setMyReview(null)
+      setPartnerReview(null)
+      return
+    }
+
+    const partnerId = isRequester ? request.selected_applicant_id : request.requester_id
+
+    // 自分が書いたレビューを取得
+    const { data: myReviewData } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('work_request_id', requestId)
+      .eq('reviewer_id', currentProfileId)
+      .maybeSingle()
+
+    setMyReview(myReviewData)
+
+    // 相手が書いたレビューを取得
+    if (partnerId) {
+      const { data: partnerReviewData } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('work_request_id', requestId)
+        .eq('reviewer_id', partnerId)
+        .maybeSingle()
+
+      setPartnerReview(partnerReviewData)
     }
   }
 
@@ -437,6 +489,67 @@ export default function RequestStatusPage() {
       alert(error.message || '仮払いに失敗しました')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  async function handlePaymentSuccessFallback() {
+    try {
+      // 現在のステータスを確認
+      const { data: currentRequest, error: fetchError } = await supabase
+        .from('work_requests')
+        .select('status, paid_at')
+        .eq('id', requestId)
+        .single()
+
+      if (fetchError) {
+        console.error('ステータス確認エラー:', fetchError)
+        alert('ステータスの確認に失敗しました')
+        return
+      }
+
+      // 既にWebhookで更新済みなら何もしない
+      if (currentRequest.status === 'paid' && currentRequest.paid_at) {
+        console.log('✅ Webhookで既に更新済み')
+        alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+        await fetchRequest()
+        return
+      }
+
+      // まだ未更新ならフォールバックで更新
+      console.log('⚠️ Webhookが届いていないため、フォールバックで更新します')
+      
+      const { error: updateError } = await supabase
+        .from('work_requests')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString()
+        })
+        .eq('id', requestId)
+        .eq('status', 'contracted') // 念のため、contractedの時だけ更新
+
+      if (updateError) {
+        console.error('ステータス更新エラー:', updateError)
+        alert('ステータスの更新に失敗しました')
+        return
+      }
+
+      // 通知を送る
+      if (request?.selected_applicant_id) {
+        await createNotification(
+          request.selected_applicant_id,
+          'paid',
+          '仮払いが完了しました',
+          `「${request.title}」の仮払いが完了しました。作業を開始してください。`,
+          `/requests/${requestId}/status`
+        )
+      }
+
+      alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+      await fetchRequest()
+
+    } catch (error) {
+      console.error('仮払い完了処理エラー:', error)
+      alert('エラーが発生しました')
     }
   }
 
@@ -669,6 +782,64 @@ export default function RequestStatusPage() {
       alert(error instanceof Error ? error.message : '応答処理に失敗しました')
     } finally {
       setProcessing(false)
+    }
+  }
+
+  async function handleSubmitReviewForm(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (reviewRating === 0) {
+      alert('評価を選択してください')
+      return
+    }
+
+    if (!confirm('レビューを投稿しますか？\n※投稿後は編集・削除できません。')) {
+      return
+    }
+
+    setSubmittingReview(true)
+
+    try {
+      const revieweeId = isRequester ? request?.selected_applicant_id : request?.requester_id
+
+      const { error } = await supabase
+        .from('reviews')
+        .insert({
+          work_request_id: requestId,
+          reviewer_id: currentProfileId,
+          reviewee_id: revieweeId,
+          rating: reviewRating,
+          comment: reviewComment.trim() || null,
+          created_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('レビュー投稿エラー:', error)
+        throw new Error('レビューの投稿に失敗しました')
+      }
+
+      // 通知を送る
+      if (revieweeId && request) {
+        await createNotification(
+          revieweeId,
+          'review',
+          'レビューが投稿されました',
+          `「${request.title}」のレビューが投稿されました。`,
+          `/creators/${isRequester ? request.contractor?.username : request.requester.username}`
+        )
+      }
+
+      alert('レビューを投稿しました！')
+      setShowReviewForm(false)
+      setReviewRating(0)
+      setReviewComment('')
+      await fetchReviews()
+
+    } catch (error) {
+      console.error('レビュー投稿エラー:', error)
+      alert(error instanceof Error ? error.message : 'レビューの投稿に失敗しました')
+    } finally {
+      setSubmittingReview(false)
     }
   }
 
@@ -1324,22 +1495,304 @@ export default function RequestStatusPage() {
           )}
 
           {request.status === 'completed' && (
-            <div style={{ 
-              padding: '20px', 
-              backgroundColor: '#F1F8F4', 
-              border: '1px solid #C8E6C9', 
-              borderRadius: '8px',
-              marginBottom: '28px',
-              textAlign: 'center'
-            }}>
-              <i className="fas fa-check-circle" style={{ fontSize: '36px', color: '#4CAF50', marginBottom: '12px' }}></i>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: '#1A1A1A' }}>
-                完了
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6B6B6B' }}>
-                お疲れ様でした！取引が完了しました。
-              </p>
-            </div>
+            <>
+              {/* 完了メッセージ */}
+              <div style={{ 
+                padding: '20px', 
+                backgroundColor: '#F1F8F4', 
+                border: '1px solid #C8E6C9', 
+                borderRadius: '8px',
+                marginBottom: '28px',
+                textAlign: 'center'
+              }}>
+                <i className="fas fa-check-circle" style={{ fontSize: '36px', color: '#4CAF50', marginBottom: '12px' }}></i>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: '#1A1A1A' }}>
+                  完了
+                </h3>
+                <p style={{ fontSize: '14px', color: '#6B6B6B' }}>
+                  お疲れ様でした！取引が完了しました。
+                </p>
+              </div>
+
+              {/* レビューセクション */}
+              <div style={{ marginBottom: '28px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#1A1A1A' }}>
+                  レビュー
+                </h2>
+
+                {/* レビュー投稿フォーム（未投稿の場合） */}
+                {!myReview && !showReviewForm && (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #D0D5DA',
+                    borderRadius: '12px',
+                    marginBottom: '16px',
+                    textAlign: 'center'
+                  }}>
+                    <i className="fas fa-star" style={{ fontSize: '32px', color: '#FFB800', marginBottom: '12px' }}></i>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#222222' }}>
+                      {isRequester ? 'クリエイターを評価' : '依頼者を評価'}
+                    </h3>
+                    <p style={{ fontSize: '14px', color: '#555555', marginBottom: '16px' }}>
+                      取引はいかがでしたか？レビューを投稿してください。
+                    </p>
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="btn-primary"
+                      style={{ fontSize: '14px', padding: '10px 24px' }}
+                    >
+                      レビューを書く
+                    </button>
+                  </div>
+                )}
+
+                {/* レビュー投稿フォーム */}
+                {!myReview && showReviewForm && (
+                  <div style={{
+                    padding: '24px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #D0D5DA',
+                    borderRadius: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#222222' }}>
+                      レビューを投稿
+                    </h3>
+
+                    <form onSubmit={handleSubmitReviewForm}>
+                      {/* 星評価 */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          fontSize: '14px', 
+                          fontWeight: '600', 
+                          marginBottom: '12px',
+                          color: '#222222'
+                        }}>
+                          評価 <span style={{ color: '#C05656' }}>*</span>
+                        </label>
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '8px', 
+                          fontSize: '32px',
+                          color: '#FFB800'
+                        }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                transition: 'transform 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                              <i className={star <= reviewRating ? 'fas fa-star' : 'far fa-star'}></i>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* コメント */}
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          fontSize: '14px', 
+                          fontWeight: '600', 
+                          marginBottom: '8px',
+                          color: '#222222'
+                        }}>
+                          コメント（任意）
+                        </label>
+                        <textarea
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                          placeholder="取引の感想やフィードバックを記入してください"
+                          rows={4}
+                          maxLength={500}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: '1px solid #D0D5DA',
+                            borderRadius: '8px',
+                            fontSize: '14px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                        <div style={{ marginTop: '4px', fontSize: '12px', color: '#888888', textAlign: 'right' }}>
+                          {reviewComment.length} / 500
+                        </div>
+                      </div>
+
+                      <div style={{ 
+                        padding: '12px', 
+                        backgroundColor: '#F5F6F8', 
+                        borderRadius: '8px', 
+                        marginBottom: '20px', 
+                        fontSize: '13px', 
+                        lineHeight: '1.6', 
+                        color: '#555555'
+                      }}>
+                        <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#888888' }}></i>
+                        投稿したレビューは編集・削除できません。
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReviewForm(false)
+                            setReviewRating(0)
+                            setReviewComment('')
+                          }}
+                          disabled={submittingReview}
+                          className="btn-secondary"
+                          style={{ flex: 1 }}
+                        >
+                          キャンセル
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={submittingReview || reviewRating === 0}
+                          className="btn-primary"
+                          style={{ flex: 1 }}
+                        >
+                          {submittingReview ? '投稿中...' : '投稿する'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* 自分が書いたレビュー */}
+                {myReview && (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #D0D5DA',
+                    borderRadius: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: '12px'
+                    }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#222222', margin: 0 }}>
+                        あなたのレビュー
+                      </h3>
+                      <div style={{ fontSize: '12px', color: '#888888' }}>
+                        {new Date(myReview.created_at).toLocaleDateString('ja-JP', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      fontSize: '20px', 
+                      color: '#FFB800',
+                      marginBottom: '12px',
+                      letterSpacing: '2px'
+                    }}>
+                      {[...Array(5)].map((_, i) => (
+                        <i 
+                          key={i} 
+                          className={i < myReview.rating ? 'fas fa-star' : 'far fa-star'}
+                        ></i>
+                      ))}
+                    </div>
+
+                    {myReview.comment && (
+                      <p style={{
+                        fontSize: '14px',
+                        lineHeight: '1.7',
+                        color: '#555555',
+                        whiteSpace: 'pre-wrap',
+                        margin: 0
+                      }}>
+                        {myReview.comment}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* 相手から受けたレビュー */}
+                {partnerReview && (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#F5F6F8',
+                    border: '1px solid #D0D5DA',
+                    borderRadius: '12px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: '12px'
+                    }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#222222', margin: 0 }}>
+                        {isRequester ? 'クリエイターからのレビュー' : '依頼者からのレビュー'}
+                      </h3>
+                      <div style={{ fontSize: '12px', color: '#888888' }}>
+                        {new Date(partnerReview.created_at).toLocaleDateString('ja-JP', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      fontSize: '20px', 
+                      color: '#FFB800',
+                      marginBottom: '12px',
+                      letterSpacing: '2px'
+                    }}>
+                      {[...Array(5)].map((_, i) => (
+                        <i 
+                          key={i} 
+                          className={i < partnerReview.rating ? 'fas fa-star' : 'far fa-star'}
+                        ></i>
+                      ))}
+                    </div>
+
+                    {partnerReview.comment && (
+                      <p style={{
+                        fontSize: '14px',
+                        lineHeight: '1.7',
+                        color: '#555555',
+                        whiteSpace: 'pre-wrap',
+                        margin: 0
+                      }}>
+                        {partnerReview.comment}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* どちらもレビューなし */}
+                {!myReview && !partnerReview && !showReviewForm && (
+                  <div style={{
+                    padding: '40px 20px',
+                    textAlign: 'center',
+                    color: '#888888'
+                  }}>
+                    <i className="fas fa-star" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3, color: '#D0D5DA' }}></i>
+                    <p style={{ fontSize: '14px', margin: 0 }}>まだレビューがありません</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* 納品履歴 */}

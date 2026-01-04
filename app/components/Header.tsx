@@ -1163,7 +1163,7 @@ export default function Header() {
                     }}
                   >
                     <div className="avatar avatar-medium" style={{
-                      border: `2px solid ${isMenuOpen ? '#5B7C99' : '#D0D5DA'}`
+                      border: `1px solid ${isMenuOpen ? '#5B7C99' : '#D0D5DA'}`
                     }}>
                       {profile?.avatar_url ? (
                         <img

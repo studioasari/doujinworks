@@ -109,11 +109,13 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
         right: '20px',
         padding: '16px 24px',
         borderRadius: '8px',
-        backgroundColor: type === 'success' ? '#4CAF50' : '#F44336',
+        backgroundColor: type === 'success' ? '#4F8A6B' : '#C05656',
         color: '#FFFFFF',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         zIndex: 9999,
-        animation: 'slideIn 0.3s ease-out'
+        animation: 'slideIn 0.3s ease-out',
+        fontSize: '14px',
+        fontWeight: '500'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -414,18 +416,41 @@ function ConfirmModal({
         </div>
 
         {/* ボタン */}
-        <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
           <button
             type="button"
             onClick={onCancel}
-            className="btn-secondary"
+            style={{
+              fontSize: '14px',
+              color: '#999999',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: 0,
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#1A1A1A'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#999999'}
           >
+            <i className="fas fa-chevron-left" style={{ fontSize: '12px' }}></i>
             修正する
           </button>
           <button
             type="button"
             onClick={onConfirm}
             className="btn-primary"
+            style={{
+              padding: '12px 32px',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
           >
             確定してアップロード
           </button>
@@ -485,7 +510,7 @@ function DraftModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="card-title mb-24">
-          <i className="fas fa-folder-open" style={{ marginRight: '12px' }}></i>
+          <i className="fas fa-folder-open" style={{ marginRight: '12px', color: '#5B7C99' }}></i>
           保存済みの下書き ({drafts.length}件)
         </h2>
 
@@ -519,8 +544,8 @@ function DraftModal({
                     {draft.categoryName && (
                       <span style={{ 
                         fontSize: '11px', 
-                        color: '#6B6B6B',
-                        backgroundColor: '#F5F5F5',
+                        color: '#555555',
+                        backgroundColor: '#EEF0F3',
                         padding: '2px 8px',
                         borderRadius: '4px',
                         display: 'inline-flex',
@@ -534,8 +559,8 @@ function DraftModal({
                     {draft.id === 'autosave' && (
                       <span style={{ 
                         fontSize: '11px', 
-                        color: '#6B6B6B',
-                        backgroundColor: '#F5F5F5',
+                        color: '#555555',
+                        backgroundColor: '#EEF0F3',
                         padding: '2px 8px',
                         borderRadius: '4px'
                       }}>
@@ -544,7 +569,9 @@ function DraftModal({
                     )}
                   </div>
                   <h3 style={{ 
-                    fontWeight: 'bold',
+                    fontWeight: '600',
+                    fontSize: '16px',
+                    color: '#222222',
                     marginBottom: '8px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -559,7 +586,7 @@ function DraftModal({
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
                       {draft.selectedTags.slice(0, 5).map((tag, index) => (
                         <span key={index} className="badge badge-category" style={{ fontSize: '11px' }}>
-                          {tag}
+                          #{tag}
                         </span>
                       ))}
                       {draft.selectedTags.length > 5 && (
@@ -576,26 +603,8 @@ function DraftModal({
                       onDelete(draft)
                     }
                   }}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    color: '#999999',
-                    backgroundColor: 'transparent',
-                    border: '1px solid #E5E5E5',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    height: 'fit-content',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#FF4444'
-                    e.currentTarget.style.borderColor = '#FF4444'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#999999'
-                    e.currentTarget.style.borderColor = '#E5E5E5'
-                  }}
+                  className="btn-secondary btn-small"
+                  style={{ flexShrink: 0 }}
                 >
                   削除
                 </button>
@@ -1180,57 +1189,6 @@ function UploadIllustrationPageContent() {
 
   return (
     <>
-      <style jsx>{`
-        @media (max-width: 768px) {
-          main {
-            padding: 20px !important;
-          }
-          
-          .page-title {
-            font-size: 20px !important;
-          }
-          
-          .card-no-hover {
-            padding: 24px !important;
-          }
-          
-          .p-40 {
-            padding: 24px !important;
-          }
-          
-          .flex-between {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 16px;
-          }
-          
-          .mb-40 {
-            margin-bottom: 24px !important;
-          }
-          
-          .btn-small {
-            width: 100%;
-            justify-content: center;
-            padding: 12px 16px !important;
-            font-size: 12px !important;
-          }
-          
-          .flex.gap-16 {
-            flex-direction: column;
-            width: 100%;
-          }
-          
-          .flex.gap-16 button {
-            width: 100%;
-          }
-          
-          /* 下書きモーダル内の削除ボタン */
-          .card button[style*="padding: 8px 16px"] {
-            padding: 6px 12px !important;
-            font-size: 12px !important;
-          }
-        }
-      `}</style>
       <Header />
       
       {/* 下書き復元コンポーネント */}
@@ -1240,7 +1198,7 @@ function UploadIllustrationPageContent() {
       
       <div style={{ 
         minHeight: '100vh', 
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F5F6F8',
         display: 'flex',
         alignItems: 'flex-start'
       }}>
@@ -1271,37 +1229,21 @@ function UploadIllustrationPageContent() {
 
             {/* 圧縮中の表示 */}
             {compressing && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#FFF9E6',
-                border: '1px solid #FFE082',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <i className="fas fa-spinner fa-spin" style={{ color: '#F57C00' }}></i>
-                <span style={{ color: '#F57C00', fontSize: '14px', fontWeight: '500' }}>
-                  画像を圧縮しています...
-                </span>
+              <div className="alert alert-info mb-24">
+                <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                画像を圧縮しています...
               </div>
             )}
 
             <form onSubmit={handlePreSubmit} className="card-no-hover p-40">
               {/* 画像アップロード */}
               <div className="mb-32">
-                <label className="form-label mb-12">
+                <label className="form-label-bold mb-12">
                   イラスト画像 <span className="form-required">*</span>
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    {imageFiles.length}/100枚（ドラッグして並び替え）・自動圧縮
-                  </span>
                 </label>
+                <div className="form-hint mb-12">
+                  {imageFiles.length}/100枚 • ドラッグして並び替え可能 • 自動圧縮あり
+                </div>
 
                 {/* 画像が0枚の時：大きなアップロードエリア */}
                 {imageFiles.length === 0 && (
@@ -1321,10 +1263,10 @@ function UploadIllustrationPageContent() {
                         <i className="fas fa-images"></i>
                       </div>
                       <div className="upload-area-text">
-                        クリックまたはドラッグして<br />画像を追加
+                        クリックまたはドラッグして画像を追加
                       </div>
                       <div className="upload-area-hint">
-                        JPEG / GIF / PNG / 自動圧縮（1920px幅）/ 最大100枚（合計200MB以内まで）
+                        JPEG / PNG / GIF • 最大100枚（合計200MB以内）
                       </div>
                     </div>
                   </div>
@@ -1349,7 +1291,7 @@ function UploadIllustrationPageContent() {
                           position: 'relative',
                           cursor: 'grab',
                           opacity: draggedIndex === index ? 0.5 : 1,
-                          border: dragOverIndex === index ? '3px solid #1A1A1A' : '2px solid #E5E5E5',
+                          border: dragOverIndex === index ? '3px solid #5B7C99' : '2px solid #D0D5DA',
                           borderRadius: '8px',
                           transition: 'all 0.2s ease'
                         }}
@@ -1374,10 +1316,10 @@ function UploadIllustrationPageContent() {
                             top: '8px',
                             left: '8px',
                             padding: '4px 8px',
-                            backgroundColor: '#1A1A1A',
+                            backgroundColor: '#5B7C99',
                             color: '#FFFFFF',
                             fontSize: '11px',
-                            fontWeight: 'bold',
+                            fontWeight: '600',
                             borderRadius: '4px'
                           }}>
                             メイン
@@ -1395,22 +1337,20 @@ function UploadIllustrationPageContent() {
                             position: 'absolute',
                             top: '8px',
                             right: '8px',
-                            width: '20px',
-                            height: '20px',
+                            width: '24px',
+                            height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
                             color: '#FFFFFF',
                             border: 'none',
                             borderRadius: '50%',
                             cursor: 'pointer',
-                            fontSize: '14px',
-                            lineHeight: '1',
-                            padding: '0'
+                            fontSize: '12px'
                           }}
                         >
-                          ✕
+                          <i className="fas fa-times"></i>
                         </button>
                       </div>
                     ))}
@@ -1425,28 +1365,24 @@ function UploadIllustrationPageContent() {
                         }}
                         onDragLeave={() => setDragging(false)}
                         onDrop={handleImageDrop}
+                        className="upload-area"
                         style={{
                           height: '150px',
-                          border: '2px dashed #E5E5E5',
-                          borderRadius: '8px',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: dragging ? '#FAFAFA' : '#FFFFFF',
-                          transition: 'all 0.2s ease'
+                          cursor: 'pointer'
                         }}
                       >
                         <i className="fas fa-plus" style={{ 
                           fontSize: '24px', 
-                          color: '#6B6B6B',
+                          color: '#5B7C99',
                           marginBottom: '8px'
                         }}></i>
                         <div style={{ 
                           fontSize: '12px', 
-                          color: '#6B6B6B',
-                          textAlign: 'center'
+                          color: '#888888'
                         }}>
                           画像を追加
                         </div>
@@ -1465,12 +1401,8 @@ function UploadIllustrationPageContent() {
                 />
 
                 {errors.images && (
-                  <div style={{
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    color: '#F44336'
-                  }}>
-                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                  <div className="form-error">
+                    <i className="fas fa-exclamation-circle"></i>
                     {errors.images}
                   </div>
                 )}
@@ -1478,35 +1410,23 @@ function UploadIllustrationPageContent() {
 
               {/* タイトル */}
               <div className="mb-24">
-                <label className="form-label">
+                <label className="form-label-bold">
                   タイトル <span className="form-required">*</span>
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: title.length > 50 ? '#F44336' : '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    {title.length} / 50
-                  </span>
                 </label>
+                <div className="form-hint mb-8">
+                  {title.length}/50文字
+                </div>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="イラストのタイトル"
                   maxLength={50}
-                  className="input-field"
-                  style={{
-                    borderColor: errors.title ? '#F44336' : undefined
-                  }}
+                  className={`input-field ${errors.title ? 'error' : ''}`}
                 />
                 {errors.title && (
-                  <div style={{
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    color: '#F44336'
-                  }}>
-                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                  <div className="form-error">
+                    <i className="fas fa-exclamation-circle"></i>
                     {errors.title}
                   </div>
                 )}
@@ -1514,17 +1434,12 @@ function UploadIllustrationPageContent() {
 
               {/* 説明 */}
               <div className="mb-32">
-                <label className="form-label">
+                <label className="form-label-bold">
                   説明
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: description.length > 1000 ? '#F44336' : '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    {description.length} / 1000
-                  </span>
                 </label>
+                <div className="form-hint mb-8">
+                  {description.length}/1000文字
+                </div>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -1532,25 +1447,17 @@ function UploadIllustrationPageContent() {
                   rows={6}
                   maxLength={1000}
                   className="textarea-field"
-                  style={{
-                    borderColor: description.length > 1000 ? '#F44336' : undefined
-                  }}
                 />
               </div>
 
               {/* タグ入力（入力欄内にタグ表示） */}
               <div className="mb-24">
-                <label className="form-label mb-12">
+                <label className="form-label-bold mb-12">
                   タグを追加 <span className="form-required">*</span>
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    最大10個まで（1個以上必須） {selectedTags.length}/10
-                  </span>
                 </label>
+                <div className="form-hint mb-8">
+                  最大10個まで（1個以上必須） {selectedTags.length}/10
+                </div>
                 
                 {/* タグと入力欄を統合 */}
                 <div style={{
@@ -1558,7 +1465,7 @@ function UploadIllustrationPageContent() {
                   flexWrap: 'wrap',
                   gap: '8px',
                   padding: '12px',
-                  border: '2px solid #E5E5E5',
+                  border: '1px solid #D0D5DA',
                   borderRadius: '8px',
                   backgroundColor: '#FFFFFF',
                   minHeight: '48px',
@@ -1573,10 +1480,11 @@ function UploadIllustrationPageContent() {
                         alignItems: 'center',
                         gap: '6px',
                         padding: '4px 10px',
-                        backgroundColor: '#1A1A1A',
+                        backgroundColor: '#5B7C99',
                         color: '#FFFFFF',
                         borderRadius: '16px',
-                        fontSize: '13px'
+                        fontSize: '13px',
+                        fontWeight: '500'
                       }}
                     >
                       <span>#{tag}</span>
@@ -1618,7 +1526,8 @@ function UploadIllustrationPageContent() {
                       border: 'none',
                       outline: 'none',
                       fontSize: '14px',
-                      padding: '4px'
+                      padding: '4px',
+                      color: '#222222'
                     }}
                   />
                 </div>
@@ -1626,23 +1535,15 @@ function UploadIllustrationPageContent() {
 
               {/* プリセットタグ（補助） */}
               <div className="mb-32">
-                <label className="form-label">
+                <label className="form-label mb-12">
                   プリセットタグから選択
-                  <span style={{ 
-                    marginLeft: '12px', 
-                    fontSize: '12px', 
-                    color: '#6B6B6B',
-                    fontWeight: 'normal'
-                  }}>
-                    クリックで追加/削除
-                  </span>
                 </label>
                 <div style={{ 
                   display: 'flex', 
                   flexWrap: 'wrap', 
                   gap: '8px',
                   padding: '16px',
-                  backgroundColor: '#FAFAFA',
+                  backgroundColor: '#EEF0F3',
                   borderRadius: '8px'
                 }}>
                   {presetTags.map((tag) => (
@@ -1652,9 +1553,9 @@ function UploadIllustrationPageContent() {
                       onClick={() => togglePresetTag(tag)}
                       className="filter-button"
                       style={{
-                        backgroundColor: selectedTags.includes(tag) ? '#1A1A1A' : '#FFFFFF',
-                        color: selectedTags.includes(tag) ? '#FFFFFF' : '#1A1A1A',
-                        borderColor: selectedTags.includes(tag) ? '#1A1A1A' : '#E5E5E5'
+                        backgroundColor: selectedTags.includes(tag) ? '#5B7C99' : '#FFFFFF',
+                        color: selectedTags.includes(tag) ? '#FFFFFF' : '#222222',
+                        borderColor: selectedTags.includes(tag) ? '#5B7C99' : '#D0D5DA'
                       }}
                     >
                       #{tag}
@@ -1665,87 +1566,52 @@ function UploadIllustrationPageContent() {
 
               {/* 年齢制限（タブ風） */}
               <div className="mb-32">
-                <label className="form-label mb-12">
+                <label className="form-label-bold mb-12">
                   年齢制限 <span className="form-required">*</span>
                 </label>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '12px',
-                  marginBottom: '8px'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setRating('general')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: rating === 'general' ? '#1A1A1A' : '#FFFFFF',
-                      color: rating === 'general' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${rating === 'general' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: rating === 'general' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    全年齢
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRating('r18')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: rating === 'r18' ? '#1A1A1A' : '#FFFFFF',
-                      color: rating === 'r18' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${rating === 'r18' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: rating === 'r18' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    R-18
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRating('r18g')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: rating === 'r18g' ? '#1A1A1A' : '#FFFFFF',
-                      color: rating === 'r18g' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${rating === 'r18g' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: rating === 'r18g' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    R-18G
-                  </button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  {[
+                    { value: 'general', label: '全年齢' },
+                    { value: 'r18', label: 'R-18' },
+                    { value: 'r18g', label: 'R-18G' }
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setRating(item.value as any)}
+                      className="radio-card"
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        justifyContent: 'center',
+                        backgroundColor: rating === item.value ? '#EAF0F5' : '#FFFFFF',
+                        borderColor: rating === item.value ? '#5B7C99' : '#D0D5DA'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        checked={rating === item.value}
+                        onChange={() => {}}
+                        style={{ display: 'none' }}
+                      />
+                      <span style={{ 
+                        fontSize: '14px',
+                        fontWeight: rating === item.value ? '600' : '400',
+                        color: '#222222'
+                      }}>
+                        {item.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <div className="text-small text-gray" style={{ paddingLeft: '4px' }}>
+                <div className="form-hint" style={{ marginTop: '8px' }}>
                   R-18: 性的表現を含む / R-18G: 暴力的・グロテスク表現を含む
                 </div>
               </div>
 
               {/* オリジナル作品 */}
               <div className="mb-24">
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  cursor: 'pointer',
-                  padding: '12px',
-                  border: '2px solid #E5E5E5',
-                  borderRadius: '8px',
-                  backgroundColor: isOriginal ? '#FAFAFA' : '#FFFFFF',
-                  transition: 'all 0.2s ease'
-                }}>
+                <label className="radio-card" style={{ cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={isOriginal}
@@ -1753,16 +1619,17 @@ function UploadIllustrationPageContent() {
                     style={{
                       width: '18px',
                       height: '18px',
+                      marginRight: '12px',
                       cursor: 'pointer',
-                      accentColor: '#1A1A1A'
+                      accentColor: '#5B7C99'
                     }}
                   />
                   <div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', color: '#222222' }}>
                       オリジナル作品
                     </div>
                     <div className="text-small text-gray">
-                      二次創作ではない、独自に創作した作品の場合はチェックしてください
+                      二次創作ではない、独自に創作した作品の場合はチェック
                     </div>
                   </div>
                 </label>
@@ -1770,129 +1637,100 @@ function UploadIllustrationPageContent() {
 
               {/* コメント設定 */}
               <div className="mb-32">
-                <label className="form-label mb-12">
+                <label className="form-label-bold mb-12">
                   作品へのコメント
                 </label>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setAllowComments(true)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: allowComments ? '#1A1A1A' : '#FFFFFF',
-                      color: allowComments ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${allowComments ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: allowComments ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <i className="fas fa-comment" style={{ marginRight: '8px' }}></i>
-                    許可する
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAllowComments(false)}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: !allowComments ? '#1A1A1A' : '#FFFFFF',
-                      color: !allowComments ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${!allowComments ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: !allowComments ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <i className="fas fa-comment-slash" style={{ marginRight: '8px' }}></i>
-                    許可しない
-                  </button>
+                  {[
+                    { value: true, label: '許可する', icon: 'fa-comment' },
+                    { value: false, label: '許可しない', icon: 'fa-comment-slash' }
+                  ].map((item) => (
+                    <button
+                      key={String(item.value)}
+                      type="button"
+                      onClick={() => setAllowComments(item.value)}
+                      className="radio-card"
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        justifyContent: 'center',
+                        backgroundColor: allowComments === item.value ? '#EAF0F5' : '#FFFFFF',
+                        borderColor: allowComments === item.value ? '#5B7C99' : '#D0D5DA'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        checked={allowComments === item.value}
+                        onChange={() => {}}
+                        style={{ display: 'none' }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className={`fas ${item.icon}`} style={{ color: '#5B7C99' }}></i>
+                        <span style={{ 
+                          fontSize: '14px',
+                          fontWeight: allowComments === item.value ? '600' : '400',
+                          color: '#222222'
+                        }}>
+                          {item.label}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* 公開範囲（タブ風） */}
               <div className="mb-32">
-                <label className="form-label mb-12">
+                <label className="form-label-bold mb-12">
                   公開範囲 <span className="form-required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setVisibility('public')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: visibility === 'public' ? '#1A1A1A' : '#FFFFFF',
-                      color: visibility === 'public' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${visibility === 'public' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: visibility === 'public' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <i className="fas fa-globe" style={{ marginRight: '8px' }}></i>
-                    全体公開
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVisibility('followers')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: visibility === 'followers' ? '#1A1A1A' : '#FFFFFF',
-                      color: visibility === 'followers' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${visibility === 'followers' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: visibility === 'followers' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <i className="fas fa-users" style={{ marginRight: '8px' }}></i>
-                    フォロワー限定
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVisibility('private')}
-                    style={{
-                      flex: 1,
-                      padding: '12px 20px',
-                      backgroundColor: visibility === 'private' ? '#1A1A1A' : '#FFFFFF',
-                      color: visibility === 'private' ? '#FFFFFF' : '#1A1A1A',
-                      border: `2px solid ${visibility === 'private' ? '#1A1A1A' : '#E5E5E5'}`,
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: visibility === 'private' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <i className="fas fa-lock" style={{ marginRight: '8px' }}></i>
-                    非公開
-                  </button>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'public', label: '全体公開', icon: 'fa-globe' },
+                    { value: 'followers', label: 'フォロワー限定', icon: 'fa-users' },
+                    { value: 'private', label: '非公開', icon: 'fa-lock' }
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setVisibility(item.value as any)}
+                      className="radio-card"
+                      style={{
+                        flex: '1 1 calc(33.333% - 8px)',
+                        minWidth: '140px',
+                        padding: '12px',
+                        justifyContent: 'center',
+                        backgroundColor: visibility === item.value ? '#EAF0F5' : '#FFFFFF',
+                        borderColor: visibility === item.value ? '#5B7C99' : '#D0D5DA'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        checked={visibility === item.value}
+                        onChange={() => {}}
+                        style={{ display: 'none' }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className={`fas ${item.icon}`} style={{ color: '#5B7C99' }}></i>
+                        <span style={{ 
+                          fontSize: '14px',
+                          fontWeight: visibility === item.value ? '600' : '400',
+                          color: '#222222'
+                        }}>
+                          {item.label}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* 利用規約同意 */}
-              <div className="mb-32">
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
+              <div className="mb-40">
+                <label className="radio-card" style={{ 
                   cursor: 'pointer',
-                  padding: '16px',
-                  border: `2px solid ${errors.terms ? '#F44336' : '#E5E5E5'}`,
-                  borderRadius: '8px',
-                  backgroundColor: agreedToTerms ? '#FAFAFA' : '#FFFFFF',
-                  transition: 'all 0.2s ease'
+                  borderColor: errors.terms ? '#C05656' : (agreedToTerms ? '#5B7C99' : '#D0D5DA'),
+                  backgroundColor: agreedToTerms ? '#EAF0F5' : '#FFFFFF'
                 }}>
                   <input
                     type="checkbox"
@@ -1906,59 +1744,73 @@ function UploadIllustrationPageContent() {
                     style={{
                       width: '18px',
                       height: '18px',
+                      marginRight: '12px',
                       cursor: 'pointer',
-                      marginTop: '2px',
-                      accentColor: '#1A1A1A'
+                      accentColor: '#5B7C99'
                     }}
                   />
                   <div>
-                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', color: '#222222' }}>
                       利用規約への同意 <span className="form-required">*</span>
                     </div>
                     <div className="text-small text-gray">
-                      <Link href="/terms" target="_blank" style={{ color: '#1A1A1A', textDecoration: 'underline' }}>利用規約</Link>や<Link href="/guideline" target="_blank" style={{ color: '#1A1A1A', textDecoration: 'underline' }}>ガイドライン</Link>に違反する作品は削除の対象となります。内容を確認し、同意した上でアップロードしてください。
+                      <Link href="/terms" target="_blank" className="text-link">利用規約</Link>や
+                      <Link href="/guideline" target="_blank" className="text-link">ガイドライン</Link>
+                      に違反する作品は削除の対象となります
                     </div>
                   </div>
                 </label>
                 {errors.terms && (
-                  <div style={{
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    color: '#F44336'
-                  }}>
-                    <i className="fas fa-exclamation-circle" style={{ marginRight: '6px' }}></i>
+                  <div className="form-error">
+                    <i className="fas fa-exclamation-circle"></i>
                     {errors.terms}
                   </div>
                 )}
               </div>
 
               {/* ボタン */}
-              <div className="flex gap-16" style={{ justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => router.push('/portfolio/upload')}
-                  disabled={uploading}
-                  className="btn-secondary"
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Link 
+                  href="/portfolio/upload"
+                  style={{
+                    fontSize: '14px',
+                    color: '#555555',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#222222'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#555555'}
                 >
+                  <i className="fas fa-chevron-left" style={{ fontSize: '12px' }}></i>
                   キャンセル
-                </button>
+                </Link>
+                
                 <button
                   type="submit"
                   disabled={!isFormValid}
+                  className="btn-primary"
                   style={{
-                    padding: '12px 32px',
-                    backgroundColor: isFormValid ? '#1A1A1A' : '#E5E5E5',
-                    color: isFormValid ? '#FFFFFF' : '#999999',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    cursor: isFormValid ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s ease',
-                    opacity: uploading ? 0.6 : 1
+                    padding: '14px 32px',
+                    fontSize: '15px',
+                    minWidth: '180px',
+                    opacity: !isFormValid ? 0.5 : 1
                   }}
                 >
-                  {uploading ? 'アップロード中...' : '確認画面へ'}
+                  {uploading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i>
+                      アップロード中...
+                    </>
+                  ) : (
+                    '確認画面へ'
+                  )}
                 </button>
               </div>
             </form>
@@ -2001,6 +1853,102 @@ function UploadIllustrationPageContent() {
           onClose={() => setToast(null)}
         />
       )}
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          main {
+            padding: 24px 16px !important;
+          }
+          
+          .page-title {
+            font-size: 24px !important;
+          }
+          
+          .card-no-hover.p-40 {
+            padding: 24px !important;
+          }
+          
+          .mb-40 {
+            margin-bottom: 24px !important;
+          }
+          
+          .mb-32 {
+            margin-bottom: 24px !important;
+          }
+          
+          .flex-between {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+          
+          .btn-small {
+            width: 100%;
+            padding: 10px 16px !important;
+          }
+          
+          div[style*="gridTemplateColumns: repeat(auto-fill, minmax(150px, 1fr))"] {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          
+          img[style*="height: 150px"],
+          div[style*="height: 150px"] {
+            height: 120px !important;
+          }
+          
+          /* 年齢制限・コメント・公開範囲ボタン - モバイルで縦並び */
+          div[style*="display: flex"][style*="gap: 12px"]:has(.radio-card) {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+          
+          .radio-card {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+          }
+          
+          /* 確認モーダル */
+          .card-no-hover[style*="maxWidth: 800px"] {
+            padding: 24px 16px !important;
+          }
+          
+          .section-title {
+            font-size: 20px !important;
+          }
+          
+          /* 下書きモーダル */
+          .card-no-hover[style*="maxWidth: 600px"] {
+            padding: 20px 16px !important;
+          }
+          
+          .card[style*="padding: 20px"] {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+          
+          .card[style*="padding: 20px"] > div[style*="flex: 1"] {
+            width: 100% !important;
+          }
+          
+          .card[style*="padding: 20px"] .btn-small {
+            margin-top: 12px !important;
+          }
+
+          /* ボタンエリア - モバイル */
+          div[style*="justifyContent: space-between"]:has(a[href="/portfolio/upload"]) {
+            flex-direction: column-reverse !important;
+            gap: 12px !important;
+          }
+          
+          div[style*="justifyContent: space-between"]:has(a[href="/portfolio/upload"]) a,
+          div[style*="justifyContent: space-between"]:has(a[href="/portfolio/upload"]) button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

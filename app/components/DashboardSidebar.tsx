@@ -92,6 +92,8 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
           
           <MenuItem href="/settings/profile">プロフィール編集</MenuItem>
 
+          <MenuItem href="/settings/pricing">料金表管理</MenuItem>
+
           <MenuItem href="/portfolio/manage">作品管理</MenuItem>
 
           <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>

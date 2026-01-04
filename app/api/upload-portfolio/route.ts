@@ -24,6 +24,9 @@ export async function POST(req: Request) {
       case 'deliveries':
         bucketName = process.env.R2_BUCKET_DELIVERIES
         break
+      case 'pricing':
+        bucketName = process.env.R2_BUCKET_PRICING
+        break
       case 'portfolio':
       default:
         bucketName = process.env.R2_BUCKET_PORTFOLIO
@@ -57,6 +60,9 @@ export async function POST(req: Request) {
         break
       case 'deliveries':
         publicUrl = process.env.R2_PUBLIC_URL_DELIVERIES || process.env.R2_ENDPOINT!
+        break
+      case 'pricing':
+        publicUrl = process.env.R2_PUBLIC_URL_PRICING || process.env.R2_ENDPOINT!
         break
       case 'portfolio':
       default:
