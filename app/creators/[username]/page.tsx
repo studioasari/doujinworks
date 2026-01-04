@@ -1292,9 +1292,11 @@ export default function CreatorDetailPage() {
             marginBottom: '24px',
             borderBottom: '2px solid #D0D5DA',
             paddingBottom: '0'
-          }}>
+          }}
+          className="main-tab-navigation">
             <button
               onClick={() => setMainTab('works')}
+              className="main-tab-button"
               style={{
                 padding: '12px 24px',
                 border: 'none',
@@ -1323,6 +1325,7 @@ export default function CreatorDetailPage() {
             </button>
             <button
               onClick={() => setMainTab('pricing')}
+              className="main-tab-button"
               style={{
                 padding: '12px 24px',
                 border: 'none',
@@ -1351,6 +1354,7 @@ export default function CreatorDetailPage() {
             </button>
             <button
               onClick={() => setMainTab('reviews')}
+              className="main-tab-button"
               style={{
                 padding: '12px 24px',
                 border: 'none',
@@ -1931,6 +1935,18 @@ export default function CreatorDetailPage() {
           }
 
           .request-button-container {
+            text-align: center !important;
+          }
+
+          .main-tab-navigation {
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+
+          .main-tab-button {
+            flex: 1 !important;
+            min-width: 0 !important;
+            padding: 12px 8px !important;
             text-align: center !important;
           }
         }
