@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { supabase } from '@/utils/supabase'
 
 type BreadcrumbItem = {
   label: string
@@ -12,13 +13,36 @@ type BreadcrumbItem = {
 export default function Breadcrumb() {
   const pathname = usePathname()
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([])
+  const [creatorName, setCreatorName] = useState<string | null>(null)
 
   // パンくずを表示しないパス
   const excludePaths = ['/', '/login', '/signup', '/auth']
+
+  // クリエイターページの場合、ユーザー名を取得
+  useEffect(() => {
+    const paths = pathname.split('/').filter(Boolean)
+    if (paths[0] === 'creators' && paths[1]) {
+      fetchCreatorName(paths[1])
+    } else {
+      setCreatorName(null)
+    }
+  }, [pathname])
+
+  async function fetchCreatorName(username: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('username', username)
+      .single()
+    
+    if (data?.display_name) {
+      setCreatorName(data.display_name)
+    }
+  }
   
   useEffect(() => {
     generateBreadcrumbs()
-  }, [pathname])
+  }, [pathname, creatorName])
 
   function generateBreadcrumbs() {
     const paths = pathname.split('/').filter(Boolean)
@@ -37,7 +61,7 @@ export default function Breadcrumb() {
         return
       }
       
-      const label = getPathLabel(path, index === paths.length - 1)
+      const label = getPathLabel(path, index === paths.length - 1, paths, index)
       
       items.push({
         label,
@@ -48,7 +72,7 @@ export default function Breadcrumb() {
     setBreadcrumbs(items)
   }
 
-  function getPathLabel(path: string, isLast: boolean): string {
+  function getPathLabel(path: string, isLast: boolean, paths: string[], index: number): string {
     // パスに対応するラベルのマッピング
     const pathLabels: { [key: string]: string } = {
       // メインページ
@@ -79,6 +103,11 @@ export default function Breadcrumb() {
       'design': 'デザイン',
       'logo': 'ロゴ',
       'other': 'その他',
+    }
+
+    // creatorsの次のパスはユーザー名として扱う
+    if (index > 0 && paths[index - 1] === 'creators' && !pathLabels[path]) {
+      return creatorName || path
     }
 
     return pathLabels[path] || (isLast ? '詳細' : path)

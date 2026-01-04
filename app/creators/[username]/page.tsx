@@ -745,7 +745,7 @@ export default function CreatorDetailPage() {
                 }}
                 className="profile-header-row">
                   {/* 名前とユーザーID */}
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     {/* 職業・肩書き（名前の上） */}
                     {creator.job_title && (
                       <div style={{
@@ -760,9 +760,8 @@ export default function CreatorDetailPage() {
 
                     <div style={{ 
                       display: 'flex', 
-                      alignItems: 'baseline', 
-                      gap: '8px',
-                      flexWrap: 'wrap'
+                      flexDirection: 'column',
+                      gap: '2px'
                     }}
                     className="name-username-row">
                       <h1 style={{
@@ -770,7 +769,10 @@ export default function CreatorDetailPage() {
                         fontWeight: 'bold',
                         color: '#222222',
                         lineHeight: '1.3',
-                        margin: 0
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}
                       className="profile-name">
                         {creator.display_name || '名前未設定'}
@@ -919,19 +921,6 @@ export default function CreatorDetailPage() {
                   </div>
                 </div>
 
-                {/* 自己紹介 */}
-                {creator.bio && (
-                  <p style={{
-                    fontSize: '14px',
-                    lineHeight: '1.7',
-                    color: '#555555',
-                    marginBottom: '16px',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {creator.bio}
-                  </p>
-                )}
-
                 {/* SNSリンクとシェアボタン */}
                 <div style={{
                   display: 'flex',
@@ -968,7 +957,9 @@ export default function CreatorDetailPage() {
                         e.currentTarget.style.borderColor = '#D0D5DA'
                       }}
                     >
-                      <i className="fab fa-twitter"></i>
+                      <svg fill="currentColor" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z" fill="currentColor"/>
+                      </svg>
                     </a>
                   )}
                   {creator.pixiv_url && (
@@ -998,7 +989,10 @@ export default function CreatorDetailPage() {
                         e.currentTarget.style.borderColor = '#D0D5DA'
                       }}
                     >
-                      <i className="fas fa-palette"></i>
+                      <svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="18" height="18" style={{ borderRadius: '4px' }}>
+                        <path d="M0 0h600v600H0Z" fill="#0096fa"/>
+                        <path d="M313.164 371.503c-44.48 0-80.54-36.06-80.54-80.54s36.06-80.54 80.54-80.54 80.54 36.059 80.54 80.54c0 44.48-36.06 80.54-80.54 80.54M158.83 472.976a9.217 9.217 0 0 0 9.218 9.216h55.357a9.217 9.217 0 0 0 9.218-9.216v-50.351c23.448 14.373 51.023 22.671 80.541 22.671 85.236 0 154.334-69.097 154.334-154.334 0-85.236-69.098-154.333-154.334-154.333-36.26 0-69.572 12.537-95.913 33.469l-18.803-29.238a9.22 9.22 0 0 0-7.753-4.231h-22.647a9.22 9.22 0 0 0-9.218 9.218z" fill="#fff"/>
+                      </svg>
                     </a>
                   )}
                   {creator.instagram_url && (
@@ -1165,8 +1159,10 @@ export default function CreatorDetailPage() {
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF0F3'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <i className="fab fa-twitter" style={{ color: '#1DA1F2', fontSize: '18px' }}></i>
-                          Twitter
+                          <svg fill="#000000" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z" fill="#000000"/>
+                          </svg>
+                          X
                         </button>
                         <button
                           onClick={() => handleShare('facebook')}
@@ -1239,9 +1235,23 @@ export default function CreatorDetailPage() {
                   </div>
                 </div>
 
+                {/* 自己紹介 */}
+                {creator.bio && (
+                  <p style={{
+                    fontSize: '14px',
+                    lineHeight: '1.7',
+                    color: '#555555',
+                    marginTop: '16px',
+                    marginBottom: '0',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {creator.bio}
+                  </p>
+                )}
+
                 {/* 依頼を送るボタン（目立つ位置に単独配置） */}
                 {!isOwnProfile && (
-                  <div style={{ marginTop: '20px' }}>
+                  <div style={{ marginTop: '20px' }} className="request-button-container">
                     <Link
                       href={`/requests/create?to=${username}`}
                       style={{
@@ -1511,7 +1521,7 @@ export default function CreatorDetailPage() {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                   gap: '24px',
-                  padding: '24px 0'
+                  padding: '0'
                 }}>
                   {pricingPlans.map(plan => (
                     <Link
@@ -1894,33 +1904,34 @@ export default function CreatorDetailPage() {
             flex-direction: column !important;
             gap: 20px !important;
             align-items: center !important;
-            text-align: center !important;
           }
 
           .profile-info-column {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 100%;
           }
 
           .profile-header-row {
-            flex-direction: column !important;
-            align-items: center !important;
-            gap: 16px !important;
+            flex-direction: row !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
           }
 
           .profile-header-row > div:first-child {
-            text-align: center;
+            flex: 1;
+            min-width: 0;
           }
 
           .name-username-row {
-            justify-content: center !important;
-            flex-direction: column !important;
-            gap: 4px !important;
+            align-items: flex-start !important;
           }
 
           .profile-action-buttons {
-            justify-content: center !important;
+            flex-shrink: 0 !important;
+          }
+
+          .request-button-container {
+            text-align: center !important;
           }
         }
 
@@ -1933,7 +1944,7 @@ export default function CreatorDetailPage() {
 
         @media (max-width: 768px) {
           .profile-section {
-            padding: 24px !important;
+            padding: 24px 0 0 0 !important;
           }
 
           .profile-avatar {
