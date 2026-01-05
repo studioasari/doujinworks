@@ -119,52 +119,64 @@ export default function Breadcrumb() {
   }
 
   return (
-    <nav style={{
-      backgroundColor: '#FFFFFF',
-      borderTop: '1px solid #D0D5DA'
-    }}>
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: '12px 40px'
+    <>
+      <style jsx>{`
+        .breadcrumb-container {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 12px 20px;
+        }
+
+        @media (max-width: 768px) {
+          .breadcrumb-container {
+            padding: 12px 16px;
+          }
+        }
+      `}</style>
+
+      <nav style={{
+        backgroundColor: '#FFFFFF',
+        borderTop: '1px solid #D0D5DA'
       }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '13px',
-        flexWrap: 'wrap'
-      }}>
-        {breadcrumbs.map((item, index) => (
-          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {index > 0 && (
-              <i className="fas fa-chevron-right" style={{ 
-                fontSize: '9px', 
-                color: '#D0D5DA' 
-              }}></i>
-            )}
-            {index === breadcrumbs.length - 1 ? (
-              <span style={{ color: '#888888', fontWeight: 400 }}>
-                {item.label}
-              </span>
-            ) : (
-              <Link 
-                href={item.href}
-                style={{
-                  color: '#888888',
-                  textDecoration: 'none',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#5B7C99'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
-              >
-                {item.label}
-              </Link>
-            )}
+        <div className="breadcrumb-container">
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '13px',
+            flexWrap: 'wrap'
+          }}>
+            {breadcrumbs.map((item, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {index > 0 && (
+                  <i className="fas fa-chevron-right" style={{ 
+                    fontSize: '9px', 
+                    color: '#D0D5DA' 
+                  }}></i>
+                )}
+                {index === breadcrumbs.length - 1 ? (
+                  <span style={{ color: '#888888', fontWeight: 400 }}>
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link 
+                    href={item.href}
+                    style={{
+                      color: '#888888',
+                      textDecoration: 'none',
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#5B7C99'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      </div>
-    </nav>
+        </div>
+      </nav>
+    </>
   )
 }

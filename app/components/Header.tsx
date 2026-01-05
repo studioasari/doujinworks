@@ -1038,9 +1038,20 @@ export default function Header() {
     <>
       <style dangerouslySetInnerHTML={{__html: `
         .header-container {
-          padding: 16px 40px;
           height: 64px;
           box-sizing: border-box;
+        }
+        
+        .header-inner {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 16px 20px;
+          height: 100%;
+          box-sizing: border-box;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
         }
         
         @media (max-width: 768px) {
@@ -1048,9 +1059,10 @@ export default function Header() {
             display: none !important;
           }
           .header-container {
-            padding: 12px 16px;
             height: 60px;
-            box-sizing: border-box;
+          }
+          .header-inner {
+            padding: 12px 16px;
           }
         }
         
@@ -1062,25 +1074,13 @@ export default function Header() {
       `}} />
 
       <header className="header-container" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid #D0D5DA',
         position: 'sticky',
         top: 0,
-        zIndex: 100,
-        gap: '20px'
+        zIndex: 100
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          gap: '20px'
-        }}>
+        <div className="header-inner">
           <Link href="/" style={{ 
             textDecoration: 'none',
             display: 'flex',

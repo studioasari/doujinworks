@@ -5,24 +5,37 @@ export default function Footer() {
   return (
     <>
       <style jsx>{`
-        footer a {
-          color: #555555 !important;
-          text-decoration: none !important;
-        }
-
-        footer a:hover {
-          color: #222222 !important;
-        }
-
-        .social-links a:hover {
-          color: #5B7C99 !important;
-        }
-
         .footer-grid {
           display: grid;
           grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
           gap: 60px;
           margin-bottom: 40px;
+        }
+
+        .footer-main-content {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 60px 20px 40px;
+        }
+
+        .footer-social-legal-section {
+          border-top: 1px solid #D0D5DA;
+          padding: 20px 0;
+        }
+
+        .footer-social-legal-wrapper {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 20px;
+        }
+
+        .footer-copyright {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 20px 20px;
+          text-align: center;
+          font-size: 13px;
+          color: #555555;
         }
 
         .social-legal-container {
@@ -56,23 +69,23 @@ export default function Footer() {
         }
 
         .legal-links a {
-          color: #555555 !important;
+          color: #555555;
           text-decoration: none;
           transition: color 0.2s;
         }
 
         .legal-links a:hover {
-          color: #222222 !important;
+          color: #222222;
         }
 
         .footer-link {
-          color: #555555 !important;
+          color: #555555;
           text-decoration: none;
           transition: color 0.2s;
         }
 
         .footer-link:hover {
-          color: #222222 !important;
+          color: #222222;
         }
 
         /* タブレット（768px～1024px） */
@@ -88,6 +101,22 @@ export default function Footer() {
           .footer-grid {
             grid-template-columns: 1fr;
             gap: 32px;
+          }
+
+          .footer-main-content {
+            padding: 52px 16px 12px;
+          }
+
+          .footer-social-legal-section {
+            padding: 52px 0;
+          }
+
+          .footer-social-legal-wrapper {
+            padding: 0 16px;
+          }
+
+          .footer-copyright {
+            padding: 20px 16px;
           }
 
           .social-legal-container {
@@ -123,11 +152,7 @@ export default function Footer() {
         borderTop: '1px solid #D0D5DA'
       }}>
         {/* メインコンテンツエリア */}
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          padding: '60px 40px 40px'
-        }}>
+        <div className="footer-main-content">
           <div className="footer-grid">
             {/* サービス情報 */}
             <div>
@@ -135,7 +160,7 @@ export default function Footer() {
                 src="/logotype.png" 
                 alt="同人ワークス" 
                 style={{ 
-                  height: '24px',
+                  height: '20px',
                   marginBottom: '16px',
                   display: 'block'
                 }} 
@@ -309,16 +334,9 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* SNSアイコン + 法的リンク（画面幅いっぱい） */}
-        <div style={{
-          borderTop: '1px solid #D0D5DA',
-          padding: '20px 0'
-        }}>
-          <div style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            padding: '0 40px'
-          }}>
+        {/* SNSアイコン + 法的リンク */}
+        <div className="footer-social-legal-section">
+          <div className="footer-social-legal-wrapper">
             <div className="social-legal-container">
               {/* SNSアイコン */}
               <div className="social-links">
@@ -378,16 +396,9 @@ export default function Footer() {
         {/* 下部：コピーライト */}
         <div style={{
           backgroundColor: '#F5F6F8',
-          padding: '20px 40px',
           borderTop: '1px solid #D0D5DA'
         }}>
-          <div style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            textAlign: 'center',
-            fontSize: '13px',
-            color: '#555555'
-          }}>
+          <div className="footer-copyright">
             © 2025 Studio Asari. All rights reserved.
           </div>
         </div>
