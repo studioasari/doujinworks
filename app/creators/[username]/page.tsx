@@ -904,7 +904,7 @@ export default function CreatorDetailPage() {
                 {/* 統計情報 */}
                 <div style={{
                   display: 'flex',
-                  gap: '20px',
+                  gap: '10px',
                   fontSize: '13px',
                   color: '#555555',
                   marginBottom: '16px'
@@ -1252,8 +1252,16 @@ export default function CreatorDetailPage() {
                 {/* 依頼を送るボタン（目立つ位置に単独配置） */}
                 {!isOwnProfile && (
                   <div style={{ marginTop: '20px' }} className="request-button-container">
-                    <Link
-                      href={`/requests/create?to=${username}`}
+                    <button
+                      onClick={() => {
+                        if (!currentUserId) {
+                          if (confirm('依頼を送るにはログインが必要です。ログインページに移動しますか？')) {
+                            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+                          }
+                          return
+                        }
+                        router.push(`/requests/create?to=${username}`)
+                      }}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1266,7 +1274,8 @@ export default function CreatorDetailPage() {
                         borderRadius: '22px',
                         fontSize: '15px',
                         fontWeight: '600',
-                        textDecoration: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
@@ -1278,7 +1287,7 @@ export default function CreatorDetailPage() {
                     >
                       <i className="fas fa-paper-plane"></i>
                       依頼を送る
-                    </Link>
+                    </button>
                   </div>
                 )}
               </div>
