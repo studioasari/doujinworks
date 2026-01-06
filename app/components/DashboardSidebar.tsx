@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/utils/supabase'
 
 type DashboardSidebarProps = {
   accountType?: string | null
@@ -10,6 +12,60 @@ type DashboardSidebarProps = {
 
 export default function DashboardSidebar({ accountType = null, isAdmin = false }: DashboardSidebarProps) {
   const pathname = usePathname()
+  const [isAcceptingOrders, setIsAcceptingOrders] = useState(false)
+  const [isToggleLoading, setIsToggleLoading] = useState(true)
+
+  useEffect(() => {
+    if (accountType === 'business') {
+      fetchAcceptingStatus()
+    } else {
+      setIsToggleLoading(false)
+    }
+  }, [accountType])
+
+  async function fetchAcceptingStatus() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_accepting_orders')
+        .eq('user_id', user.id)
+        .single()
+
+      if (data) {
+        setIsAcceptingOrders(data.is_accepting_orders ?? false)
+      }
+    } catch (error) {
+      console.error('受付状態取得エラー:', error)
+    } finally {
+      setIsToggleLoading(false)
+    }
+  }
+
+  async function toggleAcceptingOrders() {
+    setIsToggleLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const newStatus = !isAcceptingOrders
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_accepting_orders: newStatus })
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      setIsAcceptingOrders(newStatus)
+    } catch (error) {
+      console.error('受付状態更新エラー:', error)
+    } finally {
+      setIsToggleLoading(false)
+    }
+  }
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -88,6 +144,73 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
 
       <aside className="sidebar">
         <nav>
+          {/* 受付中トグル（ビジネスユーザーのみ） */}
+          {accountType === 'business' && (
+            <>
+              <div style={{
+                padding: '16px',
+                backgroundColor: isAcceptingOrders ? '#E8F5E9' : '#FFF3E0',
+                borderRadius: '8px',
+                marginBottom: '16px'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px'
+                }}>
+                  <span style={{
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: isAcceptingOrders ? '#2E7D32' : '#E65100'
+                  }}>
+                    {isAcceptingOrders ? '🟢 受付中' : '🔴 受付停止中'}
+                  </span>
+                  
+                  {/* トグルスイッチ */}
+                  <button
+                    onClick={toggleAcceptingOrders}
+                    disabled={isToggleLoading}
+                    style={{
+                      width: '44px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: isAcceptingOrders ? '#4CAF50' : '#BDBDBD',
+                      cursor: isToggleLoading ? 'wait' : 'pointer',
+                      position: 'relative',
+                      transition: 'background-color 0.2s',
+                      opacity: isToggleLoading ? 0.6 : 1
+                    }}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FFFFFF',
+                      position: 'absolute',
+                      top: '2px',
+                      left: isAcceptingOrders ? '22px' : '2px',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}></div>
+                  </button>
+                </div>
+                
+                <p style={{
+                  fontSize: '11px',
+                  color: '#666666',
+                  margin: 0,
+                  lineHeight: '1.4'
+                }}>
+                  {isAcceptingOrders 
+                    ? '新規依頼を受け付けています' 
+                    : '新規依頼を受け付けていません'}
+                </p>
+              </div>
+            </>
+          )}
+
           <MenuItem href="/dashboard">ダッシュボード</MenuItem>
           
           <MenuItem href="/settings/profile">プロフィール編集</MenuItem>
