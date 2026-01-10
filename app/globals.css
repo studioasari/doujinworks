@@ -5575,6 +5575,11 @@ button {
   cursor: not-allowed;
 }
 
+.auth-submit-btn.disabled:hover {
+  background: #D8DEE4;
+  color: #999999;
+}
+
 /* 区切り線 */
 .auth-divider {
   display: flex;
@@ -5732,6 +5737,11 @@ button {
   background: #D8DEE4;
   color: #999999;
   cursor: not-allowed;
+}
+
+.auth-modal-btn.submit.disabled:hover {
+  background: #D8DEE4;
+  color: #999999;
 }
 
 /* レスポンシブ */
@@ -5995,7 +6005,7 @@ button {
   box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
 }
 
-.signup-complete-btn.primary:hover {
+.signup-complete-btn.primary:hover:not(.disabled) {
   background: #4F6D86;
 }
 
@@ -6004,6 +6014,11 @@ button {
   color: #999999;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.signup-complete-btn.disabled:hover {
+  background: #D8DEE4;
+  color: #999999;
 }
 
 /* 利用方法選択カード */
