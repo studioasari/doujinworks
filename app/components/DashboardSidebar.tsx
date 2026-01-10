@@ -71,186 +71,171 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     if (href === '/dashboard') {
       return pathname === '/dashboard'
     }
-    if (href === '/portfolio/manage') {
-      return pathname.startsWith('/portfolio/')
+    if (href === '/dashboard/portfolio') {
+      return pathname.startsWith('/dashboard/portfolio')
     }
-    if (href.startsWith('/settings/')) {
+    if (href === '/requests/manage') {
+      return pathname === '/requests/manage'
+    }
+    if (href === '/requests/create') {
+      return pathname === '/requests/create'
+    }
+    if (href.startsWith('/dashboard/')) {
       return pathname === href || pathname.startsWith(href + '/')
-    }
-    if (href === '/wallet/earnings') {
-      return pathname.startsWith('/wallet/')
-    }
-    if (href === '/admin') {
-      return pathname === '/admin'
     }
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const MenuItem = ({ href, children }: { href: string, children: React.ReactNode }) => {
-    const active = isActive(href)
-    return (
-      <Link
-        href={href}
-        style={{
-          width: '100%',
-          padding: '12px 16px',
-          border: 'none',
-          background: active ? '#F5F5F5' : 'transparent',
-          fontSize: '15px',
-          fontWeight: active ? '600' : '400',
-          color: '#1A1A1A',
-          cursor: 'pointer',
-          textAlign: 'left',
-          borderRadius: '6px',
-          marginBottom: '4px',
-          transition: 'background-color 0.2s',
-          display: 'block',
-          textDecoration: 'none'
-        }}
-        onMouseEnter={(e) => {
-          if (!active) e.currentTarget.style.backgroundColor = '#FAFAFA'
-        }}
-        onMouseLeave={(e) => {
-          if (!active) e.currentTarget.style.backgroundColor = 'transparent'
-        }}
-      >
-        {children}
-      </Link>
-    )
+  // モバイル用メニュー項目（アイコン+短いラベル）
+  const mobileMenuItems = [
+    { href: '/dashboard', icon: 'home', label: 'ホーム' },
+    { href: '/dashboard/profile', icon: 'user-edit', label: 'プロフィール' },
+    { href: '/dashboard/pricing', icon: 'tags', label: '料金表' },
+    { href: '/dashboard/portfolio', icon: 'images', label: '作品' },
+    { href: '/requests/manage', icon: 'clipboard-list', label: '依頼管理' },
+    { href: '/requests/create', icon: 'plus-circle', label: '依頼作成' },
+    { href: '/dashboard/earnings', icon: 'chart-line', label: '売上' },
+    { href: '/dashboard/payments', icon: 'credit-card', label: '支払い' },
+    { href: '/dashboard/bank-account', icon: 'university', label: '振込先' },
+    { href: '/messages', icon: 'envelope', label: 'メッセージ' },
+  ]
+
+  // ビジネスユーザー用
+  if (accountType === 'business') {
+    mobileMenuItems.push({ href: '/dashboard/business', icon: 'briefcase', label: 'ビジネス' })
   }
+
+  // 管理者用メニュー
+  const adminMobileItems = isAdmin ? [
+    { href: '/admin', icon: 'cog', label: '管理' },
+    { href: '/admin/payments', icon: 'money-check', label: '振込管理' },
+    { href: '/admin/users', icon: 'users', label: 'ユーザー' },
+  ] : []
 
   return (
     <>
-      <style jsx>{`
-        .sidebar {
-          width: 240px;
-          border-right: 1px solid #E5E5E5;
-          padding: 20px;
-          flex-shrink: 0;
-          position: sticky;
-          top: 64px;
-          height: calc(100vh - 64px);
-          overflow-y: auto;
-          align-self: flex-start;
-          background-color: white;
-        }
+      {/* モバイル: 上部横スクロールナビ */}
+      <nav className="dashboard-mobile-nav">
+        <div className="dashboard-mobile-nav-scroll">
+          {mobileMenuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`dashboard-mobile-nav-item ${isActive(item.href) ? 'active' : ''}`}
+            >
+              <i className={`fas fa-${item.icon}`}></i>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+          {adminMobileItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`dashboard-mobile-nav-item admin ${isActive(item.href) ? 'active' : ''}`}
+            >
+              <i className={`fas fa-${item.icon}`}></i>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
 
-        @media (max-width: 768px) {
-          .sidebar {
-            display: none;
-          }
-        }
-      `}</style>
-
-      <aside className="sidebar">
-        <nav>
+      {/* PC: 左サイドバー */}
+      <aside className="dashboard-sidebar">
+        <nav className="dashboard-sidebar-nav">
           {/* 受付中トグル（ビジネスユーザーのみ） */}
           {accountType === 'business' && (
-            <>
-              <div style={{
-                padding: '16px',
-                backgroundColor: isAcceptingOrders ? '#E8F5E9' : '#FFF3E0',
-                borderRadius: '8px',
-                marginBottom: '16px'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px'
-                }}>
-                  <span style={{
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: isAcceptingOrders ? '#2E7D32' : '#E65100'
-                  }}>
-                    <i className="fas fa-circle" style={{ fontSize: '14px', marginRight: '8px' }}></i>
-                    {isAcceptingOrders ? '受付中' : '受付停止中'}
-                  </span>
-                  
-                  {/* トグルスイッチ */}
-                  <button
-                    onClick={toggleAcceptingOrders}
-                    disabled={isToggleLoading}
-                    style={{
-                      width: '44px',
-                      height: '24px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: isAcceptingOrders ? '#4CAF50' : '#BDBDBD',
-                      cursor: isToggleLoading ? 'wait' : 'pointer',
-                      position: 'relative',
-                      transition: 'background-color 0.2s',
-                      opacity: isToggleLoading ? 0.6 : 1
-                    }}
-                  >
-                    <div style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FFFFFF',
-                      position: 'absolute',
-                      top: '2px',
-                      left: isAcceptingOrders ? '22px' : '2px',
-                      transition: 'left 0.2s',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }}></div>
-                  </button>
-                </div>
+            <div className={`dashboard-status-card ${isAcceptingOrders ? 'accepting' : 'paused'}`}>
+              <div className="dashboard-status-header">
+                <span className={`dashboard-status-label ${isAcceptingOrders ? 'accepting' : 'paused'}`}>
+                  <i className="fas fa-circle"></i>
+                  {isAcceptingOrders ? '受付中' : '受付停止中'}
+                </span>
                 
-                <p style={{
-                  fontSize: '11px',
-                  color: '#666666',
-                  margin: 0,
-                  lineHeight: '1.4'
-                }}>
-                  {isAcceptingOrders 
-                    ? '新規依頼を受け付けています' 
-                    : '新規依頼を受け付けていません'}
-                </p>
+                <button
+                  onClick={toggleAcceptingOrders}
+                  disabled={isToggleLoading}
+                  className={`dashboard-toggle ${isAcceptingOrders ? 'on' : 'off'} ${isToggleLoading ? 'loading' : ''}`}
+                >
+                  <div className="dashboard-toggle-knob"></div>
+                </button>
               </div>
-            </>
+              
+              <p className="dashboard-status-text">
+                {isAcceptingOrders 
+                  ? '新規依頼を受け付けています' 
+                  : '新規依頼を受け付けていません'}
+              </p>
+            </div>
           )}
 
-          <MenuItem href="/dashboard">ダッシュボード</MenuItem>
+          <Link href="/dashboard" className={`dashboard-sidebar-item ${isActive('/dashboard') ? 'active' : ''}`}>
+            ダッシュボード
+          </Link>
           
-          <MenuItem href="/settings/profile">プロフィール編集</MenuItem>
+          <Link href="/dashboard/profile" className={`dashboard-sidebar-item ${isActive('/dashboard/profile') ? 'active' : ''}`}>
+            プロフィール編集
+          </Link>
 
-          <MenuItem href="/settings/pricing">料金表管理</MenuItem>
+          <Link href="/dashboard/pricing" className={`dashboard-sidebar-item ${isActive('/dashboard/pricing') ? 'active' : ''}`}>
+            料金表管理
+          </Link>
 
-          <MenuItem href="/portfolio/manage">作品管理</MenuItem>
+          <Link href="/dashboard/portfolio" className={`dashboard-sidebar-item ${isActive('/dashboard/portfolio') ? 'active' : ''}`}>
+            作品管理
+          </Link>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+          <div className="dashboard-sidebar-divider"></div>
 
-          <MenuItem href="/requests">依頼管理</MenuItem>
+          <Link href="/requests/manage" className={`dashboard-sidebar-item ${isActive('/requests/manage') ? 'active' : ''}`}>
+            依頼管理
+          </Link>
 
-          <MenuItem href="/requests/manage">受注管理</MenuItem>
+          <Link href="/requests/create" className={`dashboard-sidebar-item ${isActive('/requests/create') ? 'active' : ''}`}>
+            依頼を作成
+          </Link>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+          <div className="dashboard-sidebar-divider"></div>
 
-          <MenuItem href="/wallet/earnings">売上管理</MenuItem>
+          <Link href="/dashboard/earnings" className={`dashboard-sidebar-item ${isActive('/dashboard/earnings') ? 'active' : ''}`}>
+            売上管理
+          </Link>
 
-          <MenuItem href="/wallet/payments">支払い管理</MenuItem>
+          <Link href="/dashboard/payments" className={`dashboard-sidebar-item ${isActive('/dashboard/payments') ? 'active' : ''}`}>
+            支払い管理
+          </Link>
 
-          <MenuItem href="/wallet/bank-account">振込先設定</MenuItem>
+          <Link href="/dashboard/bank-account" className={`dashboard-sidebar-item ${isActive('/dashboard/bank-account') ? 'active' : ''}`}>
+            振込先設定
+          </Link>
 
-          <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+          <div className="dashboard-sidebar-divider"></div>
 
-          <MenuItem href="/messages">メッセージ</MenuItem>
+          <Link href="/messages" className={`dashboard-sidebar-item ${isActive('/messages') ? 'active' : ''}`}>
+            メッセージ
+          </Link>
 
           {accountType === 'business' && (
-            <MenuItem href="/settings/business">ビジネス情報</MenuItem>
+            <Link href="/dashboard/business" className={`dashboard-sidebar-item ${isActive('/dashboard/business') ? 'active' : ''}`}>
+              ビジネス情報
+            </Link>
           )}
 
           {isAdmin && (
             <>
-              <div style={{ height: '1px', backgroundColor: '#E5E5E5', margin: '16px 0' }}></div>
+              <div className="dashboard-sidebar-divider"></div>
               
-              <MenuItem href="/admin">管理ダッシュボード</MenuItem>
+              <Link href="/admin" className={`dashboard-sidebar-item ${isActive('/admin') ? 'active' : ''}`}>
+                管理ダッシュボード
+              </Link>
 
-              <MenuItem href="/admin/payments">振込管理</MenuItem>
+              <Link href="/admin/payments" className={`dashboard-sidebar-item ${isActive('/admin/payments') ? 'active' : ''}`}>
+                振込管理
+              </Link>
 
-              <MenuItem href="/admin/users">ユーザー管理</MenuItem>
+              <Link href="/admin/users" className={`dashboard-sidebar-item ${isActive('/admin/users') ? 'active' : ''}`}>
+                ユーザー管理
+              </Link>
             </>
           )}
         </nav>

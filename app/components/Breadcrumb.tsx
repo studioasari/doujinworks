@@ -97,9 +97,9 @@ export default function Breadcrumb() {
     const paths = pathname.split('/').filter(Boolean)
     const items: BreadcrumbItem[] = [{ label: 'ホーム', href: '/' }]
 
-    // 料金表詳細ページ
+    // 料金表詳細ページ（公開ページ）
     if (paths[0] === 'pricing' && paths[1] && isUUID(paths[1])) {
-      items.push({ label: 'サービス一覧', href: '/pricing' })
+      items.push({ label: '料金表一覧', href: '/pricing' })
       if (dynamicData.pricingPlan) {
         const categoryLabel = CATEGORY_LABELS[dynamicData.pricingPlan.category] || dynamicData.pricingPlan.category
         items.push({ label: categoryLabel, href: `/pricing/${dynamicData.pricingPlan.category}` })
@@ -138,8 +138,35 @@ export default function Breadcrumb() {
   }
 
   function getPathLabel(path: string, isLast: boolean, paths: string[], index: number): string {
+    // ダッシュボード配下の特別なラベル
+    const dashboardLabels: { [key: string]: string } = {
+      'profile': 'プロフィール編集',
+      'pricing': '料金表管理',
+      'business': 'ビジネス情報',
+      'portfolio': '作品管理',
+      'earnings': '売上管理',
+      'payments': '支払い管理',
+      'bank-account': '振込先設定',
+    }
+
+    // ダッシュボード > 作品管理 配下の特別なラベル
+    const portfolioManageLabels: { [key: string]: string } = {
+      'upload': 'アップロード',
+      'drafts': '下書き',
+    }
+
+    // 親パスがdashboardの場合、専用ラベルを使用
+    if (index > 0 && paths[index - 1] === 'dashboard' && dashboardLabels[path]) {
+      return dashboardLabels[path]
+    }
+
+    // dashboard/portfolio配下の場合
+    if (index > 1 && paths[0] === 'dashboard' && paths[1] === 'portfolio' && portfolioManageLabels[path]) {
+      return portfolioManageLabels[path]
+    }
+
     const pathLabels: { [key: string]: string } = {
-      'pricing': 'サービス一覧',
+      'pricing': '料金表一覧',
       'portfolio': '作品一覧',
       'requests': '依頼一覧',
       'creators': 'クリエイター',
@@ -157,6 +184,12 @@ export default function Breadcrumb() {
       'manage': '管理',
       'upload': 'アップロード',
       'drafts': '下書き',
+      'wallet': 'ウォレット',
+      'earnings': '売上管理',
+      'payments': '支払い管理',
+      'bank-account': '振込先設定',
+      'admin': '管理者',
+      'users': 'ユーザー管理',
       ...CATEGORY_LABELS,
     }
 

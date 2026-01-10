@@ -485,7 +485,7 @@ export default function CreatorDetailPage() {
                         </button>
                       </>
                     ) : (
-                      <Link href="/settings/profile" className="creator-edit-btn">
+                      <Link href="/dashboard/profile" className="creator-edit-btn">
                         <i className="fas fa-edit" style={{ fontSize: '12px' }}></i>
                         編集
                       </Link>
