@@ -22,6 +22,7 @@ type Profile = {
   account_type: string | null
   can_receive_work: boolean
   can_request_work: boolean
+  is_admin: boolean
 }
 
 type BusinessProfile = {
@@ -281,7 +282,7 @@ export default function DashboardPage() {
         display: 'flex',
         alignItems: 'flex-start'
       }}>
-        <DashboardSidebar />
+        <DashboardSidebar accountType={profile?.account_type} isAdmin={profile?.is_admin} />
 
         <main style={{ 
           flex: 1, 

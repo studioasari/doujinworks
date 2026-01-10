@@ -1,663 +1,498 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../utils/supabase'
-import Header from './components/Header'
-import Footer from './components/Footer'
-import LoadingSkeleton from './LoadingSkeleton'
+import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+
+type PricingPlan = {
+  id: string
+  plan_name: string
+  thumbnail_url: string
+  minimum_price: number
+  category: string
+  creator_id: string
+  profiles: {
+    username: string
+    display_name: string
+    avatar_url: string | null
+    is_accepting_orders: boolean
+  }
+}
 
 type PortfolioItem = {
   id: string
   title: string
   image_url: string
   thumbnail_url: string | null
-  creator_id: string
   category: string
-  created_at: string
+  creator_id: string
+  like_count: number
   profiles: {
     username: string
     display_name: string
     avatar_url: string | null
   }
-  likeCount: number
-  commentCount: number
 }
 
 type Creator = {
+  id: string
   user_id: string
   username: string
   display_name: string
   avatar_url: string | null
   bio: string | null
-  workCount: number
-  followerCount: number
+  is_accepting_orders: boolean
+  specialties: string[] | null
 }
 
-export default function Home() {
-  const [featuredWorks, setFeaturedWorks] = useState<PortfolioItem[]>([])
-  const [newWorks, setNewWorks] = useState<PortfolioItem[]>([])
+type WorkRequest = {
+  id: string
+  title: string
+  description: string
+  budget_min: number | null
+  budget_max: number | null
+  category: string
+  created_at: string
+  profiles: {
+    display_name: string
+    avatar_url: string | null
+  }
+}
+
+export default function HomePage() {
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([])
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [popularWorks, setPopularWorks] = useState<PortfolioItem[]>([])
-  const [featuredCreators, setFeaturedCreators] = useState<Creator[]>([])
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'following'>('all')
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [creators, setCreators] = useState<Creator[]>([])
+  const [workRequests, setWorkRequests] = useState<WorkRequest[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkAuth()
     fetchData()
   }, [])
 
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    setIsLoggedIn(!!user)
-  }
-
   async function fetchData() {
-    console.time('データ取得時間')
     setLoading(true)
     
     try {
-      const { data: allWorks, error } = await supabase
-        .from('portfolio_items')
-        .select('id, title, image_url, thumbnail_url, creator_id, category, created_at')
+      // 料金表を取得
+      const { data: plans } = await supabase
+        .from('pricing_plans')
+        .select('id, plan_name, thumbnail_url, minimum_price, category, creator_id')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(8)
 
-      if (error) {
-        console.error('作品取得エラー:', error)
-        return
-      }
-
-      if (allWorks && allWorks.length > 0) {
-        const creatorIds = [...new Set(allWorks.map(w => w.creator_id))]
+      if (plans && plans.length > 0) {
+        const validPlans = plans.filter(p => p.creator_id !== null)
+        const creatorIds = [...new Set(validPlans.map(p => p.creator_id))]
+        
         const { data: creatorsData } = await supabase
           .from('profiles')
-          .select('user_id, username, display_name, avatar_url')
+          .select('id, username, display_name, avatar_url, is_accepting_orders')
+          .in('id', creatorIds)
+
+        const creatorMap = new Map()
+        creatorsData?.forEach(c => creatorMap.set(c.id, c))
+
+        const plansWithProfiles = validPlans.map(plan => ({
+          ...plan,
+          profiles: creatorMap.get(plan.creator_id) || {
+            username: '',
+            display_name: '不明',
+            avatar_url: null,
+            is_accepting_orders: false
+          }
+        }))
+
+        setPricingPlans(plansWithProfiles)
+      }
+
+      // 作品を取得
+      const { data: items } = await supabase
+        .from('portfolio_items')
+        .select('id, title, image_url, thumbnail_url, category, creator_id')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(8)
+
+      if (items && items.length > 0) {
+        const validItems = items.filter(item => item.creator_id !== null)
+        const creatorIds = [...new Set(validItems.map(w => w.creator_id))]
+        
+        const { data: creatorsData } = await supabase
+          .from('profiles')
+          .select('id, user_id, username, display_name, avatar_url')
           .in('user_id', creatorIds)
 
         const creatorMap = new Map()
         creatorsData?.forEach(c => creatorMap.set(c.user_id, c))
 
-        const ids = allWorks.map(w => w.id)
-        const [{ data: likes }, { data: comments }] = await Promise.all([
-          supabase.from('portfolio_likes').select('portfolio_item_id').in('portfolio_item_id', ids),
-          supabase.from('comments').select('portfolio_item_id').in('portfolio_item_id', ids)
-        ])
-
-        const likeMap = new Map()
-        likes?.forEach(l => likeMap.set(l.portfolio_item_id, (likeMap.get(l.portfolio_item_id) || 0) + 1))
-        
-        const commentMap = new Map()
-        comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
-
-        const worksWithStats = allWorks.map((work: any) => ({
-          ...work,
-          profiles: creatorMap.get(work.creator_id),
-          likeCount: likeMap.get(work.id) || 0,
-          commentCount: commentMap.get(work.id) || 0
+        const itemsWithProfiles = validItems.map(item => ({
+          ...item,
+          like_count: 0,
+          profiles: creatorMap.get(item.creator_id) || {
+            username: '',
+            display_name: '不明',
+            avatar_url: null
+          }
         }))
 
-        setNewWorks(worksWithStats.slice(0, 30))
-        setFeaturedWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount).slice(0, 8))
-        setPopularWorks(worksWithStats.sort((a, b) => b.likeCount - a.likeCount).slice(0, 18))
+        setPortfolioItems(itemsWithProfiles)
       }
 
+      // 人気作品（いいね数順）
+      const { data: allItems } = await supabase
+        .from('portfolio_items')
+        .select('id, title, image_url, thumbnail_url, category, creator_id')
+        .eq('is_public', true)
+        .limit(50)
+
+      if (allItems && allItems.length > 0) {
+        const validItems = allItems.filter(item => item.creator_id !== null)
+        const itemIds = validItems.map(w => w.id)
+        
+        const { data: likes } = await supabase
+          .from('portfolio_likes')
+          .select('portfolio_item_id')
+          .in('portfolio_item_id', itemIds)
+
+        const likeMap = new Map()
+        likes?.forEach(l => {
+          likeMap.set(l.portfolio_item_id, (likeMap.get(l.portfolio_item_id) || 0) + 1)
+        })
+
+        const creatorIds = [...new Set(validItems.map(w => w.creator_id))]
+        const { data: creatorsData } = await supabase
+          .from('profiles')
+          .select('id, user_id, username, display_name, avatar_url')
+          .in('user_id', creatorIds)
+
+        const creatorMap = new Map()
+        creatorsData?.forEach(c => creatorMap.set(c.user_id, c))
+
+        const itemsWithLikes = validItems.map(item => ({
+          ...item,
+          like_count: likeMap.get(item.id) || 0,
+          profiles: creatorMap.get(item.creator_id) || {
+            username: '',
+            display_name: '不明',
+            avatar_url: null
+          }
+        }))
+
+        itemsWithLikes.sort((a, b) => b.like_count - a.like_count)
+        setPopularWorks(itemsWithLikes.slice(0, 6))
+      }
+
+      // クリエイターを取得（受付中優先）
       const { data: creatorsData } = await supabase
         .from('profiles')
-        .select('user_id, username, display_name, avatar_url, bio')
-        .limit(30)
+        .select('id, user_id, username, display_name, avatar_url, bio, is_accepting_orders, specialties')
+        .not('display_name', 'is', null)
+        .order('is_accepting_orders', { ascending: false })
+        .limit(8)
 
       if (creatorsData) {
-        const creatorIds = creatorsData.map(c => c.user_id)
-        const [{ data: works }, { data: follows }] = await Promise.all([
-          supabase.from('portfolio_items').select('creator_id').eq('is_public', true).in('creator_id', creatorIds),
-          supabase.from('follows').select('following_id').in('following_id', creatorIds)
-        ])
+        setCreators(creatorsData)
+      }
 
-        const workMap = new Map()
-        works?.forEach(w => workMap.set(w.creator_id, (workMap.get(w.creator_id) || 0) + 1))
+      // 依頼を取得（募集中のみ）
+      const { data: requestsData } = await supabase
+        .from('work_requests')
+        .select('id, title, description, budget_min, budget_max, category, created_at, requester_id')
+        .eq('request_type', 'public')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(6)
 
-        const followerMap = new Map()
-        follows?.forEach(f => followerMap.set(f.following_id, (followerMap.get(f.following_id) || 0) + 1))
-
-        const creatorsWithStats = creatorsData.map((creator: any) => ({
-          ...creator,
-          workCount: workMap.get(creator.user_id) || 0,
-          followerCount: followerMap.get(creator.user_id) || 0
-        }))
+      if (requestsData && requestsData.length > 0) {
+        const requesterIds = [...new Set(requestsData.map(r => r.requester_id))]
         
-        setFeaturedCreators(creatorsWithStats.filter(c => c.workCount > 0).sort((a, b) => b.workCount - a.workCount).slice(0, 12))
+        const { data: requesters } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .in('id', requesterIds)
+
+        const requesterMap = new Map()
+        requesters?.forEach(r => requesterMap.set(r.id, r))
+
+        const requestsWithProfiles = requestsData.map(req => ({
+          ...req,
+          profiles: requesterMap.get(req.requester_id) || {
+            display_name: '不明',
+            avatar_url: null
+          }
+        }))
+
+        setWorkRequests(requestsWithProfiles)
       }
 
     } catch (error) {
       console.error('データ取得エラー:', error)
     } finally {
-      console.timeEnd('データ取得時間')
       setLoading(false)
     }
   }
 
   function getCategoryLabel(category: string) {
-    const categories: { [key: string]: string } = {
+    const labels: { [key: string]: string } = {
       illustration: 'イラスト',
-      manga: '漫画',
+      manga: 'マンガ',
       novel: '小説',
       music: '音楽',
       voice: 'ボイス',
-      video: '動画'
+      video: '動画',
+      design: 'デザイン',
+      other: 'その他'
     }
-    return categories[category] || category
-  }
-
-  function getFilteredWorks(works: PortfolioItem[]) {
-    if (!activeCategory) return works
-    return works.filter(w => w.category === activeCategory)
-  }
-
-  const categories = [
-    { id: 'illustration', label: 'イラスト' },
-    { id: 'manga', label: 'マンガ' },
-    { id: 'novel', label: '小説' },
-    { id: 'music', label: '音楽' },
-    { id: 'voice', label: 'ボイス' },
-    { id: 'video', label: '動画' }
-  ]
-
-  function PortfolioCard({ item }: { item: PortfolioItem }) {
-    return (
-      <Link href={`/portfolio/${item.id}`} className="portfolio-card">
-        <div className="portfolio-card-image">
-          <img
-            src={item.thumbnail_url || item.image_url}
-            alt={item.title}
-            loading="lazy"
-          />
-          <div className="category-badge">
-            {getCategoryLabel(item.category)}
-          </div>
-        </div>
-
-        <div className="portfolio-card-content">
-          <h3 className="card-subtitle text-ellipsis mb-8">
-            {item.title}
-          </h3>
-
-          <div
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              window.location.href = `/creators/${item.profiles?.username || ''}`
-            }}
-            className="creator-info mb-12"
-          >
-            <div className="avatar avatar-small">
-              {item.profiles?.avatar_url ? (
-                <Image 
-                  src={item.profiles.avatar_url} 
-                  alt="" 
-                  width={24} 
-                  height={24} 
-                />
-              ) : (
-                <i className="fas fa-user"></i>
-              )}
-            </div>
-            <span className="text-small text-secondary text-ellipsis">
-              {item.profiles?.display_name || '名前未設定'}
-            </span>
-          </div>
-
-          <div className="portfolio-stats">
-            <span>
-              <i className="far fa-heart"></i>
-              <span>{item.likeCount}</span>
-            </span>
-            <span>
-              <i className="far fa-comment"></i>
-              <span>{item.commentCount}</span>
-            </span>
-          </div>
-        </div>
-      </Link>
-    )
+    return labels[category] || 'その他'
   }
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh',
-      backgroundColor: '#F5F6F8',
-      width: '100vw',
-      overflowX: 'hidden'
-    }}>
+    <div className="flex flex-col bg-page" style={{ minHeight: '100vh' }}>
       <Header />
-      
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .portfolio-card {
-            background-color: #FFFFFF;
-            border: 1px solid #D0D5DA;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            text-decoration: none;
-            display: block;
-          }
-          
-          .portfolio-card:hover {
-            border-color: #5B7C99;
-            box-shadow: 0 2px 8px rgba(91, 124, 153, 0.15);
-          }
-          
-          .portfolio-card-image {
-            width: 100%;
-            padding-top: 100%;
-            position: relative;
-            background-color: #EEF0F3;
-          }
-          
-          .portfolio-card-image img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-          
-          .category-badge {
-            position: absolute;
-            bottom: 8px;
-            left: 8px;
-            background-color: rgba(34, 34, 34, 0.85);
-            color: #FFFFFF;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-          }
-          
-          .portfolio-card-content {
-            padding: 16px;
-          }
-          
-          .creator-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-          }
-          
-          .creator-info:hover {
-            opacity: 0.7;
-          }
-          
-          .portfolio-stats {
-            display: flex;
-            gap: 12px;
-            font-size: 12px;
-            color: #888888;
-          }
-          
-          .portfolio-stats span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
-          
-          .sidebar-nav-button {
-            width: 100%;
-            padding: 12px 16px;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            font-weight: 400;
-            color: #222222;
-            cursor: pointer;
-            text-align: left;
-            border-radius: 8px;
-            transition: background-color 0.2s;
-            text-decoration: none;
-            display: block;
-          }
-          
-          .sidebar-nav-button:hover {
-            background-color: #EEF0F3;
-          }
-          
-          .sidebar-nav-button.active {
-            background-color: #EAF0F5;
-            font-weight: 600;
-            color: #5B7C99;
-          }
-          
-          .sidebar-section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #888888;
-            margin-bottom: 8px;
-            padding: 0 16px;
-          }
-          
-          .featured-creator-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background-color: transparent;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: background-color 0.2s;
-          }
-          
-          .featured-creator-card:hover {
-            background-color: #EEF0F3;
-          }
-          
-          @media (max-width: 1024px) {
-            .sidebar-desktop {
-              display: none !important;
-            }
-          }
-          
-          @media (max-width: 768px) {
-            .grid-portfolio {
-              grid-template-columns: repeat(2, 1fr) !important;
-              gap: 12px !important;
-            }
-          }
-        `
-      }} />
-      
-      <main style={{ display: 'flex', minHeight: 'calc(100vh - 60px)', width: '100%' }}>
-        {/* サイドバー */}
-        <aside style={{
-          width: '240px',
-          flexShrink: 0,
-          borderRight: '1px solid #D0D5DA',
-          backgroundColor: '#FFFFFF',
-          padding: '20px',
-          minHeight: '100%'
-        }}
-        className="sidebar-desktop">
-          {/* メインナビゲーション */}
-          <nav className="mb-24">
-            <button
-              onClick={() => {
-                setActiveTab('all')
-                setActiveCategory(null)
-              }}
-              className={`sidebar-nav-button ${activeTab === 'all' && !activeCategory ? 'active' : ''}`}
-            >
-              すべて
-            </button>
-            {isLoggedIn && (
-              <button
-                onClick={() => {
-                  setActiveTab('following')
-                  setActiveCategory(null)
-                }}
-                className={`sidebar-nav-button ${activeTab === 'following' ? 'active' : ''}`}
-              >
-                フォロー中
-              </button>
-            )}
-          </nav>
 
-          <div className="separator"></div>
-
-          {/* 仕事セクション */}
-          <div className="mb-24">
-            <div className="sidebar-section-title">仕事</div>
-            <Link href="/requests" className="sidebar-nav-button">
-              依頼を探す
+      <main>
+        {/* サービスを探す */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">サービスを探す</h2>
+            <Link href="/pricing" className="section-link">
+              もっと見る <i className="fas fa-arrow-right"></i>
             </Link>
-            {isLoggedIn && (
-              <Link href="/requests/create" className="sidebar-nav-button">
-                依頼を投稿
-              </Link>
-            )}
           </div>
-
-          <div className="separator"></div>
-
-          {/* クリエイター */}
-          <Link href="/creators" className="sidebar-nav-button mb-24">
-            クリエイターを探す
-          </Link>
-
-          <div className="separator"></div>
-
-          {/* カテゴリ */}
-          <div className="mb-24">
-            <div className="sidebar-section-title">カテゴリ</div>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveTab('all')
-                  setActiveCategory(activeCategory === cat.id ? null : cat.id)
-                }}
-                className={`sidebar-nav-button ${activeCategory === cat.id ? 'active' : ''}`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="separator"></div>
-
-          {/* 注目のクリエイター */}
-          <div>
-            <div className="sidebar-section-title">注目のクリエイター</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {featuredCreators.slice(0, 8).map((creator) => (
-                <Link 
-                  key={creator.user_id}
-                  href={`/creators/${creator.username}`}
-                  className="featured-creator-card"
-                >
-                  <div className="avatar avatar-medium">
-                    {creator.avatar_url ? (
-                      <Image 
-                        src={creator.avatar_url} 
-                        alt="" 
-                        width={48} 
-                        height={48} 
-                      />
-                    ) : (
-                      <i className="fas fa-user"></i>
-                    )}
+          
+          {pricingPlans.length > 0 ? (
+            <div className="card-grid">
+              {pricingPlans.map((plan) => (
+                <Link key={plan.id} href={`/pricing/${plan.id}`} className="soft-card">
+                  <div className="pricing-card-image">
+                    <img src={plan.thumbnail_url} alt={plan.plan_name} loading="lazy" />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="text-small text-primary text-ellipsis" style={{ fontWeight: 600 }}>
-                      {creator.display_name}
+                  <div className="pricing-card-content">
+                    <div className="text-ellipsis mb-8" style={{ fontSize: '15px', fontWeight: 600, color: '#222222' }}>
+                      {plan.plan_name}
                     </div>
-                    <div className="text-tiny text-gray">
-                      {creator.workCount} 作品
+                    <div className="text-price mb-12">¥{plan.minimum_price.toLocaleString()}〜</div>
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      <div className="avatar-neu avatar-neu-medium">
+                        {plan.profiles.avatar_url ? (
+                          <Image src={plan.profiles.avatar_url} alt="" width={28} height={28} />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
+                      </div>
+                      <span className="text-ellipsis text-secondary" style={{ fontSize: '13px', flex: 1 }}>
+                        {plan.profiles.display_name || '名前未設定'}
+                      </span>
+                    </div>
+                    <div className={`status-badge ${plan.profiles.is_accepting_orders ? 'accepting' : 'not-accepting'}`} style={{ marginTop: '12px' }}>
+                      <i className="fas fa-circle"></i>
+                      {plan.profiles.is_accepting_orders ? '受付中' : '受付停止'}
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
-          </div>
-        </aside>
-
-        {/* メインコンテンツ */}
-        <div style={{ flex: 1, minWidth: 0, backgroundColor: '#FFFFFF' }}>
-          {loading ? (
-            <LoadingSkeleton />
           ) : (
-            <>
-              {/* カテゴリフィルター適用時 */}
-              {activeCategory && (
-                <>
-                  <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
-                    <div className="flex-between mb-16">
-                      <h2 className="section-title">
-                        {getCategoryLabel(activeCategory)}
-                      </h2>
-                      <button
-                        onClick={() => setActiveCategory(null)}
-                        className="btn-secondary btn-small"
-                      >
-                        <i className="fas fa-times"></i> フィルターを解除
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-24">
-                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
-                      alignItems: 'center',
-                      textDecoration: 'none',
-                      color: '#222222'
-                    }}>
-                      <h3 className="section-title">おすすめ作品</h3>
-                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                    </Link>
-                    <div className="grid-portfolio" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '20px'
-                    }}>
-                      {getFilteredWorks(featuredWorks).map((item) => (
-                        <PortfolioCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-24">
-                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
-                      alignItems: 'center',
-                      textDecoration: 'none',
-                      color: '#222222'
-                    }}>
-                      <h3 className="section-title">新着作品</h3>
-                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                    </Link>
-                    <div className="grid-portfolio" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '20px'
-                    }}>
-                      {getFilteredWorks(newWorks).map((item) => (
-                        <PortfolioCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-24">
-                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
-                      alignItems: 'center',
-                      textDecoration: 'none',
-                      color: '#222222'
-                    }}>
-                      <h3 className="section-title">人気作品</h3>
-                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                    </Link>
-                    <div className="grid-portfolio" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '20px'
-                    }}>
-                      {getFilteredWorks(popularWorks).map((item) => (
-                        <PortfolioCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* 通常表示 */}
-              {!activeCategory && (
-                <>
-                  {/* フォロー中タブ */}
-                  {isLoggedIn && activeTab === 'following' && (
-                    <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
-                      <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
-                        alignItems: 'center',
-                        textDecoration: 'none',
-                        color: '#222222'
-                      }}>
-                        <h3 className="section-title">フォロー中の新着作品</h3>
-                        <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                      </Link>
-                      <div className="grid-portfolio" style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                        gap: '20px'
-                      }}>
-                        {newWorks.slice(0, 12).map((item) => (
-                          <PortfolioCard key={item.id} item={item} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 注目作品 */}
-                  <div className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
-                    <Link href="/portfolio" className="flex gap-8 mb-16" style={{ 
-                      alignItems: 'center',
-                      textDecoration: 'none',
-                      color: '#222222'
-                    }}>
-                      <h3 className="section-title">注目作品</h3>
-                      <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                    </Link>
-                    <div className="grid-portfolio" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '20px'
-                    }}>
-                      {featuredWorks.map((item) => (
-                        <PortfolioCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* カテゴリ別セクション */}
-                  {categories.map((cat) => {
-                    const categoryWorks = newWorks.filter(w => w.category === cat.id).slice(0, 8)
-                    if (categoryWorks.length === 0) return null
-                    
-                    return (
-                      <div key={cat.id} className="p-24" style={{ borderBottom: '1px solid #EEF0F3' }}>
-                        <Link 
-                          href={`/portfolio?category=${cat.id}`}
-                          className="flex gap-8 mb-16"
-                          style={{ 
-                            alignItems: 'center',
-                            textDecoration: 'none',
-                            color: '#222222'
-                          }}
-                        >
-                          <h3 className="section-title">新着{cat.label}</h3>
-                          <i className="fas fa-chevron-right text-gray" style={{ fontSize: '14px' }}></i>
-                        </Link>
-                        <div className="grid-portfolio" style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                          gap: '20px'
-                        }}>
-                          {categoryWorks.map((item) => (
-                            <PortfolioCard key={item.id} item={item} />
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </>
-              )}
-            </>
+            <div className="empty-state">
+              <i className="fas fa-briefcase"></i>
+              <p>まだサービスがありません</p>
+            </div>
           )}
-        </div>
+        </section>
+
+        {/* 人気クリエイター */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">人気クリエイター</h2>
+          </div>
+          
+          {creators.length > 0 ? (
+            <div className="creator-grid">
+              {creators.map((creator) => (
+                <Link key={creator.id} href={`/creator/${creator.username || creator.id}`} className="soft-card" style={{ padding: '24px 20px', textAlign: 'center' }}>
+                  <div className="avatar-neu avatar-neu-xlarge" style={{ margin: '0 auto 16px' }}>
+                    {creator.avatar_url ? (
+                      <Image src={creator.avatar_url} alt="" width={72} height={72} />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#222222', marginBottom: '6px' }}>
+                    {creator.display_name || '名前未設定'}
+                  </div>
+                  <div className="text-clamp-2 text-secondary" style={{ fontSize: '12px', marginBottom: '12px', minHeight: '36px', lineHeight: 1.5 }}>
+                    {creator.bio || 'よろしくお願いします！'}
+                  </div>
+                  <div className={`status-badge ${creator.is_accepting_orders ? 'accepting' : 'not-accepting'}`} style={{ padding: '6px 14px' }}>
+                    <i className="fas fa-circle"></i>
+                    {creator.is_accepting_orders ? '受付中' : '受付停止'}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <i className="fas fa-users"></i>
+              <p>クリエイターがいません</p>
+            </div>
+          )}
+        </section>
+
+        {/* 人気作品ランキング */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">人気作品ランキング</h2>
+            <Link href="/portfolio" className="section-link">
+              もっと見る <i className="fas fa-arrow-right"></i>
+            </Link>
+          </div>
+          
+          {popularWorks.length > 0 ? (
+            <div className="ranking-grid">
+              {popularWorks.map((item, index) => (
+                <Link key={item.id} href={`/portfolio/${item.id}`} className="soft-card" style={{ position: 'relative' }}>
+                  <div className={`ranking-badge ${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other'}`}>
+                    {index + 1}
+                  </div>
+                  <div className="portfolio-card-image">
+                    <img src={item.thumbnail_url || item.image_url} alt={item.title} loading="lazy" />
+                  </div>
+                  <div className="portfolio-card-content">
+                    <div className="text-ellipsis mb-8" style={{ fontSize: '14px', fontWeight: 600, color: '#222222' }}>
+                      {item.title}
+                    </div>
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      <div className="avatar-neu avatar-neu-small">
+                        {item.profiles.avatar_url ? (
+                          <Image src={item.profiles.avatar_url} alt="" width={24} height={24} />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
+                      </div>
+                      <span className="text-ellipsis text-secondary" style={{ fontSize: '12px' }}>
+                        {item.profiles.display_name || '名前未設定'}
+                      </span>
+                    </div>
+                    <div className="like-count" style={{ marginTop: '8px' }}>
+                      <i className="fas fa-heart"></i>
+                      {item.like_count}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <i className="fas fa-trophy"></i>
+              <p>まだランキングがありません</p>
+            </div>
+          )}
+        </section>
+
+        {/* 新着作品 */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">新着作品</h2>
+            <Link href="/portfolio" className="section-link">
+              もっと見る <i className="fas fa-arrow-right"></i>
+            </Link>
+          </div>
+          
+          {portfolioItems.length > 0 ? (
+            <div className="portfolio-grid">
+              {portfolioItems.map((item) => (
+                <Link key={item.id} href={`/portfolio/${item.id}`} className="soft-card">
+                  <div className="portfolio-card-image">
+                    <img src={item.thumbnail_url || item.image_url} alt={item.title} loading="lazy" />
+                  </div>
+                  <div className="portfolio-card-content">
+                    <div className="text-ellipsis mb-8" style={{ fontSize: '14px', fontWeight: 600, color: '#222222' }}>
+                      {item.title}
+                    </div>
+                    <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                      <div className="avatar-neu avatar-neu-small">
+                        {item.profiles.avatar_url ? (
+                          <Image src={item.profiles.avatar_url} alt="" width={24} height={24} />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
+                      </div>
+                      <span className="text-ellipsis text-secondary" style={{ fontSize: '12px' }}>
+                        {item.profiles.display_name || '名前未設定'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <i className="fas fa-image"></i>
+              <p>まだ作品がありません</p>
+            </div>
+          )}
+        </section>
+
+        {/* 依頼を探す */}
+        <section className="home-section">
+          <div className="section-header">
+            <h2 className="section-title">依頼を探す</h2>
+            <Link href="/requests" className="section-link">
+              もっと見る <i className="fas fa-arrow-right"></i>
+            </Link>
+          </div>
+          
+          {workRequests.length > 0 ? (
+            <div className="request-grid">
+              {workRequests.map((request) => (
+                <Link key={request.id} href={`/requests/${request.id}`} className="soft-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="badge-category" style={{ alignSelf: 'flex-start' }}>
+                    {getCategoryLabel(request.category)}
+                  </div>
+                  <div className="text-clamp-2" style={{ fontSize: '16px', fontWeight: 700, color: '#222222', lineHeight: 1.4 }}>
+                    {request.title}
+                  </div>
+                  <div className="text-clamp-2 text-secondary" style={{ fontSize: '13px', lineHeight: 1.5 }}>
+                    {request.description}
+                  </div>
+                  <div className="text-price">
+                    {request.budget_min && request.budget_max ? (
+                      <>¥{request.budget_min.toLocaleString()}〜{request.budget_max.toLocaleString()}</>
+                    ) : request.budget_min ? (
+                      <>¥{request.budget_min.toLocaleString()}〜</>
+                    ) : request.budget_max ? (
+                      <>〜¥{request.budget_max.toLocaleString()}</>
+                    ) : '予算未定'}
+                  </div>
+                  <div className="separator-light" style={{ margin: '0', marginTop: 'auto' }}></div>
+                  <div className="flex gap-8" style={{ alignItems: 'center' }}>
+                    <div className="avatar-neu avatar-neu-small">
+                      {request.profiles.avatar_url ? (
+                        <Image src={request.profiles.avatar_url} alt="" width={24} height={24} />
+                      ) : (
+                        <i className="fas fa-user"></i>
+                      )}
+                    </div>
+                    <span className="text-secondary" style={{ fontSize: '12px' }}>
+                      {request.profiles.display_name || '名前未設定'}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <i className="fas fa-clipboard-list"></i>
+              <p>まだ依頼がありません</p>
+            </div>
+          )}
+        </section>
       </main>
 
       <Footer />

@@ -64,7 +64,7 @@ export function SignupCompleteClient({ user }: Props) {
     router.push(`/signup/complete?step=${newStep}`, { scroll: false })
   }
 
-// URLパラメータが変更されたらステップを同期
+  // URLパラメータが変更されたらステップを同期
   useEffect(() => {
     const stepFromUrl = (searchParams.get('step') as Step) || 'userType'
     setStep(stepFromUrl)
@@ -309,14 +309,8 @@ export function SignupCompleteClient({ user }: Props) {
 
   if (!user) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#F5F6F8',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{ color: '#888888' }}>読み込み中...</div>
+      <div className="signup-complete-page">
+        <div className="signup-complete-loading">読み込み中...</div>
       </div>
     )
   }
@@ -368,122 +362,6 @@ export function SignupCompleteClient({ user }: Props) {
             />
           </div>
         </div>
-
-        <style jsx>{`
-          .desktop-indicator {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 48px;
-            padding: 0 20px;
-          }
-
-          .mobile-indicator {
-            display: none;
-          }
-
-          .step-group {
-            display: flex;
-            align-items: center;
-          }
-
-          .step-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-          }
-
-          .step-number {
-            min-width: 32px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: #D8DEE4;
-            color: #888888;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 600;
-            flex-shrink: 0;
-            transition: all 0.2s;
-          }
-
-          .step-number.active {
-            background-color: #5B7C99;
-            color: #FFFFFF;
-          }
-
-          .step-text {
-            font-size: 14px;
-            color: #888888;
-            font-weight: 400;
-          }
-
-          .step-text.active {
-            color: #222222;
-            font-weight: 600;
-          }
-
-          .step-line {
-            width: 60px;
-            height: 2px;
-            background-color: #D8DEE4;
-            margin: 0 16px;
-            transition: all 0.2s;
-          }
-
-          .step-line.active {
-            background-color: #5B7C99;
-          }
-
-          @media (max-width: 640px) {
-            .desktop-indicator {
-              display: none;
-            }
-
-            .mobile-indicator {
-              display: block;
-              margin-bottom: 32px;
-              padding: 0 20px;
-            }
-
-            .progress-info {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 8px;
-            }
-
-            .current-step-label {
-              font-size: 14px;
-              font-weight: 600;
-              color: #222222;
-            }
-
-            .step-counter {
-              font-size: 12px;
-              font-weight: 500;
-              color: #888888;
-            }
-
-            .progress-bar-container {
-              width: 100%;
-              height: 4px;
-              background-color: #D8DEE4;
-              border-radius: 2px;
-              overflow: hidden;
-            }
-
-            .progress-bar-fill {
-              height: 100%;
-              background-color: #5B7C99;
-              border-radius: 2px;
-              transition: width 0.3s ease;
-            }
-          }
-        `}</style>
       </>
     )
   }
@@ -491,33 +369,14 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 1: 利用方法選択
   if (step === 'userType') {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#F5F6F8',
-        padding: '48px 20px'
-      }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <div className="signup-complete-page">
+        <div className="signup-complete-container signup-complete-container-wide">
           <StepIndicator />
           
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700',
-            marginBottom: '12px',
-            textAlign: 'center',
-            color: '#222222'
-          }}>
-            利用方法を選択
-          </h1>
-          <p style={{ 
-            textAlign: 'center',
-            color: '#555555',
-            marginBottom: '40px',
-            fontSize: '14px'
-          }}>
-            同人ワークスをどのように利用しますか?
-          </p>
+          <h1 className="signup-complete-title">利用方法を選択</h1>
+          <p className="signup-complete-subtitle">同人ワークスをどのように利用しますか?</p>
 
-          <div className="user-type-container">
+          <div className="user-type-grid">
             <button
               onClick={() => {
                 setUserType('casual')
@@ -525,14 +384,14 @@ export function SignupCompleteClient({ user }: Props) {
               }}
               className="user-type-card"
             >
-              <div className="card-content">
-                <div className="card-text">
-                  <div className="card-title">一般利用</div>
-                  <div className="card-description">
+              <div className="user-type-card-content">
+                <div className="user-type-card-text">
+                  <div className="user-type-card-title">一般利用</div>
+                  <div className="user-type-card-description">
                     趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
                   </div>
                 </div>
-                <div className="card-image-placeholder">
+                <div className="user-type-card-image">
                   {/* 挿絵をここに配置 */}
                 </div>
               </div>
@@ -545,81 +404,19 @@ export function SignupCompleteClient({ user }: Props) {
               }}
               className="user-type-card"
             >
-              <div className="card-content">
-                <div className="card-text">
-                  <div className="card-title">ビジネス利用</div>
-                  <div className="card-description">
+              <div className="user-type-card-content">
+                <div className="user-type-card-text">
+                  <div className="user-type-card-title">ビジネス利用</div>
+                  <div className="user-type-card-description">
                     仕事の受発注、報酬の受け取りなどビジネスとして利用する
                   </div>
                 </div>
-                <div className="card-image-placeholder">
+                <div className="user-type-card-image">
                   {/* 挿絵をここに配置 */}
                 </div>
               </div>
             </button>
           </div>
-
-          <style jsx>{`
-            .user-type-container {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-            }
-
-            .user-type-card {
-              padding: 24px;
-              text-align: left;
-              background-color: #FFFFFF;
-              border: 2px solid #D0D5DA;
-              border-radius: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-              width: 100%;
-            }
-
-            .user-type-card:hover {
-              border-color: #5B7C99;
-              box-shadow: 0 2px 8px rgba(91, 124, 153, 0.1);
-            }
-
-            .card-content {
-              display: flex;
-              flex-direction: column;
-              gap: 20px;
-            }
-
-            .card-text {
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-            }
-
-            .card-title {
-              font-size: 18px;
-              font-weight: 600;
-              color: #222222;
-            }
-
-            .card-description {
-              font-size: 14px;
-              color: #555555;
-              line-height: 1.6;
-            }
-
-            .card-image-placeholder {
-              width: 200px;
-              height: 200px;
-              background-color: #D0D5DA;
-              border-radius: 8px;
-              margin: 0 auto;
-            }
-
-            @media (max-width: 768px) {
-              .user-type-container {
-                grid-template-columns: 1fr;
-              }
-            }
-          `}</style>
         </div>
       </div>
     )
@@ -628,39 +425,15 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 2: 基本情報入力
   if (step === 'basicInfo') {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#F5F6F8',
-        padding: '48px 20px'
-      }}>
+      <div className="signup-complete-page">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700',
-            marginBottom: '12px',
-            textAlign: 'center',
-            color: '#222222'
-          }}>
-            基本情報の入力
-          </h1>
-          <p style={{ 
-            textAlign: 'center',
-            color: '#555555',
-            marginBottom: '40px',
-            fontSize: '14px'
-          }}>
-            アカウント情報を設定してください
-          </p>
+        <div className="signup-complete-container">
+          <h1 className="signup-complete-title">基本情報の入力</h1>
+          <p className="signup-complete-subtitle">アカウント情報を設定してください</p>
           
           <StepIndicator />
 
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '32px',
-            border: '1px solid #D0D5DA'
-          }}>
+          <div className="signup-complete-card">
             <form onSubmit={(e) => {
               e.preventDefault()
               if (userType === 'business') {
@@ -670,44 +443,25 @@ export function SignupCompleteClient({ user }: Props) {
               }
             }}>
               {user?.app_metadata?.provider !== 'email' && (
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ 
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#222222',
-                    marginBottom: '8px'
-                  }}>
+                <div className="signup-complete-form-group">
+                  <label className="signup-complete-label">
                     メールアドレス
+                    <span className="signup-complete-readonly-badge">
+                      <i className="fas fa-lock"></i> 変更不可
+                    </span>
                   </label>
                   <input
                     type="email"
                     value={user?.email || ''}
                     disabled
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D0D5DA',
-                      borderRadius: '8px',
-                      outline: 'none',
-                      color: '#888888',
-                      backgroundColor: '#EEF0F3',
-                      cursor: 'not-allowed'
-                    }}
+                    className="signup-complete-input disabled"
                   />
                 </div>
               )}
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  ユーザーID <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  ユーザーID <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -716,35 +470,23 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="doujinworks"
                   required
                   autoComplete="off"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'border-color 0.15s',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                  className="signup-complete-input"
                 />
-                <div style={{ fontSize: '12px', color: '#888888', marginTop: '6px' }}>
+                <div className="signup-complete-hint">
                   4〜20文字 / 英数字とアンダースコア(_)のみ
                 </div>
                 {username && (
-                  <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                  <div className="signup-complete-validation">
                     {usernameCheck.checking && (
-                      <span style={{ color: '#888888' }}>確認中...</span>
+                      <span className="checking">確認中...</span>
                     )}
                     {!usernameCheck.checking && usernameCheck.available === true && (
-                      <span style={{ color: '#4F8A6B' }}>
+                      <span className="available">
                         <i className="fas fa-check-circle"></i> 利用可能です
                       </span>
                     )}
                     {!usernameCheck.checking && usernameCheck.available === false && (
-                      <span style={{ color: '#C05656' }}>
+                      <span className="unavailable">
                         <i className="fas fa-times-circle"></i> {usernameCheck.error}
                       </span>
                     )}
@@ -752,15 +494,9 @@ export function SignupCompleteClient({ user }: Props) {
                 )}
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  表示名 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  表示名 <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -768,71 +504,29 @@ export function SignupCompleteClient({ user }: Props) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="同人ワークス"
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    transition: 'border-color 0.15s',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                  className="signup-complete-input"
                 />
               </div>
 
               {error && (
-                <div className="alert alert-error" style={{
-                  marginBottom: '24px',
-                  fontSize: '14px'
-                }}>
+                <div className="auth-error">
+                  <i className="fas fa-exclamation-circle"></i>
                   {error}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="signup-complete-buttons">
                 <button
                   type="button"
                   onClick={() => changeStep('userType')}
-                  style={{
-                    flex: 1,
-                    fontSize: '14px',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    backgroundColor: '#FFFFFF',
-                    color: '#555555',
-                    border: '1px solid #D0D5DA',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#5B7C99'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#D0D5DA'
-                  }}
+                  className="signup-complete-btn secondary"
                 >
                   戻る
                 </button>
                 <button
                   type="submit"
                   disabled={!isBasicInfoComplete()}
-                  style={{
-                    flex: 1,
-                    fontSize: '14px',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    backgroundColor: isBasicInfoComplete() ? '#5B7C99' : '#D0D5DA',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    cursor: isBasicInfoComplete() ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s'
-                  }}
+                  className={`signup-complete-btn primary ${!isBasicInfoComplete() ? 'disabled' : ''}`}
                 >
                   {userType === 'business' ? '次へ' : '内容確認'}
                 </button>
@@ -847,86 +541,34 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 3: ビジネス情報入力
   if (step === 'businessInfo') {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#F5F6F8',
-        padding: '48px 20px'
-      }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700',
-            marginBottom: '12px',
-            textAlign: 'center',
-            color: '#222222'
-          }}>
-            ビジネス情報の入力
-          </h1>
-          <p style={{ 
-            textAlign: 'center',
-            color: '#555555',
-            marginBottom: '40px',
-            fontSize: '14px'
-          }}>
-            取引に必要な情報を入力してください
-          </p>
+      <div className="signup-complete-page">
+        <div className="signup-complete-container">
+          <h1 className="signup-complete-title">ビジネス情報の入力</h1>
+          <p className="signup-complete-subtitle">取引に必要な情報を入力してください</p>
           
           <StepIndicator />
 
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '32px',
-            border: '1px solid #D0D5DA'
-          }}>
+          <div className="signup-complete-card">
             <form onSubmit={(e) => {
               e.preventDefault()
               changeStep('confirm')
             }}>
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '12px'
-                }}>
-                  個人/法人 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  個人/法人 <span className="required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="signup-complete-toggle-group">
                   <button
                     type="button"
                     onClick={() => setAccountType('individual')}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: accountType === 'individual' ? '#FFFFFF' : '#555555',
-                      backgroundColor: accountType === 'individual' ? '#5B7C99' : '#FFFFFF',
-                      border: `1px solid ${accountType === 'individual' ? '#5B7C99' : '#D0D5DA'}`,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
+                    className={`signup-complete-toggle ${accountType === 'individual' ? 'active' : ''}`}
                   >
                     個人
                   </button>
                   <button
                     type="button"
                     onClick={() => setAccountType('corporate')}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: accountType === 'corporate' ? '#FFFFFF' : '#555555',
-                      backgroundColor: accountType === 'corporate' ? '#5B7C99' : '#FFFFFF',
-                      border: `1px solid ${accountType === 'corporate' ? '#5B7C99' : '#D0D5DA'}`,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
+                    className={`signup-complete-toggle ${accountType === 'corporate' ? 'active' : ''}`}
                   >
                     法人
                   </button>
@@ -934,35 +576,18 @@ export function SignupCompleteClient({ user }: Props) {
               </div>
 
               {/* 姓名（横並び） */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  氏名 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  氏名 <span className="required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="signup-complete-row">
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="姓"
                     required
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D0D5DA',
-                      borderRadius: '8px',
-                      outline: 'none',
-                      color: '#222222',
-                      backgroundColor: '#FFFFFF'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                    className="signup-complete-input"
                   />
                   <input
                     type="text"
@@ -970,35 +595,18 @@ export function SignupCompleteClient({ user }: Props) {
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="名"
                     required
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D0D5DA',
-                      borderRadius: '8px',
-                      outline: 'none',
-                      color: '#222222',
-                      backgroundColor: '#FFFFFF'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                    className="signup-complete-input"
                   />
                 </div>
               </div>
 
               {/* 姓名かな（横並び） */}
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  氏名(かな) <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  氏名(かな) <span className="required">*</span>
                 </label>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
+                <div className="signup-complete-row">
+                  <div className="signup-complete-field">
                     <input
                       type="text"
                       value={lastNameKana}
@@ -1008,30 +616,13 @@ export function SignupCompleteClient({ user }: Props) {
                       }}
                       placeholder="せい"
                       required
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: '14px',
-                        border: `1px solid ${lastNameKanaError ? '#C05656' : '#D0D5DA'}`,
-                        borderRadius: '8px',
-                        outline: 'none',
-                        color: '#222222',
-                        backgroundColor: '#FFFFFF'
-                      }}
-                      onFocus={(e) => {
-                        if (!lastNameKanaError) e.currentTarget.style.borderColor = '#5B7C99'
-                      }}
-                      onBlur={(e) => {
-                        if (!lastNameKanaError) e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
+                      className={`signup-complete-input ${lastNameKanaError ? 'error' : ''}`}
                     />
                     {lastNameKanaError && (
-                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#C05656' }}>
-                        {lastNameKanaError}
-                      </div>
+                      <div className="signup-complete-field-error">{lastNameKanaError}</div>
                     )}
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div className="signup-complete-field">
                     <input
                       type="text"
                       value={firstNameKana}
@@ -1041,42 +632,19 @@ export function SignupCompleteClient({ user }: Props) {
                       }}
                       placeholder="めい"
                       required
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        fontSize: '14px',
-                        border: `1px solid ${firstNameKanaError ? '#C05656' : '#D0D5DA'}`,
-                        borderRadius: '8px',
-                        outline: 'none',
-                        color: '#222222',
-                        backgroundColor: '#FFFFFF'
-                      }}
-                      onFocus={(e) => {
-                        if (!firstNameKanaError) e.currentTarget.style.borderColor = '#5B7C99'
-                      }}
-                      onBlur={(e) => {
-                        if (!firstNameKanaError) e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
+                      className={`signup-complete-input ${firstNameKanaError ? 'error' : ''}`}
                     />
                     {firstNameKanaError && (
-                      <div style={{ marginTop: '6px', fontSize: '12px', color: '#C05656' }}>
-                        {firstNameKanaError}
-                      </div>
+                      <div className="signup-complete-field-error">{firstNameKanaError}</div>
                     )}
                   </div>
                 </div>
               </div>
 
               {accountType === 'corporate' && (
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ 
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#222222',
-                    marginBottom: '8px'
-                  }}>
-                    会社名 <span style={{ color: '#C05656' }}>*</span>
+                <div className="signup-complete-form-group">
+                  <label className="signup-complete-label">
+                    会社名 <span className="required">*</span>
                   </label>
                   <input
                     type="text"
@@ -1084,31 +652,14 @@ export function SignupCompleteClient({ user }: Props) {
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="株式会社○○"
                     required
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      fontSize: '14px',
-                      border: '1px solid #D0D5DA',
-                      borderRadius: '8px',
-                      outline: 'none',
-                      color: '#222222',
-                      backgroundColor: '#FFFFFF'
-                    }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                    className="signup-complete-input"
                   />
                 </div>
               )}
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  電話番号 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  電話番号 <span className="required">*</span>
                 </label>
                 <input
                   type="tel"
@@ -1120,39 +671,16 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="09012345678"
                   required
                   maxLength={11}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: `1px solid ${phoneError ? '#C05656' : '#D0D5DA'}`,
-                    borderRadius: '8px',
-                    outline: 'none',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => {
-                    if (!phoneError) e.currentTarget.style.borderColor = '#5B7C99'
-                  }}
-                  onBlur={(e) => {
-                    if (!phoneError) e.currentTarget.style.borderColor = '#D0D5DA'
-                  }}
+                  className={`signup-complete-input ${phoneError ? 'error' : ''}`}
                 />
                 {phoneError && (
-                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#C05656' }}>
-                    {phoneError}
-                  </div>
+                  <div className="signup-complete-field-error">{phoneError}</div>
                 )}
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  郵便番号 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  郵便番号 <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -1164,57 +692,22 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="1234567"
                   required
                   maxLength={7}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: `1px solid ${postalCodeError ? '#C05656' : '#D0D5DA'}`,
-                    borderRadius: '8px',
-                    outline: 'none',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => {
-                    if (!postalCodeError) e.currentTarget.style.borderColor = '#5B7C99'
-                  }}
-                  onBlur={(e) => {
-                    if (!postalCodeError) e.currentTarget.style.borderColor = '#D0D5DA'
-                  }}
+                  className={`signup-complete-input ${postalCodeError ? 'error' : ''}`}
                 />
                 {postalCodeError && (
-                  <div style={{ marginTop: '6px', fontSize: '13px', color: '#C05656' }}>
-                    {postalCodeError}
-                  </div>
+                  <div className="signup-complete-field-error">{postalCodeError}</div>
                 )}
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  都道府県 <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  都道府県 <span className="required">*</span>
                 </label>
                 <select
                   value={prefecture}
                   onChange={(e) => setPrefecture(e.target.value)}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    color: '#222222'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                  className="signup-complete-select"
                 >
                   <option value="">選択してください</option>
                   <option value="北海道">北海道</option>
@@ -1267,15 +760,9 @@ export function SignupCompleteClient({ user }: Props) {
                 </select>
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  住所(番地まで) <span style={{ color: '#C05656' }}>*</span>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  住所(番地まで) <span className="required">*</span>
                 </label>
                 <input
                   type="text"
@@ -1283,100 +770,40 @@ export function SignupCompleteClient({ user }: Props) {
                   onChange={(e) => setAddress1(e.target.value)}
                   placeholder="○○市○○町1-2-3"
                   required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                  className="signup-complete-input"
                 />
               </div>
 
-              <div style={{ marginBottom: '32px' }}>
-                <label style={{ 
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#222222',
-                  marginBottom: '8px'
-                }}>
-                  住所(建物名など)
-                </label>
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">住所(建物名など)</label>
                 <input
                   type="text"
                   value={address2}
                   onChange={(e) => setAddress2(e.target.value)}
                   placeholder="○○マンション101号室"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    fontSize: '14px',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    color: '#222222',
-                    backgroundColor: '#FFFFFF'
-                  }}
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#5B7C99'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#D0D5DA'}
+                  className="signup-complete-input"
                 />
               </div>
 
               {error && (
-                <div className="alert alert-error" style={{
-                  marginBottom: '24px',
-                  fontSize: '14px'
-                }}>
+                <div className="auth-error">
+                  <i className="fas fa-exclamation-circle"></i>
                   {error}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="signup-complete-buttons">
                 <button
                   type="button"
                   onClick={() => changeStep('basicInfo')}
-                  style={{
-                    flex: 1,
-                    fontSize: '14px',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    backgroundColor: '#FFFFFF',
-                    color: '#555555',
-                    border: '1px solid #D0D5DA',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#5B7C99'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#D0D5DA'
-                  }}
+                  className="signup-complete-btn secondary"
                 >
                   戻る
                 </button>
                 <button
                   type="submit"
                   disabled={!isBusinessInfoComplete()}
-                  style={{
-                    flex: 1,
-                    fontSize: '14px',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    backgroundColor: isBusinessInfoComplete() ? '#5B7C99' : '#D0D5DA',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    cursor: isBusinessInfoComplete() ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s'
-                  }}
+                  className={`signup-complete-btn primary ${!isBusinessInfoComplete() ? 'disabled' : ''}`}
                 >
                   内容確認
                 </button>
@@ -1391,67 +818,41 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 4: 確認ページ
   if (step === 'confirm') {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        backgroundColor: '#F5F6F8',
-        padding: '48px 20px'
-      }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: '700',
-            marginBottom: '12px',
-            textAlign: 'center',
-            color: '#222222'
-          }}>
-            入力内容の確認
-          </h1>
-          <p style={{ 
-            textAlign: 'center',
-            color: '#555555',
-            marginBottom: '40px',
-            fontSize: '14px'
-          }}>
-            内容をご確認の上、登録を完了してください
-          </p>
+      <div className="signup-complete-page">
+        <div className="signup-complete-container">
+          <h1 className="signup-complete-title">入力内容の確認</h1>
+          <p className="signup-complete-subtitle">内容をご確認の上、登録を完了してください</p>
           
           <StepIndicator />
 
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '32px',
-            border: '1px solid #D0D5DA'
-          }}>
+          <div className="signup-complete-card">
             
             {/* 基本情報 */}
-            <div style={{ marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#222222' }}>
-                基本情報
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                  <span style={{ fontSize: '14px', color: '#555555' }}>利用方法</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>
+            <div className="signup-complete-section">
+              <h2 className="signup-complete-section-title">基本情報</h2>
+              <div className="signup-complete-confirm-list">
+                <div className="signup-complete-confirm-item">
+                  <span className="confirm-label">利用方法</span>
+                  <span className="confirm-value">
                     {userType === 'casual' ? '一般利用' : 'ビジネス利用'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                  <span style={{ fontSize: '14px', color: '#555555' }}>メールアドレス</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{user?.email}</span>
+                <div className="signup-complete-confirm-item">
+                  <span className="confirm-label">メールアドレス</span>
+                  <span className="confirm-value">{user?.email}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                  <span style={{ fontSize: '14px', color: '#555555' }}>ユーザーID</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{username}</span>
+                <div className="signup-complete-confirm-item">
+                  <span className="confirm-label">ユーザーID</span>
+                  <span className="confirm-value">{username}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                  <span style={{ fontSize: '14px', color: '#555555' }}>表示名</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{displayName}</span>
+                <div className="signup-complete-confirm-item">
+                  <span className="confirm-label">表示名</span>
+                  <span className="confirm-value">{displayName}</span>
                 </div>
                 {user?.app_metadata?.provider === 'email' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>パスワード</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>設定済み</span>
+                  <div className="signup-complete-confirm-item no-border">
+                    <span className="confirm-label">パスワード</span>
+                    <span className="confirm-value">設定済み</span>
                   </div>
                 )}
               </div>
@@ -1459,38 +860,36 @@ export function SignupCompleteClient({ user }: Props) {
 
             {/* ビジネス情報 */}
             {userType === 'business' && (
-              <div style={{ marginBottom: '32px' }}>
-                <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: '#222222' }}>
-                  ビジネス情報
-                </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>個人/法人</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>
+              <div className="signup-complete-section">
+                <h2 className="signup-complete-section-title">ビジネス情報</h2>
+                <div className="signup-complete-confirm-list">
+                  <div className="signup-complete-confirm-item">
+                    <span className="confirm-label">個人/法人</span>
+                    <span className="confirm-value">
                       {accountType === 'individual' ? '個人' : '法人'}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>氏名</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{lastName} {firstName}</span>
+                  <div className="signup-complete-confirm-item">
+                    <span className="confirm-label">氏名</span>
+                    <span className="confirm-value">{lastName} {firstName}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>氏名(かな)</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{lastNameKana} {firstNameKana}</span>
+                  <div className="signup-complete-confirm-item">
+                    <span className="confirm-label">氏名(かな)</span>
+                    <span className="confirm-value">{lastNameKana} {firstNameKana}</span>
                   </div>
                   {accountType === 'corporate' && companyName && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                      <span style={{ fontSize: '14px', color: '#555555' }}>会社名</span>
-                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{companyName}</span>
+                    <div className="signup-complete-confirm-item">
+                      <span className="confirm-label">会社名</span>
+                      <span className="confirm-value">{companyName}</span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>電話番号</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222' }}>{phone}</span>
+                  <div className="signup-complete-confirm-item">
+                    <span className="confirm-label">電話番号</span>
+                    <span className="confirm-value">{phone}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #EEF0F3' }}>
-                    <span style={{ fontSize: '14px', color: '#555555' }}>住所</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#222222', textAlign: 'right' }}>
+                  <div className="signup-complete-confirm-item no-border">
+                    <span className="confirm-label">住所</span>
+                    <span className="confirm-value" style={{ textAlign: 'right' }}>
                       〒{postalCode}<br />
                       {prefecture}{address1}{address2 && ` ${address2}`}
                     </span>
@@ -1500,54 +899,24 @@ export function SignupCompleteClient({ user }: Props) {
             )}
 
             {error && (
-              <div className="alert alert-error" style={{
-                marginBottom: '24px',
-                fontSize: '14px'
-              }}>
+              <div className="auth-error">
+                <i className="fas fa-exclamation-circle"></i>
                 {error}
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="signup-complete-buttons">
               <button
                 type="button"
                 onClick={() => changeStep(userType === 'business' ? 'businessInfo' : 'basicInfo')}
-                style={{
-                  flex: 1,
-                  fontSize: '14px',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  backgroundColor: '#FFFFFF',
-                  color: '#555555',
-                  border: '1px solid #D0D5DA',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#5B7C99'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#D0D5DA'
-                }}
+                className="signup-complete-btn secondary"
               >
                 戻る
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                style={{
-                  flex: 1,
-                  fontSize: '14px',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  backgroundColor: loading ? '#D0D5DA' : '#5B7C99',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
-                }}
+                className={`signup-complete-btn primary ${loading ? 'disabled' : ''}`}
               >
                 {loading ? '登録中...' : '登録完了'}
               </button>

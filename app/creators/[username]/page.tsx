@@ -10,7 +10,6 @@ import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import LoadingSkeleton from './LoadingSkeleton'
 
-// プロフィール情報の型定義
 type Creator = {
   id: string
   user_id: string
@@ -31,7 +30,6 @@ type Creator = {
   created_at: string
 }
 
-// 作品情報の型定義
 type PortfolioItem = {
   id: string
   title: string
@@ -39,7 +37,6 @@ type PortfolioItem = {
   thumbnail_url: string | null
 }
 
-// 料金表の型定義
 type PricingPlan = {
   id: string
   category: string
@@ -53,7 +50,6 @@ type PricingPlan = {
   created_at: string
 }
 
-// レビュー情報の型定義
 type Review = {
   id: string
   work_request_id: string
@@ -72,7 +68,6 @@ type Review = {
   }
 }
 
-// カテゴリラベルのマッピング（定数化して再利用）
 const CATEGORY_LABELS: { [key: string]: string } = {
   'illustration': 'イラスト',
   'manga': 'マンガ',
@@ -86,107 +81,42 @@ const CATEGORY_LABELS: { [key: string]: string } = {
   'other': 'その他'
 }
 
-// カテゴリの順序（定数化）
 const CATEGORY_ORDER = ['illustration', 'manga', 'novel', 'music', 'voice', 'video']
 
-// カテゴリラベル取得関数（コンポーネント外に移動）
 function getCategoryLabel(category: string | null): string {
   if (!category) return 'その他'
   return CATEGORY_LABELS[category] || category
 }
 
-// 表示用の画像URL取得（コンポーネント外に移動）
 function getWorkImageUrl(work: PortfolioItem): string | null {
   return work.thumbnail_url || null
 }
 
-// 作品カードコンポーネント（メモ化で高速化）
 const WorkCard = memo(({ work }: { work: PortfolioItem }) => {
   const imageUrl = getWorkImageUrl(work)
   
   return (
-    <Link
-      href={`/portfolio/${work.id}`}
-      style={{
-        textDecoration: 'none',
-        color: 'inherit',
-        display: 'block'
-      }}
-    >
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        border: '1px solid #D0D5DA'
-      }}
-      className="work-card">
-        {/* サムネイル */}
-        <div style={{
-          position: 'relative',
-          paddingBottom: '100%',
-          backgroundColor: '#F5F6F8',
-          overflow: 'hidden'
-        }}>
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={work.title}
-              fill
-              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              loading="lazy"
-              quality={75}
-              style={{ objectFit: 'cover', transition: 'transform 0.3s ease' }}
-            />
-          ) : (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#888888'
-            }}>
-              <i className="fas fa-image" style={{ fontSize: '48px', opacity: 0.3 }}></i>
-            </div>
-          )}
-          {/* カテゴリバッジ */}
-          <div style={{
-            position: 'absolute',
-            top: '8px',
-            left: '8px',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '4px 10px',
-            borderRadius: '6px',
-            fontSize: '11px',
-            fontWeight: '600',
-            backdropFilter: 'blur(4px)'
-          }}>
-            {getCategoryLabel(work.category)}
+    <Link href={`/portfolio/${work.id}`} className="creator-work-card">
+      <div className="creator-work-image">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={work.title}
+            fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            loading="lazy"
+            quality={75}
+            style={{ objectFit: 'cover' }}
+          />
+        ) : (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+            <i className="fas fa-image" style={{ fontSize: '48px', opacity: 0.3 }}></i>
           </div>
-        </div>
-        {/* タイトル */}
-        <div style={{
-          padding: '14px'
-        }}>
-          <h3 style={{
-            fontSize: '14px',
-            fontWeight: '600',
-            color: '#222222',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            margin: 0,
-            lineHeight: '1.4'
-          }}>
-            {work.title}
-          </h3>
-        </div>
+        )}
+        <div className="creator-work-badge">{getCategoryLabel(work.category)}</div>
+      </div>
+      <div className="creator-work-content">
+        <h3 className="creator-work-title">{work.title}</h3>
       </div>
     </Link>
   )
@@ -219,47 +149,29 @@ export default function CreatorDetailPage() {
   const [averageRating, setAverageRating] = useState<number>(0)
   const [totalReviews, setTotalReviews] = useState<number>(0)
 
-  // ページタイトルを設定
   useEffect(() => {
     if (creator) {
       document.title = `${creator.display_name || creator.username || 'ユーザー'} - 同人ワークス`
     }
   }, [creator])
 
-  // カテゴリ一覧をメモ化（高速化）
   const categories = useMemo(() => {
-    const uniqueCategories = Array.from(
-      new Set(portfolioItems.map(work => work.category).filter(Boolean) as string[])
-    )
+    const uniqueCategories = Array.from(new Set(portfolioItems.map(work => work.category).filter(Boolean) as string[]))
     return CATEGORY_ORDER.filter(cat => uniqueCategories.includes(cat))
   }, [portfolioItems])
 
-  // フィルタリングされた作品をメモ化（高速化）
   const filteredWorks = useMemo(() => {
-    if (worksCategoryTab === 'all') {
-      return portfolioItems
-    }
+    if (worksCategoryTab === 'all') return portfolioItems
     return portfolioItems.filter(work => work.category === worksCategoryTab)
   }, [worksCategoryTab, portfolioItems])
 
-  // 自分のプロフィールかどうかをメモ化
   const isOwnProfile = useMemo(() => {
     return currentProfileId && creator && currentProfileId === creator.id
   }, [currentProfileId, creator])
 
-  // 認証チェック（初回のみ）
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  useEffect(() => { checkAuth() }, [])
+  useEffect(() => { if (username) fetchCreator() }, [username])
 
-  // usernameが変わったらクリエイター情報を取得
-  useEffect(() => {
-    if (username) {
-      fetchCreator()
-    }
-  }, [username])
-
-  // 外側クリックで共有メニューを閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement
@@ -267,41 +179,24 @@ export default function CreatorDetailPage() {
         setIsShareDropdownOpen(false)
       }
     }
-
     if (isShareDropdownOpen) {
       document.addEventListener('click', handleClickOutside)
-      return () => {
-        document.removeEventListener('click', handleClickOutside)
-      }
+      return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [isShareDropdownOpen])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     setCurrentUserId(user?.id || null)
-
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (profile) {
-        setCurrentProfileId(profile.id)
-      }
+      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
+      if (profile) setCurrentProfileId(profile.id)
     }
   }
 
   async function fetchCreator() {
     setLoading(true)
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('username', username)
-      .single()
-
+    const { data, error } = await supabase.from('profiles').select('*').eq('username', username).single()
     if (error) {
       console.error('クリエイター取得エラー:', error)
       setCreator(null)
@@ -316,20 +211,14 @@ export default function CreatorDetailPage() {
         ])
       }
     }
-    
     setLoading(false)
   }
 
   async function fetchReviews(creatorId: string) {
     setReviewsLoading(true)
-    
     const { data, error } = await supabase
       .from('reviews')
-      .select(`
-        *,
-        reviewer:profiles!reviews_reviewer_id_fkey(display_name, avatar_url, username),
-        work_request:work_requests(title)
-      `)
+      .select(`*, reviewer:profiles!reviews_reviewer_id_fkey(display_name, avatar_url, username), work_request:work_requests(title)`)
       .eq('reviewee_id', creatorId)
       .order('created_at', { ascending: false })
 
@@ -338,8 +227,6 @@ export default function CreatorDetailPage() {
       setReviews([])
     } else {
       setReviews(data || [])
-      
-      // 平均評価を計算
       if (data && data.length > 0) {
         const avg = data.reduce((sum, review) => sum + review.rating, 0) / data.length
         setAverageRating(Math.round(avg * 10) / 10)
@@ -349,13 +236,11 @@ export default function CreatorDetailPage() {
         setTotalReviews(0)
       }
     }
-    
     setReviewsLoading(false)
   }
 
   async function fetchPortfolio(userId: string) {
     setWorksLoading(true)
-    
     const { data, error } = await supabase
       .from('portfolio_items')
       .select('id, title, category, thumbnail_url')
@@ -370,13 +255,11 @@ export default function CreatorDetailPage() {
     } else {
       setPortfolioItems(data || [])
     }
-    
     setWorksLoading(false)
   }
 
   async function fetchPricingPlans(creatorId: string) {
     setPricingLoading(true)
-    
     const { data, error } = await supabase
       .from('pricing_plans')
       .select('*')
@@ -390,32 +273,15 @@ export default function CreatorDetailPage() {
     } else {
       setPricingPlans(data || [])
     }
-    
     setPricingLoading(false)
   }
 
   async function fetchStats(userId: string) {
-    const [
-      { count: followerCnt },
-      { count: followingCnt },
-      { data: followData }
-    ] = await Promise.all([
-      supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', userId),
-      supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('follower_id', userId),
-      currentUserId ? supabase
-        .from('follows')
-        .select('*')
-        .eq('follower_id', currentUserId)
-        .eq('following_id', userId)
-        .maybeSingle() : Promise.resolve({ data: null })
+    const [{ count: followerCnt }, { count: followingCnt }, { data: followData }] = await Promise.all([
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId),
+      currentUserId ? supabase.from('follows').select('*').eq('follower_id', currentUserId).eq('following_id', userId).maybeSingle() : Promise.resolve({ data: null })
     ])
-
     setFollowerCount(followerCnt || 0)
     setFollowingCount(followingCnt || 0)
     setIsFollowing(!!followData)
@@ -428,28 +294,16 @@ export default function CreatorDetailPage() {
       }
       return
     }
-
     if (!creator) return
 
     try {
       if (isFollowing) {
-        if (!confirm('フォローを解除しますか？')) {
-          return
-        }
-        
-        await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', creator.user_id)
-
+        if (!confirm('フォローを解除しますか？')) return
+        await supabase.from('follows').delete().eq('follower_id', currentUserId).eq('following_id', creator.user_id)
         setIsFollowing(false)
         setFollowerCount(prev => prev - 1)
       } else {
-        await supabase
-          .from('follows')
-          .insert({ follower_id: currentUserId, following_id: creator.user_id })
-
+        await supabase.from('follows').insert({ follower_id: currentUserId, following_id: creator.user_id })
         setIsFollowing(true)
         setFollowerCount(prev => prev + 1)
       }
@@ -465,26 +319,15 @@ export default function CreatorDetailPage() {
       }
       return
     }
-
     if (!currentProfileId || !creator) return
 
     setSendingMessage(true)
-
     try {
-      const { data: myRooms } = await supabase
-        .from('chat_room_participants')
-        .select('chat_room_id')
-        .eq('profile_id', currentProfileId)
+      const { data: myRooms } = await supabase.from('chat_room_participants').select('chat_room_id').eq('profile_id', currentProfileId)
 
       if (myRooms && myRooms.length > 0) {
         const roomIds = myRooms.map(r => r.chat_room_id)
-        
-        const { data: sharedRooms, error: sharedError } = await supabase
-          .from('chat_room_participants')
-          .select('chat_room_id')
-          .eq('profile_id', creator.id)
-          .in('chat_room_id', roomIds)
-
+        const { data: sharedRooms, error: sharedError } = await supabase.from('chat_room_participants').select('chat_room_id').eq('profile_id', creator.id).in('chat_room_id', roomIds)
         if (!sharedError && sharedRooms && sharedRooms.length > 0) {
           router.push(`/messages/${sharedRooms[0].chat_room_id}`)
           setSendingMessage(false)
@@ -492,12 +335,7 @@ export default function CreatorDetailPage() {
         }
       }
 
-      const { data: newRoom, error: roomError } = await supabase
-        .from('chat_rooms')
-        .insert({})
-        .select()
-        .single()
-
+      const { data: newRoom, error: roomError } = await supabase.from('chat_rooms').insert({}).select().single()
       if (roomError || !newRoom) {
         console.error('チャットルーム作成エラー:', roomError)
         alert('チャットルームの作成に失敗しました')
@@ -505,26 +343,21 @@ export default function CreatorDetailPage() {
         return
       }
 
-      const { error: participantsError } = await supabase
-        .from('chat_room_participants')
-        .insert([
-          { chat_room_id: newRoom.id, profile_id: currentProfileId },
-          { chat_room_id: newRoom.id, profile_id: creator.id }
-        ])
-
+      const { error: participantsError } = await supabase.from('chat_room_participants').insert([
+        { chat_room_id: newRoom.id, profile_id: currentProfileId },
+        { chat_room_id: newRoom.id, profile_id: creator.id }
+      ])
       if (participantsError) {
         console.error('参加者追加エラー:', participantsError)
         alert('参加者の追加に失敗しました')
         setSendingMessage(false)
         return
       }
-
       router.push(`/messages/${newRoom.id}`)
     } catch (error) {
       console.error('メッセージ送信エラー:', error)
       alert('エラーが発生しました')
     }
-
     setSendingMessage(false)
   }, [currentUserId, currentProfileId, creator, router])
 
@@ -547,19 +380,13 @@ export default function CreatorDetailPage() {
           navigator.clipboard.writeText(url).then(() => {
             alert('プロフィールURLをコピーしました！')
             setIsShareDropdownOpen(false)
-          }).catch((err) => {
-            console.error('URLのコピーに失敗しました:', err)
-            fallbackCopyToClipboard(url)
-          })
+          }).catch(() => fallbackCopyToClipboard(url))
         } else {
           fallbackCopyToClipboard(url)
         }
         break
     }
-    
-    if (platform !== 'copy') {
-      setIsShareDropdownOpen(false)
-    }
+    if (platform !== 'copy') setIsShareDropdownOpen(false)
   }, [username, creator])
 
   function fallbackCopyToClipboard(text: string) {
@@ -600,26 +427,10 @@ export default function CreatorDetailPage() {
     return (
       <>
         <Header />
-        <div style={{ 
-          minHeight: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          backgroundColor: '#F5F6F8'
-        }}>
-          <div style={{ 
-            textAlign: 'center', 
-            backgroundColor: 'white', 
-            padding: '40px', 
-            borderRadius: '16px',
-            border: '1px solid #D0D5DA'
-          }}>
-            <h1 style={{ fontSize: '24px', marginBottom: '16px', color: '#222222' }}>
-              クリエイターが見つかりません
-            </h1>
-            <Link href="/portfolio" className="btn-primary">
-              作品一覧に戻る
-            </Link>
+        <div className="creator-not-found">
+          <div className="creator-not-found-card">
+            <h1>クリエイターが見つかりません</h1>
+            <Link href="/portfolio" className="btn-primary">作品一覧に戻る</Link>
           </div>
         </div>
         <Footer />
@@ -630,270 +441,51 @@ export default function CreatorDetailPage() {
   return (
     <>
       <Header />
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#FFFFFF',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        {/* ヘッダー背景画像（絶対配置、3:1比率、もっと薄く表示） */}
+      <div className="creator-detail-page">
+        {/* ヘッダー背景 */}
         {creator.header_url && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: 'calc(100vw / 3)',
-            maxHeight: '400px',
-            overflow: 'hidden',
-            zIndex: 0
-          }}
-          className="header-background">
-            <Image
-              src={creator.header_url}
-              alt=""
-              fill
-              sizes="100vw"
-              quality={85}
-              priority
-              style={{ 
-                objectFit: 'cover',
-                objectPosition: 'center'
-              }}
-            />
-            {/* より薄い白オーバーレイ */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,1) 100%)'
-            }}></div>
+          <div className="creator-header-bg">
+            <Image src={creator.header_url} alt="" fill sizes="100vw" quality={85} priority style={{ objectFit: 'cover', objectPosition: 'center' }} />
+            <div className="creator-header-overlay"></div>
           </div>
         )}
 
-        {/* メインコンテンツ */}
-        <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
-          padding: '40px 20px',
-          position: 'relative',
-          zIndex: 10
-        }}>
+        <div className="creator-container">
           {/* プロフィールセクション */}
-          <div style={{
-            backgroundColor: 'transparent',
-            borderRadius: '12px',
-            overflow: 'visible',
-            marginBottom: '40px',
-            position: 'relative',
-            padding: '32px'
-          }}
-          className="profile-section">
-            {/* 2カラムレイアウト */}
-            <div style={{
-              display: 'flex',
-              gap: '32px',
-              alignItems: 'flex-start'
-            }}
-            className="profile-layout">
-              {/* 左カラム: アバター */}
-              <div style={{
-                flexShrink: 0
-              }}
-              className="profile-avatar-column">
-                <div style={{
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  backgroundColor: '#F5F6F8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  border: '4px solid #FFFFFF'
-                }}
-                className="profile-avatar">
+          <div className="creator-profile-section">
+            <div className="creator-profile-layout">
+              {/* アバター */}
+              <div className="creator-avatar-column">
+                <div className="creator-avatar">
                   {creator.avatar_url ? (
-                    <Image
-                      src={creator.avatar_url}
-                      alt={creator.display_name || ''}
-                      fill
-                      priority
-                      quality={85}
-                      style={{ objectFit: 'cover' }}
-                      sizes="(max-width: 768px) 80px, 120px"
-                    />
+                    <Image src={creator.avatar_url} alt={creator.display_name || ''} fill priority quality={85} style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 100px, 120px" />
                   ) : (
-                    <i className="fas fa-user" style={{ fontSize: '48px', color: '#888888' }}></i>
+                    <i className="fas fa-user"></i>
                   )}
                 </div>
               </div>
 
-              {/* 右カラム: プロフィール情報 */}
-              <div style={{ flex: 1, minWidth: 0 }} className="profile-info-column">
-                {/* 上部: 名前行とアクションボタン */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '16px',
-                  marginBottom: '12px',
-                  flexWrap: 'wrap'
-                }}
-                className="profile-header-row">
-                  {/* 名前とユーザーID */}
+              {/* プロフィール情報 */}
+              <div className="creator-info-column">
+                <div className="creator-header-row">
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* 職業・肩書き（名前の上） */}
-                    {creator.job_title && (
-                      <div style={{
-                        fontSize: '13px',
-                        color: '#888888',
-                        marginBottom: '4px',
-                        fontWeight: '500'
-                      }}>
-                        {creator.job_title}
-                      </div>
-                    )}
-
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      gap: '2px'
-                    }}
-                    className="name-username-row">
-                      <h1 style={{
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        color: '#222222',
-                        lineHeight: '1.3',
-                        margin: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                      className="profile-name">
-                        {creator.display_name || '名前未設定'}
-                      </h1>
-                      {creator.username && (
-                        <div style={{
-                          fontSize: '14px',
-                          color: '#555555'
-                        }}
-                        className="username-display">
-                          @{creator.username}
-                        </div>
-                      )}
-                    </div>
+                    {creator.job_title && <div className="creator-job-title">{creator.job_title}</div>}
+                    <h1 className="creator-name">{creator.display_name || '名前未設定'}</h1>
+                    {creator.username && <div className="creator-username">@{creator.username}</div>}
                   </div>
 
-                  {/* アクションボタン（名前の横） */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    flexShrink: 0
-                  }}
-                  className="profile-action-buttons">
+                  <div className="creator-action-buttons">
                     {!isOwnProfile ? (
                       <>
-                        {/* メッセージボタン */}
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={sendingMessage}
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            border: '1px solid #D0D5DA',
-                            borderRadius: '50%',
-                            backgroundColor: '#FFFFFF',
-                            color: '#555555',
-                            fontSize: '16px',
-                            cursor: sendingMessage ? 'default' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                          title="メッセージを送る"
-                          onMouseEnter={(e) => {
-                            if (!sendingMessage) {
-                              e.currentTarget.style.backgroundColor = '#EEF0F3'
-                              e.currentTarget.style.borderColor = '#B0B5BA'
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#FFFFFF'
-                            e.currentTarget.style.borderColor = '#D0D5DA'
-                          }}
-                        >
+                        <button onClick={handleSendMessage} disabled={sendingMessage} className="creator-msg-btn" title="メッセージを送る">
                           <i className="fas fa-envelope"></i>
                         </button>
-                        
-                        {/* フォローボタン */}
-                        <button
-                          onClick={handleFollow}
-                          style={{
-                            height: '40px',
-                            padding: '0 20px',
-                            borderRadius: '20px',
-                            backgroundColor: isFollowing ? '#FFFFFF' : '#5B7C99',
-                            color: isFollowing ? '#555555' : '#FFFFFF',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            border: isFollowing ? '1px solid #D0D5DA' : 'none'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (isFollowing) {
-                              e.currentTarget.style.backgroundColor = '#EEF0F3'
-                              e.currentTarget.style.borderColor = '#B0B5BA'
-                            } else {
-                              e.currentTarget.style.backgroundColor = '#4A6B85'
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = isFollowing ? '#FFFFFF' : '#5B7C99'
-                            e.currentTarget.style.borderColor = '#D0D5DA'
-                          }}
-                        >
+                        <button onClick={handleFollow} className={`creator-follow-btn ${isFollowing ? 'following' : 'not-following'}`}>
                           {isFollowing ? 'フォロー中' : 'フォロー'}
                         </button>
                       </>
                     ) : (
-                      <Link
-                        href="/settings/profile"
-                        style={{
-                          height: '40px',
-                          padding: '0 20px',
-                          border: '1px solid #D0D5DA',
-                          borderRadius: '20px',
-                          backgroundColor: '#FFFFFF',
-                          color: '#555555',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s',
-                          textDecoration: 'none'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#EEF0F3'
-                          e.currentTarget.style.borderColor = '#B0B5BA'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#FFFFFF'
-                          e.currentTarget.style.borderColor = '#D0D5DA'
-                        }}
-                      >
+                      <Link href="/settings/profile" className="creator-edit-btn">
                         <i className="fas fa-edit" style={{ fontSize: '12px' }}></i>
                         編集
                       </Link>
@@ -901,333 +493,54 @@ export default function CreatorDetailPage() {
                   </div>
                 </div>
 
-                {/* 統計情報 */}
-                <div style={{
-                  display: 'flex',
-                  gap: '10px',
-                  fontSize: '13px',
-                  color: '#555555',
-                  marginBottom: '16px'
-                }}>
-                  <div>
-                    <span style={{ fontWeight: 'bold', color: '#222222' }}>
-                      {followingCount.toLocaleString()}
-                    </span> フォロー
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 'bold', color: '#222222' }}>
-                      {followerCount.toLocaleString()}
-                    </span> フォロワー
-                  </div>
+                {/* 統計 */}
+                <div className="creator-stats">
+                  <div><strong>{followingCount.toLocaleString()}</strong> フォロー</div>
+                  <div><strong>{followerCount.toLocaleString()}</strong> フォロワー</div>
                 </div>
 
-                {/* SNSリンクとシェアボタン */}
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  position: 'relative',
-                  zIndex: 2
-                }}>
+                {/* SNSリンク */}
+                <div className="creator-social-links">
                   {creator.twitter_url && (
-                    <a
-                      href={creator.twitter_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#555555',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
-                      <svg fill="currentColor" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z" fill="currentColor"/>
-                      </svg>
+                    <a href={creator.twitter_url} target="_blank" rel="noopener noreferrer" className="creator-social-icon">
+                      <svg fill="currentColor" viewBox="0 0 24 24" height="18" width="18"><path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z"/></svg>
                     </a>
                   )}
                   {creator.pixiv_url && (
-                    <a
-                      href={creator.pixiv_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#555555',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
-                      <svg role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="18" height="18" style={{ borderRadius: '4px' }}>
-                        <path d="M0 0h600v600H0Z" fill="#0096fa"/>
-                        <path d="M313.164 371.503c-44.48 0-80.54-36.06-80.54-80.54s36.06-80.54 80.54-80.54 80.54 36.059 80.54 80.54c0 44.48-36.06 80.54-80.54 80.54M158.83 472.976a9.217 9.217 0 0 0 9.218 9.216h55.357a9.217 9.217 0 0 0 9.218-9.216v-50.351c23.448 14.373 51.023 22.671 80.541 22.671 85.236 0 154.334-69.097 154.334-154.334 0-85.236-69.098-154.333-154.334-154.333-36.26 0-69.572 12.537-95.913 33.469l-18.803-29.238a9.22 9.22 0 0 0-7.753-4.231h-22.647a9.22 9.22 0 0 0-9.218 9.218z" fill="#fff"/>
-                      </svg>
+                    <a href={creator.pixiv_url} target="_blank" rel="noopener noreferrer" className="creator-social-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="18" height="18"><path d="M0 0h600v600H0Z" fill="#0096fa"/><path d="M313.164 371.503c-44.48 0-80.54-36.06-80.54-80.54s36.06-80.54 80.54-80.54 80.54 36.059 80.54 80.54c0 44.48-36.06 80.54-80.54 80.54M158.83 472.976a9.217 9.217 0 0 0 9.218 9.216h55.357a9.217 9.217 0 0 0 9.218-9.216v-50.351c23.448 14.373 51.023 22.671 80.541 22.671 85.236 0 154.334-69.097 154.334-154.334 0-85.236-69.098-154.333-154.334-154.333-36.26 0-69.572 12.537-95.913 33.469l-18.803-29.238a9.22 9.22 0 0 0-7.753-4.231h-22.647a9.22 9.22 0 0 0-9.218 9.218z" fill="#fff"/></svg>
                     </a>
                   )}
                   {creator.instagram_url && (
-                    <a
-                      href={creator.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#555555',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
-                      <i className="fab fa-instagram"></i>
-                    </a>
+                    <a href={creator.instagram_url} target="_blank" rel="noopener noreferrer" className="creator-social-icon"><i className="fab fa-instagram"></i></a>
                   )}
                   {creator.youtube_url && (
-                    <a
-                      href={creator.youtube_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#555555',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
-                      <i className="fab fa-youtube"></i>
-                    </a>
+                    <a href={creator.youtube_url} target="_blank" rel="noopener noreferrer" className="creator-social-icon"><i className="fab fa-youtube"></i></a>
                   )}
                   {creator.website_url && (
-                    <a
-                      href={creator.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#555555',
-                        textDecoration: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
-                      <i className="fas fa-globe"></i>
-                    </a>
+                    <a href={creator.website_url} target="_blank" rel="noopener noreferrer" className="creator-social-icon"><i className="fas fa-globe"></i></a>
                   )}
-                  {/* シェアボタン（SNSリンクと一緒に配置） */}
-                  <div 
-                    className="share-dropdown-container"
-                    style={{ position: 'relative', zIndex: 10 }}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setIsShareDropdownOpen(!isShareDropdownOpen)
-                      }}
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D0D5DA',
-                        color: '#555555',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s'
-                      }}
-                      title="プロフィールを共有"
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                        e.currentTarget.style.borderColor = '#B0B5BA'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                        e.currentTarget.style.borderColor = '#D0D5DA'
-                      }}
-                    >
+                  {/* シェアボタン */}
+                  <div className="share-dropdown-container" style={{ position: 'relative', zIndex: 10 }}>
+                    <button onClick={(e) => { e.stopPropagation(); setIsShareDropdownOpen(!isShareDropdownOpen) }} className="creator-social-icon" title="プロフィールを共有">
                       <i className="fas fa-share-alt"></i>
                     </button>
-
-                    {/* ドロップダウンメニュー */}
                     {isShareDropdownOpen && (
-                      <div 
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: '0',
-                          marginTop: '8px',
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #D0D5DA',
-                          borderRadius: '8px',
-                          padding: '8px',
-                          minWidth: '200px',
-                          maxWidth: '100vw',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          zIndex: 1000
-                        }}
-                      >
-                        <button
-                          onClick={() => handleShare('twitter')}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            textAlign: 'left',
-                            border: 'none',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            color: '#222222'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF0F3'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <svg fill="#000000" viewBox="0 0 24 24" height="18" width="18" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z" fill="#000000"/>
-                          </svg>
+                      <div className="creator-share-dropdown">
+                        <button onClick={() => handleShare('twitter')} className="creator-share-item">
+                          <svg fill="#000" viewBox="0 0 24 24" height="18" width="18"><path d="M13.2672 10.9617L18.2259 5.21997H17.0509L12.7452 10.2054L9.30637 5.21997H5.34003L10.5403 12.7589L5.34003 18.78H6.51514L11.062 13.5151L14.6937 18.78H18.66L13.2669 10.9617H13.2672ZM11.6578 12.8253L11.1309 12.0746L6.93855 6.10115H8.74345L12.1267 10.9219L12.6536 11.6726L17.0514 17.9389H15.2465L11.6578 12.8256V12.8253Z"/></svg>
                           X
                         </button>
-                        <button
-                          onClick={() => handleShare('facebook')}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            textAlign: 'left',
-                            border: 'none',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            color: '#222222'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF0F3'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
+                        <button onClick={() => handleShare('facebook')} className="creator-share-item">
                           <i className="fab fa-facebook" style={{ color: '#1877F2', fontSize: '18px' }}></i>
                           Facebook
                         </button>
-                        <button
-                          onClick={() => handleShare('line')}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            textAlign: 'left',
-                            border: 'none',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            color: '#222222'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF0F3'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
+                        <button onClick={() => handleShare('line')} className="creator-share-item">
                           <i className="fab fa-line" style={{ color: '#00B900', fontSize: '18px' }}></i>
                           LINE
                         </button>
-                        <button
-                          onClick={() => handleShare('copy')}
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            textAlign: 'left',
-                            border: 'none',
-                            background: 'transparent',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            color: '#222222'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EEF0F3'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <i className="fas fa-link" style={{ color: '#555555', fontSize: '18px' }}></i>
+                        <button onClick={() => handleShare('copy')} className="creator-share-item">
+                          <i className="fas fa-link" style={{ color: '#555', fontSize: '18px' }}></i>
                           URLをコピー
                         </button>
                       </div>
@@ -1236,362 +549,79 @@ export default function CreatorDetailPage() {
                 </div>
 
                 {/* 自己紹介 */}
-                {creator.bio && (
-                  <p style={{
-                    fontSize: '14px',
-                    lineHeight: '1.7',
-                    color: '#555555',
-                    marginTop: '16px',
-                    marginBottom: '0',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {creator.bio}
-                  </p>
-                )}
+                {creator.bio && <p className="creator-bio">{creator.bio}</p>}
 
-                {/* 依頼を送るボタン（目立つ位置に単独配置） */}
+                {/* 依頼ボタン */}
                 {!isOwnProfile && (
-                  <div style={{ marginTop: '20px' }} className="request-button-container">
-                    <button
-                      onClick={() => {
-                        if (!currentUserId) {
-                          if (confirm('依頼を送るにはログインが必要です。ログインページに移動しますか？')) {
-                            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-                          }
-                          return
+                  <button
+                    onClick={() => {
+                      if (!currentUserId) {
+                        if (confirm('依頼を送るにはログインが必要です。ログインページに移動しますか？')) {
+                          router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
                         }
-                        router.push(`/requests/create?to=${username}`)
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        height: '44px',
-                        padding: '0 32px',
-                        backgroundColor: '#5B7C99',
-                        color: '#FFFFFF',
-                        borderRadius: '22px',
-                        fontSize: '15px',
-                        fontWeight: '600',
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#4A6B85'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#5B7C99'
-                      }}
-                    >
-                      <i className="fas fa-paper-plane"></i>
-                      依頼を送る
-                    </button>
-                  </div>
+                        return
+                      }
+                      router.push(`/requests/create?to=${username}`)
+                    }}
+                    className="creator-request-btn"
+                  >
+                    <i className="fas fa-paper-plane"></i>
+                    依頼を送る
+                  </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* メインタブナビゲーション */}
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            marginBottom: '24px',
-            borderBottom: '2px solid #D0D5DA',
-            paddingBottom: '0'
-          }}
-          className="main-tab-navigation">
-            <button
-              onClick={() => setMainTab('works')}
-              className="main-tab-button"
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: mainTab === 'works' ? '#5B7C99' : '#555555',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                position: 'relative',
-                transition: 'all 0.2s',
-                minWidth: '100px',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              作品
-              {mainTab === 'works' && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  backgroundColor: '#5B7C99'
-                }}></div>
-              )}
-            </button>
-            <button
-              onClick={() => setMainTab('pricing')}
-              className="main-tab-button"
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: mainTab === 'pricing' ? '#5B7C99' : '#555555',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                position: 'relative',
-                transition: 'all 0.2s',
-                minWidth: '100px',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              料金表
-              {mainTab === 'pricing' && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  backgroundColor: '#5B7C99'
-                }}></div>
-              )}
-            </button>
-            <button
-              onClick={() => setMainTab('reviews')}
-              className="main-tab-button"
-              style={{
-                padding: '12px 24px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: mainTab === 'reviews' ? '#5B7C99' : '#555555',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                position: 'relative',
-                transition: 'all 0.2s',
-                minWidth: '100px',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              レビュー
-              {mainTab === 'reviews' && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  backgroundColor: '#5B7C99'
-                }}></div>
-              )}
-            </button>
+          {/* メインタブ */}
+          <div className="creator-main-tabs">
+            <button onClick={() => setMainTab('works')} className={`creator-main-tab ${mainTab === 'works' ? 'active' : ''}`}>作品</button>
+            <button onClick={() => setMainTab('pricing')} className={`creator-main-tab ${mainTab === 'pricing' ? 'active' : ''}`}>料金表</button>
+            <button onClick={() => setMainTab('reviews')} className={`creator-main-tab ${mainTab === 'reviews' ? 'active' : ''}`}>レビュー</button>
           </div>
 
-          {/* 作品タブコンテンツ */}
+          {/* 作品タブ */}
           {mainTab === 'works' && (
             <>
-              {/* カテゴリタブナビゲーション */}
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                marginBottom: '32px',
-                overflowX: 'auto',
-                paddingBottom: '8px'
-              }}
-              className="tab-navigation">
-                <button
-                  onClick={() => setWorksCategoryTab('all')}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: '24px',
-                    border: worksCategoryTab === 'all' ? 'none' : '1px solid #D0D5DA',
-                    backgroundColor: worksCategoryTab === 'all' ? '#5B7C99' : '#FFFFFF',
-                    color: worksCategoryTab === 'all' ? 'white' : '#555555',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (worksCategoryTab !== 'all') {
-                      e.currentTarget.style.backgroundColor = '#EEF0F3'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (worksCategoryTab !== 'all') {
-                      e.currentTarget.style.backgroundColor = '#FFFFFF'
-                    }
-                  }}
-                >
-                  すべて
-                </button>
+              <div className="creator-category-tabs">
+                <button onClick={() => setWorksCategoryTab('all')} className={`creator-category-tab ${worksCategoryTab === 'all' ? 'active' : ''}`}>すべて</button>
                 {categories.map(category => (
-                  <button
-                    key={category}
-                    onClick={() => setWorksCategoryTab(category)}
-                    style={{
-                      padding: '10px 24px',
-                      borderRadius: '24px',
-                      border: worksCategoryTab === category ? 'none' : '1px solid #D0D5DA',
-                      backgroundColor: worksCategoryTab === category ? '#5B7C99' : '#FFFFFF',
-                      color: worksCategoryTab === category ? 'white' : '#555555',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (worksCategoryTab !== category) {
-                        e.currentTarget.style.backgroundColor = '#EEF0F3'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (worksCategoryTab !== category) {
-                        e.currentTarget.style.backgroundColor = '#FFFFFF'
-                      }
-                    }}
-                  >
+                  <button key={category} onClick={() => setWorksCategoryTab(category)} className={`creator-category-tab ${worksCategoryTab === category ? 'active' : ''}`}>
                     {getCategoryLabel(category)}
                   </button>
                 ))}
               </div>
 
-              {/* 作品グリッド */}
               {worksLoading ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  padding: '80px 20px',
-                  color: '#555555'
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '16px' }}></i>
-                    <p>作品を読み込み中...</p>
-                  </div>
-                </div>
+                <div className="creator-loading"><div className="creator-loading-content"><i className="fas fa-spinner fa-spin"></i><p>作品を読み込み中...</p></div></div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '24px'
-                }}
-                className="works-grid">
+                <div className="creator-works-grid">
                   {filteredWorks.length === 0 ? (
-                    <div style={{
-                      gridColumn: '1 / -1',
-                      textAlign: 'center',
-                      padding: '80px 20px',
-                      color: '#555555'
-                    }}>
-                      <i className="fas fa-folder-open" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}></i>
-                      <p>作品がありません</p>
-                    </div>
+                    <div className="creator-empty" style={{ gridColumn: '1 / -1' }}><i className="fas fa-folder-open"></i><p>作品がありません</p></div>
                   ) : (
-                    filteredWorks.map(work => (
-                      <WorkCard key={work.id} work={work} />
-                    ))
+                    filteredWorks.map(work => <WorkCard key={work.id} work={work} />)
                   )}
                 </div>
               )}
             </>
           )}
 
-          {/* 料金表タブコンテンツ */}
+          {/* 料金表タブ */}
           {mainTab === 'pricing' && (
             <div>
               {pricingLoading ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  padding: '80px 20px',
-                  color: '#555555'
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '16px' }}></i>
-                    <p>料金表を読み込み中...</p>
-                  </div>
-                </div>
+                <div className="creator-loading"><div className="creator-loading-content"><i className="fas fa-spinner fa-spin"></i><p>料金表を読み込み中...</p></div></div>
               ) : pricingPlans.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '80px 20px',
-                  color: '#555555'
-                }}>
-                  <i className="fas fa-receipt" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}></i>
-                  <p>料金表がまだ登録されていません</p>
-                </div>
+                <div className="creator-empty"><i className="fas fa-receipt"></i><p>料金表がまだ登録されていません</p></div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: '24px',
-                  padding: '0'
-                }}>
+                <div className="creator-pricing-grid">
                   {pricingPlans.map(plan => (
-                    <Link
-                      key={plan.id}
-                      href={`/pricing/${plan.id}`}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        border: '1px solid #D0D5DA',
-                        textDecoration: 'none',
-                        display: 'block'
-                      }}
-                      className="pricing-card"
-                    >
-                      <img
-                        src={plan.thumbnail_url}
-                        alt={plan.plan_name}
-                        style={{
-                          width: '100%',
-                          height: '200px',
-                          objectFit: 'cover'
-                        }}
-                      />
-                      
-                      <div style={{ padding: '16px' }}>
-                        <div style={{ marginBottom: '8px' }}>
-                          <span style={{
-                            fontSize: '11px',
-                            color: '#555555',
-                            backgroundColor: '#EEF0F3',
-                            padding: '2px 8px',
-                            borderRadius: '4px'
-                          }}>
-                            {getCategoryLabel(plan.category)}
-                          </span>
-                        </div>
-                        
-                        <h3 style={{
-                          fontSize: '18px',
-                          fontWeight: '600',
-                          color: '#222222',
-                          marginBottom: '8px'
-                        }}>
-                          {plan.plan_name}
-                        </h3>
-                        
-                        <p style={{
-                          fontSize: '20px',
-                          fontWeight: '600',
-                          color: '#5B7C99',
-                          margin: 0
-                        }}>
-                          ¥{plan.minimum_price.toLocaleString()}〜
-                        </p>
+                    <Link key={plan.id} href={`/pricing/${plan.id}`} className="creator-pricing-card">
+                      <img src={plan.thumbnail_url} alt={plan.plan_name} className="creator-pricing-image" />
+                      <div className="creator-pricing-content">
+                        <span className="creator-pricing-category">{getCategoryLabel(plan.category)}</span>
+                        <h3 className="creator-pricing-name">{plan.plan_name}</h3>
+                        <p className="creator-pricing-price">¥{plan.minimum_price.toLocaleString()}〜</p>
                       </div>
                     </Link>
                   ))}
@@ -1600,291 +630,81 @@ export default function CreatorDetailPage() {
             </div>
           )}
 
-          {/* レビュータブコンテンツ */}
+          {/* レビュータブ */}
           {mainTab === 'reviews' && (
             <div>
               {reviewsLoading ? (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  padding: '80px 20px',
-                  color: '#888888'
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '16px' }}></i>
-                    <p style={{ fontSize: '14px', margin: 0 }}>レビューを読み込み中...</p>
-                  </div>
-                </div>
+                <div className="creator-loading"><div className="creator-loading-content"><i className="fas fa-spinner fa-spin"></i><p>レビューを読み込み中...</p></div></div>
               ) : reviews.length === 0 ? (
-                <div className="empty-state" style={{
-                  textAlign: 'center',
-                  padding: '80px 20px'
-                }}>
-                  <i className="fas fa-star" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3, color: '#D0D5DA' }}></i>
-                  <p style={{ fontSize: '14px', color: '#888888', margin: 0 }}>まだレビューがありません</p>
-                </div>
+                <div className="creator-empty"><i className="fas fa-star"></i><p>まだレビューがありません</p></div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '300px 1fr',
-                  gap: '32px',
-                  alignItems: 'start'
-                }}
-                className="reviews-layout">
-                  {/* 左カラム: 統計 */}
-                  <div style={{
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #D0D5DA',
-                    borderRadius: '12px',
-                    padding: '24px',
-                    position: 'sticky',
-                    top: '20px'
-                  }}>
-                    {/* 平均スコア */}
-                    <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-                      <div style={{
-                        fontSize: '48px',
-                        fontWeight: '700',
-                        color: '#222222',
-                        lineHeight: '1',
-                        marginBottom: '8px'
-                      }}>
-                        {averageRating.toFixed(1)}
-                      </div>
-                      <div style={{
-                        fontSize: '20px',
-                        color: '#FFB800',
-                        letterSpacing: '2px',
-                        marginBottom: '8px'
-                      }}>
-                        {[...Array(5)].map((_, i) => {
-                          const diff = averageRating - i
-                          if (diff >= 1) {
-                            return <i key={i} className="fas fa-star"></i>
-                          } else if (diff > 0) {
-                            return <i key={i} className="fas fa-star-half-alt"></i>
-                          } else {
-                            return <i key={i} className="far fa-star"></i>
-                          }
-                        })}
-                      </div>
-                      <div style={{
-                        fontSize: '14px',
-                        color: '#888888'
-                      }}>
-                        {totalReviews}件のレビューより
-                      </div>
+                <div className="creator-reviews-layout">
+                  {/* 統計 */}
+                  <div className="creator-reviews-stats">
+                    <div className="creator-reviews-avg">{averageRating.toFixed(1)}</div>
+                    <div className="creator-reviews-stars">
+                      {[...Array(5)].map((_, i) => {
+                        const diff = averageRating - i
+                        if (diff >= 1) return <i key={i} className="fas fa-star"></i>
+                        if (diff > 0) return <i key={i} className="fas fa-star-half-alt"></i>
+                        return <i key={i} className="far fa-star"></i>
+                      })}
                     </div>
-
-                    {/* 評価分布 */}
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}>
+                    <div className="creator-reviews-count">{totalReviews}件のレビューより</div>
+                    <div>
                       {[5, 4, 3, 2, 1].map(rating => {
                         const count = reviews.filter(r => r.rating === rating).length
                         const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
-                        
                         return (
-                          <div key={rating} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '13px'
-                          }}>
-                            {/* 星 */}
-                            <div style={{
-                              color: '#FFB800',
-                              minWidth: '90px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}>
+                          <div key={rating} className="creator-rating-bar">
+                            <div className="creator-rating-stars">
                               {[...Array(5)].map((_, i) => (
-                                <i 
-                                  key={i} 
-                                  className={i < rating ? 'fas fa-star' : 'far fa-star'}
-                                  style={{ fontSize: '12px', color: i < rating ? '#FFB800' : '#E5E5E5' }}
-                                ></i>
+                                <i key={i} className={i < rating ? 'fas fa-star' : 'far fa-star'} style={{ color: i < rating ? '#FFB800' : '#E5E5E5' }}></i>
                               ))}
                             </div>
-                            
-                            {/* バー */}
-                            <div style={{
-                              flex: 1,
-                              height: '8px',
-                              backgroundColor: '#E5E5E5',
-                              borderRadius: '4px',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{
-                                width: `${percentage}%`,
-                                height: '100%',
-                                backgroundColor: '#FFB800',
-                                transition: 'width 0.3s ease'
-                              }}></div>
-                            </div>
-                            
-                            {/* 件数 */}
-                            <div style={{
-                              minWidth: '20px',
-                              textAlign: 'right',
-                              color: '#888888',
-                              fontWeight: '500'
-                            }}>
-                              {count}
-                            </div>
+                            <div className="creator-rating-progress"><div className="creator-rating-fill" style={{ width: `${percentage}%` }}></div></div>
+                            <div className="creator-rating-count">{count}</div>
                           </div>
                         )
                       })}
                     </div>
                   </div>
 
-                  {/* 右カラム: レビュー一覧 */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px'
-                  }}>
+                  {/* レビュー一覧 */}
+                  <div className="creator-reviews-list">
                     {reviews.map(review => (
-                      <div
-                        key={review.id}
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #D0D5DA',
-                          borderRadius: '12px',
-                          padding: '20px'
-                        }}
-                      >
-                        {/* レビュアー情報 */}
-                        <div style={{ marginBottom: '16px' }}>
-                          {review.reviewer?.username ? (
-                            <Link
-                              href={`/creators/${review.reviewer.username}`}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                textDecoration: 'none',
-                                color: 'inherit'
-                              }}
-                            >
-                              <div style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '50%',
-                                backgroundColor: '#D8DEE4',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden',
-                                flexShrink: 0
-                              }}>
-                                {review.reviewer?.avatar_url ? (
-                                  <img 
-                                    src={review.reviewer.avatar_url} 
-                                    alt={review.reviewer.display_name || ''} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                  />
-                                ) : (
-                                  <i className="fas fa-user" style={{ color: '#888888', fontSize: '16px' }}></i>
-                                )}
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ 
-                                  fontSize: '14px', 
-                                  fontWeight: '600', 
-                                  color: '#222222'
-                                }}>
-                                  {review.reviewer?.display_name || '名前未設定'}
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#888888' }}>
-                                  {new Date(review.created_at).toLocaleDateString('ja-JP', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                  })}
-                                </div>
-                              </div>
-                            </Link>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <div style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '50%',
-                                backgroundColor: '#D8DEE4',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden',
-                                flexShrink: 0
-                              }}>
-                                <i className="fas fa-user" style={{ color: '#888888', fontSize: '16px' }}></i>
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ 
-                                  fontSize: '14px', 
-                                  fontWeight: '600', 
-                                  color: '#222222'
-                                }}>
-                                  名前未設定
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#888888' }}>
-                                  {new Date(review.created_at).toLocaleDateString('ja-JP', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                  })}
-                                </div>
-                              </div>
+                      <div key={review.id} className="creator-review-card">
+                        {review.reviewer?.username ? (
+                          <Link href={`/creators/${review.reviewer.username}`} className="creator-review-header">
+                            <div className="creator-review-avatar">
+                              {review.reviewer?.avatar_url ? (
+                                <img src={review.reviewer.avatar_url} alt={review.reviewer.display_name || ''} />
+                              ) : (
+                                <i className="fas fa-user"></i>
+                              )}
                             </div>
-                          )}
-                        </div>
-
-                        {/* 評価 */}
-                        <div style={{ marginBottom: '12px' }}>
-                          <div style={{ 
-                            fontSize: '18px', 
-                            color: '#FFB800',
-                            letterSpacing: '2px',
-                            marginBottom: '8px'
-                          }}>
-                            {[...Array(5)].map((_, i) => (
-                              <i 
-                                key={i} 
-                                className={i < review.rating ? 'fas fa-star' : 'far fa-star'}
-                              ></i>
-                            ))}
+                            <div style={{ flex: 1 }}>
+                              <div className="creator-review-name">{review.reviewer?.display_name || '名前未設定'}</div>
+                              <div className="creator-review-date">{new Date(review.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="creator-review-header">
+                            <div className="creator-review-avatar"><i className="fas fa-user"></i></div>
+                            <div style={{ flex: 1 }}>
+                              <div className="creator-review-name">名前未設定</div>
+                              <div className="creator-review-date">{new Date(review.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                            </div>
                           </div>
-                          <div style={{ 
-                            fontSize: '12px', 
-                            color: '#888888',
-                            backgroundColor: '#F5F6F8',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            display: 'inline-block',
-                            fontWeight: '500'
-                          }}>
-                            <i className="fas fa-briefcase" style={{ marginRight: '6px', fontSize: '11px' }}></i>
-                            {review.work_request?.title || '削除された依頼'}
-                          </div>
-                        </div>
-
-                        {/* コメント */}
-                        {review.comment && (
-                          <p style={{
-                            fontSize: '14px',
-                            lineHeight: '1.7',
-                            color: '#555555',
-                            whiteSpace: 'pre-wrap',
-                            margin: 0
-                          }}>
-                            {review.comment}
-                          </p>
                         )}
+                        <div className="creator-review-rating">
+                          {[...Array(5)].map((_, i) => <i key={i} className={i < review.rating ? 'fas fa-star' : 'far fa-star'}></i>)}
+                        </div>
+                        <div className="creator-review-project">
+                          <i className="fas fa-briefcase" style={{ marginRight: '6px', fontSize: '11px' }}></i>
+                          {review.work_request?.title || '削除された依頼'}
+                        </div>
+                        {review.comment && <p className="creator-review-comment">{review.comment}</p>}
                       </div>
                     ))}
                   </div>
@@ -1894,134 +714,6 @@ export default function CreatorDetailPage() {
           )}
         </div>
       </div>
-
-      {/* スタイル */}
-      <style jsx global>{`
-        /* レビューレイアウト レスポンシブ */
-        .reviews-layout {
-          grid-template-columns: 300px 1fr;
-          gap: 32px;
-        }
-
-        @media (max-width: 768px) {
-          .reviews-layout {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
-          }
-          
-          .reviews-layout > div:first-child {
-            position: static !important;
-          }
-
-          .profile-layout {
-            flex-direction: column !important;
-            gap: 20px !important;
-            align-items: center !important;
-          }
-
-          .profile-info-column {
-            width: 100%;
-          }
-
-          .profile-header-row {
-            flex-direction: row !important;
-            align-items: flex-start !important;
-            justify-content: space-between !important;
-            gap: 12px !important;
-          }
-
-          .profile-header-row > div:first-child {
-            flex: 1;
-            min-width: 0;
-          }
-
-          .name-username-row {
-            align-items: flex-start !important;
-          }
-
-          .profile-action-buttons {
-            flex-shrink: 0 !important;
-          }
-
-          .request-button-container {
-            text-align: center !important;
-          }
-
-          .main-tab-navigation {
-            justify-content: center !important;
-            gap: 0 !important;
-          }
-
-          .main-tab-button {
-            flex: 1 !important;
-            min-width: 0 !important;
-            padding: 12px 8px !important;
-            text-align: center !important;
-          }
-        }
-
-        @media (max-width: 1024px) {
-          .works-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 20px !important;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .profile-section {
-            padding: 24px 0 0 0 !important;
-          }
-
-          .profile-avatar {
-            width: 100px !important;
-            height: 100px !important;
-          }
-
-          .profile-avatar i {
-            font-size: 40px !important;
-          }
-
-          .profile-name {
-            font-size: 20px !important;
-          }
-
-          .tab-navigation {
-            padding: 0 4px;
-          }
-
-          .works-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 16px !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .works-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
-          }
-        }
-
-        /* ホバーエフェクト */
-        .work-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        .work-card img {
-          transition: transform 0.3s ease;
-        }
-
-        .work-card:hover img {
-          transform: scale(1.05);
-        }
-
-        .pricing-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-      `}</style>
-
       <Footer />
     </>
   )

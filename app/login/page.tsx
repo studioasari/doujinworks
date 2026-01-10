@@ -23,7 +23,7 @@ function LoginForm() {
   // リダイレクト先を取得（デフォルトはダッシュボード）
   const redirectTo = searchParams.get('redirect') || '/dashboard'
 
-  // 👇 URLパラメータからエラーメッセージを表示
+  // URLパラメータからエラーメッセージを表示
   useEffect(() => {
     const urlError = searchParams.get('error')
     
@@ -130,255 +130,130 @@ function LoginForm() {
   }
 
   return (
-    <div style={{ 
-      width: '100%', 
-      maxWidth: '400px',
-      border: '1px solid #D0D5DA',
-      borderRadius: '8px',
-      padding: '40px',
-      backgroundColor: '#FFFFFF'
-    }}>
-      <h2 className="page-title" style={{ 
-        marginBottom: '40px', 
-        textAlign: 'center',
-        fontSize: '24px',
-        color: '#222222'
-      }}>
-        ログイン
-      </h2>
+    <div className="auth-card">
+      <h2 className="auth-card-title">ログイン</h2>
 
       <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: '20px' }}>
-          <label className="form-label" style={{ color: '#222222' }}>
-            メールアドレスまたはユーザーID
-          </label>
-          <input
-            type="text"
-            name="emailOrUsername"
-            className="input-field"
-            value={emailOrUsername}
-            onChange={(e) => setEmailOrUsername(e.target.value)}
-            placeholder="メール or ユーザーID"
-            required
-            disabled={isLocked || isPending}
-            style={{
-              borderColor: '#D0D5DA',
-              color: '#222222',
-              opacity: (isLocked || isPending) ? 0.6 : 1,
-              cursor: (isLocked || isPending) ? 'not-allowed' : 'text'
-            }}
-          />
+        {/* メールアドレスまたはユーザーID */}
+        <div className="auth-form-group">
+          <label className="auth-label">メールアドレスまたはユーザーID</label>
+          <div className="auth-input-wrapper">
+            <input
+              type="text"
+              name="emailOrUsername"
+              className="auth-input"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
+              placeholder="メール or ユーザーID"
+              required
+              disabled={isLocked || isPending}
+            />
+          </div>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            marginBottom: '8px' 
-          }}>
-            <label className="form-label" style={{ marginBottom: 0, color: '#222222' }}>
-              パスワード
-            </label>
-            <Link href="/reset-password" style={{ 
-              color: '#5B7C99', 
-              fontSize: '13px',
-              textDecoration: 'none'
-            }}>
+        {/* パスワード */}
+        <div className="auth-form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label className="auth-label" style={{ marginBottom: 0 }}>パスワード</label>
+            <Link href="/reset-password" className="auth-link" style={{ fontSize: '13px' }}>
               パスワードを忘れた
             </Link>
           </div>
-          <div style={{ position: 'relative' }}>
+          <div className="auth-input-wrapper">
             <input
               type={showPassword ? 'text' : 'password'}
               name="password"
-              className="input-field"
+              className="auth-input has-icon"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder=""
               required
               minLength={6}
               disabled={isLocked || isPending}
-              style={{
-                width: '100%',
-                paddingRight: '40px',
-                borderColor: '#D0D5DA',
-                color: '#222222',
-                opacity: (isLocked || isPending) ? 0.6 : 1,
-                cursor: (isLocked || isPending) ? 'not-allowed' : 'text'
-              }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               disabled={isLocked || isPending}
-              style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: (isLocked || isPending) ? 'not-allowed' : 'pointer',
-                color: '#888888',
-                fontSize: '14px',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: (isLocked || isPending) ? 0.6 : 1
-              }}
-              onMouseEnter={(e) => !(isLocked || isPending) && (e.currentTarget.style.color = '#555555')}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#888888'}
+              className="auth-password-toggle"
             >
               <i className={showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'}></i>
             </button>
           </div>
         </div>
 
+        {/* 成功メッセージ */}
         {resendSuccess && (
-          <div className="alert alert-success" style={{ 
-            marginBottom: '16px', 
-            fontSize: '14px'
-          }}>
+          <div className="auth-success" style={{ marginBottom: '16px' }}>
+            <i className="fas fa-check-circle"></i>
             認証メールを再送信しました。メールボックスをご確認ください。
           </div>
         )}
 
+        {/* エラーメッセージ */}
         {error && (
-          <div className="alert alert-error" style={{ 
-            marginBottom: '16px', 
-            fontSize: '14px'
-          }}>
-            {error}
-            {isEmailUnconfirmed && (
-              <div style={{ marginTop: '12px' }}>
+          <div className="auth-error">
+            <i className="fas fa-exclamation-circle"></i>
+            <div style={{ flex: 1 }}>
+              {error}
+              {isEmailUnconfirmed && (
                 <button
                   type="button"
                   onClick={handleResendEmail}
                   disabled={isResending}
-                  className="btn-secondary btn-small"
-                  style={{
-                    width: '100%',
-                    borderColor: '#C05656',
-                    color: '#C05656',
-                    opacity: isResending ? 0.6 : 1,
-                    cursor: isResending ? 'not-allowed' : 'pointer'
-                  }}
+                  className="auth-resend-btn"
                 >
                   {isResending ? '送信中...' : '認証メールを再送信'}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
         <button
           type="submit"
-          className="btn-primary"
           disabled={isPending || !isFormValid}
-          style={{ 
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            backgroundColor: (isFormValid && !isPending) ? '#5B7C99' : '#D0D5DA',
-            color: (isFormValid && !isPending) ? '#FFFFFF' : '#888888',
-            border: 'none',
-            cursor: (isFormValid && !isPending) ? 'pointer' : 'not-allowed',
-            transition: 'all 0.2s ease',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '600'
-          }}
+          className={`auth-submit-btn ${isFormValid && !isPending ? 'active' : 'disabled'}`}
         >
           {isPending ? 'ログイン中...' : 'ログイン'}
         </button>
       </form>
 
-      {/* グレーの線 */}
-      <div style={{
-        width: '100%',
-        height: '1px',
-        backgroundColor: '#D0D5DA',
-        margin: '32px 0'
-      }}></div>
+      <div className="auth-divider">
+        <div className="auth-divider-line"></div>
+        <span className="auth-divider-text">または</span>
+        <div className="auth-divider-line"></div>
+      </div>
 
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '12px',
-        marginBottom: '32px'
-      }}>
+      <div className="auth-social-buttons">
         <button
-          className="btn-secondary"
           onClick={() => handleSocialLogin('google')}
           disabled={isPending}
-          style={{ 
-            width: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '8px',
-            opacity: isPending ? 0.6 : 1,
-            cursor: isPending ? 'not-allowed' : 'pointer'
-          }}
+          className="auth-social-btn"
         >
-          <img src="/icons/google.svg" alt="Google" width={20} height={20} />
+          <img src="/icons/google.svg" alt="Google" />
           Googleでログイン
         </button>
         <button
-          className="btn-secondary"
           onClick={() => handleSocialLogin('x')}
           disabled={isPending}
-          style={{ 
-            width: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '8px',
-            opacity: isPending ? 0.6 : 1,
-            cursor: isPending ? 'not-allowed' : 'pointer'
-          }}
+          className="auth-social-btn"
         >
-          <img src="/icons/x.svg" alt="X" width={20} height={20} />
+          <img src="/icons/x.svg" alt="X" />
           Xでログイン
         </button>
         {/* <button
-          className="btn-secondary"
           onClick={() => handleSocialLogin('discord')}
           disabled={isPending}
-          style={{ 
-            width: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            gap: '8px',
-            opacity: isPending ? 0.6 : 1,
-            cursor: isPending ? 'not-allowed' : 'pointer'
-          }}
+          className="auth-social-btn"
         >
-          <i className="fab fa-discord" style={{ color: '#5865F2' }}></i>
+          <i className="fab fa-discord" style={{ color: '#5865F2', fontSize: '20px' }}></i>
           Discordでログイン
         </button> */}
       </div>
 
-      {/* グレーの線 */}
-      <div style={{
-        width: '100%',
-        height: '1px',
-        backgroundColor: '#D0D5DA',
-        margin: '32px 0'
-      }}></div>
-
-      <div style={{ textAlign: 'center' }}>
-        <Link href="/signup" style={{ 
-          color: '#5B7C99', 
-          textDecoration: 'underline',
-          fontSize: '14px'
-        }}>
+      <div className="auth-footer">
+        <Link href="/signup" className="auth-footer-link">
           新規登録はこちら
         </Link>
       </div>
@@ -388,31 +263,17 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div style={{ 
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      padding: '40px 20px',
-      backgroundColor: '#F5F6F8'
-    }}>
+    <>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Suspense fallback={
-        <div style={{ 
-          width: '100%', 
-          maxWidth: '400px',
-          border: '1px solid #D0D5DA',
-          borderRadius: '8px',
-          padding: '40px',
-          backgroundColor: '#FFFFFF',
-          textAlign: 'center',
-          color: '#888888'
-        }}>
-          読み込み中...
-        </div>
-      }>
-        <LoginForm />
-      </Suspense>
-    </div>
+      <div className="auth-page">
+        <Suspense fallback={
+          <div className="auth-card" style={{ textAlign: 'center', color: '#888888' }}>
+            読み込み中...
+          </div>
+        }>
+          <LoginForm />
+        </Suspense>
+      </div>
+    </>
   )
 }

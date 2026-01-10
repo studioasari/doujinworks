@@ -164,7 +164,8 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
                     fontWeight: '600',
                     color: isAcceptingOrders ? '#2E7D32' : '#E65100'
                   }}>
-                    {isAcceptingOrders ? '🟢 受付中' : '🔴 受付停止中'}
+                    <i className="fas fa-circle" style={{ fontSize: '14px', marginRight: '8px' }}></i>
+                    {isAcceptingOrders ? '受付中' : '受付停止中'}
                   </span>
                   
                   {/* トグルスイッチ */}
