@@ -442,22 +442,20 @@ export function SignupCompleteClient({ user }: Props) {
                 changeStep('confirm')
               }
             }}>
-              {user?.app_metadata?.provider !== 'email' && (
-                <div className="signup-complete-form-group">
-                  <label className="signup-complete-label">
-                    メールアドレス
-                    <span className="signup-complete-readonly-badge">
-                      <i className="fas fa-lock"></i> 変更不可
-                    </span>
-                  </label>
-                  <input
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="signup-complete-input disabled"
-                  />
-                </div>
-              )}
+              <div className="signup-complete-form-group">
+                <label className="signup-complete-label">
+                  メールアドレス
+                  <span className="signup-complete-readonly-badge">
+                    <i className="fas fa-lock"></i> 変更不可
+                  </span>
+                </label>
+                <input
+                  type="email"
+                  value={user?.email || ''}
+                  disabled
+                  className="signup-complete-input disabled"
+                />
+              </div>
 
               <div className="signup-complete-form-group">
                 <label className="signup-complete-label">
