@@ -30,25 +30,25 @@ export async function POST(request: NextRequest) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
 
-    const requestId = session.metadata?.request_id
+    const contractId = session.metadata?.contract_id
 
-    if (requestId) {
-      // データベース更新
+    if (contractId) {
+      // work_contracts テーブルを更新
       const { error } = await supabase
-        .from('work_requests')
+        .from('work_contracts')
         .update({
           status: 'paid',
           paid_at: new Date().toISOString(),
-          escrow_transaction_id: session.payment_intent as string,
+          payment_intent_id: session.payment_intent as string,
         })
-        .eq('id', requestId)
+        .eq('id', contractId)
 
       if (error) {
         console.error('DB更新エラー:', error)
         return NextResponse.json({ error: 'Database Error' }, { status: 500 })
       }
 
-      console.log('仮払い完了:', requestId)
+      console.log('仮払い完了 - 契約ID:', contractId)
     }
   }
 

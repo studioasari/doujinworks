@@ -52,6 +52,7 @@ const CATEGORY_LABELS: { [key: string]: string } = {
 
 const STATUS_LABELS: { [key: string]: string } = {
   open: '募集中',
+  closed: '募集終了',
   contracted: '仮払い待ち',
   paid: '作業中',
   delivered: '納品済み',
@@ -85,6 +86,7 @@ export default function RequestDetailPage() {
   const [processing, setProcessing] = useState(false)
   const [messageText, setMessageText] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [myContractId, setMyContractId] = useState<string | null>(null)
 
   const params = useParams()
   const router = useRouter()
@@ -98,6 +100,12 @@ export default function RequestDetailPage() {
     if (requestId) {
       fetchRequest()
       checkApplication()
+    }
+  }, [requestId, currentProfileId])
+
+  useEffect(() => {
+    if (requestId && currentProfileId) {
+      checkMyContract()
     }
   }, [requestId, currentProfileId])
 
@@ -139,6 +147,21 @@ export default function RequestDetailPage() {
         const myApp = data.find(app => app.applicant_id === currentProfileId)
         setHasApplied(!!myApp)
       }
+    }
+  }
+
+  async function checkMyContract() {
+    if (!currentProfileId) return
+    
+    const { data, error } = await supabase
+      .from('work_contracts')
+      .select('id')
+      .eq('work_request_id', requestId)
+      .eq('contractor_id', currentProfileId)
+      .single()
+
+    if (!error && data) {
+      setMyContractId(data.id)
     }
   }
 
@@ -497,8 +520,8 @@ export default function RequestDetailPage() {
               )}
 
               {/* クリエイター向けリンク（契約済み） */}
-              {!isRequester && currentProfileId && request.selected_applicant_id === currentProfileId && request.status !== 'open' && (
-                <Link href={`/requests/${requestId}/status`} className="req-detail-btn primary full">
+              {!isRequester && myContractId && (
+                <Link href={`/requests/${requestId}/contracts/${myContractId}`} className="req-detail-btn primary full">
                   <i className="fas fa-tasks"></i>
                   契約進捗を確認
                 </Link>

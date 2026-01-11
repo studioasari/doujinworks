@@ -26,6 +26,7 @@ type Application = {
   id: string
   status: string
   created_at: string
+  contract_id: string | null
   work_request: {
     id: string
     title: string
@@ -158,10 +159,26 @@ export default function DashboardPage() {
           .eq('id', requestData.requester_id)
           .single()
 
+        // 採用された場合は契約IDを取得
+        let contractId: string | null = null
+        if (app.status === 'accepted') {
+          const { data: contractData } = await supabase
+            .from('work_contracts')
+            .select('id')
+            .eq('work_request_id', app.work_request_id)
+            .eq('contractor_id', currentProfileId)
+            .single()
+          
+          if (contractData) {
+            contractId = contractData.id
+          }
+        }
+
         return {
           id: app.id,
           status: app.status,
           created_at: app.created_at,
+          contract_id: contractId,
           work_request: {
             id: requestData.id,
             title: requestData.title,
@@ -181,6 +198,7 @@ export default function DashboardPage() {
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       open: '募集中',
+      closed: '募集終了',
       contracted: '仮払い待ち',
       paid: '作業中',
       delivered: '納品済み',
@@ -216,7 +234,7 @@ export default function DashboardPage() {
   // 統計情報
   const requestStats = {
     open: myRequests.filter(r => r.status === 'open').length,
-    active: myRequests.filter(r => ['contracted', 'paid', 'delivered'].includes(r.status)).length,
+    active: myRequests.filter(r => ['closed', 'contracted', 'paid', 'delivered'].includes(r.status)).length,
     completed: myRequests.filter(r => r.status === 'completed').length,
     total: myRequests.length
   }
@@ -231,7 +249,7 @@ export default function DashboardPage() {
   // フィルタリング
   const filteredRequests = myRequests.filter(r => {
     if (requestTab === 'open') return r.status === 'open'
-    if (requestTab === 'active') return ['contracted', 'paid', 'delivered'].includes(r.status)
+    if (requestTab === 'active') return ['closed', 'contracted', 'paid', 'delivered'].includes(r.status)
     if (requestTab === 'completed') return r.status === 'completed'
     return true
   })
@@ -242,6 +260,14 @@ export default function DashboardPage() {
     if (applicationTab === 'completed') return a.work_request?.status === 'completed'
     return true
   })
+
+  // クリエイター用のリンク先を決定
+  function getCreatorLink(application: Application) {
+    if (application.status === 'accepted' && application.contract_id) {
+      return `/requests/${application.work_request?.id}/contracts/${application.contract_id}`
+    }
+    return `/requests/${application.work_request?.id}`
+  }
 
   return (
     <>
@@ -434,13 +460,15 @@ export default function DashboardPage() {
                       {filteredApplications.map((application) => (
                         <Link
                           key={application.id}
-                          href={application.status === 'accepted' ? `/requests/${application.work_request?.id}/status` : `/requests/${application.work_request?.id}`}
+                          href={getCreatorLink(application)}
                           className="requests-manage-card"
                         >
                           <div className="requests-manage-card-header">
                             <h3 className="requests-manage-card-title">{application.work_request?.title}</h3>
-                            <span className={`requests-manage-status-badge ${application.work_request?.status || ''}`}>
-                              {getStatusLabel(application.work_request?.status || '')}
+                            <span className={`requests-manage-status-badge ${application.status === 'accepted' ? (application.work_request?.status || '') : application.status}`}>
+                              {application.status === 'accepted' 
+                                ? getStatusLabel(application.work_request?.status || '') 
+                                : getStatusLabel(application.status)}
                             </span>
                           </div>
 
