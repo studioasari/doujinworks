@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../../../../utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '../../../../components/Header'
 import Footer from '../../../../components/Footer'
 import { createNotification } from '../../../../../utils/notifications'
+
+const MESSAGES_PER_PAGE = 30
 
 type Contract = {
   id: string
@@ -52,6 +54,35 @@ type Delivery = {
   feedback: string | null
 }
 
+type Message = {
+  id: string
+  chat_room_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  file_url: string | null
+  file_type: string | null
+  file_name: string | null
+  deleted: boolean
+  // 楽観的UI用
+  _optimistic?: boolean
+  _failed?: boolean
+}
+
+// メッセージスケルトン
+function MessagesSkeleton() {
+  return (
+    <div className="chat-messages-skeleton">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className={`chat-skeleton-row ${i % 2 === 0 ? 'sent' : 'received'}`}>
+          {i % 2 !== 0 && <div className="chat-skeleton-avatar" />}
+          <div className="chat-skeleton-bubble" style={{ width: `${100 + (i * 30)}px` }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function ContractDetailPage() {
   const [contract, setContract] = useState<Contract | null>(null)
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
@@ -61,19 +92,60 @@ export default function ContractDetailPage() {
   const [isRequester, setIsRequester] = useState(false)
   const [isContractor, setIsContractor] = useState(false)
   
-  // デバッグ用
   const [debugInfo, setDebugInfo] = useState<string>('')
   
-  // 納品モーダル
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
   const [deliveryMessage, setDeliveryMessage] = useState('')
   const [deliveryUrl, setDeliveryUrl] = useState('')
 
-  // 検収モーダル
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null)
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve')
   const [reviewFeedback, setReviewFeedback] = useState('')
+
+  // レビュー済みかどうか
+  const [hasReviewed, setHasReviewed] = useState(false)
+
+  const [chatRoomId, setChatRoomId] = useState<string | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
+  const [chatLoading, setChatLoading] = useState(true)
+  const [otherUser, setOtherUser] = useState<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null } | null>(null)
+  const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<string | null>(null)
+  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({})
+
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  // コンテキストメニュー用
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; messageId: string } | null>(null)
+
+  // メディア拡大モーダル用
+  const [enlargedMedia, setEnlargedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
+
+  // スマホ用タブ
+  const [activeTab, setActiveTab] = useState<'status' | 'chat'>('status')
+
+  // 初期ロード中フラグ（画像読み込み時のスクロール用）
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+
+  // 新機能用state
+  const [isDragging, setIsDragging] = useState(false)
+  const [showNewMessageButton, setShowNewMessageButton] = useState(false)
+  const [newMessageCount, setNewMessageCount] = useState(0)
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const isInitialLoadRef = useRef(true)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
 
   const params = useParams()
   const router = useRouter()
@@ -88,6 +160,7 @@ export default function ContractDetailPage() {
     if (contractId && currentProfileId) {
       fetchContract()
       fetchDeliveries()
+      checkReviewStatus()
       
       const urlParams = new URLSearchParams(window.location.search)
       if (urlParams.get('payment') === 'success') {
@@ -96,6 +169,112 @@ export default function ContractDetailPage() {
       }
     }
   }, [contractId, currentProfileId])
+
+  useEffect(() => {
+    if (contract && currentProfileId) {
+      initializeChatRoom()
+    }
+  }, [contract, currentProfileId])
+
+  useEffect(() => {
+    if (chatRoomId && currentProfileId) {
+      fetchMessages()
+      const unsubscribe = subscribeToMessages()
+      updateLastReadAt()
+      return () => unsubscribe()
+    }
+  }, [chatRoomId, currentProfileId])
+
+  useEffect(() => {
+    if (otherUser && chatRoomId && currentProfileId) {
+      fetchOtherUserLastReadAt()
+    }
+  }, [otherUser, chatRoomId, currentProfileId])
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      generateSignedUrlsBatch()
+    }
+  }, [messages])
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current
+      if (newMessage === '') {
+        textarea.style.height = '44px'
+        textarea.style.overflowY = 'hidden'
+      } else {
+        textarea.style.height = '44px'
+        const newHeight = Math.min(textarea.scrollHeight, 120)
+        textarea.style.height = newHeight + 'px'
+        textarea.style.overflowY = newHeight >= 120 ? 'auto' : 'hidden'
+      }
+    }
+  }, [newMessage])
+
+  // タブ切り替え時のスクロール対応
+  useEffect(() => {
+    if (activeTab === 'chat' && messages.length > 0 && !chatLoading) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const container = messagesContainerRef.current
+          if (container) {
+            container.scrollTop = container.scrollHeight
+          }
+        })
+      })
+    }
+  }, [activeTab])
+
+  // 無限スクロール用 + 新着ボタン制御
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container || chatLoading) return
+
+    const handleScroll = () => {
+      if (container.scrollTop < 100 && hasMoreMessages && !loadingMore) {
+        loadMoreMessages()
+      }
+      
+      // 新着メッセージボタンの表示制御
+      if (isNearBottom()) {
+        setShowNewMessageButton(false)
+        setNewMessageCount(0)
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [hasMoreMessages, loadingMore, chatLoading, activeTab])
+
+  // コンテキストメニューを閉じる
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null)
+    if (contextMenu) {
+      window.addEventListener('click', handleClick)
+      return () => window.removeEventListener('click', handleClick)
+    }
+  }, [contextMenu])
+
+  // メディアモーダル表示時のスクロール無効化
+  useEffect(() => {
+    if (enlargedMedia) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [enlargedMedia])
+
+  // ========== Helper Functions ==========
+
+  function isNearBottom() {
+    const container = messagesContainerRef.current
+    if (!container) return true
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 100
+  }
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -134,16 +313,14 @@ export default function ContractDetailPage() {
       .eq('id', contractId)
       .single()
 
-    // RLSエラーの場合
     if (error) {
       setDebugInfo(`データ取得エラー: ${JSON.stringify(error)}`)
       setLoading(false)
       return
     }
 
-    // データがない場合
     if (!data) {
-      setDebugInfo('データが取得できませんでした（RLSで弾かれた可能性）')
+      setDebugInfo('データが取得できませんでした')
       setLoading(false)
       return
     }
@@ -154,16 +331,8 @@ export default function ContractDetailPage() {
     const isReq = requesterId === currentProfileId
     const isCon = contractorId === currentProfileId
 
-    // デバッグ情報をセット（リダイレクトせずに画面に表示）
     if (!isReq && !isCon) {
-      setDebugInfo(`
-        権限エラー:
-        - requesterId: ${requesterId}
-        - contractorId: ${contractorId}
-        - currentProfileId: ${currentProfileId}
-        - isRequester: ${isReq}
-        - isContractor: ${isCon}
-      `)
+      setDebugInfo(`権限エラー`)
       setLoading(false)
       return
     }
@@ -185,6 +354,684 @@ export default function ContractDetailPage() {
       console.error('納品履歴取得エラー:', error)
     } else {
       setDeliveries(data || [])
+    }
+  }
+
+  // レビュー済みかチェック
+  async function checkReviewStatus() {
+    if (!currentProfileId || !contractId) return
+
+    const { data } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('work_contract_id', contractId)
+      .eq('reviewer_id', currentProfileId)
+      .single()
+
+    setHasReviewed(!!data)
+  }
+
+  async function initializeChatRoom() {
+    if (!contract) return
+
+    const workRequest = contract.work_request as any
+    const requesterId = workRequest?.requester_id
+    const contractorId = contract.contractor_id
+    const otherUserId = currentProfileId === requesterId ? contractorId : requesterId
+
+    if (currentProfileId === requesterId) {
+      setOtherUser({
+        id: contract.contractor.id,
+        username: contract.contractor.username,
+        display_name: contract.contractor.display_name,
+        avatar_url: contract.contractor.avatar_url
+      })
+    } else {
+      setOtherUser({
+        id: workRequest?.requester?.id,
+        username: workRequest?.requester?.username,
+        display_name: workRequest?.requester?.display_name,
+        avatar_url: workRequest?.requester?.avatar_url
+      })
+    }
+
+    const { data: myRooms } = await supabase
+      .from('chat_room_participants')
+      .select('chat_room_id')
+      .eq('profile_id', currentProfileId)
+
+    if (myRooms && myRooms.length > 0) {
+      for (const room of myRooms) {
+        const { data: participants } = await supabase
+          .from('chat_room_participants')
+          .select('profile_id')
+          .eq('chat_room_id', room.chat_room_id)
+
+        const profileIds = participants?.map(p => p.profile_id) || []
+        if (profileIds.length === 2 && profileIds.includes(otherUserId)) {
+          setChatRoomId(room.chat_room_id)
+          return
+        }
+      }
+    }
+
+    const { data: newRoom, error: roomError } = await supabase
+      .from('chat_rooms')
+      .insert({
+        related_request_id: contract.work_request_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (roomError) {
+      console.error('チャットルーム作成エラー:', roomError)
+      setChatLoading(false)
+      return
+    }
+
+    await supabase.from('chat_room_participants').insert([
+      { chat_room_id: newRoom.id, profile_id: currentProfileId, last_read_at: new Date().toISOString(), pinned: false, hidden: false },
+      { chat_room_id: newRoom.id, profile_id: otherUserId, last_read_at: new Date().toISOString(), pinned: false, hidden: false }
+    ])
+
+    setChatRoomId(newRoom.id)
+  }
+
+  async function fetchMessages() {
+    if (!chatRoomId) return
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_room_id', chatRoomId)
+      .eq('deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE)
+
+    if (error) {
+      console.error('メッセージ取得エラー:', error)
+      setChatLoading(false)
+      return
+    }
+    
+    if (data) {
+      const reversed = data.reverse()
+      setMessages(reversed)
+      setHasMoreMessages(data.length === MESSAGES_PER_PAGE)
+    }
+    
+    setChatLoading(false)
+    
+    // 初期読み込み時のスクロール
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      setIsInitialLoad(true)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const container = messagesContainerRef.current
+          if (container) {
+            container.scrollTop = container.scrollHeight
+          }
+        })
+      })
+      
+      // 2秒後に初期ロード終了
+      setTimeout(() => setIsInitialLoad(false), 2000)
+    }
+  }
+
+  async function loadMoreMessages() {
+    if (!chatRoomId || loadingMore || !hasMoreMessages || messages.length === 0) return
+    
+    const oldestMessage = messages[0]
+    setLoadingMore(true)
+
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_room_id', chatRoomId)
+      .eq('deleted', false)
+      .lt('created_at', oldestMessage.created_at)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE)
+
+    if (data && data.length > 0) {
+      const container = messagesContainerRef.current
+      const oldScrollHeight = container?.scrollHeight || 0
+
+      const reversed = data.reverse()
+      
+      // 重複チェックを追加
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id))
+        const newMessages = reversed.filter(m => !existingIds.has(m.id))
+        return [...newMessages, ...prev]
+      })
+      
+      setHasMoreMessages(data.length === MESSAGES_PER_PAGE)
+
+      // 2重のrequestAnimationFrameでDOM更新を確実に待つ
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight
+            container.scrollTop = newScrollHeight - oldScrollHeight
+          }
+        })
+      })
+    } else {
+      setHasMoreMessages(false)
+    }
+
+    setLoadingMore(false)
+  }
+
+  async function fetchOtherUserLastReadAt() {
+    if (!chatRoomId || !currentProfileId) return
+    
+    const { data } = await supabase
+      .from('chat_room_participants')
+      .select('last_read_at')
+      .eq('chat_room_id', chatRoomId)
+      .neq('profile_id', currentProfileId)
+      .single()
+
+    if (data) setOtherUserLastReadAt(data.last_read_at)
+  }
+
+  // 一括署名付きURL取得（改善版）
+  async function generateSignedUrlsBatch() {
+    const keysToGenerate = messages
+      .filter(m => m.file_url && !signedUrls[m.file_url] && !m.file_url.startsWith('blob:'))
+      .map(m => m.file_url!)
+    
+    if (keysToGenerate.length === 0) return
+
+    try {
+      const response = await fetch('/api/r2-signed-url-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket: 'chats', keys: keysToGenerate })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.urls) {
+          setSignedUrls(prev => ({ ...prev, ...data.urls }))
+        }
+      }
+    } catch (error) {
+      console.error('一括署名付きURL生成エラー:', error)
+    }
+  }
+
+  function subscribeToMessages() {
+    if (!chatRoomId) return () => {}
+
+    const channel = supabase
+      .channel(`chat_${chatRoomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${chatRoomId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as Message
+          if (!newMsg.deleted) {
+            const nearBottom = isNearBottom()
+            // 楽観的UIで既に追加済みの場合は、_optimisticフラグを外すだけ
+            setMessages(prev => {
+              const existingIndex = prev.findIndex(m => m.id === newMsg.id)
+              if (existingIndex >= 0) {
+                const updated = [...prev]
+                updated[existingIndex] = { ...newMsg, _optimistic: false }
+                return updated
+              }
+              // 自分が送ったメッセージでない場合のみ追加
+              if (newMsg.sender_id !== currentProfileId) {
+                if (!nearBottom) {
+                  setShowNewMessageButton(true)
+                  setNewMessageCount(prev => prev + 1)
+                }
+                return [...prev, newMsg]
+              }
+              return prev
+            })
+            if (newMsg.sender_id !== currentProfileId) {
+              updateLastReadAt()
+            }
+            if (nearBottom) {
+              requestAnimationFrame(() => {
+                const container = messagesContainerRef.current
+                if (container) {
+                  container.scrollTop = container.scrollHeight
+                }
+              })
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_room_id=eq.${chatRoomId}`
+        },
+        (payload) => {
+          const updated = payload.new as Message
+          if (updated.deleted) {
+            setMessages(prev => prev.filter(m => m.id !== updated.id))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_room_participants',
+          filter: `chat_room_id=eq.${chatRoomId}`
+        },
+        (payload) => {
+          const updated = payload.new as any
+          if (updated.profile_id !== currentProfileId) {
+            setOtherUserLastReadAt(updated.last_read_at)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  async function updateLastReadAt() {
+    if (!chatRoomId) return
+    await supabase
+      .from('chat_room_participants')
+      .update({ last_read_at: new Date().toISOString() })
+      .eq('chat_room_id', chatRoomId)
+      .eq('profile_id', currentProfileId)
+  }
+
+  async function deleteMessage(messageId: string) {
+    if (!confirm('このメッセージを削除しますか？')) { 
+      setContextMenu(null)
+      return 
+    }
+    await supabase.from('messages').update({ deleted: true }).eq('id', messageId)
+    setMessages(prev => prev.filter(m => m.id !== messageId))
+    setContextMenu(null)
+  }
+
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch('/api/r2-signed-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          bucket: 'chats', 
+          key: fileUrl, 
+          download: true, 
+          fileName 
+        })
+      })
+      
+      if (!response.ok) throw new Error('URL生成失敗')
+      
+      const data = await response.json()
+      window.location.href = data.signedUrl
+    } catch (error) {
+      console.error('ダウンロードエラー:', error)
+      alert('ダウンロードに失敗しました')
+    }
+  }
+
+  // 画像/動画読み込み完了時のハンドラー
+  const handleMediaLoad = () => {
+    if (isInitialLoad) {
+      const container = messagesContainerRef.current
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    }
+  }
+
+  function isMessageRead(message: Message): boolean {
+    if (message.sender_id !== currentProfileId) return false
+    if (!otherUserLastReadAt) return false
+    return new Date(otherUserLastReadAt) >= new Date(message.created_at)
+  }
+
+  const getFileType = (file: File): string => {
+    if (file.type.startsWith('image/')) return 'image'
+    if (file.type.startsWith('video/')) return 'video'
+    if (file.type === 'application/pdf') return 'pdf'
+    if (file.type === 'application/zip' || file.type === 'application/x-zip-compressed') return 'zip'
+    return 'file'
+  }
+
+  // ファイル選択の共通処理
+  const processFile = (file: File) => {
+    if (file.size > 50 * 1024 * 1024) { 
+      alert('ファイルサイズは50MB以下にしてください')
+      return false
+    }
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm', 'application/pdf', 'application/zip', 'application/x-zip-compressed']
+    if (!validTypes.includes(file.type)) { 
+      alert('対応ファイル形式: JPG, PNG, GIF, WebP, MP4, MOV, WebM, PDF, ZIP')
+      return false
+    }
+
+    setSelectedFile(file)
+    if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+      setPreviewUrl(URL.createObjectURL(file))
+    } else {
+      setPreviewUrl(null)
+    }
+    return true
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+  }
+
+  // ドラッグ&ドロップ
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.currentTarget === e.target) {
+      setIsDragging(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      processFile(files[0])
+    }
+  }
+
+  // ペースト（Ctrl+V）で画像送信
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault()
+        const file = items[i].getAsFile()
+        if (file) {
+          const fileName = `pasted-image-${Date.now()}.png`
+          const renamedFile = new File([file], fileName, { type: file.type })
+          processFile(renamedFile)
+        }
+        break
+      }
+    }
+  }
+
+  // 長押しメニュー（モバイル）
+  const handleTouchStart = (e: React.TouchEvent, message: Message) => {
+    if (message.sender_id !== currentProfileId || message._optimistic) return
+    
+    touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    
+    longPressTimerRef.current = setTimeout(() => {
+      const touch = e.touches[0]
+      let x = touch.clientX
+      let y = touch.clientY
+      if (x + 180 > window.innerWidth) x = window.innerWidth - 190
+      if (y + 60 > window.innerHeight) y = window.innerHeight - 70
+      setContextMenu({ x, y, messageId: message.id })
+      
+      if (navigator.vibrate) navigator.vibrate(50)
+    }, 500)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return
+    
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x)
+    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y)
+    
+    if (dx > 10 || dy > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    touchStartPosRef.current = null
+  }
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const uploadFile = async (file: File): Promise<{ url: string; type: string } | null> => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('bucket', 'chats')
+      formData.append('category', chatRoomId || '')
+      formData.append('userId', currentProfileId)
+
+      const response = await fetch('/api/upload-chat', { method: 'POST', body: formData })
+      if (!response.ok) throw new Error('アップロードに失敗しました')
+      const data = await response.json()
+      return { url: data.key, type: getFileType(file) }
+    } catch (error) {
+      console.error('ファイルアップロードエラー:', error)
+      return null
+    }
+  }
+
+  const getFileIcon = (fileType: string | null) => {
+    const icons: { [key: string]: string } = { pdf: 'fa-file-pdf', zip: 'fa-file-zipper' }
+    return icons[fileType || ''] || 'fa-file'
+  }
+
+  const getSignedUrl = (fileUrl: string | null) => fileUrl ? signedUrls[fileUrl] || null : null
+
+  // 新着メッセージボタンクリック
+  const handleNewMessageButtonClick = () => {
+    const container = messagesContainerRef.current
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+    setShowNewMessageButton(false)
+    setNewMessageCount(0)
+  }
+
+  // 楽観的UI更新を使ったメッセージ送信
+  async function sendMessage() {
+    if ((!newMessage.trim() && !selectedFile) || sendingMessage || !chatRoomId) return
+
+    const messageContent = newMessage.trim()
+    const fileToUpload = selectedFile
+    const localPreviewUrl = previewUrl
+
+    // 楽観的UIメッセージを作成
+    const optimisticId = `optimistic-${Date.now()}`
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      chat_room_id: chatRoomId,
+      sender_id: currentProfileId,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      file_url: localPreviewUrl,
+      file_type: fileToUpload ? getFileType(fileToUpload) : null,
+      file_name: fileToUpload?.name || null,
+      deleted: false,
+      _optimistic: true
+    }
+
+    // 即座にUIに反映
+    setMessages(prev => [...prev, optimisticMessage])
+    setNewMessage('')
+    handleRemoveFile()
+    
+    // 送信後スクロール
+    requestAnimationFrame(() => {
+      const container = messagesContainerRef.current
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    })
+
+    setSendingMessage(true)
+    if (fileToUpload) setUploading(true)
+
+    let fileUrl: string | null = null
+    let fileType: string | null = null
+    let fileName: string | null = null
+
+    if (fileToUpload) {
+      const uploadResult = await uploadFile(fileToUpload)
+      if (!uploadResult) {
+        // 失敗した場合、楽観的メッセージに失敗フラグを付ける
+        setMessages(prev => prev.map(m => 
+          m.id === optimisticId ? { ...m, _failed: true } : m
+        ))
+        alert('ファイルのアップロードに失敗しました')
+        setSendingMessage(false)
+        setUploading(false)
+        return
+      }
+      fileUrl = uploadResult.url
+      fileType = uploadResult.type
+      fileName = fileToUpload.name
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: chatRoomId,
+        sender_id: currentProfileId,
+        content: messageContent || '',
+        file_url: fileUrl,
+        file_type: fileType,
+        file_name: fileName,
+        deleted: false
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('メッセージ送信エラー:', error)
+      // 失敗した場合、楽観的メッセージに失敗フラグを付ける
+      setMessages(prev => prev.map(m => 
+        m.id === optimisticId ? { ...m, _failed: true } : m
+      ))
+      alert('メッセージの送信に失敗しました')
+    } else {
+      // 成功した場合、楽観的メッセージを実際のメッセージで置き換え
+      setMessages(prev => prev.map(m => 
+        m.id === optimisticId ? { ...data as Message, _optimistic: false } : m
+      ))
+      
+      if (fileUrl && (fileType === 'image' || fileType === 'video')) {
+        // 新しいファイルの署名付きURLを取得
+        generateSignedUrlsBatch()
+      }
+      
+      await supabase
+        .from('chat_rooms')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', chatRoomId)
+    }
+
+    setSendingMessage(false)
+    setUploading(false)
+  }
+
+  // 失敗したメッセージの再送信
+  async function retryMessage(failedMessage: Message) {
+    if (!chatRoomId) return
+    
+    // 失敗フラグを外して再送信を試みる
+    setMessages(prev => prev.map(m => 
+      m.id === failedMessage.id ? { ...m, _failed: false, _optimistic: true } : m
+    ))
+    
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        chat_room_id: chatRoomId,
+        sender_id: currentProfileId,
+        content: failedMessage.content || '',
+        file_url: null,
+        file_type: null,
+        file_name: null,
+        deleted: false
+      })
+      .select()
+      .single()
+
+    if (error) {
+      setMessages(prev => prev.map(m => 
+        m.id === failedMessage.id ? { ...m, _failed: true } : m
+      ))
+    } else {
+      setMessages(prev => prev.map(m => 
+        m.id === failedMessage.id ? { ...data as Message, _optimistic: false } : m
+      ))
+      await supabase.from('chat_rooms').update({ updated_at: new Date().toISOString() }).eq('id', chatRoomId)
+    }
+  }
+
+  function formatTime(dateString: string) {
+    return new Date(dateString).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  function formatChatDate(dateString: string) {
+    const date = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    if (date.toDateString() === today.toDateString()) return '今日'
+    if (date.toDateString() === yesterday.toDateString()) return '昨日'
+    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+  }
+
+  function navigateToProfile() {
+    if (otherUser?.username) {
+      router.push(`/creators/${otherUser.username}`)
     }
   }
 
@@ -408,8 +1255,29 @@ export default function ContractDetailPage() {
     return new Date(dateString).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
+  function formatShortDate(dateString: string) {
+    return new Date(dateString).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+  }
+
   function formatDateTime(dateString: string) {
     return new Date(dateString).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  function getProgressSteps() {
+    return [
+      { key: 'contracted', label: '契約', done: true, date: contract?.contracted_at },
+      { key: 'paid', label: '仮払い', done: !!contract?.paid_at, active: contract?.status === 'contracted', date: contract?.paid_at },
+      { key: 'working', label: '作業中', done: !!contract?.delivered_at, active: contract?.status === 'paid' },
+      { key: 'delivered', label: '納品', done: !!contract?.completed_at, active: contract?.status === 'delivered', date: contract?.delivered_at },
+      { key: 'completed', label: '完了', done: !!contract?.completed_at, date: contract?.completed_at },
+    ]
+  }
+
+  function getProgressLineWidth() {
+    const steps = getProgressSteps()
+    const doneCount = steps.filter(s => s.done).length
+    if (doneCount <= 1) return 0
+    return ((doneCount - 1) / 4) * 100
   }
 
   if (loading) {
@@ -428,32 +1296,7 @@ export default function ContractDetailPage() {
     )
   }
 
-  // デバッグ情報がある場合は表示
-  if (debugInfo) {
-    return (
-      <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <Header />
-        <div className="req-status-page">
-          <div style={{ padding: '40px', background: '#fff', margin: '20px', borderRadius: '8px' }}>
-            <h1 style={{ color: 'red' }}>デバッグ情報</h1>
-            <pre style={{ background: '#f5f5f5', padding: '20px', whiteSpace: 'pre-wrap' }}>
-              {debugInfo}
-            </pre>
-            <p style={{ marginTop: '20px' }}>
-              <strong>contractId:</strong> {contractId}<br />
-              <strong>requestId:</strong> {requestId}<br />
-              <strong>currentProfileId:</strong> {currentProfileId}
-            </p>
-            <Link href={`/requests/${requestId}`} style={{ color: 'blue' }}>依頼詳細に戻る</Link>
-          </div>
-        </div>
-        <Footer />
-      </>
-    )
-  }
-
-  if (!contract) {
+  if (debugInfo || !contract) {
     return (
       <>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -472,6 +1315,446 @@ export default function ContractDetailPage() {
 
   const workRequest = contract.work_request as any
   const pendingDeliveries = deliveries.filter(d => d.status === 'pending')
+  const progressSteps = getProgressSteps()
+
+  const renderActionBar = () => {
+    if (contract.status === 'contracted' && isRequester) {
+      return (
+        <div className="req-status-action-bar">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon warning">
+              <i className="fas fa-credit-card"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>仮払いを行ってください</h3>
+              <p>仮払いを行うと、クリエイターが作業を開始できます。</p>
+            </div>
+          </div>
+          <button onClick={handlePayment} disabled={processing} className="req-status-action-bar-btn">
+            {processing ? '処理中...' : '仮払いする'}
+          </button>
+        </div>
+      )
+    }
+
+    if (contract.status === 'contracted' && isContractor) {
+      return (
+        <div className="req-status-action-bar waiting">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon info">
+              <i className="fas fa-clock"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>仮払いをお待ちください</h3>
+              <p>依頼者が仮払いを完了すると、作業を開始できます。</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (contract.status === 'paid' && isContractor) {
+      return (
+        <div className="req-status-action-bar">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon info">
+              <i className="fas fa-upload"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>作業を進めてください</h3>
+              <p>作業が完了したら、成果物を納品してください。</p>
+            </div>
+          </div>
+          <button onClick={() => setShowDeliveryModal(true)} className="req-status-action-bar-btn">
+            納品する
+          </button>
+        </div>
+      )
+    }
+
+    if (contract.status === 'paid' && isRequester) {
+      return (
+        <div className="req-status-action-bar waiting">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon info">
+              <i className="fas fa-spinner fa-pulse"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>作業中です</h3>
+              <p>クリエイターが作業を進めています。納品をお待ちください。</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (contract.status === 'delivered' && isRequester && pendingDeliveries.length > 0) {
+      return (
+        <div className="req-status-action-bar">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon success">
+              <i className="fas fa-box-open"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>納品物を確認してください</h3>
+              <p>クリエイターから納品物が提出されました。下記から検収を行ってください。</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (contract.status === 'delivered' && isContractor) {
+      return (
+        <div className="req-status-action-bar waiting">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon warning">
+              <i className="fas fa-hourglass-half"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>検収をお待ちください</h3>
+              <p>依頼者が検収を行っています。しばらくお待ちください。</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (contract.status === 'completed') {
+      return (
+        <div className="req-status-action-bar completed">
+          <div className="req-status-action-bar-content">
+            <div className="req-status-action-bar-icon success">
+              <i className="fas fa-check-circle"></i>
+            </div>
+            <div className="req-status-action-bar-text">
+              <h3>取引が完了しました</h3>
+              <p>お疲れ様でした！</p>
+            </div>
+          </div>
+          {!hasReviewed && (
+            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className="req-status-action-bar-btn review">
+              <i className="fas fa-star"></i>
+              レビューを書く
+            </Link>
+          )}
+          {hasReviewed && (
+            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className="req-status-action-bar-btn secondary">
+              <i className="fas fa-check"></i>
+              レビュー済み
+            </Link>
+          )}
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  const renderMainContent = () => (
+    <>
+      {renderActionBar()}
+
+      <div className="req-status-steps">
+        <div className="req-status-steps-bar">
+          <div className="req-status-steps-line">
+            <div className="req-status-steps-line-fill" style={{ width: `${getProgressLineWidth()}%` }}></div>
+          </div>
+          {progressSteps.map((step, index) => (
+            <div key={step.key} className={`req-status-step ${step.done ? 'done' : ''} ${step.active ? 'active' : ''}`}>
+              <div className="req-status-step-icon">
+                {step.done ? (
+                  <i className="fas fa-check"></i>
+                ) : step.active ? (
+                  <i className="fas fa-circle" style={{ fontSize: '8px' }}></i>
+                ) : (
+                  <span>{index + 1}</span>
+                )}
+              </div>
+              <div className="req-status-step-label">{step.label}</div>
+              {step.date && <div className="req-status-step-date">{formatShortDate(step.date)}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="req-status-info-card">
+        <h2 className="req-status-info-title">契約情報</h2>
+        <div className="req-status-info-grid-2col">
+          <div className="req-status-info-item">
+            <div className="req-status-info-item-label">契約金額</div>
+            <div className="req-status-info-item-value price">{contract.final_price?.toLocaleString()}円</div>
+          </div>
+          <div className="req-status-info-item">
+            <div className="req-status-info-item-label">納期</div>
+            <div className="req-status-info-item-value">
+              {contract.deadline ? formatDate(contract.deadline) : '未設定'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {deliveries.length > 0 && (
+        <div className="req-status-deliveries">
+          <h2 className="req-status-deliveries-title">納品履歴 ({deliveries.length}件)</h2>
+          <div className="req-status-deliveries-list">
+            {deliveries.map((delivery) => (
+              <div key={delivery.id} className={`req-status-delivery-card ${delivery.status === 'approved' ? 'approved' : ''}`}>
+                <div className="req-status-delivery-header">
+                  <div className="req-status-delivery-date">{formatDateTime(delivery.created_at)}</div>
+                  <span className={`req-status-delivery-badge ${delivery.status}`}>
+                    {delivery.status === 'pending' && '検収待ち'}
+                    {delivery.status === 'approved' && '承認済み'}
+                    {delivery.status === 'rejected' && '差戻し'}
+                  </span>
+                </div>
+                <p className="req-status-delivery-message">{delivery.message}</p>
+                {delivery.delivery_url && (
+                  <a href={delivery.delivery_url} target="_blank" rel="noopener noreferrer" className="req-status-delivery-url">
+                    <i className="fas fa-external-link-alt"></i>納品物を確認
+                  </a>
+                )}
+                {delivery.feedback && (
+                  <div className={`req-status-delivery-feedback ${delivery.status === 'rejected' ? 'rejected' : ''}`}>
+                    <div className="req-status-delivery-feedback-label"><i className="fas fa-comment"></i>フィードバック</div>
+                    <p className="req-status-delivery-feedback-text">{delivery.feedback}</p>
+                  </div>
+                )}
+                {isRequester && delivery.status === 'pending' && (
+                  <div className="req-status-delivery-actions">
+                    <button onClick={() => openReviewModal(delivery.id, 'reject')} disabled={processing} className="req-status-btn secondary flex-1">差し戻す</button>
+                    <button onClick={() => openReviewModal(delivery.id, 'approve')} disabled={processing} className="req-status-btn primary flex-1">承認して完了</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  const renderChatContent = () => (
+    <div 
+      className="chat-container"
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* ドラッグオーバーレイ */}
+      {isDragging && (
+        <div className="chat-drag-overlay">
+          <div className="chat-drag-content">
+            <i className="fas fa-cloud-upload-alt"></i>
+            <p>ファイルをドロップして送信</p>
+          </div>
+        </div>
+      )}
+
+      <div className="chat-header" onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
+        <div className="chat-header-avatar">
+          {otherUser?.avatar_url ? (
+            <img src={otherUser.avatar_url} alt="" loading="lazy" />
+          ) : (
+            <span>{otherUser?.display_name?.charAt(0) || '?'}</span>
+          )}
+        </div>
+        <div className="chat-header-info">
+          <div className="chat-header-name">{otherUser?.display_name || '名前未設定'}</div>
+          <div className="chat-header-status">{isRequester ? 'クリエイター' : '依頼者'}</div>
+        </div>
+        {otherUser?.username && <i className="fas fa-chevron-right chat-header-arrow"></i>}
+      </div>
+
+      <div className="chat-messages" ref={messagesContainerRef}>
+        {loadingMore && (
+          <div className="chat-loading-more">
+            <i className="fas fa-spinner fa-spin"></i>
+            <span>読み込み中...</span>
+          </div>
+        )}
+        {chatLoading ? (
+          <MessagesSkeleton />
+        ) : messages.length === 0 ? (
+          <div className="chat-empty">
+            <i className="far fa-comments"></i>
+            <p>メッセージはまだありません</p>
+            <p className="chat-empty-hint">気軽にメッセージを送ってみましょう</p>
+          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => {
+              const isCurrentUser = message.sender_id === currentProfileId
+              const showDate = index === 0 || 
+                new Date(messages[index - 1].created_at).toDateString() !== 
+                new Date(message.created_at).toDateString()
+              // 楽観的UIの場合はローカルプレビューURLを使用、それ以外は署名付きURL
+              const signedUrl = message._optimistic && message.file_url?.startsWith('blob:') 
+                ? message.file_url 
+                : getSignedUrl(message.file_url)
+
+              return (
+                <div key={message.id}>
+                  {showDate && (
+                    <div className="chat-date-divider">
+                      <span>{formatChatDate(message.created_at)}</span>
+                    </div>
+                  )}
+                  <div 
+                    className={`chat-message ${isCurrentUser ? 'sent' : 'received'} ${message._optimistic ? 'optimistic' : ''} ${message._failed ? 'failed' : ''}`}
+                    onContextMenu={(e) => {
+                      if (isCurrentUser && !message._optimistic) {
+                        e.preventDefault()
+                        setContextMenu({ x: e.clientX, y: e.clientY, messageId: message.id })
+                      }
+                    }}
+                    onTouchStart={(e) => handleTouchStart(e, message)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    {!isCurrentUser && (
+                      <div className="chat-message-avatar" onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
+                        {otherUser?.avatar_url ? (
+                          <img src={otherUser.avatar_url} alt="" loading="lazy" />
+                        ) : (
+                          <span>{otherUser?.display_name?.charAt(0) || '?'}</span>
+                        )}
+                      </div>
+                    )}
+                    <div className="chat-message-content">
+                      {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
+                        <div className="chat-media">
+                          {message.file_type === 'image' ? (
+                            <img 
+                              src={signedUrl} 
+                              alt="" 
+                              loading="lazy"
+                              onClick={() => !message._optimistic && setEnlargedMedia({ url: signedUrl, type: 'image' })}
+                              onLoad={handleMediaLoad}
+                              style={{ cursor: message._optimistic ? 'default' : 'pointer' }}
+                            />
+                          ) : (
+                            <video 
+                              src={signedUrl} 
+                              controls 
+                              preload="metadata"
+                              onLoadedData={handleMediaLoad}
+                            />
+                          )}
+                          {!message._optimistic && (
+                            <button 
+                              className="chat-media-download" 
+                              onClick={() => handleDownload(message.file_url!, message.file_name || (message.file_type === 'image' ? '画像.jpg' : '動画.mp4'))}
+                            >
+                              <i className="fas fa-download"></i> 保存
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
+                        <a href={signedUrl} download={message.file_name} target="_blank" rel="noopener noreferrer" className="chat-file">
+                          <i className={`fas ${getFileIcon(message.file_type)} chat-file-icon`}></i>
+                          <div className="chat-file-info">
+                            <div className="chat-file-name">{message.file_name}</div>
+                            <div className="chat-file-type">{message.file_type?.toUpperCase()}</div>
+                          </div>
+                        </a>
+                      )}
+                      {message.content && (
+                        <div className="chat-message-bubble">{message.content}</div>
+                      )}
+                      <div className="chat-message-time">
+                        {message._optimistic && !message._failed && (
+                          <span className="chat-message-sending">送信中...</span>
+                        )}
+                        {message._failed && (
+                          <button className="chat-message-retry" onClick={() => retryMessage(message)}>
+                            <i className="fas fa-exclamation-circle"></i> 再送信
+                          </button>
+                        )}
+                        {!message._optimistic && !message._failed && (
+                          <>
+                            {formatTime(message.created_at)}
+                            {isCurrentUser && isMessageRead(message) && (
+                              <span className="chat-message-read"> 既読</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+
+        {/* 新着メッセージボタン */}
+        {showNewMessageButton && (
+          <button className="chat-new-message-btn" onClick={handleNewMessageButtonClick}>
+            <i className="fas fa-arrow-down"></i>
+            {newMessageCount > 0 && <span>{newMessageCount}件の新着メッセージ</span>}
+          </button>
+        )}
+      </div>
+
+      {selectedFile && (
+        <div className="chat-file-preview">
+          <div className="chat-file-preview-inner">
+            {selectedFile.type.startsWith('image/') && previewUrl && <img src={previewUrl} alt="プレビュー" />}
+            {selectedFile.type.startsWith('video/') && previewUrl && <video src={previewUrl} controls />}
+            {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
+              <div className="chat-file-preview-info">
+                <i className={`fas ${getFileIcon(getFileType(selectedFile))}`}></i>
+                <span>{selectedFile.name}</span>
+              </div>
+            )}
+            <button className="chat-file-preview-remove" onClick={handleRemoveFile}><i className="fas fa-times"></i></button>
+          </div>
+        </div>
+      )}
+
+      <div className="chat-input-container">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,application/pdf,application/zip"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+        <button className="chat-attach-btn" onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || uploading}>
+          <i className="fas fa-paperclip"></i>
+        </button>
+        <textarea
+          ref={textareaRef}
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing) return
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              sendMessage()
+            }
+          }}
+          onPaste={handlePaste}
+          placeholder="メッセージを入力..."
+          disabled={sendingMessage || chatLoading}
+          rows={1}
+          className="chat-input"
+        />
+        <button
+          onClick={sendMessage}
+          disabled={sendingMessage || chatLoading}
+          className="chat-send-btn"
+        >
+          {uploading ? 'アップロード中...' : '送信'}
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -479,213 +1762,54 @@ export default function ContractDetailPage() {
       <Header />
       <div className="req-status-page">
         <div className="req-status-container">
-          {/* パンくず */}
-          <div className="req-status-breadcrumb">
-            <Link href="/requests">依頼一覧</Link>
-            <span>/</span>
-            <Link href={`/requests/${requestId}`}>{workRequest?.title}</Link>
-            <span>/</span>
-            <span>契約詳細</span>
-          </div>
-
           {/* ヘッダー */}
           <div className="req-status-header">
             <h1 className="req-status-title">{workRequest?.title}</h1>
-            <div className="req-status-badges">
+            {/* <div className="req-status-badges">
               <span className={`req-status-badge ${contract.status}`}>{getStatusLabel(contract.status)}</span>
+            </div> */}
+          </div>
+
+          {/* スマホ用タブ */}
+          <div className="mobile-tabs">
+            <button 
+              className={`mobile-tab ${activeTab === 'status' ? 'active' : ''}`}
+              onClick={() => setActiveTab('status')}
+            >
+              <i className="fas fa-clipboard-list"></i>
+              <span>進捗</span>
+            </button>
+            <button 
+              className={`mobile-tab ${activeTab === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveTab('chat')}
+            >
+              <i className="fas fa-comments"></i>
+              <span>チャット</span>
+            </button>
+          </div>
+
+          {/* PC用2カラムレイアウト */}
+          <div className="req-status-layout desktop-only">
+            <div className="req-status-main">
+              {renderMainContent()}
+            </div>
+            <div className="req-status-chat">
+              {renderChatContent()}
             </div>
           </div>
 
-          {/* 進捗タイムライン */}
-          <div className="req-status-timeline">
-            <h2 className="req-status-timeline-title">進捗状況</h2>
-            <div className="req-status-timeline-list">
-              <div className="req-status-timeline-item">
-                <div className="req-status-timeline-icon done"><i className="fas fa-check"></i></div>
-                <div className="req-status-timeline-content">
-                  <div className="req-status-timeline-label">契約確定</div>
-                  {contract.contracted_at && <div className="req-status-timeline-date">{formatDate(contract.contracted_at)}</div>}
-                </div>
+          {/* スマホ用タブコンテンツ */}
+          <div className="mobile-content">
+            {activeTab === 'status' ? (
+              <div className="mobile-main">
+                {renderMainContent()}
               </div>
-              <div className="req-status-timeline-item">
-                <div className={`req-status-timeline-icon ${contract.paid_at ? 'done' : 'pending'}`}>
-                  {contract.paid_at ? <i className="fas fa-check"></i> : <div className="dot"></div>}
-                </div>
-                <div className="req-status-timeline-content">
-                  <div className={`req-status-timeline-label ${!contract.paid_at ? 'inactive' : ''}`}>仮払い完了</div>
-                  {contract.paid_at && <div className="req-status-timeline-date">{formatDate(contract.paid_at)}</div>}
-                </div>
+            ) : (
+              <div className="mobile-chat">
+                {renderChatContent()}
               </div>
-              <div className="req-status-timeline-item">
-                <div className={`req-status-timeline-icon ${contract.delivered_at ? 'done' : contract.status === 'paid' ? 'active' : 'pending'}`}>
-                  {contract.delivered_at ? <i className="fas fa-check"></i> : contract.status === 'paid' ? <i className="fas fa-spinner fa-spin"></i> : <div className="dot"></div>}
-                </div>
-                <div className="req-status-timeline-content">
-                  <div className={`req-status-timeline-label ${contract.status !== 'paid' && !contract.delivered_at ? 'inactive' : ''}`}>作業中</div>
-                </div>
-              </div>
-              <div className="req-status-timeline-item">
-                <div className={`req-status-timeline-icon ${contract.completed_at ? 'done' : contract.status === 'delivered' ? 'active' : 'pending'}`}>
-                  {contract.completed_at ? <i className="fas fa-check"></i> : contract.status === 'delivered' ? <i className="fas fa-hourglass-half"></i> : <div className="dot"></div>}
-                </div>
-                <div className="req-status-timeline-content">
-                  <div className={`req-status-timeline-label ${contract.status !== 'delivered' && !contract.completed_at ? 'inactive' : ''}`}>納品・検収</div>
-                  {contract.delivered_at && <div className="req-status-timeline-date">{formatDate(contract.delivered_at)}</div>}
-                </div>
-              </div>
-              <div className="req-status-timeline-item">
-                <div className={`req-status-timeline-icon ${contract.completed_at ? 'done' : 'pending'}`}>
-                  {contract.completed_at ? <i className="fas fa-check"></i> : <div className="dot"></div>}
-                </div>
-                <div className="req-status-timeline-content">
-                  <div className={`req-status-timeline-label ${!contract.completed_at ? 'inactive' : ''}`}>完了</div>
-                  {contract.completed_at && <div className="req-status-timeline-date">{formatDate(contract.completed_at)}</div>}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
-
-          {/* 契約情報カード */}
-          <div className="req-status-info-card">
-            <h2 className="req-status-info-title">契約情報</h2>
-            <div className="req-status-info-grid">
-              <div className="req-status-info-row">
-                <span className="req-status-info-label">契約金額</span>
-                <span className="req-status-info-value">{contract.final_price?.toLocaleString()}円</span>
-              </div>
-              {contract.deadline && (
-                <div className="req-status-info-row">
-                  <span className="req-status-info-label">納期</span>
-                  <span className="req-status-info-value">{formatDate(contract.deadline)}</span>
-                </div>
-              )}
-            </div>
-            <hr className="req-status-info-divider" />
-            <h3 className="req-status-info-subtitle">{isRequester ? 'クリエイター' : '依頼者'}</h3>
-            <div className="req-status-user-card">
-              <div className="req-status-user-avatar">
-                {(() => {
-                  const profile = isRequester ? contract.contractor : workRequest?.requester
-                  return profile?.avatar_url ? <img src={profile.avatar_url} alt="" /> : <span>{profile?.display_name?.charAt(0) || '?'}</span>
-                })()}
-              </div>
-              <div>
-                {(() => {
-                  const profile = isRequester ? contract.contractor : workRequest?.requester
-                  return profile?.username 
-                    ? <Link href={`/creators/${profile.username}`} className="req-status-user-name">{profile.display_name || '名前未設定'}</Link>
-                    : <div className="req-status-user-name">{profile?.display_name || '名前未設定'}</div>
-                })()}
-              </div>
-            </div>
-          </div>
-
-          {/* 仮払い待ち - 依頼者 */}
-          {contract.status === 'contracted' && isRequester && (
-            <div className="req-status-action-card warning">
-              <h3 className="req-status-action-title"><i className="fas fa-credit-card warning"></i>次のステップ: 仮払い</h3>
-              <p className="req-status-action-text">仮払いを行うと、クリエイターが作業を開始できます。</p>
-              <div className="req-status-action-buttons">
-                <button onClick={handlePayment} disabled={processing} className="req-status-btn primary">
-                  {processing ? '処理中...' : '仮払いする'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 仮払い待ち - クリエイター */}
-          {contract.status === 'contracted' && isContractor && (
-            <div className="req-status-action-card info center">
-              <i className="fas fa-clock req-status-action-icon-large warning"></i>
-              <h3 className="req-status-action-title" style={{ justifyContent: 'center' }}>仮払い待ち</h3>
-              <p className="req-status-action-text">依頼者が仮払いを完了すると、作業を開始できます。</p>
-            </div>
-          )}
-
-          {/* 作業中 - クリエイター */}
-          {contract.status === 'paid' && isContractor && (
-            <div className="req-status-action-card info">
-              <h3 className="req-status-action-title"><i className="fas fa-upload info"></i>納品する</h3>
-              <p className="req-status-action-text">作業が完了したら、成果物を納品してください。</p>
-              <div className="req-status-action-buttons">
-                <button onClick={() => setShowDeliveryModal(true)} className="req-status-btn primary">納品する</button>
-              </div>
-            </div>
-          )}
-
-          {/* 作業中 - 依頼者 */}
-          {contract.status === 'paid' && isRequester && (
-            <div className="req-status-action-card info center">
-              <i className="fas fa-spinner fa-pulse req-status-action-icon-large"></i>
-              <h3 className="req-status-action-title" style={{ justifyContent: 'center' }}>作業中</h3>
-              <p className="req-status-action-text">クリエイターが作業を進めています。納品をお待ちください。</p>
-            </div>
-          )}
-
-          {/* 検収待ち - 依頼者 */}
-          {contract.status === 'delivered' && isRequester && pendingDeliveries.length > 0 && (
-            <div className="req-status-action-card info">
-              <h3 className="req-status-action-title"><i className="fas fa-check-circle info"></i>検収をお願いします</h3>
-              <p className="req-status-action-text">クリエイターから納品物が提出されました。下記の納品履歴から検収を行ってください。</p>
-            </div>
-          )}
-
-          {/* 検収待ち - クリエイター */}
-          {contract.status === 'delivered' && isContractor && (
-            <div className="req-status-action-card info center">
-              <i className="fas fa-hourglass-half req-status-action-icon-large warning"></i>
-              <h3 className="req-status-action-title" style={{ justifyContent: 'center' }}>検収待ち</h3>
-              <p className="req-status-action-text">依頼者が検収を行っています。しばらくお待ちください。</p>
-            </div>
-          )}
-
-          {/* 完了 */}
-          {contract.status === 'completed' && (
-            <div className="req-status-action-card success center">
-              <i className="fas fa-check-circle req-status-action-icon-large success"></i>
-              <h3 className="req-status-action-title" style={{ justifyContent: 'center' }}>完了</h3>
-              <p className="req-status-action-text">お疲れ様でした！取引が完了しました。</p>
-            </div>
-          )}
-
-          {/* 納品履歴 */}
-          {deliveries.length > 0 && (
-            <div className="req-status-deliveries">
-              <h2 className="req-status-deliveries-title">納品履歴 ({deliveries.length}件)</h2>
-              <div className="req-status-deliveries-list">
-                {deliveries.map((delivery) => (
-                  <div key={delivery.id} className={`req-status-delivery-card ${delivery.status === 'approved' ? 'approved' : ''}`}>
-                    <div className="req-status-delivery-header">
-                      <div className="req-status-delivery-date">{formatDateTime(delivery.created_at)}</div>
-                      <span className={`req-status-delivery-badge ${delivery.status}`}>
-                        {delivery.status === 'pending' && '検収待ち'}
-                        {delivery.status === 'approved' && '承認済み'}
-                        {delivery.status === 'rejected' && '差戻し'}
-                      </span>
-                    </div>
-                    <p className="req-status-delivery-message">{delivery.message}</p>
-                    {delivery.delivery_url && (
-                      <a href={delivery.delivery_url} target="_blank" rel="noopener noreferrer" className="req-status-delivery-url">
-                        <i className="fas fa-external-link-alt"></i>納品物を確認
-                      </a>
-                    )}
-                    {delivery.feedback && (
-                      <div className={`req-status-delivery-feedback ${delivery.status === 'rejected' ? 'rejected' : ''}`}>
-                        <div className="req-status-delivery-feedback-label"><i className="fas fa-comment"></i>フィードバック</div>
-                        <p className="req-status-delivery-feedback-text">{delivery.feedback}</p>
-                      </div>
-                    )}
-                    {isRequester && delivery.status === 'pending' && (
-                      <div className="req-status-delivery-actions">
-                        <button onClick={() => openReviewModal(delivery.id, 'reject')} disabled={processing} className="req-status-btn secondary flex-1">差し戻す</button>
-                        <button onClick={() => openReviewModal(delivery.id, 'approve')} disabled={processing} className="req-status-btn primary flex-1">承認して完了</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -732,25 +1856,43 @@ export default function ContractDetailPage() {
         </div>
       )}
 
-      <Footer />
+      {/* コンテキストメニュー */}
+      {contextMenu && (
+        <div 
+          className="context-menu"
+          style={{ 
+            position: 'fixed', 
+            top: contextMenu.y, 
+            left: contextMenu.x,
+            zIndex: 9999
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button 
+            className="context-menu-item delete"
+            onClick={() => deleteMessage(contextMenu.messageId)}
+          >
+            <i className="fas fa-trash"></i>
+            削除
+          </button>
+        </div>
+      )}
 
-      <style jsx>{`
-        .req-status-breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          font-size: 14px;
-          color: #888888;
-        }
-        .req-status-breadcrumb a {
-          color: #5B7C99;
-          text-decoration: none;
-        }
-        .req-status-breadcrumb a:hover {
-          text-decoration: underline;
-        }
-      `}</style>
+      {/* メディア拡大モーダル */}
+      {enlargedMedia && (
+        <div className="chat-media-modal" onClick={() => setEnlargedMedia(null)}>
+          <button className="chat-media-close" onClick={() => setEnlargedMedia(null)}>
+            <i className="fas fa-times"></i>
+          </button>
+          {enlargedMedia.type === 'image' ? (
+            <img src={enlargedMedia.url} alt="" onClick={(e) => e.stopPropagation()} />
+          ) : (
+            <video src={enlargedMedia.url} controls autoPlay onClick={(e) => e.stopPropagation()} />
+          )}
+        </div>
+      )}
+
+      <Footer />
     </>
   )
 }

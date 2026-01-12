@@ -13,7 +13,7 @@ const s3Client = new S3Client({
 
 export async function POST(request: NextRequest) {
   try {
-    const { bucket, key } = await request.json()
+    const { bucket, key, download, fileName } = await request.json()
 
     if (!bucket || !key) {
       return NextResponse.json(
@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // バケット名を取得
     let bucketName: string | undefined
 
     if (bucket === 'chats') {
@@ -42,14 +41,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 署名付きURL生成（有効期限: 1時間）
-    const command = new GetObjectCommand({
+    const commandOptions: any = {
       Bucket: bucketName,
       Key: key,
-    })
+    }
+    
+    // ダウンロード用の場合はContent-Dispositionを付与
+    if (download && fileName) {
+      commandOptions.ResponseContentDisposition = `attachment; filename="${encodeURIComponent(fileName)}"`
+    }
+
+    const command = new GetObjectCommand(commandOptions)
 
     const signedUrl = await getSignedUrl(s3Client, command, {
-      expiresIn: 3600, // 1時間
+      expiresIn: 3600,
     })
 
     return NextResponse.json({

@@ -2236,15 +2236,15 @@ button {
   color: #888888;
 }
 
-.header-search-input:focus {
+/* .header-search-input:focus {
   background: #FFFFFF;
   box-shadow: inset 2px 2px 4px #d0d5da, inset -2px -2px 4px #ffffff;
-}
+} */
 
 /* ヘッダーナビゲーション */
 .header-nav {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   flex-shrink: 0;
 }
@@ -12402,7 +12402,7 @@ button {
     margin-left: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 20px 16px !important;
+    /* padding: 20px 16px !important; */
   }
 }
 
@@ -15164,6 +15164,1033 @@ button {
   }
 }
 
+/* ========================================
+   メッセージ一覧
+   ======================================== */
+
+.messages-page {
+  min-height: 100vh;
+  background-color: #E8ECEF;
+  display: flex;
+  flex-direction: column;
+}
+
+.messages-page .empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+}
+
+.messages-header {
+  padding: 24px 32px;
+  background-color: #E8ECEF;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 32px 32px;
+}
+
+.message-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.message-item:hover {
+  transform: translateY(-6px);
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06); */
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.message-item-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #888888;
+  overflow: hidden;
+  position: relative;
+}
+
+.message-item-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message-item-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #C05656;
+  color: #FFFFFF;
+  border-radius: 10px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.message-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.message-item-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.message-item-name.unread {
+  font-weight: 700;
+}
+
+.message-item-time {
+  font-size: 12px;
+  color: #888888;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.message-item-text {
+  font-size: 14px;
+  color: #555555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.message-item-text.unread {
+  font-weight: 600;
+  color: #222222;
+}
+
+.message-item-pin {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 12px;
+  color: #5B7C99;
+}
+
+/* ========================================
+   チャットルーム
+   ======================================== */
+
+.chat-page {
+  display: flex;
+  height: calc(100vh - 64px);
+  background-color: #E8ECEF;
+}
+
+/* サイドバー（ルーム一覧） */
+.chat-sidebar {
+  width: 320px;
+  background: #E8ECEF;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 16px;
+}
+
+.chat-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-room-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: transparent;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.chat-room-item.active {
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+}
+
+.chat-room-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #888888;
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-room-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-room-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background-color: #C05656;
+  color: #FFFFFF;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+.chat-room-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.chat-room-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.chat-room-name.unread {
+  font-weight: 700;
+}
+
+.chat-room-time {
+  font-size: 12px;
+  color: #888888;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.chat-room-text {
+  font-size: 13px;
+  color: #555555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.chat-room-text.unread {
+  font-weight: 600;
+  color: #222222;
+}
+
+.chat-room-pin {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: #5B7C99;
+}
+
+/* メインエリア */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border-radius: 20px 0 0 20px;
+  overflow: hidden;
+  margin: 16px 0 16px 0;
+}
+
+/* モバイルヘッダー */
+.chat-mobile-header {
+  display: none;
+  padding: 12px 16px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #EEF0F3;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-mobile-back {
+  font-size: 18px;
+  color: #5B7C99;
+  text-decoration: none;
+  padding: 4px;
+}
+
+.chat-mobile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #888888;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.chat-mobile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-mobile-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222222;
+  cursor: pointer;
+}
+
+/* 関連依頼バー */
+.chat-request-bar {
+  background: #FFFFFF;
+  border-bottom: 1px solid #EEF0F3;
+}
+
+.chat-request-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.15s;
+}
+
+.chat-request-item:hover {
+  background: #EEF0F3;
+}
+
+.chat-request-icon {
+  color: #5B7C99;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.chat-request-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-request-label {
+  font-size: 11px;
+  color: #888888;
+  margin-bottom: 2px;
+}
+
+.chat-request-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #222222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-request-meta {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chat-request-budget {
+  font-size: 12px;
+  color: #5B7C99;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chat-request-deadline {
+  font-size: 11px;
+  color: #888888;
+}
+
+.chat-request-arrow {
+  color: #D0D5DA;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* メッセージエリア */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #E8ECEF;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages .empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-messages-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-date-divider {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.chat-date-divider span {
+  font-size: 12px;
+  color: #888888;
+  background: #E8ECEF;
+  padding: 4px 12px;
+}
+
+.chat-message-row {
+  display: flex;
+  margin-bottom: 12px;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.chat-message-row.sent {
+  justify-content: flex-end;
+}
+
+.chat-message-row.received {
+  justify-content: flex-start;
+}
+
+.chat-message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #888888;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.chat-message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-message-content {
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-message-row.sent .chat-message-content {
+  align-items: flex-end;
+}
+
+.chat-message-row.received .chat-message-content {
+  align-items: flex-start;
+}
+
+.chat-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chat-bubble.sent {
+  background: #222222;
+  color: #FFFFFF;
+}
+
+.chat-bubble.received {
+  background: #FFFFFF;
+  color: #222222;
+}
+
+.chat-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #888888;
+}
+
+.chat-message-read {
+  color: #5B7C99;
+}
+
+/* メディアメッセージ */
+.chat-media {
+  position: relative;
+  max-width: 200px;
+  min-width: 120px;
+  border-radius: 12px;
+  overflow: hidden;  
+}
+
+.chat-media img,
+.chat-media video {
+  width: 100%;
+  min-width: 120px;
+  min-height: 120px;
+  max-width: 150px;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.chat-media-download {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s;
+}
+
+.chat-media-download:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ファイルメッセージ */
+.chat-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 200px;
+  transition: background-color 0.2s;
+}
+
+.chat-file:hover {
+  background: #EEF0F3;
+}
+
+.chat-file-icon {
+  font-size: 24px;
+  color: #5B7C99;
+}
+
+.chat-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222222;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-file-type {
+  font-size: 12px;
+  color: #888888;
+}
+
+.chat-file-download {
+  font-size: 16px;
+  color: #5B7C99;
+}
+
+/* 依頼カード */
+.chat-request-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 320px;
+}
+
+.chat-request-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #5B7C99;
+  font-weight: 600;
+}
+
+.chat-request-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222222;
+  margin-bottom: 8px;
+}
+
+.chat-request-card-meta {
+  font-size: 13px;
+  color: #555555;
+  margin-bottom: 8px;
+}
+
+.chat-request-card-desc {
+  font-size: 13px;
+  color: #555555;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chat-request-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #EEF0F3;
+  color: #222222;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.chat-request-card-link:hover {
+  background: #E8ECEF;
+}
+
+/* 入力エリア */
+.chat-input-area {
+  background: #E8ECEF;
+  border-top: none;
+}
+
+.chat-file-preview {
+  padding: 16px 20px;
+  border-bottom: 1px solid #D0D5DA;
+  background: #FFFFFF;
+}
+
+.chat-file-preview-inner {
+  position: relative;
+  display: inline-block;
+  max-width: 200px;
+}
+
+.chat-file-preview img,
+.chat-file-preview video {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  display: block;
+}
+
+.chat-file-preview-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #EEF0F3;
+  border-radius: 8px;
+}
+
+.chat-file-preview-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #222222;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 16px 20px;
+}
+
+.chat-attach-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  border: none;
+  color: #888888;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  transition: all 0.15s ease;
+}
+
+.chat-attach-btn:hover {
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+}
+
+.chat-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 22px;
+  background: #EEF0F3;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  font-size: 15px;
+  color: #222222;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+  min-height: 44px;
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: #888888;
+}
+
+.chat-send-btn {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 22px;
+  background: #5B7C99;
+  color: #FFFFFF;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  background: #4F6D86;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* コンテキストメニュー */
+.chat-context-menu {
+  position: fixed;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 3000;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.chat-context-item {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: #222222;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color 0.2s;
+}
+
+.chat-context-item:hover {
+  background: #EEF0F3;
+}
+
+.chat-context-item.danger {
+  color: #C05656;
+}
+
+.chat-context-item.danger:hover {
+  background: #FDF2F2;
+}
+
+.chat-context-icon {
+  width: 16px;
+  color: #888888;
+}
+
+.chat-context-item.danger .chat-context-icon {
+  color: #C05656;
+}
+
+/* プロフィールモーダル */
+.chat-profile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.chat-profile-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.chat-profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #EEF0F3;
+  box-shadow: inset 3px 3px 6px #c5c9cc, inset -3px -3px 6px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #888888;
+  overflow: hidden;
+  margin: 0 auto 24px;
+}
+
+.chat-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-profile-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #222222;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.chat-profile-username {
+  font-size: 14px;
+  color: #888888;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.chat-profile-bio {
+  font-size: 14px;
+  color: #555555;
+  line-height: 1.7;
+  text-align: center;
+  margin-bottom: 28px;
+  white-space: pre-wrap;
+}
+
+/* メディア拡大モーダル */
+.chat-media-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  cursor: pointer;
+}
+
+.chat-media-modal img,
+.chat-media-modal video {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+}
+
+.chat-media-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #222222;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  /* メッセージ一覧 */
+  .messages-header {
+    padding: 20px 16px;
+  }
+  
+  .messages-list {
+    padding: 0 16px 24px;
+    gap: 10px;
+  }
+  
+  .message-item {
+    padding: 14px 16px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+  
+  .message-item-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+  }
+  
+  .message-item-name {
+    font-size: 14px;
+  }
+  
+  .message-item-text {
+    font-size: 13px;
+  }
+
+  /* チャットルーム */
+  .chat-sidebar {
+    display: none;
+  }
+  
+  .chat-main {
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .chat-mobile-header {
+    display: flex;
+  }
+  
+  .chat-messages {
+    padding: 16px;
+  }
+  
+  .chat-input-row {
+    padding: 12px 16px;
+  }
+  
+  .chat-bubble {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  
+  .chat-message-content {
+    max-width: 80%;
+  }
+}
+
 /* ============================================
    契約進捗ページ - ソフトUI
    ============================================ */
@@ -15174,9 +16201,9 @@ button {
 }
 
 .req-status-container {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 40px 24px;
 }
 
 /* ローディング・エラー */
@@ -15238,82 +16265,235 @@ button {
 .req-status-badge.completed { background: #4F8A6B; }
 .req-status-badge.cancelled { background: #888888; }
 
-/* 進捗タイムライン */
-.req-status-timeline {
+/* ========================================
+   2カラムレイアウト
+   ======================================== */
+
+.req-status-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.req-status-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.req-status-chat {
+  position: sticky;
+  top: 24px;
+}
+
+/* ========================================
+   アクションバー（ステータス）
+   ======================================== */
+
+.req-status-action-bar {
   background: #E8ECEF;
   border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
 }
 
-.req-status-timeline-title {
-  font-size: 16px;
+.req-status-action-bar.completed {
+  background: linear-gradient(135deg, #4F8A6B 0%, #3d7057 100%);
+  box-shadow: none;
+}
+
+.req-status-action-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.req-status-action-bar-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  background: #E8ECEF;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+}
+
+.req-status-action-bar-icon.warning {
+  color: #C7A23A;
+}
+
+.req-status-action-bar-icon.info {
+  color: #5B7C99;
+}
+
+.req-status-action-bar-icon.success {
+  color: #4F8A6B;
+}
+
+.req-status-action-bar.completed .req-status-action-bar-icon {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  color: #FFFFFF;
+}
+
+.req-status-action-bar-text h3 {
+  font-size: 15px;
   font-weight: 700;
   color: #222222;
-  margin-bottom: 20px;
+  margin: 0 0 4px 0;
 }
 
-.req-status-timeline-list {
+.req-status-action-bar-text p {
+  font-size: 13px;
+  color: #555555;
+  margin: 0;
+}
+
+.req-status-action-bar.completed .req-status-action-bar-text h3,
+.req-status-action-bar.completed .req-status-action-bar-text p {
+  color: #FFFFFF;
+}
+
+.req-status-action-bar-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  background: #5B7C99;
+  color: #FFFFFF;
+}
+
+.req-status-action-bar-btn:hover {
+  background: #4F6D86;
+}
+
+.req-status-action-bar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   横長の進捗ステップ（凹み）
+   ======================================== */
+
+.req-status-steps {
+  background: #E8ECEF;
+  border-radius: 16px;
+  padding: 24px 32px;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+}
+
+.req-status-steps-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  padding: 0 20px;
+}
+
+.req-status-step {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
-.req-status-timeline-item {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-.req-status-timeline-icon {
-  width: 28px;
-  height: 28px;
+.req-status-step-icon {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-}
-
-.req-status-timeline-icon.done { background: #4F8A6B; color: #FFFFFF; }
-.req-status-timeline-icon.active { background: #5B7C99; color: #FFFFFF; }
-.req-status-timeline-icon.pending {
-  background: #E8ECEF;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-timeline-icon i { font-size: 12px; }
-
-.req-status-timeline-icon .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #888888;
-}
-
-.req-status-timeline-content { flex: 1; }
-
-.req-status-timeline-label {
   font-size: 14px;
+  font-weight: 700;
+  background: #E8ECEF;
+  color: #888888;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  position: relative;
+  z-index: 2;
+}
+
+.req-status-step.done .req-status-step-icon {
+  background: #4F8A6B;
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+.req-status-step.active .req-status-step-icon {
+  background: #5B7C99;
+  color: #FFFFFF;
+  box-shadow: none;
+  animation: stepPulse 2s infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 124, 153, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(91, 124, 153, 0); }
+}
+
+.req-status-step-label {
+  margin-top: 10px;
+  font-size: 12px;
   font-weight: 600;
+  color: #888888;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.req-status-step.done .req-status-step-label,
+.req-status-step.active .req-status-step-label {
   color: #222222;
 }
 
-.req-status-timeline-label.inactive { color: #888888; }
-
-.req-status-timeline-date {
-  font-size: 12px;
+.req-status-step-date {
+  font-size: 11px;
   color: #888888;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
-/* 情報カード */
+/* 進捗ステップのライン（絶対配置で中央に） */
+.req-status-steps-line {
+  position: absolute;
+  top: 20px;
+  left: 60px;
+  right: 60px;
+  height: 3px;
+  background: #d0d4d8;
+  z-index: 1;
+  border-radius: 2px;
+}
+
+.req-status-steps-line-fill {
+  height: 100%;
+  background: #4F8A6B;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+/* ========================================
+   契約情報（凹み・2カラム）
+   ======================================== */
+
 .req-status-info-card {
   background: #E8ECEF;
   border-radius: 16px;
   padding: 24px;
-  margin-bottom: 28px;
   box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
 }
 
@@ -15324,390 +16504,43 @@ button {
   margin-bottom: 16px;
 }
 
-.req-status-info-grid { display: grid; gap: 12px; }
-
-.req-status-info-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
+.req-status-info-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-.req-status-info-label { color: #555555; }
-.req-status-info-value { font-weight: 600; color: #222222; }
+.req-status-info-item {
+  background: transparent;
+  border-radius: 12px;
+  padding: 16px;
+}
 
-.req-status-info-note {
+.req-status-info-item-label {
   font-size: 12px;
   color: #888888;
-  margin-top: 6px;
-  text-align: right;
-}
-
-.req-status-info-note i { margin-right: 6px; }
-
-.req-status-info-divider {
-  border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  margin: 16px 0;
-}
-
-.req-status-info-subtitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: #222222;
-  margin-bottom: 8px;
-}
-
-.req-status-info-description {
-  font-size: 14px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  color: #555555;
-}
-
-/* ユーザーカード */
-.req-status-user-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.req-status-user-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #EEF0F3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.req-status-user-avatar span {
-  font-size: 16px;
-  font-weight: 700;
-  color: #555555;
-}
-
-.req-status-user-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #222222;
-  text-decoration: none;
-}
-
-.req-status-user-name:hover { color: #5B7C99; }
-
-/* 納品ファイルリンク */
-.req-status-file-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #E8ECEF;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 14px;
-  color: #5B7C99;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
-  transition: all 0.2s ease;
-}
-
-.req-status-file-link:hover {
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-/* アクションカード */
-.req-status-action-card {
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
-}
-
-.req-status-action-card.warning,
-.req-status-action-card.info,
-.req-status-action-card.success {
-  background: #E8ECEF;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-action-card.alert {
-  background: #E8ECEF;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
-  border-left: 4px solid #C7A23A;
-}
-
-.req-status-action-card.center { text-align: center; }
-
-.req-status-action-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #222222;
-  margin-bottom: 12px;
-}
-
-.req-status-action-title i { font-size: 18px; }
-.req-status-action-title i.warning { color: #C7A23A; }
-.req-status-action-title i.info { color: #5B7C99; }
-.req-status-action-title i.success { color: #4F8A6B; }
-.req-status-action-title i.danger { color: #C05656; }
-
-.req-status-action-text {
-  font-size: 14px;
-  color: #555555;
-  margin-bottom: 16px;
-  line-height: 1.6;
-}
-
-.req-status-action-icon-large {
-  font-size: 40px;
-  color: #5B7C99;
-  margin-bottom: 12px;
-}
-
-.req-status-action-icon-large.warning { color: #C7A23A; }
-.req-status-action-icon-large.success { color: #4F8A6B; }
-
-.req-status-action-buttons {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* キャンセル申請カード */
-.req-status-cancel-request {
-  background: #E8ECEF;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
-  border-left: 4px solid #C7A23A;
-}
-
-.req-status-cancel-request-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #222222;
-  margin-bottom: 16px;
-}
-
-.req-status-cancel-request-title i { color: #C7A23A; }
-
-.req-status-cancel-request-content {
-  background: #F5F6F8;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.req-status-cancel-request-meta {
-  font-size: 13px;
-  color: #888888;
-  margin-bottom: 12px;
-}
-
-.req-status-cancel-request-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #222222;
   margin-bottom: 6px;
 }
 
-.req-status-cancel-request-reason {
-  font-size: 14px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  color: #555555;
-}
-
-.req-status-cancel-request-warning {
-  background: #F5F6F8;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #555555;
-}
-
-.req-status-cancel-request-warning i {
-  color: #C05656;
-  margin-right: 8px;
-}
-
-/* レビューセクション */
-.req-status-review-section { margin-bottom: 28px; }
-
-.req-status-review-section-title {
+.req-status-info-item-value {
   font-size: 18px;
   font-weight: 700;
   color: #222222;
-  margin-bottom: 16px;
 }
 
-.req-status-review-prompt {
-  background: #E8ECEF;
-  border-radius: 16px;
-  padding: 24px;
-  text-align: center;
-  margin-bottom: 16px;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+.req-status-info-item-value.price {
+  color: #5B7C99;
 }
 
-.req-status-review-prompt i {
-  font-size: 36px;
-  color: #C7A23A;
-  margin-bottom: 12px;
-}
-
-.req-status-review-prompt h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #222222;
-  margin-bottom: 8px;
-}
-
-.req-status-review-prompt p {
-  font-size: 14px;
-  color: #555555;
-  margin-bottom: 16px;
-}
-
-.req-status-review-form {
-  background: #E8ECEF;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 16px;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-review-form h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #222222;
-  margin-bottom: 16px;
-}
-
-.req-status-review-stars {
-  display: flex;
-  gap: 8px;
-  font-size: 32px;
-  color: #C7A23A;
-  margin-bottom: 20px;
-}
-
-.req-status-review-stars button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  transition: transform 0.2s;
-}
-
-.req-status-review-stars button:hover { transform: scale(1.1); }
-
-.req-status-review-card {
-  background: #E8ECEF;
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 16px;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-review-card.partner { background: #F5F6F8; }
-
-.req-status-review-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.req-status-review-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #222222;
-}
-
-.req-status-review-card-date {
-  font-size: 12px;
-  color: #888888;
-}
-
-.req-status-review-card-stars {
-  font-size: 20px;
-  color: #C7A23A;
-  letter-spacing: 2px;
-  margin-bottom: 12px;
-}
-
-.req-status-review-card-comment {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #555555;
-  white-space: pre-wrap;
-}
-
-.req-status-review-empty {
-  padding: 40px 20px;
-  text-align: center;
-  color: #888888;
-}
-
-.req-status-review-empty i {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.3;
-  color: #888888;
-}
-
-/* 納品履歴 */
-.req-status-deliveries { margin-top: 28px; }
+/* ========================================
+   納品履歴（凹み）
+   ======================================== */
 
 .req-status-deliveries-title {
   font-size: 18px;
   font-weight: 700;
   color: #222222;
   margin-bottom: 16px;
-}
-
-.req-status-deliveries-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.req-status-deliveries-stat {
-  background: transparent;
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
-}
-
-.req-status-deliveries-stat-label {
-  font-size: 11px;
-  color: #555555;
-  margin-bottom: 4px;
-}
-
-.req-status-deliveries-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #5B7C99;
 }
 
 .req-status-deliveries-list {
@@ -15720,7 +16553,7 @@ button {
   background: #E8ECEF;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
 }
 
 .req-status-delivery-card.approved { opacity: 0.7; }
@@ -15747,7 +16580,7 @@ button {
 .req-status-delivery-badge.pending {
   background: #E8ECEF;
   color: #C7A23A;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
 }
 
 .req-status-delivery-badge.approved {
@@ -15758,7 +16591,7 @@ button {
 .req-status-delivery-badge.rejected {
   background: #E8ECEF;
   color: #C05656;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
 }
 
 .req-status-delivery-message {
@@ -15788,7 +16621,7 @@ button {
 }
 
 .req-status-delivery-feedback {
-  background: #F5F6F8;
+  background: rgba(0, 0, 0, 0.03);
   border-radius: 8px;
   padding: 12px;
   margin-top: 12px;
@@ -15817,7 +16650,10 @@ button {
   margin-top: 12px;
 }
 
-/* ボタン */
+/* ========================================
+   ボタン
+   ======================================== */
+
 .req-status-btn {
   display: inline-flex;
   align-items: center;
@@ -15871,7 +16707,10 @@ button {
 .req-status-btn.small { padding: 8px 16px; font-size: 13px; }
 .req-status-btn.flex-1 { flex: 1; }
 
-/* モーダル */
+/* ========================================
+   モーダル
+   ======================================== */
+
 .req-status-modal-overlay {
   position: fixed;
   top: 0;
@@ -15942,121 +16781,11 @@ button {
   min-height: 100px;
 }
 
-.req-status-modal-char-count {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #888888;
-  text-align: right;
-}
-
-.req-status-modal-file-input {
-  width: 100%;
-  padding: 12px;
-  background: #E8ECEF;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-modal-file-info {
-  margin-top: 8px;
-  font-size: 13px;
-  color: #555555;
-}
-
-.req-status-modal-file-info i { margin-right: 6px; }
-
 .req-status-modal-hint {
   margin-top: 8px;
   font-size: 12px;
   color: #888888;
 }
-
-/* 納品方法選択 */
-.req-status-delivery-method {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.req-status-delivery-method-option {
-  flex: 1;
-  padding: 16px;
-  background: #E8ECEF;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
-}
-
-.req-status-delivery-method-option.selected {
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-delivery-method-option:not(.selected) {
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
-}
-
-.req-status-delivery-method-option input { margin-right: 8px; }
-
-.req-status-delivery-method-option span {
-  font-size: 14px;
-  font-weight: 600;
-  color: #222222;
-}
-
-.req-status-delivery-method-option div {
-  font-size: 12px;
-  color: #888888;
-  margin-top: 4px;
-  margin-left: 24px;
-}
-
-/* 進捗バー */
-.req-status-progress { margin-bottom: 20px; }
-
-.req-status-progress-label {
-  font-size: 13px;
-  color: #555555;
-  margin-bottom: 8px;
-}
-
-.req-status-progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #E8ECEF;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-}
-
-.req-status-progress-fill {
-  height: 100%;
-  background: #5B7C99;
-  transition: width 0.3s ease;
-}
-
-/* 情報ボックス */
-.req-status-modal-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px;
-  background: #F5F6F8;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #555555;
-}
-
-.req-status-modal-info i { margin-top: 2px; flex-shrink: 0; }
-.req-status-modal-info i.info { color: #5B7C99; }
-.req-status-modal-info i.success { color: #4F8A6B; }
-.req-status-modal-info i.warning { color: #C7A23A; }
-.req-status-modal-info i.danger { color: #C05656; }
 
 .req-status-modal-buttons {
   display: flex;
@@ -16065,22 +16794,69 @@ button {
 
 .req-status-modal-buttons .req-status-btn { flex: 1; }
 
-/* モバイル対応 */
-@media (max-width: 768px) {
-  .req-status-container { padding: 24px 16px; }
-  .req-status-title { font-size: 18px; }
+/* ========================================
+   レスポンシブ
+   ======================================== */
 
-  .req-status-timeline,
-  .req-status-info-card,
-  .req-status-action-card,
-  .req-status-cancel-request {
-    padding: 20px 16px;
-    border-radius: 12px;
+@media (max-width: 1024px) {
+  .req-status-container {
+    padding: 24px 16px;
   }
 
-  .req-status-action-buttons { flex-direction: column; }
-  .req-status-action-buttons .req-status-btn { width: 100%; }
-  .req-status-delivery-method { flex-direction: column; }
+  .req-status-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .req-status-chat {
+    order: -1;
+    position: static;
+  }
+
+  .req-status-steps {
+    padding: 20px 16px;
+  }
+
+  .req-status-steps-bar {
+    padding: 0 10px;
+  }
+
+  .req-status-step-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .req-status-steps-line {
+    top: 16px;
+    left: 40px;
+    right: 40px;
+  }
+
+  .req-status-step-label {
+    font-size: 11px;
+  }
+
+  .req-status-action-bar {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .req-status-action-bar-content {
+    flex-direction: column;
+  }
+
+  .req-status-action-bar-btn {
+    width: 100%;
+  }
+
+  .req-status-info-grid-2col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .req-status-title { font-size: 18px; }
+
   .req-status-delivery-actions { flex-direction: column; }
   .req-status-delivery-actions .req-status-btn { width: 100%; }
 
@@ -16090,4 +16866,529 @@ button {
   }
 
   .req-status-modal-buttons { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .req-status-step-label {
+    font-size: 10px;
+  }
+
+  .req-status-step-date {
+    display: none;
+  }
+
+  .req-status-info-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   契約ページ - スマホ用タブ
+   ======================================== */
+
+.mobile-tabs {
+  display: none;
+  margin-bottom: 20px;
+  background: #E8ECEF;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.mobile-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888888;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-tab.active {
+  color: #222222;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+}
+
+.mobile-tab i {
+  font-size: 16px;
+}
+
+.mobile-content {
+  display: none;
+}
+
+.mobile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ========================================
+   契約ページ - チャットコンテナ
+   ======================================== */
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  max-height: 700px;
+  min-height: 400px;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #E8ECEF;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+}
+
+.chat-header-avatar {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #E8ECEF;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chat-header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-header-avatar span {
+  font-size: 16px;
+  color: #888888;
+}
+
+.chat-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-header-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #222222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-header-status {
+  font-size: 12px;
+  color: #888888;
+}
+
+.chat-header-arrow {
+  color: #888888;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888888;
+  gap: 8px;
+}
+
+.chat-empty i {
+  font-size: 48px;
+  opacity: 0.4;
+  margin-bottom: 8px;
+}
+
+.chat-empty-hint {
+  font-size: 13px;
+}
+
+.chat-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888888;
+}
+
+/* 契約ページ用メッセージ */
+.chat-message {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.chat-message.sent {
+  flex-direction: row-reverse;
+}
+
+.chat-message.received {
+  flex-direction: row;
+}
+
+.chat-message.sent .chat-message-content {
+  align-items: flex-end;
+}
+
+.chat-message.received .chat-message-content {
+  align-items: flex-start;
+}
+
+.chat-message-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.chat-message.received .chat-message-bubble {
+  background: #E8ECEF;
+  color: #222222;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+}
+
+.chat-message.sent .chat-message-bubble {
+  background: #222222;
+  color: #FFFFFF;
+}
+
+.chat-message-time {
+  font-size: 11px;
+  color: #888888;
+}
+
+.chat-file-preview-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #222222;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========================================
+   契約ページ - レスポンシブ追加
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-tabs {
+    display: flex;
+  }
+
+  .mobile-content {
+    display: block;
+  }
+
+  .mobile-chat .chat-container {
+    height: calc(100vh - 280px);
+    max-height: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .mobile-tabs {
+    display: none;
+  }
+
+  .mobile-content {
+    display: none;
+  }
+}
+
+/* ========================================
+   契約ページ - チャット入力エリア
+   ======================================== */
+
+.chat-input-container {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #E8ECEF;
+  border-radius: 16px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chat-input-container .chat-attach-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #E8ECEF;
+  border: none;
+  padding: 0;
+  box-sizing: border-box;
+  color: #888888;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+}
+
+.chat-input-container .chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 22px;
+  background: #E8ECEF;
+  box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+  font-size: 14px;
+  color: #222222;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.4;
+  min-height: 44px;
+  max-height: 120px;
+  outline: none;
+}
+
+/* 既存を置き換え */
+.chat-input-container .chat-send-btn {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 22px;
+  background: #5B7C99;
+  color: #FFFFFF;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+/* 追加 */
+.chat-input-container .chat-send-btn:hover:not(:disabled) {
+  background: #4F6D86;
+}
+
+.chat-input-container .chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================
+   契約ページ - スマホ用修正
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .req-status-page {
+    min-height: auto;
+  }
+
+  .req-status-info-item {
+    padding: 0;
+  }
+}
+
+.chat-loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  color: #888888;
+  font-size: 12px;
+}
+
+/* コンテキストメニュー */
+.context-menu {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 100px;
+  transform: translateX(-100%);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.context-menu-item:hover {
+  background: #fff5f5;
+}
+
+.context-menu-item i {
+  width: 14px;
+  text-align: center;
+}
+
+/* ドラッグオーバーレイ */
+.chat-drag-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(91, 124, 153, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.chat-drag-content {
+  text-align: center;
+  color: white;
+}
+
+.chat-drag-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.chat-drag-content p {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* 新着メッセージボタン */
+.chat-new-message-btn {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #5B7C99;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.chat-new-message-btn:hover {
+  background: #4A6A85;
+  transform: translateX(-50%) scale(1.05);
+}
+
+.chat-new-message-btn i {
+  font-size: 12px;
+}
+
+/* =============================================
+   レビューボタン用CSS（globals.cssに追加）
+   ============================================= */
+
+/* 完了時のアクションバーにレビューボタン */
+.req-status-action-bar.completed {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.req-status-action-bar-btn.review {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  color: #333;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.req-status-action-bar-btn.review:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+.req-status-action-bar-btn.review i {
+  font-size: 16px;
+}
+
+.req-status-action-bar-btn.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f0f0;
+  color: #666;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.req-status-action-bar-btn.secondary:hover {
+  background: #e0e0e0;
+}
+
+@media (max-width: 768px) {
+  .req-status-action-bar.completed {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .req-status-action-bar-btn.review,
+  .req-status-action-bar-btn.secondary {
+    justify-content: center;
+    width: 100%;
+  }
 }
