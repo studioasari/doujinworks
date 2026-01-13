@@ -1088,7 +1088,6 @@ export default function DashboardClient() {
           align-items: center;
           justify-content: center;
           gap: 8px;
-          box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
           transition: all 0.2s;
         }
 
@@ -1231,7 +1230,6 @@ export default function DashboardClient() {
           cursor: pointer;
           transition: all 0.15s;
           text-align: center;
-          box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
         }
 
         .period-toggle button:hover:not(.active) {

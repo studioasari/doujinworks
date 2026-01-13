@@ -6894,12 +6894,12 @@ button {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  /* box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff; */
 }
 
-.profile-account-type-card:hover {
+/* .profile-account-type-card:hover {
   box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
-}
+} */
 
 .profile-account-type-card.active {
   box-shadow: inset 3px 3px 6px #c5c9cc, inset -3px -3px 6px #ffffff;
@@ -6962,7 +6962,7 @@ button {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  /* box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff; */
 }
 
 .profile-toggle-btn:hover {
@@ -10690,7 +10690,7 @@ button {
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff; */
   transition: all 0.15s ease;
 }
 
@@ -10781,7 +10781,7 @@ button {
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff; */
 }
 
 .upload-illust-dropzone-icon i {
@@ -10996,7 +10996,7 @@ button {
   border: none;
   border-radius: 20px;
   cursor: pointer;
-  box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+  /* box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff; */
   transition: all 0.15s ease;
 }
 
@@ -11035,7 +11035,7 @@ button {
   border-radius: 12px;
   cursor: pointer;
   min-width: 100px;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff; */
   transition: all 0.15s ease;
 }
 
@@ -11062,13 +11062,13 @@ button {
   background: #E8ECEF;
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff; */
   transition: all 0.15s ease;
 }
 
-.upload-illust-checkbox:hover {
+/* .upload-illust-checkbox:hover {
   box-shadow: 5px 5px 10px #c5c9cc, -5px -5px 10px #ffffff;
-}
+} */
 
 .upload-illust-checkbox.checked {
   box-shadow: inset 3px 3px 6px #c5c9cc, inset -3px -3px 6px #ffffff;
@@ -11121,7 +11121,7 @@ button {
 .upload-illust-cancel {
   color: #555;
   background: #e8ecef;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #fff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #fff; */
   padding: 14px 24px;
   border-radius: 12px;
   font-size: 14px;
@@ -11134,7 +11134,7 @@ button {
 }
 
 .upload-illust-cancel:hover {
-  box-shadow: 2px 2px 4px #c5c9cc, -2px -2px 4px #fff;
+  /* box-shadow: 2px 2px 4px #c5c9cc, -2px -2px 4px #fff; */
   color: #333;
 }
 
@@ -11362,7 +11362,13 @@ button {
   padding: 16px;
   background: #E8ECEF;
   border-radius: 12px;
-  box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff;
+  /* box-shadow: 4px 4px 8px #c5c9cc, -4px -4px 8px #ffffff; */
+}
+
+.upload-illust-draft-item:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  transition: all .2s;
 }
 
 .upload-illust-draft-item .draft-content {
@@ -13005,7 +13011,6 @@ button {
   padding: 32px;
   background: #E8ECEF;
   border-radius: 20px;
-  box-shadow: 8px 8px 16px #c5c9cc, -8px -8px 16px #ffffff;
 }
 
 .create-modal-title {

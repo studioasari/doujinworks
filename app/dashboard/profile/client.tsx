@@ -969,6 +969,9 @@ export default function ProfileClient() {
 
                 {/* ボタン */}
                 <div className="profile-form-actions">
+                  <Link href="/dashboard" className="profile-btn secondary">
+                    キャンセル
+                  </Link>
                   <button
                     onClick={handleSave}
                     disabled={saving}
@@ -976,9 +979,6 @@ export default function ProfileClient() {
                   >
                     {saving ? '保存中...' : '変更を保存'}
                   </button>
-                  <Link href="/dashboard" className="profile-btn secondary">
-                    キャンセル
-                  </Link>
                 </div>
               </div>
             </div>
