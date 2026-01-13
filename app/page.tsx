@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import HeroSection from '@/app/components/HeroSection'
 
 type PricingPlan = {
   id: string
@@ -257,6 +258,9 @@ export default function HomePage() {
       <Header />
 
       <main>
+        {/* ヒーローセクション */}
+        <HeroSection />
+
         {/* サービスを探す */}
         <section className="home-section">
           <div className="section-header">
