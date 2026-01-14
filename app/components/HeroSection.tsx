@@ -218,12 +218,19 @@ export default function HeroSection() {
             )}
           </div>
 
-          {/* Portfolio CTA */}
-          <Link href="/portfolio" className="hero-portfolio-cta">
-            <i className="fas fa-images"></i>
-            作品から探す
-            <i className="fas fa-arrow-right hero-portfolio-arrow"></i>
-          </Link>
+          {/* CTA Buttons - 2つ横並び */}
+          <div className="hero-cta-buttons">
+            <Link href="/portfolio" className="hero-cta-button">
+              <i className="fas fa-images"></i>
+              作品から探す
+              <i className="fas fa-arrow-right hero-cta-arrow"></i>
+            </Link>
+            <Link href="/requests" className="hero-cta-button hero-cta-button-secondary">
+              <i className="fas fa-briefcase"></i>
+              お仕事を探す
+              <i className="fas fa-arrow-right hero-cta-arrow"></i>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

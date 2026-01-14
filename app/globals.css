@@ -17405,6 +17405,7 @@ button {
 .hero-section {
   position: relative;
   height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17738,16 +17739,21 @@ button {
   color: #222222;
 }
 
-/* Portfolio CTA */
-.hero-portfolio-cta {
+/* CTA Buttons - 2つ横並び */
+.hero-cta-buttons {
+  display: flex;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.hero-cta-button {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  width: 100%;
-  margin-top: 28px;
-  padding: 18px 28px;
-  font-size: 15px;
+  gap: 10px;
+  padding: 16px 20px;
+  font-size: 14px;
   font-weight: 600;
   color: #5B7C99;
   background: #FFFFFF;
@@ -17758,19 +17764,24 @@ button {
   transition: all 0.2s ease;
 }
 
-.hero-portfolio-cta:hover {
+.hero-cta-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-.hero-portfolio-cta i:first-child {
-  font-size: 18px;
+.hero-cta-button i:first-child {
+  font-size: 16px;
 }
 
-.hero-portfolio-arrow {
-  font-size: 14px;
+.hero-cta-arrow {
+  font-size: 12px;
   margin-left: auto;
   color: #888888;
+}
+
+/* Secondary CTA (お仕事を探す) */
+.hero-cta-button-secondary {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 /* ============================================
@@ -17779,6 +17790,7 @@ button {
 @media (max-width: 768px) {
   .hero-section {
     height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     padding: 0 16px;
   }
 
@@ -17862,9 +17874,23 @@ button {
     min-width: auto;
   }
 
-  /* Portfolio CTA */
-  .hero-portfolio-cta {
-    padding: 16px 24px;
+  /* CTA Buttons - スマホでも横並び */
+  .hero-cta-buttons {
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .hero-cta-button {
+    padding: 14px 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .hero-cta-button i:first-child {
     font-size: 14px;
+  }
+
+  .hero-cta-arrow {
+    display: none;
   }
 }
