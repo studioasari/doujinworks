@@ -17761,6 +17761,7 @@ button {
   text-decoration: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .hero-cta-button:hover {
@@ -17774,8 +17775,9 @@ button {
 
 .hero-cta-arrow {
   font-size: 12px;
-  margin-left: auto;
   color: #888888;
+  position: absolute;
+  right: 20px;
 }
 
 /* Secondary CTA (お仕事を探す) */
@@ -17889,6 +17891,6 @@ button {
   }
 
   .hero-cta-arrow {
-    display: none;
+    display: none !important;
   }
 }
