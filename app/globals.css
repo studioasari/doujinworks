@@ -17404,7 +17404,7 @@ button {
 
 .hero-section {
   position: relative;
-  height: 100vh;
+  height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17526,11 +17526,15 @@ button {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
-/* Keyword Tab */
-.hero-search-keyword {
+/* Keyword Tab - Desktop */
+.hero-search-keyword-desktop {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.hero-search-keyword-mobile {
+  display: none;
 }
 
 .hero-search-input-wrapper {
@@ -17597,6 +17601,7 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0;
 }
 
 .hero-popular-label i {
@@ -17612,6 +17617,7 @@ button {
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .hero-popular-tag:hover {
@@ -17767,11 +17773,23 @@ button {
   color: #888888;
 }
 
-/* Responsive */
+/* ============================================
+   Responsive - Mobile (768px以下)
+   ============================================ */
 @media (max-width: 768px) {
+  .hero-section {
+    height: calc(100vh - 60px);
+    padding: 0 16px;
+  }
+
   .hero-logo {
-    height: 50px;
+    height: 60px;
     margin-bottom: 40px;
+  }
+
+  .hero-catchcopy {
+    font-size: 13px;
+    margin-bottom: 16px;
   }
 
   .hero-search-tab {
@@ -17780,27 +17798,73 @@ button {
   }
 
   .hero-search-box {
-    padding: 24px;
+    padding: 20px;
   }
 
-  .hero-search-input-wrapper {
+  /* Keyword Tab - Mobile Layout */
+  .hero-search-keyword-desktop {
+    display: none;
+  }
+
+  .hero-search-keyword-mobile {
+    display: flex;
     flex-direction: column;
+    gap: 12px;
+  }
+
+  .hero-search-input {
+    width: 100%;
   }
 
   .hero-search-button {
     width: 100%;
   }
 
-  .hero-category-grid {
-    grid-template-columns: repeat(2, 1fr);
+  /* Popular Tags - Horizontal Scroll */
+  .hero-popular-tags {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 -20px;
+    padding: 0 20px;
   }
 
+  .hero-popular-tags::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Category Grid - 3列維持 */
+  .hero-category-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .hero-category-button {
+    padding: 14px 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  .hero-category-button i {
+    font-size: 18px;
+  }
+
+  /* Condition Tab */
   .hero-condition-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
   }
 
   .hero-condition-label {
     min-width: auto;
+  }
+
+  /* Portfolio CTA */
+  .hero-portfolio-cta {
+    padding: 16px 24px;
+    font-size: 14px;
   }
 }

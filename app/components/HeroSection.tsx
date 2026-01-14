@@ -92,8 +92,43 @@ export default function HeroSection() {
           <div className="hero-search-box">
             {/* Keyword Tab */}
             {activeTab === 'keyword' && (
-              <div className="hero-search-keyword">
-                <div className="hero-search-input-wrapper">
+              <>
+                {/* Desktop Layout */}
+                <div className="hero-search-keyword-desktop">
+                  <div className="hero-search-input-wrapper">
+                    <input
+                      type="text"
+                      className="hero-search-input"
+                      placeholder="クリエイター名・作風・タグで検索..."
+                      value={keyword}
+                      onChange={(e) => setKeyword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    />
+                    <button className="hero-search-button" onClick={handleSearch}>
+                      検索
+                    </button>
+                  </div>
+                  
+                  {/* Popular Tags */}
+                  <div className="hero-popular-tags">
+                    <span className="hero-popular-label">
+                      <i className="fas fa-lightbulb"></i>
+                      人気の検索
+                    </span>
+                    {popularTags.map((tag) => (
+                      <span 
+                        key={tag}
+                        className="hero-popular-tag"
+                        onClick={() => handleTagClick(tag)}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mobile Layout */}
+                <div className="hero-search-keyword-mobile">
                   <input
                     type="text"
                     className="hero-search-input"
@@ -102,28 +137,29 @@ export default function HeroSection() {
                     onChange={(e) => setKeyword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
-                  <button className="hero-search-button" onClick={handleSearch}>
+                  
+                  {/* Popular Tags - Between input and button on mobile */}
+                  <div className="hero-popular-tags">
+                    <span className="hero-popular-label">
+                      <i className="fas fa-lightbulb"></i>
+                      人気の検索
+                    </span>
+                    {popularTags.map((tag) => (
+                      <span 
+                        key={tag}
+                        className="hero-popular-tag"
+                        onClick={() => handleTagClick(tag)}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <button className="hero-search-button hero-search-button-full" onClick={handleSearch}>
                     検索
                   </button>
                 </div>
-                
-                {/* Popular Tags */}
-                <div className="hero-popular-tags">
-                  <span className="hero-popular-label">
-                    <i className="fas fa-lightbulb"></i>
-                    人気の検索
-                  </span>
-                  {popularTags.map((tag) => (
-                    <span 
-                      key={tag}
-                      className="hero-popular-tag"
-                      onClick={() => handleTagClick(tag)}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              </>
             )}
 
             {/* Category Tab */}
