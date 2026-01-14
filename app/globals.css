@@ -17405,7 +17405,6 @@ button {
 .hero-section {
   position: relative;
   height: calc(100vh - 64px);
-  height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -17790,7 +17789,6 @@ button {
 @media (max-width: 768px) {
   .hero-section {
     height: calc(100vh - 60px);
-    height: calc(100dvh - 60px);
     padding: 0 16px;
   }
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
 import "./globals.css";
 
@@ -8,6 +8,12 @@ const zenMaruGothic = Zen_Maru_Gothic({
   preload: false,
   variable: "--font-zen-maru",
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  interactiveWidget: 'resizes-content',
+}
 
 export const metadata: Metadata = {
   title: "同人ワークス",
