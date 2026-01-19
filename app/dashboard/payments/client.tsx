@@ -8,15 +8,20 @@ import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
 
-type PaidRequest = {
+type PaidContract = {
   id: string
-  title: string
+  work_request_id: string
   final_price: number
   paid_at: string
+  completed_at: string | null
   status: string
-  category: string
-  selected_applicant_id: string | null
-  creator: {
+  work_request: {
+    id: string
+    title: string
+    category: string
+  }
+  contractor: {
+    id: string
     display_name: string | null
     avatar_url: string | null
   }
@@ -24,7 +29,7 @@ type PaidRequest = {
 
 type MonthlyPayment = {
   month: string
-  requests: PaidRequest[]
+  contracts: PaidContract[]
   total_amount: number
 }
 
@@ -40,7 +45,7 @@ export default function PaymentsClient() {
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [accountType, setAccountType] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [paidRequests, setPaidRequests] = useState<PaidRequest[]>([])
+  const [paidContracts, setPaidContracts] = useState<PaidContract[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([])
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'overview' | 'monthly' | 'history'>('overview')
@@ -59,14 +64,14 @@ export default function PaymentsClient() {
 
   useEffect(() => {
     if (currentProfileId) {
-      loadPaidRequests()
+      loadPaidContracts()
     }
   }, [currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/wallet/payments')}`)
+      router.push(`/login?redirect=${encodeURIComponent('/dashboard/payments')}`)
       return
     }
 
@@ -85,11 +90,30 @@ export default function PaymentsClient() {
     setLoading(false)
   }
 
-  async function loadPaidRequests() {
-    const { data: requests, error } = await supabase
-      .from('work_requests')
-      .select('id, title, final_price, paid_at, status, category, selected_applicant_id')
-      .eq('requester_id', currentProfileId)
+  async function loadPaidContracts() {
+    // work_contractsから支払い済みのデータを取得
+    const { data: contracts, error } = await supabase
+      .from('work_contracts')
+      .select(`
+        id,
+        work_request_id,
+        final_price,
+        paid_at,
+        completed_at,
+        status,
+        contractor_id,
+        work_request:work_requests!work_request_id (
+          id,
+          title,
+          category,
+          requester_id
+        ),
+        contractor:profiles!work_contracts_contractor_id_fkey (
+          id,
+          display_name,
+          avatar_url
+        )
+      `)
       .not('paid_at', 'is', null)
       .order('paid_at', { ascending: false })
 
@@ -98,48 +122,48 @@ export default function PaymentsClient() {
       return
     }
 
-    const requestsWithCreator = await Promise.all(
-      (requests || []).map(async (request) => {
-        if (!request.selected_applicant_id) {
-          return {
-            ...request,
-            creator: { display_name: null, avatar_url: null }
-          }
+    // 自分が依頼者のもののみフィルター＆整形
+    const myContracts = (contracts || [])
+      .filter((c: any) => c.work_request?.requester_id === currentProfileId)
+      .map((c: any) => ({
+        id: c.id,
+        work_request_id: c.work_request_id,
+        final_price: c.final_price,
+        paid_at: c.paid_at,
+        completed_at: c.completed_at,
+        status: c.status,
+        work_request: {
+          id: c.work_request?.id || '',
+          title: c.work_request?.title || '',
+          category: c.work_request?.category || ''
+        },
+        contractor: {
+          id: c.contractor?.id || '',
+          display_name: c.contractor?.display_name || null,
+          avatar_url: c.contractor?.avatar_url || null
         }
+      }))
 
-        const { data: creator } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', request.selected_applicant_id)
-          .single()
-
-        return {
-          ...request,
-          creator: creator || { display_name: null, avatar_url: null }
-        }
-      })
-    )
-
-    setPaidRequests(requestsWithCreator)
+    setPaidContracts(myContracts)
 
     // 月別にグループ化
-    const groupedByMonth = requestsWithCreator.reduce((acc: any, request) => {
-      const paidDate = new Date(request.paid_at)
+    const groupedByMonth = myContracts.reduce((acc: any, contract: any) => {
+      const paidDate = new Date(contract.paid_at)
       const monthKey = `${paidDate.getFullYear()}-${String(paidDate.getMonth() + 1).padStart(2, '0')}`
       
       if (!acc[monthKey]) {
         acc[monthKey] = []
       }
-      acc[monthKey].push(request)
+      acc[monthKey].push(contract)
       return acc
     }, {})
 
-    const monthlyData = Object.entries(groupedByMonth).map(([month, requests]: [string, any]) => {
-      const totalAmount = requests.reduce((sum: number, req: any) => sum + (req.final_price || 0), 0)
+    const monthlyData = Object.entries(groupedByMonth).map(([month, contracts]: [string, any]) => {
+      const totalAmount = contracts.reduce((sum: number, c: any) => sum + (c.final_price || 0), 0)
       
       return {
         month,
-        requests,
+        contracts,
         total_amount: totalAmount
       }
     }).sort((a, b) => b.month.localeCompare(a.month))
@@ -167,18 +191,18 @@ export default function PaymentsClient() {
     setExpandedMonths(newExpanded)
   }
 
-  async function openReceiptEditor(request: PaidRequest) {
+  async function openReceiptEditor(contract: PaidContract) {
     // 既存の領収書メタデータをチェック
     const { data: existingMetadata } = await supabase
       .from('receipt_metadata')
       .select('*')
-      .eq('request_id', request.id)
+      .eq('request_id', contract.work_request_id)
       .single()
 
     if (existingMetadata) {
       // 既に生成済み - DBの内容を使用（編集不可）
       setEditingReceipt({
-        requestId: request.id,
+        requestId: contract.work_request_id,
         addressee: existingMetadata.addressee,
         purpose: existingMetadata.purpose,
         isFirstTime: false
@@ -201,9 +225,9 @@ export default function PaymentsClient() {
       }
 
       setEditingReceipt({
-        requestId: request.id,
+        requestId: contract.work_request_id,
         addressee: defaultAddressee,
-        purpose: request.title,
+        purpose: contract.work_request.title,
         isFirstTime: true
       })
     }
@@ -240,9 +264,9 @@ export default function PaymentsClient() {
     try {
       setGeneratingPdf(true)
       
-      const request = paidRequests.find(r => r.id === editingReceipt.requestId)
-      if (!request || !request.selected_applicant_id) {
-        alert('クリエイター情報が見つかりません')
+      const contract = paidContracts.find(c => c.work_request_id === editingReceipt.requestId)
+      if (!contract) {
+        alert('契約情報が見つかりません')
         return
       }
 
@@ -272,10 +296,10 @@ export default function PaymentsClient() {
           requestId: editingReceipt.requestId,
           title: editingReceipt.purpose,
           addressee: editingReceipt.addressee,
-          amount: request.final_price,
-          paidAt: request.paid_at,
+          amount: contract.final_price,
+          paidAt: contract.paid_at,
           requesterId: currentProfileId,
-          creatorId: request.selected_applicant_id
+          creatorId: contract.contractor.id
         }),
       })
 
@@ -320,7 +344,7 @@ export default function PaymentsClient() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `領収書_${editingReceipt.purpose}_${formatDate(request.paid_at)}.pdf`
+      a.download = `領収書_${editingReceipt.purpose}_${formatDate(contract.paid_at)}.pdf`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -354,6 +378,7 @@ export default function PaymentsClient() {
 
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
+      contracted: '契約済み',
       paid: '作業中',
       delivered: '納品済み',
       completed: '完了',
@@ -364,6 +389,7 @@ export default function PaymentsClient() {
 
   function getStatusClass(status: string) {
     const classes: { [key: string]: string } = {
+      contracted: 'contracted',
       paid: 'working',
       delivered: 'delivered',
       completed: 'completed',
@@ -372,15 +398,15 @@ export default function PaymentsClient() {
     return classes[status] || ''
   }
 
-  const totalPaid = paidRequests.reduce((sum, r) => sum + (r.final_price || 0), 0)
-  const thisMonthPaid = paidRequests
-    .filter(r => {
-      const paidDate = new Date(r.paid_at)
+  const totalPaid = paidContracts.reduce((sum, c) => sum + (c.final_price || 0), 0)
+  const thisMonthPaid = paidContracts
+    .filter(c => {
+      const paidDate = new Date(c.paid_at)
       const now = new Date()
       return paidDate.getMonth() === now.getMonth() && paidDate.getFullYear() === now.getFullYear()
     })
-    .reduce((sum, r) => sum + (r.final_price || 0), 0)
-  const activeRequests = paidRequests.filter(r => ['paid', 'delivered'].includes(r.status)).length
+    .reduce((sum, c) => sum + (c.final_price || 0), 0)
+  const activeContracts = paidContracts.filter(c => ['paid', 'delivered'].includes(c.status)).length
 
   return (
     <>
@@ -441,7 +467,7 @@ export default function PaymentsClient() {
                     </div>
                     <div className="payments-summary-card">
                       <div className="payments-summary-value">
-                        {activeRequests}<span className="payments-summary-unit">件</span>
+                        {activeContracts}<span className="payments-summary-unit">件</span>
                       </div>
                       <div className="payments-summary-label">進行中の依頼</div>
                     </div>
@@ -454,39 +480,39 @@ export default function PaymentsClient() {
                       最近の支払い
                     </h2>
 
-                    {paidRequests.length === 0 ? (
+                    {paidContracts.length === 0 ? (
                       <div className="payments-empty-inline">
                         <p>支払い履歴はまだありません</p>
                       </div>
                     ) : (
                       <div className="payments-recent-list">
-                        {paidRequests.slice(0, 5).map((request) => (
+                        {paidContracts.slice(0, 5).map((contract) => (
                           <Link
-                            key={request.id}
-                            href={`/requests/${request.id}`}
+                            key={contract.id}
+                            href={`/requests/${contract.work_request_id}`}
                             className="payments-recent-item"
                           >
                             <div className="payments-recent-info">
-                              <div className="payments-recent-item-title">{request.title}</div>
+                              <div className="payments-recent-item-title">{contract.work_request.title}</div>
                               <div className="payments-recent-meta">
                                 <div className="payments-avatar">
-                                  {request.creator.avatar_url ? (
-                                    <img src={request.creator.avatar_url} alt="" />
+                                  {contract.contractor.avatar_url ? (
+                                    <img src={contract.contractor.avatar_url} alt="" />
                                   ) : (
-                                    <span>{request.creator.display_name?.charAt(0) || '?'}</span>
+                                    <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
                                   )}
                                 </div>
                                 <span className="payments-creator-name">
-                                  {request.creator.display_name || '名前未設定'}
+                                  {contract.contractor.display_name || '名前未設定'}
                                 </span>
-                                <span className={`payments-status-badge ${getStatusClass(request.status)}`}>
-                                  {getStatusLabel(request.status)}
+                                <span className={`payments-status-badge ${getStatusClass(contract.status)}`}>
+                                  {getStatusLabel(contract.status)}
                                 </span>
                               </div>
                             </div>
                             <div className="payments-recent-amount">
-                              <div className="payments-price">{request.final_price?.toLocaleString()}円</div>
-                              <div className="payments-date">{formatDate(request.paid_at)}</div>
+                              <div className="payments-price">{contract.final_price?.toLocaleString()}円</div>
+                              <div className="payments-date">{formatDate(contract.paid_at)}</div>
                             </div>
                           </Link>
                         ))}
@@ -524,7 +550,7 @@ export default function PaymentsClient() {
                                   {formatMonth(monthData.month)}
                                 </div>
                                 <div className="payments-month-count">
-                                  {monthData.requests.length}件の支払い
+                                  {monthData.contracts.length}件の支払い
                                 </div>
                               </div>
                               <div className="payments-month-total">
@@ -534,35 +560,35 @@ export default function PaymentsClient() {
 
                             {isExpanded && (
                               <div className="payments-month-works">
-                                {monthData.requests.map((request) => (
+                                {monthData.contracts.map((contract) => (
                                   <div
-                                    key={request.id}
+                                    key={contract.id}
                                     className="payments-work-item"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Link
-                                      href={`/requests/${request.id}`}
+                                      href={`/requests/${contract.work_request_id}`}
                                       className="payments-work-link"
                                     >
-                                      <div className="payments-work-title">{request.title}</div>
-                                      <div className="payments-work-date">支払日: {formatDate(request.paid_at)}</div>
+                                      <div className="payments-work-title">{contract.work_request.title}</div>
+                                      <div className="payments-work-date">支払日: {formatDate(contract.paid_at)}</div>
                                       <div className="payments-work-creator">
                                         <div className="payments-avatar small">
-                                          {request.creator.avatar_url ? (
-                                            <img src={request.creator.avatar_url} alt="" />
+                                          {contract.contractor.avatar_url ? (
+                                            <img src={contract.contractor.avatar_url} alt="" />
                                           ) : (
-                                            <span>{request.creator.display_name?.charAt(0) || '?'}</span>
+                                            <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
                                           )}
                                         </div>
-                                        <span>{request.creator.display_name || '名前未設定'}</span>
+                                        <span>{contract.contractor.display_name || '名前未設定'}</span>
                                       </div>
                                     </Link>
                                     <div className="payments-work-amount">
                                       <div className="payments-work-price">
-                                        {request.final_price?.toLocaleString()}円
+                                        {contract.final_price?.toLocaleString()}円
                                       </div>
                                       <button
-                                        onClick={() => openReceiptEditor(request)}
+                                        onClick={() => openReceiptEditor(contract)}
                                         className="payments-btn secondary small"
                                       >
                                         領収書
@@ -583,7 +609,7 @@ export default function PaymentsClient() {
               {/* 支払い履歴タブ */}
               {activeTab === 'history' && (
                 <div className="payments-history">
-                  {paidRequests.length === 0 ? (
+                  {paidContracts.length === 0 ? (
                     <div className="payments-empty">
                       <i className="fas fa-receipt"></i>
                       <p>支払い履歴はまだありません</p>
@@ -593,38 +619,38 @@ export default function PaymentsClient() {
                     </div>
                   ) : (
                     <div className="payments-history-list">
-                      {paidRequests.map((request) => (
-                        <div key={request.id} className="payments-history-card">
-                          <Link href={`/requests/${request.id}`} className="payments-history-link">
-                            <div className="payments-history-title">{request.title}</div>
+                      {paidContracts.map((contract) => (
+                        <div key={contract.id} className="payments-history-card">
+                          <Link href={`/requests/${contract.work_request_id}`} className="payments-history-link">
+                            <div className="payments-history-title">{contract.work_request.title}</div>
                             <div className="payments-history-badges">
                               <span className="payments-category-badge">
-                                {getCategoryLabel(request.category)}
+                                {getCategoryLabel(contract.work_request.category)}
                               </span>
-                              <span className={`payments-status-badge ${getStatusClass(request.status)}`}>
-                                {getStatusLabel(request.status)}
+                              <span className={`payments-status-badge ${getStatusClass(contract.status)}`}>
+                                {getStatusLabel(contract.status)}
                               </span>
                               <span className="payments-history-date">
-                                支払日: {formatDate(request.paid_at)}
+                                支払日: {formatDate(contract.paid_at)}
                               </span>
                             </div>
                             <div className="payments-history-creator">
                               <div className="payments-avatar">
-                                {request.creator.avatar_url ? (
-                                  <img src={request.creator.avatar_url} alt="" />
+                                {contract.contractor.avatar_url ? (
+                                  <img src={contract.contractor.avatar_url} alt="" />
                                 ) : (
-                                  <span>{request.creator.display_name?.charAt(0) || '?'}</span>
+                                  <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
                                 )}
                               </div>
-                              <span>{request.creator.display_name || '名前未設定'}</span>
+                              <span>{contract.contractor.display_name || '名前未設定'}</span>
                             </div>
                           </Link>
                           <div className="payments-history-amount">
                             <div className="payments-history-price">
-                              {request.final_price?.toLocaleString()}円
+                              {contract.final_price?.toLocaleString()}円
                             </div>
                             <button
-                              onClick={() => openReceiptEditor(request)}
+                              onClick={() => openReceiptEditor(contract)}
                               className="payments-btn secondary"
                             >
                               <i className="fas fa-download"></i>
@@ -687,7 +713,7 @@ export default function PaymentsClient() {
             <div className="payments-form-group">
               <label className="payments-form-label">金額（変更不可）</label>
               <div className="payments-form-amount">
-                {paidRequests.find(r => r.id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
               </div>
             </div>
 
@@ -736,7 +762,7 @@ export default function PaymentsClient() {
               <div className="payments-confirm-item">
                 <div className="payments-confirm-label">金額</div>
                 <div className="payments-confirm-value large">
-                  {paidRequests.find(r => r.id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                  {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
                 </div>
               </div>
             </div>

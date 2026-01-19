@@ -1,0 +1,502 @@
+/**
+ * Header.module.css
+ * デザインシステムに準拠したヘッダー固有スタイル
+ */
+
+/* ============================================
+   ヘッダー全体
+   ============================================ */
+
+.header {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .inner {
+    padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
+  }
+}
+
+/* ============================================
+   ロゴ
+   ============================================ */
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo {
+  height: 24px;
+  width: auto;
+}
+
+@media (max-width: 768px) {
+  .logo {
+    height: 24px;
+  }
+}
+
+/* ============================================
+   検索バー
+   ============================================ */
+
+.inner :global(.search-bar) {
+  flex: 1;
+  max-width: 400px;
+  min-width: 200px;
+}
+
+/* ============================================
+   ナビゲーション
+   ============================================ */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .nav {
+    gap: var(--space-2);
+  }
+}
+
+/* ============================================
+   認証ボタン（未ログイン時）
+   ============================================ */
+
+.authButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ============================================
+   アイコンボタン（メール・通知）
+   ============================================ */
+
+.iconBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+@media (max-width: 768px) {
+  .iconBtn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+/* ============================================
+   通知バッジ
+   ============================================ */
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .badge {
+    top: 2px;
+    right: 2px;
+    min-width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+}
+
+/* ============================================
+   アバターボタン
+   ============================================ */
+
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.avatarBtn:hover {
+  opacity: 0.8;
+}
+
+.avatarBtn .avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatarBtn .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarBtn .avatar i {
+  color: white;
+  font-size: var(--text-sm);
+}
+
+/* ============================================
+   メニューコンテナ
+   ============================================ */
+
+.menuContainer,
+.profileMenuContainer,
+.uploadMenuContainer {
+  position: relative;
+}
+
+/* ============================================
+   ドロップダウン共通
+   ============================================ */
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdownRight {
+  right: 0;
+  left: auto;
+}
+
+/* モバイル用ドロップダウン */
+.dropdownMobile {
+  position: fixed;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-width: 100%;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* オーバーレイ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 299;
+}
+
+/* ============================================
+   ドロップダウンヘッダー
+   ============================================ */
+
+.dropdownHeader {
+  padding: var(--space-4) var(--space-5);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* ============================================
+   ドロップダウンコンテンツ
+   ============================================ */
+
+.dropdownContent {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.dropdownMobile .dropdownContent {
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ============================================
+   ドロップダウンフッター
+   ============================================ */
+
+.dropdownFooter {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-default);
+  text-align: center;
+}
+
+.dropdownFooter a {
+  font-size: var(--text-sm);
+}
+
+/* ============================================
+   ドロップダウンアイテム
+   ============================================ */
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dropdownItem:hover {
+  background: var(--bg-hover);
+}
+
+.dropdownItem i {
+  width: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   ドロップダウン区切り線
+   ============================================ */
+
+.dropdownDivider {
+  height: 1px;
+  background: var(--border-default);
+  margin: var(--space-1) 0;
+}
+
+/* ============================================
+   メッセージアイテム
+   ============================================ */
+
+.messageItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  transition: all var(--transition-fast);
+}
+
+.messageItem:hover {
+  background: var(--bg-hover);
+}
+
+.messageItem.unread {
+  background: var(--accent-primary-subtle);
+}
+
+.messageItem.unread:hover {
+  background: var(--bg-hover);
+}
+
+.messageAvatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.messageAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.messageAvatar i {
+  color: white;
+  font-size: var(--text-xs);
+}
+
+.messageContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.messageName {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.messageText {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messageTime {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   通知アイコン
+   ============================================ */
+
+.notificationIcon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-md);
+  color: var(--accent-primary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   通知タブ
+   ============================================ */
+
+.notificationTabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.notificationTab {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.notificationTab:hover {
+  color: var(--text-primary);
+}
+
+.notificationTab.active {
+  color: var(--accent-primary);
+}
+
+.notificationTab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-gradient);
+}
+
+/* ============================================
+   空状態
+   ============================================ */
+
+.emptyState {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ============================================
+   投稿ボタングループ
+   ============================================ */
+
+.uploadBtnGroup {
+  display: flex;
+  align-items: center;
+}
+
+.uploadBtnGroup > a {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.uploadDropdownBtn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+
+.uploadDropdownBtn i {
+  font-size: 10px;
+}
+
+/* ============================================
+   ダークモード調整
+   ============================================ */
+
+[data-theme="dark"] .dropdown {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .overlay {
+  background: rgba(0, 0, 0, 0.7);
+}

@@ -1,0 +1,99 @@
+/* パスワード更新ページ固有のレイアウト */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--bg-base);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+/* フォームグループ */
+.formGroup {
+  margin-bottom: var(--space-5);
+}
+
+/* ラベルのヒント */
+.labelHint {
+  font-weight: 400;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* 入力欄ラッパー（アイコン付き） */
+.inputWrapper {
+  position: relative;
+}
+
+/* パスワード表示切り替えボタン */
+.passwordToggle {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  color: var(--text-secondary);
+}
+
+.passwordToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* チェックマークアイコン（パスワード一致時） */
+.checkIcon {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--status-success);
+  font-size: var(--text-sm);
+}
+
+/* 送信ボタン（幅100%） */
+.submitBtn {
+  width: 100%;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-4);
+    align-items: flex-start;
+    padding-top: var(--space-8);
+  }
+  
+  .card {
+    max-width: 100%;
+  }
+}

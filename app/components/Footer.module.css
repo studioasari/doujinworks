@@ -1,0 +1,243 @@
+/**
+ * Footer.module.css
+ */
+
+/* ============================================
+   フッター全体
+   ============================================ */
+
+.footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-default);
+}
+
+/* ============================================
+   メインエリア
+   ============================================ */
+
+.main {
+  background: var(--bg-base);
+}
+
+.mainInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6);
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: var(--space-12);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .mainInner {
+    grid-template-columns: 1fr;
+    gap: var(--space-10);
+    padding: var(--space-8) var(--space-4);
+  }
+}
+
+/* ============================================
+   CTAエリア（左）
+   ============================================ */
+
+.ctaArea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.logo {
+  height: 24px;
+  width: auto;
+  max-width: fit-content;
+  object-fit: contain;
+  margin-bottom: var(--space-2);
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.ctaText {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.ctaButtons {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.ctaButtons :global(.btn) {
+  min-width: 120px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .ctaButtons {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 1024px) {
+  .ctaArea {
+    max-width: 320px;
+  }
+}
+
+/* ============================================
+   リンクエリア（右）
+   ============================================ */
+
+.linksArea {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-8);
+}
+
+@media (max-width: 768px) {
+  .linksArea {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+/* ============================================
+   リンク列
+   ============================================ */
+
+.linkColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.links a {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.links a:hover {
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   最下部（SNS + 法的リンク）
+   ============================================ */
+
+.bottom {
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-default);
+}
+
+.bottomInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.social {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-xl);
+  transition: color var(--transition-fast);
+}
+
+.socialIcon:hover {
+  color: var(--accent-primary);
+}
+
+.legalLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.legalLinks a {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.legalLinks a:hover {
+  color: var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+  .bottomInner {
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .legalLinks {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-4);
+  }
+}
+
+/* ============================================
+   コピーライト
+   ============================================ */
+
+.copyrightBar {
+  background: var(--bg-base);
+  border-top: 1px solid var(--border-default);
+}
+
+.copyrightInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .copyrightInner {
+    padding: var(--space-5) var(--space-4);
+  }
+}

@@ -1,302 +1,434 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../utils/supabase'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
-import LoadingScreen from '../../components/LoadingScreen'
+import { createClient } from '../../../utils/supabase/client'
 
-type User = {
+type Profile = {
   id: string
   user_id: string
-  username: string | null
-  display_name: string | null
-  email: string | null
+  username: string
+  display_name: string
   avatar_url: string | null
-  created_at: string
+  account_type: string
   is_admin: boolean
-  request_count: number
-  work_count: number
+  is_locked: boolean
+  locked_at: string | null
+  lock_until: string | null
+  is_banned: boolean
+  ban_reason: string | null
+  banned_at: string | null
+  created_at: string
 }
 
-export default function UsersPage() {
+const PER_PAGE = 20
+
+export default function AdminUsers() {
+  const supabase = createClient()
+  const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [users, setUsers] = useState<User[]>([])
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<'all' | 'active' | 'locked' | 'banned'>('all')
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   
-  const router = useRouter()
+  // モーダル用
+  const [modalUser, setModalUser] = useState<Profile | null>(null)
+  const [modalAction, setModalAction] = useState<'lock' | 'unlock' | 'ban' | 'unban' | null>(null)
+  const [banReason, setBanReason] = useState('')
+  const [lockDays, setLockDays] = useState(7)
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
-    checkAdmin()
-  }, [])
+    loadUsers()
+  }, [search, filter, page])
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredUsers(users)
-    } else {
-      const query = searchQuery.toLowerCase()
-      const filtered = users.filter(user => 
-        user.display_name?.toLowerCase().includes(query) ||
-        user.username?.toLowerCase().includes(query) ||
-        user.email?.toLowerCase().includes(query)
-      )
-      setFilteredUsers(filtered)
-    }
-  }, [searchQuery, users])
-
-  async function checkAdmin() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login?redirect=' + encodeURIComponent('/admin/users'))
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('user_id', user.id)
-      .single()
+  async function loadUsers() {
+    setLoading(true)
     
-    if (!profile?.is_admin) {
-      alert('管理者権限がありません')
-      router.push('/')
-      return
+    let query = supabase
+      .from('profiles')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+
+    // 検索
+    if (search) {
+      query = query.or(`username.ilike.%${search}%,display_name.ilike.%${search}%`)
     }
 
-    setIsAdmin(true)
-    await loadUsers()
+    // フィルター
+    if (filter === 'active') {
+      query = query.eq('is_locked', false).eq('is_banned', false)
+    } else if (filter === 'locked') {
+      query = query.eq('is_locked', true)
+    } else if (filter === 'banned') {
+      query = query.eq('is_banned', true)
+    }
+
+    // ページネーション
+    const from = (page - 1) * PER_PAGE
+    const to = from + PER_PAGE - 1
+    query = query.range(from, to)
+
+    const { data, count, error } = await query
+
+    if (error) {
+      console.error('Error loading users:', error)
+    } else {
+      setUsers(data || [])
+      setTotalCount(count || 0)
+    }
+    
     setLoading(false)
   }
 
-  async function loadUsers() {
-    try {
-      // プロフィール情報を取得
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+  function openModal(user: Profile, action: 'lock' | 'unlock' | 'ban' | 'unban') {
+    setModalUser(user)
+    setModalAction(action)
+    setBanReason('')
+  }
 
-      if (!profiles) return
+  function closeModal() {
+    setModalUser(null)
+    setModalAction(null)
+    setBanReason('')
+    setLockDays(7)
+  }
 
-      // 各ユーザーの統計情報を取得
-      const usersWithStats = await Promise.all(
-        profiles.map(async (profile) => {
-          // メールアドレスを取得（auth.usersから）
-          const { data: { user } } = await supabase.auth.admin.getUserById(profile.user_id)
+  async function executeAction() {
+    if (!modalUser || !modalAction) return
+    
+    setActionLoading(true)
 
-          // 依頼数
-          const { count: requestCount } = await supabase
-            .from('work_requests')
-            .select('*', { count: 'exact', head: true })
-            .eq('requester_id', profile.id)
+    let updateData: Partial<Profile> = {}
 
-          // 受注数
-          const { data: applications } = await supabase
-            .from('work_request_applications')
-            .select('work_request_id')
-            .eq('applicant_id', profile.id)
-            .eq('status', 'accepted')
-
-          const workCount = applications?.length || 0
-
-          return {
-            id: profile.id,
-            user_id: profile.user_id,
-            username: profile.username,
-            display_name: profile.display_name,
-            email: user?.email || null,
-            avatar_url: profile.avatar_url,
-            created_at: profile.created_at,
-            is_admin: profile.is_admin || false,
-            request_count: requestCount || 0,
-            work_count: workCount
-          }
-        })
-      )
-
-      setUsers(usersWithStats)
-      setFilteredUsers(usersWithStats)
-    } catch (error) {
-      console.error('ユーザー取得エラー:', error)
+    switch (modalAction) {
+      case 'lock':
+        const lockUntil = new Date()
+        lockUntil.setDate(lockUntil.getDate() + lockDays)
+        updateData = { 
+          is_locked: true,
+          locked_at: new Date().toISOString(),
+          lock_until: lockUntil.toISOString()
+        }
+        break
+      case 'unlock':
+        updateData = { 
+          is_locked: false,
+          locked_at: null,
+          lock_until: null
+        }
+        break
+      case 'ban':
+        updateData = { 
+          is_banned: true, 
+          banned_at: new Date().toISOString(),
+          ban_reason: banReason || null
+        }
+        break
+      case 'unban':
+        updateData = { 
+          is_banned: false, 
+          banned_at: null,
+          ban_reason: null
+        }
+        break
     }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', modalUser.id)
+
+    if (error) {
+      console.error('Error updating user:', error)
+      alert('エラーが発生しました')
+    } else {
+      await loadUsers()
+      closeModal()
+    }
+
+    setActionLoading(false)
   }
 
-  function formatDate(dateString: string) {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    })
-  }
-
-  if (loading) {
-    return <LoadingScreen />
-  }
-
-  if (!isAdmin) {
-    return null
-  }
+  const totalPages = Math.ceil(totalCount / PER_PAGE)
 
   return (
-    <>
-      <Header />
-      <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow" style={{ padding: '40px 20px' }}>
-          <h1 className="section-title mb-32">ユーザー管理</h1>
-
-          {/* ナビゲーション */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
-            <Link href="/admin" className="btn-secondary">
-              ダッシュボード
-            </Link>
-            <Link href="/admin/payments" className="btn-secondary">
-              振込管理
-            </Link>
-            <Link href="/admin/users" className="btn-primary">
-              ユーザー管理
-            </Link>
-          </div>
-
-          {/* 検索 */}
-          <div style={{ marginBottom: '24px' }}>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="ユーザー名、メールアドレスで検索"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* 統計 */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-            gap: '16px', 
-            marginBottom: '32px' 
-          }}>
-            <div className="card-no-hover p-24" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: '600', marginBottom: '8px' }}>
-                {users.length}
-              </div>
-              <div className="text-small text-gray">総ユーザー数</div>
-            </div>
-            <div className="card-no-hover p-24" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: '600', marginBottom: '8px' }}>
-                {filteredUsers.length}
-              </div>
-              <div className="text-small text-gray">検索結果</div>
-            </div>
-          </div>
-
-          {/* ユーザー一覧 */}
-          {filteredUsers.length === 0 ? (
-            <div className="empty-state">
-              <p className="text-gray">ユーザーが見つかりませんでした</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredUsers.map((user, index) => (
-                <div
-                  key={user.id}
-                  className="card-no-hover p-24"
-                  style={{
-                    borderBottom: index < filteredUsers.length - 1 ? '1px solid #E5E5E5' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                    {/* アバター */}
-                    <div style={{ 
-                      width: '60px', 
-                      height: '60px', 
-                      borderRadius: '50%', 
-                      backgroundColor: '#E5E5E5',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                      flexShrink: 0
-                    }}>
-                      {user.avatar_url ? (
-                        <img 
-                          src={user.avatar_url} 
-                          alt={user.display_name || ''} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: '24px', color: '#6B6B6B' }}>
-                          {user.display_name?.charAt(0) || '?'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* ユーザー情報 */}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ marginBottom: '8px' }}>
-                        <Link
-                          href={`/creators/${user.username}`}
-                          style={{ 
-                            fontSize: '16px', 
-                            fontWeight: '600', 
-                            color: '#1A1A1A',
-                            textDecoration: 'none',
-                            marginRight: '8px'
-                          }}
-                        >
-                          {user.display_name || '名前未設定'}
-                        </Link>
-                        {user.is_admin && (
-                          <span style={{
-                            padding: '2px 8px',
-                            backgroundColor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: '600'
-                          }}>
-                            管理者
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
-                        {user.username && (
-                          <div className="text-small text-gray">
-                            @{user.username}
-                          </div>
-                        )}
-                        {user.email && (
-                          <div className="text-small text-gray">
-                            {user.email}
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                        <div className="text-small text-gray">
-                          依頼: {user.request_count}件
-                        </div>
-                        <div className="text-small text-gray">
-                          受注: {user.work_count}件
-                        </div>
-                        <div className="text-small text-gray">
-                          登録日: {formatDate(user.created_at)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+    <div>
+      {/* ヘッダー */}
+      <div className="admin-header">
+        <h1>ユーザー管理</h1>
+        <p>登録ユーザーの管理・制限</p>
       </div>
-      <Footer />
-    </>
+
+      {/* 検索・フィルター */}
+      <div className="admin-search-bar">
+        <input
+          type="text"
+          className="admin-search-input"
+          placeholder="ユーザー名・表示名で検索..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+        />
+        <select
+          className="admin-filter-select"
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value as typeof filter)
+            setPage(1)
+          }}
+        >
+          <option value="all">すべて</option>
+          <option value="active">アクティブ</option>
+          <option value="locked">ロック中</option>
+          <option value="banned">BAN済み</option>
+        </select>
+      </div>
+
+      {/* テーブル */}
+      <div className="admin-table-container">
+        {loading ? (
+          <div className="admin-empty">
+            <i className="fas fa-spinner fa-spin"></i>
+            <p>読み込み中...</p>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="admin-empty">
+            <i className="fas fa-users"></i>
+            <p>ユーザーが見つかりません</p>
+          </div>
+        ) : (
+          <>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>ユーザー</th>
+                  <th>タイプ</th>
+                  <th>ステータス</th>
+                  <th>登録日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="admin-user-cell">
+                        <div className="admin-user-avatar">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" />
+                          ) : (
+                            <i className="fas fa-user"></i>
+                          )}
+                        </div>
+                        <div className="admin-user-info">
+                          <span className="admin-user-name">{user.display_name || '未設定'}</span>
+                          <a 
+                            href={`/creators/${user.username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="admin-user-username-link"
+                          >
+                            @{user.username}
+                            <i className="fas fa-external-link-alt"></i>
+                          </a>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`admin-badge ${user.is_admin ? 'blue' : 'gray'}`}>
+                        {user.is_admin ? '管理者' : user.account_type === 'business' ? 'ビジネス' : '一般'}
+                      </span>
+                    </td>
+                    <td>
+                      {user.is_banned ? (
+                        <span className="admin-badge red">BAN</span>
+                      ) : user.is_locked ? (
+                        <span className="admin-badge yellow">ロック</span>
+                      ) : (
+                        <span className="admin-badge green">アクティブ</span>
+                      )}
+                    </td>
+                    <td>
+                      {new Date(user.created_at).toLocaleDateString('ja-JP')}
+                    </td>
+                    <td>
+                      <div className="admin-actions">
+                        {!user.is_admin && (
+                          <>
+                            {user.is_banned ? (
+                              <button
+                                className="admin-action-btn secondary"
+                                onClick={() => openModal(user, 'unban')}
+                              >
+                                BAN解除
+                              </button>
+                            ) : (
+                              <>
+                                {user.is_locked ? (
+                                  <button
+                                    className="admin-action-btn secondary"
+                                    onClick={() => openModal(user, 'unlock')}
+                                  >
+                                    ロック解除
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="admin-action-btn warning"
+                                    onClick={() => openModal(user, 'lock')}
+                                  >
+                                    ロック
+                                  </button>
+                                )}
+                                <button
+                                  className="admin-action-btn danger"
+                                  onClick={() => openModal(user, 'ban')}
+                                >
+                                  BAN
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* ページネーション */}
+            <div className="admin-pagination">
+              <span className="admin-pagination-info">
+                {totalCount}件中 {(page - 1) * PER_PAGE + 1}〜{Math.min(page * PER_PAGE, totalCount)}件
+              </span>
+              <div className="admin-pagination-btns">
+                <button
+                  className="admin-pagination-btn"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  前へ
+                </button>
+                <button
+                  className="admin-pagination-btn"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  次へ
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* モーダル */}
+      {modalUser && modalAction && (
+        <div className="admin-modal-overlay" onClick={closeModal}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>
+                {modalAction === 'lock' && 'アカウントをロック'}
+                {modalAction === 'unlock' && 'ロックを解除'}
+                {modalAction === 'ban' && 'アカウントをBAN'}
+                {modalAction === 'unban' && 'BANを解除'}
+              </h3>
+              <button className="admin-modal-close" onClick={closeModal}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="admin-modal-body">
+              <p style={{ marginBottom: 16 }}>
+                <strong>@{modalUser.username}</strong>（{modalUser.display_name || '未設定'}）
+              </p>
+              
+              {modalAction === 'lock' && (
+                <div className="admin-form-group">
+                  <label className="admin-form-label">ロック期間（日数）</label>
+                  <input
+                    type="number"
+                    className="admin-search-input"
+                    value={lockDays}
+                    onChange={(e) => setLockDays(Number(e.target.value))}
+                    min={1}
+                    max={365}
+                    style={{ width: '100%' }}
+                  />
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: 8 }}>
+                    ロック中はログインできなくなります。
+                  </p>
+                </div>
+              )}
+              
+              {modalAction === 'unlock' && (
+                <>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                    このアカウントのロックを解除します。
+                  </p>
+                  {modalUser.lock_until && (
+                    <p style={{ fontSize: '0.875rem', marginTop: 8 }}>
+                      <strong>ロック期限:</strong> {new Date(modalUser.lock_until).toLocaleDateString('ja-JP')}
+                    </p>
+                  )}
+                </>
+              )}
+              
+              {modalAction === 'ban' && (
+                <div className="admin-form-group">
+                  <label className="admin-form-label">BAN理由（任意）</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                    placeholder="BAN理由を入力..."
+                  />
+                </div>
+              )}
+              
+              {modalAction === 'unban' && (
+                <>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: 12 }}>
+                    このアカウントのBANを解除します。
+                  </p>
+                  {modalUser.ban_reason && (
+                    <p style={{ fontSize: '0.875rem' }}>
+                      <strong>BAN理由:</strong> {modalUser.ban_reason}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="admin-modal-footer">
+              <button
+                className="admin-action-btn secondary"
+                onClick={closeModal}
+                disabled={actionLoading}
+              >
+                キャンセル
+              </button>
+              <button
+                className={`admin-action-btn ${modalAction === 'ban' ? 'danger' : modalAction === 'lock' ? 'warning' : 'primary'}`}
+                onClick={executeAction}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  <>
+                    {modalAction === 'lock' && 'ロックする'}
+                    {modalAction === 'unlock' && '解除する'}
+                    {modalAction === 'ban' && 'BANする'}
+                    {modalAction === 'unban' && '解除する'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

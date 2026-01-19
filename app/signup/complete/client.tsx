@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
+import { useRouter, useSearchParams } from 'next/navigation'
+import styles from './page.module.css'
 
-// props の型定義
 type Props = {
   user: User
 }
-import { useRouter, useSearchParams } from 'next/navigation'
 
 type UserType = 'casual' | 'business'
 type Step = 'userType' | 'basicInfo' | 'businessInfo' | 'confirm'
@@ -155,10 +155,8 @@ export function SignupCompleteClient({ user }: Props) {
     return true
   }
 
-  // 基本情報の入力チェック（修正版）
+  // 基本情報の入力チェック
   const isBasicInfoComplete = () => {
-    // OAuthユーザー(Google, Twitter, Discord)はパスワード不要
-    // メールユーザーは既にパスワード設定済み(signup時に設定)
     return username && 
           displayName && 
           usernameCheck.available === true
@@ -186,11 +184,9 @@ export function SignupCompleteClient({ user }: Props) {
   }
 
   const handleSubmit = async () => {
-    
     setLoading(true)
     setError('')
 
-    // 🔒 userType が設定されているか確認
     if (!userType) {
       setError('利用方法を選択してください')
       setLoading(false)
@@ -200,7 +196,6 @@ export function SignupCompleteClient({ user }: Props) {
     try {
       const supabase = createClient()
       
-      // セッション確認
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       
       if (!currentUser) {
@@ -211,11 +206,6 @@ export function SignupCompleteClient({ user }: Props) {
         throw new Error('ユーザーIDをご確認ください')
       }
 
-      // パスワード更新処理は完全に削除
-      // OAuthユーザーはパスワード不要
-      // メールユーザーは既にパスワード設定済み
-
-      // 🔒 プロフィール登録前に再度チェック（競合防止）
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('user_id, username, account_type')
@@ -223,12 +213,10 @@ export function SignupCompleteClient({ user }: Props) {
         .maybeSingle()
 
       if (existingProfile && existingProfile.account_type) {
-        // プロフィールが完成している場合のみリダイレクト
         router.push('/dashboard')
         return
       }
 
-      // プロフィールデータ作成
       const profileData: any = {
         user_id: currentUser.id,
         username: username.toLowerCase(),
@@ -238,7 +226,6 @@ export function SignupCompleteClient({ user }: Props) {
         can_request_work: userType === 'business',
       }
 
-      // 🔒 プロフィール登録（競合エラーハンドリング）
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .upsert(profileData, { onConflict: 'user_id' })
@@ -246,9 +233,7 @@ export function SignupCompleteClient({ user }: Props) {
         .single()
 
       if (profileError) {
-        // 🔒 UNIQUE制約違反の処理
         if (profileError.code === '23505') {
-          // PostgreSQL UNIQUE violation
           if (profileError.message.includes('username')) {
             throw new Error('このユーザーIDは既に使用されています。別のユーザーIDをお試しください。')
           } else {
@@ -258,7 +243,6 @@ export function SignupCompleteClient({ user }: Props) {
         throw profileError
       }
 
-      // ビジネス情報の登録
       if (userType === 'business') {
         const businessData: any = {
           profile_id: profile.id,
@@ -279,13 +263,11 @@ export function SignupCompleteClient({ user }: Props) {
           businessData.company_name = companyName
         }
 
-        // 🔒 ビジネスプロフィール登録（競合エラーハンドリング）
         const { error: businessError } = await supabase
           .from('business_profiles')
           .upsert(businessData, { onConflict: 'profile_id' })
 
         if (businessError) {
-          // 🔒 UNIQUE制約違反の処理
           if (businessError.code === '23505') {
             throw new Error('既にビジネス情報が登録されています。ページを更新してください。')
           }
@@ -293,7 +275,6 @@ export function SignupCompleteClient({ user }: Props) {
         }
       }
 
-      // 🔒 登録完了後、ダッシュボードへリダイレクト
       window.location.href = '/dashboard'
       
     } catch (error: any) {
@@ -309,8 +290,8 @@ export function SignupCompleteClient({ user }: Props) {
 
   if (!user) {
     return (
-      <div className="signup-complete-page">
-        <div className="signup-complete-loading">読み込み中...</div>
+      <div className={styles.page}>
+        <div className={styles.loading}>読み込み中...</div>
       </div>
     )
   }
@@ -332,32 +313,32 @@ export function SignupCompleteClient({ user }: Props) {
 
     return (
       <>
-        <div className="desktop-indicator">
+        <div className={styles.desktopIndicator}>
           {steps.map((label, index) => (
-            <div key={index} className="step-group">
-              <div className="step-item">
-                <div className={`step-number ${index <= currentStepIndex ? 'active' : ''}`}>
+            <div key={index} className={styles.stepGroup}>
+              <div className={styles.stepItem}>
+                <div className={`${styles.stepNumber} ${index <= currentStepIndex ? styles.active : ''}`}>
                   {index < currentStepIndex ? '✓' : index + 1}
                 </div>
-                <span className={`step-text ${index <= currentStepIndex ? 'active' : ''}`}>
+                <span className={`${styles.stepText} ${index <= currentStepIndex ? styles.active : ''}`}>
                   {label}
                 </span>
               </div>
               {index < steps.length - 1 && (
-                <div className={`step-line ${index < currentStepIndex ? 'active' : ''}`} />
+                <div className={`${styles.stepLine} ${index < currentStepIndex ? styles.active : ''}`} />
               )}
             </div>
           ))}
         </div>
 
-        <div className="mobile-indicator">
-          <div className="progress-info">
-            <span className="current-step-label">{steps[currentStepIndex]}</span>
-            <span className="step-counter">{currentStep}/{totalSteps}</span>
+        <div className={styles.mobileIndicator}>
+          <div className={styles.progressInfo}>
+            <span className={styles.currentStepLabel}>{steps[currentStepIndex]}</span>
+            <span className={styles.stepCounter}>{currentStep}/{totalSteps}</span>
           </div>
-          <div className="progress-bar-container">
+          <div className={styles.progressBarContainer}>
             <div 
-              className="progress-bar-fill" 
+              className={styles.progressBarFill} 
               style={{ width: `${(currentStep / totalSteps) * 100}%` }}
             />
           </div>
@@ -369,29 +350,27 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 1: 利用方法選択
   if (step === 'userType') {
     return (
-      <div className="signup-complete-page">
-        <div className="signup-complete-container signup-complete-container-wide">
-          <StepIndicator />
-          
-          <h1 className="signup-complete-title">利用方法を選択</h1>
-          <p className="signup-complete-subtitle">同人ワークスをどのように利用しますか?</p>
+      <div className={styles.page}>
+        <div className={`${styles.container} ${styles.containerWide}`}>
+          <h1 className={styles.title}>利用方法を選択</h1>
+          <p className={styles.subtitle}>同人ワークスをどのように利用しますか?</p>
 
-          <div className="user-type-grid">
+          <div className={styles.userTypeGrid}>
             <button
               onClick={() => {
                 setUserType('casual')
                 changeStep('basicInfo')
               }}
-              className="user-type-card"
+              className={styles.userTypeCard}
             >
-              <div className="user-type-card-content">
-                <div className="user-type-card-text">
-                  <div className="user-type-card-title">一般利用</div>
-                  <div className="user-type-card-description">
+              <div className={styles.userTypeCardContent}>
+                <div className={styles.userTypeCardText}>
+                  <div className={styles.userTypeCardTitle}>一般利用</div>
+                  <div className={styles.userTypeCardDescription}>
                     趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
                   </div>
                 </div>
-                <div className="user-type-card-image">
+                <div className={styles.userTypeCardImage}>
                   {/* 挿絵をここに配置 */}
                 </div>
               </div>
@@ -402,16 +381,16 @@ export function SignupCompleteClient({ user }: Props) {
                 setUserType('business')
                 changeStep('basicInfo')
               }}
-              className="user-type-card"
+              className={styles.userTypeCard}
             >
-              <div className="user-type-card-content">
-                <div className="user-type-card-text">
-                  <div className="user-type-card-title">ビジネス利用</div>
-                  <div className="user-type-card-description">
+              <div className={styles.userTypeCardContent}>
+                <div className={styles.userTypeCardText}>
+                  <div className={styles.userTypeCardTitle}>ビジネス利用</div>
+                  <div className={styles.userTypeCardDescription}>
                     仕事の受発注、報酬の受け取りなどビジネスとして利用する
                   </div>
                 </div>
-                <div className="user-type-card-image">
+                <div className={styles.userTypeCardImage}>
                   {/* 挿絵をここに配置 */}
                 </div>
               </div>
@@ -425,15 +404,14 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 2: 基本情報入力
   if (step === 'basicInfo') {
     return (
-      <div className="signup-complete-page">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <div className="signup-complete-container">
-          <h1 className="signup-complete-title">基本情報の入力</h1>
-          <p className="signup-complete-subtitle">アカウント情報を設定してください</p>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <h1 className={styles.title}>基本情報の入力</h1>
+          <p className={styles.subtitle}>アカウント情報を設定してください</p>
           
           <StepIndicator />
 
-          <div className="signup-complete-card">
+          <div className={styles.card}>
             <form onSubmit={(e) => {
               e.preventDefault()
               if (userType === 'business') {
@@ -442,10 +420,10 @@ export function SignupCompleteClient({ user }: Props) {
                 changeStep('confirm')
               }
             }}>
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
+              <div className={styles.formGroup}>
+                <label className="form-label">
                   メールアドレス
-                  <span className="signup-complete-readonly-badge">
+                  <span className={styles.readonlyBadge}>
                     <i className="fas fa-lock"></i> 変更不可
                   </span>
                 </label>
@@ -453,13 +431,14 @@ export function SignupCompleteClient({ user }: Props) {
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="signup-complete-input disabled"
+                  className="form-input"
+                  style={{ maxWidth: '100%' }}
                 />
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  ユーザーID <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  ユーザーID <span className={styles.required}>*</span>
                 </label>
                 <input
                   type="text"
@@ -468,23 +447,24 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="doujinworks"
                   required
                   autoComplete="off"
-                  className="signup-complete-input"
+                  className="form-input"
+                  style={{ maxWidth: '100%' }}
                 />
-                <div className="signup-complete-hint">
+                <div className={styles.hint}>
                   4〜20文字 / 英数字とアンダースコア(_)のみ
                 </div>
                 {username && (
-                  <div className="signup-complete-validation">
+                  <div className={styles.validation}>
                     {usernameCheck.checking && (
-                      <span className="checking">確認中...</span>
+                      <span className={styles.checking}>確認中...</span>
                     )}
                     {!usernameCheck.checking && usernameCheck.available === true && (
-                      <span className="available">
+                      <span className={styles.available}>
                         <i className="fas fa-check-circle"></i> 利用可能です
                       </span>
                     )}
                     {!usernameCheck.checking && usernameCheck.available === false && (
-                      <span className="unavailable">
+                      <span className={styles.unavailable}>
                         <i className="fas fa-times-circle"></i> {usernameCheck.error}
                       </span>
                     )}
@@ -492,9 +472,9 @@ export function SignupCompleteClient({ user }: Props) {
                 )}
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  表示名 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  表示名 <span className={styles.required}>*</span>
                 </label>
                 <input
                   type="text"
@@ -502,29 +482,30 @@ export function SignupCompleteClient({ user }: Props) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="同人ワークス"
                   required
-                  className="signup-complete-input"
+                  className="form-input"
+                  style={{ maxWidth: '100%' }}
                 />
               </div>
 
               {error && (
-                <div className="auth-error">
-                  <i className="fas fa-exclamation-circle"></i>
+                <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>
+                  <i className="fa-solid fa-circle-xmark alert-icon"></i>
                   {error}
                 </div>
               )}
 
-              <div className="signup-complete-buttons">
+              <div className={styles.buttons}>
                 <button
                   type="button"
                   onClick={() => changeStep('userType')}
-                  className="signup-complete-btn secondary"
+                  className="btn btn-secondary"
                 >
                   戻る
                 </button>
                 <button
                   type="submit"
                   disabled={!isBasicInfoComplete()}
-                  className={`signup-complete-btn primary ${!isBasicInfoComplete() ? 'disabled' : ''}`}
+                  className="btn btn-primary"
                 >
                   {userType === 'business' ? '次へ' : '内容確認'}
                 </button>
@@ -539,34 +520,34 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 3: ビジネス情報入力
   if (step === 'businessInfo') {
     return (
-      <div className="signup-complete-page">
-        <div className="signup-complete-container">
-          <h1 className="signup-complete-title">ビジネス情報の入力</h1>
-          <p className="signup-complete-subtitle">取引に必要な情報を入力してください</p>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <h1 className={styles.title}>ビジネス情報の入力</h1>
+          <p className={styles.subtitle}>取引に必要な情報を入力してください</p>
           
           <StepIndicator />
 
-          <div className="signup-complete-card">
+          <div className={styles.card}>
             <form onSubmit={(e) => {
               e.preventDefault()
               changeStep('confirm')
             }}>
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  個人/法人 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  個人/法人 <span className={styles.required}>*</span>
                 </label>
-                <div className="signup-complete-toggle-group">
+                <div className={styles.toggleGroup}>
                   <button
                     type="button"
                     onClick={() => setAccountType('individual')}
-                    className={`signup-complete-toggle ${accountType === 'individual' ? 'active' : ''}`}
+                    className={`${styles.toggleBtn} ${accountType === 'individual' ? styles.active : ''}`}
                   >
                     個人
                   </button>
                   <button
                     type="button"
                     onClick={() => setAccountType('corporate')}
-                    className={`signup-complete-toggle ${accountType === 'corporate' ? 'active' : ''}`}
+                    className={`${styles.toggleBtn} ${accountType === 'corporate' ? styles.active : ''}`}
                   >
                     法人
                   </button>
@@ -574,18 +555,19 @@ export function SignupCompleteClient({ user }: Props) {
               </div>
 
               {/* 姓名（横並び） */}
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  氏名 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  氏名 <span className={styles.required}>*</span>
                 </label>
-                <div className="signup-complete-row">
+                <div className={styles.row}>
                   <input
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="姓"
                     required
-                    className="signup-complete-input"
+                    className="form-input"
+                    style={{ maxWidth: '100%' }}
                   />
                   <input
                     type="text"
@@ -593,18 +575,19 @@ export function SignupCompleteClient({ user }: Props) {
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="名"
                     required
-                    className="signup-complete-input"
+                    className="form-input"
+                    style={{ maxWidth: '100%' }}
                   />
                 </div>
               </div>
 
               {/* 姓名かな（横並び） */}
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  氏名(かな) <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  氏名(かな) <span className={styles.required}>*</span>
                 </label>
-                <div className="signup-complete-row">
-                  <div className="signup-complete-field">
+                <div className={styles.row}>
+                  <div className={styles.field}>
                     <input
                       type="text"
                       value={lastNameKana}
@@ -614,13 +597,16 @@ export function SignupCompleteClient({ user }: Props) {
                       }}
                       placeholder="せい"
                       required
-                      className={`signup-complete-input ${lastNameKanaError ? 'error' : ''}`}
+                      className={`form-input ${lastNameKanaError ? 'error' : ''}`}
+                      style={{ maxWidth: '100%' }}
                     />
                     {lastNameKanaError && (
-                      <div className="signup-complete-field-error">{lastNameKanaError}</div>
+                      <p className="form-error">
+                        <i className="fa-solid fa-circle-exclamation"></i> {lastNameKanaError}
+                      </p>
                     )}
                   </div>
-                  <div className="signup-complete-field">
+                  <div className={styles.field}>
                     <input
                       type="text"
                       value={firstNameKana}
@@ -630,19 +616,22 @@ export function SignupCompleteClient({ user }: Props) {
                       }}
                       placeholder="めい"
                       required
-                      className={`signup-complete-input ${firstNameKanaError ? 'error' : ''}`}
+                      className={`form-input ${firstNameKanaError ? 'error' : ''}`}
+                      style={{ maxWidth: '100%' }}
                     />
                     {firstNameKanaError && (
-                      <div className="signup-complete-field-error">{firstNameKanaError}</div>
+                      <p className="form-error">
+                        <i className="fa-solid fa-circle-exclamation"></i> {firstNameKanaError}
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
 
               {accountType === 'corporate' && (
-                <div className="signup-complete-form-group">
-                  <label className="signup-complete-label">
-                    会社名 <span className="required">*</span>
+                <div className={styles.formGroup}>
+                  <label className="form-label">
+                    会社名 <span className={styles.required}>*</span>
                   </label>
                   <input
                     type="text"
@@ -650,14 +639,15 @@ export function SignupCompleteClient({ user }: Props) {
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="株式会社○○"
                     required
-                    className="signup-complete-input"
+                    className="form-input"
+                    style={{ maxWidth: '100%' }}
                   />
                 </div>
               )}
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  電話番号 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  電話番号 <span className={styles.required}>*</span>
                 </label>
                 <input
                   type="tel"
@@ -669,16 +659,19 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="09012345678"
                   required
                   maxLength={11}
-                  className={`signup-complete-input ${phoneError ? 'error' : ''}`}
+                  className={`form-input ${phoneError ? 'error' : ''}`}
+                  style={{ maxWidth: '100%' }}
                 />
                 {phoneError && (
-                  <div className="signup-complete-field-error">{phoneError}</div>
+                  <p className="form-error">
+                    <i className="fa-solid fa-circle-exclamation"></i> {phoneError}
+                  </p>
                 )}
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  郵便番号 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  郵便番号 <span className={styles.required}>*</span>
                 </label>
                 <input
                   type="text"
@@ -690,22 +683,25 @@ export function SignupCompleteClient({ user }: Props) {
                   placeholder="1234567"
                   required
                   maxLength={7}
-                  className={`signup-complete-input ${postalCodeError ? 'error' : ''}`}
+                  className={`form-input ${postalCodeError ? 'error' : ''}`}
+                  style={{ maxWidth: '100%' }}
                 />
                 {postalCodeError && (
-                  <div className="signup-complete-field-error">{postalCodeError}</div>
+                  <p className="form-error">
+                    <i className="fa-solid fa-circle-exclamation"></i> {postalCodeError}
+                  </p>
                 )}
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  都道府県 <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  都道府県 <span className={styles.required}>*</span>
                 </label>
                 <select
                   value={prefecture}
                   onChange={(e) => setPrefecture(e.target.value)}
                   required
-                  className="signup-complete-select"
+                  className={styles.select}
                 >
                   <option value="">選択してください</option>
                   <option value="北海道">北海道</option>
@@ -758,9 +754,9 @@ export function SignupCompleteClient({ user }: Props) {
                 </select>
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">
-                  住所(番地まで) <span className="required">*</span>
+              <div className={styles.formGroup}>
+                <label className="form-label">
+                  住所(番地まで) <span className={styles.required}>*</span>
                 </label>
                 <input
                   type="text"
@@ -768,40 +764,42 @@ export function SignupCompleteClient({ user }: Props) {
                   onChange={(e) => setAddress1(e.target.value)}
                   placeholder="○○市○○町1-2-3"
                   required
-                  className="signup-complete-input"
+                  className="form-input"
+                  style={{ maxWidth: '100%' }}
                 />
               </div>
 
-              <div className="signup-complete-form-group">
-                <label className="signup-complete-label">住所(建物名など)</label>
+              <div className={styles.formGroup}>
+                <label className="form-label">住所(建物名など)</label>
                 <input
                   type="text"
                   value={address2}
                   onChange={(e) => setAddress2(e.target.value)}
                   placeholder="○○マンション101号室"
-                  className="signup-complete-input"
+                  className="form-input"
+                  style={{ maxWidth: '100%' }}
                 />
               </div>
 
               {error && (
-                <div className="auth-error">
-                  <i className="fas fa-exclamation-circle"></i>
+                <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>
+                  <i className="fa-solid fa-circle-xmark alert-icon"></i>
                   {error}
                 </div>
               )}
 
-              <div className="signup-complete-buttons">
+              <div className={styles.buttons}>
                 <button
                   type="button"
                   onClick={() => changeStep('basicInfo')}
-                  className="signup-complete-btn secondary"
+                  className="btn btn-secondary"
                 >
                   戻る
                 </button>
                 <button
                   type="submit"
                   disabled={!isBusinessInfoComplete()}
-                  className={`signup-complete-btn primary ${!isBusinessInfoComplete() ? 'disabled' : ''}`}
+                  className="btn btn-primary"
                 >
                   内容確認
                 </button>
@@ -816,78 +814,72 @@ export function SignupCompleteClient({ user }: Props) {
   // Step 4: 確認ページ
   if (step === 'confirm') {
     return (
-      <div className="signup-complete-page">
-        <div className="signup-complete-container">
-          <h1 className="signup-complete-title">入力内容の確認</h1>
-          <p className="signup-complete-subtitle">内容をご確認の上、登録を完了してください</p>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <h1 className={styles.title}>入力内容の確認</h1>
+          <p className={styles.subtitle}>内容をご確認の上、登録を完了してください</p>
           
           <StepIndicator />
 
-          <div className="signup-complete-card">
+          <div className={styles.card}>
             
             {/* 基本情報 */}
-            <div className="signup-complete-section">
-              <h2 className="signup-complete-section-title">基本情報</h2>
-              <div className="signup-complete-confirm-list">
-                <div className="signup-complete-confirm-item">
-                  <span className="confirm-label">利用方法</span>
-                  <span className="confirm-value">
+            <div className={styles.section}>
+              <h2 className={styles.sectionTitle}>基本情報</h2>
+              <div className={styles.confirmList}>
+                <div className={styles.confirmItem}>
+                  <span className={styles.confirmLabel}>利用方法</span>
+                  <span className={styles.confirmValue}>
                     {userType === 'casual' ? '一般利用' : 'ビジネス利用'}
                   </span>
                 </div>
-                <div className="signup-complete-confirm-item">
-                  <span className="confirm-label">メールアドレス</span>
-                  <span className="confirm-value">{user?.email}</span>
+                <div className={styles.confirmItem}>
+                  <span className={styles.confirmLabel}>メールアドレス</span>
+                  <span className={styles.confirmValue}>{user?.email}</span>
                 </div>
-                <div className="signup-complete-confirm-item">
-                  <span className="confirm-label">ユーザーID</span>
-                  <span className="confirm-value">{username}</span>
+                <div className={styles.confirmItem}>
+                  <span className={styles.confirmLabel}>ユーザーID</span>
+                  <span className={styles.confirmValue}>{username}</span>
                 </div>
-                <div className="signup-complete-confirm-item">
-                  <span className="confirm-label">表示名</span>
-                  <span className="confirm-value">{displayName}</span>
+                <div className={`${styles.confirmItem} ${styles.noBorder}`}>
+                  <span className={styles.confirmLabel}>表示名</span>
+                  <span className={styles.confirmValue}>{displayName}</span>
                 </div>
-                {user?.app_metadata?.provider === 'email' && (
-                  <div className="signup-complete-confirm-item no-border">
-                    <span className="confirm-label">パスワード</span>
-                    <span className="confirm-value">設定済み</span>
-                  </div>
-                )}
               </div>
             </div>
 
             {/* ビジネス情報 */}
             {userType === 'business' && (
-              <div className="signup-complete-section">
-                <h2 className="signup-complete-section-title">ビジネス情報</h2>
-                <div className="signup-complete-confirm-list">
-                  <div className="signup-complete-confirm-item">
-                    <span className="confirm-label">個人/法人</span>
-                    <span className="confirm-value">
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>ビジネス情報</h2>
+                <div className={styles.confirmList}>
+                  <div className={styles.confirmItem}>
+                    <span className={styles.confirmLabel}>個人/法人</span>
+                    <span className={styles.confirmValue}>
                       {accountType === 'individual' ? '個人' : '法人'}
                     </span>
                   </div>
-                  <div className="signup-complete-confirm-item">
-                    <span className="confirm-label">氏名</span>
-                    <span className="confirm-value">{lastName} {firstName}</span>
+                  <div className={styles.confirmItem}>
+                    <span className={styles.confirmLabel}>氏名</span>
+                    <span className={styles.confirmValue}>{lastName} {firstName}</span>
                   </div>
-                  <div className="signup-complete-confirm-item">
-                    <span className="confirm-label">氏名(かな)</span>
-                    <span className="confirm-value">{lastNameKana} {firstNameKana}</span>
+                  <div className={styles.confirmItem}>
+                    <span className={styles.confirmLabel}>氏名(かな)</span>
+                    <span className={styles.confirmValue}>{lastNameKana} {firstNameKana}</span>
                   </div>
                   {accountType === 'corporate' && companyName && (
-                    <div className="signup-complete-confirm-item">
-                      <span className="confirm-label">会社名</span>
-                      <span className="confirm-value">{companyName}</span>
+                    <div className={styles.confirmItem}>
+                      <span className={styles.confirmLabel}>会社名</span>
+                      <span className={styles.confirmValue}>{companyName}</span>
                     </div>
                   )}
-                  <div className="signup-complete-confirm-item">
-                    <span className="confirm-label">電話番号</span>
-                    <span className="confirm-value">{phone}</span>
+                  <div className={styles.confirmItem}>
+                    <span className={styles.confirmLabel}>電話番号</span>
+                    <span className={styles.confirmValue}>{phone}</span>
                   </div>
-                  <div className="signup-complete-confirm-item no-border">
-                    <span className="confirm-label">住所</span>
-                    <span className="confirm-value" style={{ textAlign: 'right' }}>
+                  <div className={`${styles.confirmItem} ${styles.noBorder}`}>
+                    <span className={styles.confirmLabel}>住所</span>
+                    <span className={styles.confirmValue} style={{ textAlign: 'right' }}>
                       〒{postalCode}<br />
                       {prefecture}{address1}{address2 && ` ${address2}`}
                     </span>
@@ -897,24 +889,24 @@ export function SignupCompleteClient({ user }: Props) {
             )}
 
             {error && (
-              <div className="auth-error">
-                <i className="fas fa-exclamation-circle"></i>
+              <div className="alert alert-error" style={{ marginBottom: 'var(--space-5)' }}>
+                <i className="fa-solid fa-circle-xmark alert-icon"></i>
                 {error}
               </div>
             )}
 
-            <div className="signup-complete-buttons">
+            <div className={styles.buttons}>
               <button
                 type="button"
                 onClick={() => changeStep(userType === 'business' ? 'businessInfo' : 'basicInfo')}
-                className="signup-complete-btn secondary"
+                className="btn btn-secondary"
               >
                 戻る
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className={`signup-complete-btn primary ${loading ? 'disabled' : ''}`}
+                className="btn btn-primary"
               >
                 {loading ? '登録中...' : '登録完了'}
               </button>
@@ -924,4 +916,6 @@ export function SignupCompleteClient({ user }: Props) {
       </div>
     )
   }
+
+  return null
 }

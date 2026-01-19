@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import styles from './HeroSection.module.css'
 
 type SearchTab = 'keyword' | 'category' | 'condition'
 
@@ -46,16 +47,16 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="hero-section">
+    <section className={styles.hero}>
       {/* Background Image */}
-      <div className="hero-background">
-        <div className="hero-background-image" />
-        <div className="hero-background-overlay" />
+      <div className={styles.background}>
+        <div className={styles.backgroundImage} />
+        <div className={styles.backgroundOverlay} />
       </div>
 
       {/* Content */}
-      <div className="hero-content">
-        <p className="hero-catchcopy">
+      <div className={styles.content}>
+        <p className={styles.catchcopy}>
           理想のクリエイターがきっと見つかる
         </p>
         
@@ -63,13 +64,13 @@ export default function HeroSection() {
         <img 
           src="/logotype.png" 
           alt="DoujinWorks"
-          className="hero-logo"
+          className={styles.logo}
         />
 
         {/* Search Container */}
-        <div className="hero-search-container">
+        <div className={styles.searchContainer}>
           {/* Tabs */}
-          <div className="hero-search-tabs">
+          <div className={styles.tabs}>
             {[
               { id: 'keyword' as SearchTab, label: 'キーワードで探す' },
               { id: 'category' as SearchTab, label: 'カテゴリから探す' },
@@ -77,48 +78,48 @@ export default function HeroSection() {
             ].map((tab, index) => (
               <button
                 key={tab.id}
-                className={`hero-search-tab ${activeTab === tab.id ? 'active' : ''} ${
-                  activeTab === tab.id && index === 0 ? 'first' : ''
-                } ${activeTab === tab.id && index === 2 ? 'last' : ''}`}
+                className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''} ${
+                  index === 0 ? styles.tabFirst : ''
+                } ${index === 2 ? styles.tabLast : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 {tab.label}
-                {activeTab === tab.id && <div className="hero-search-tab-arrow" />}
+                {activeTab === tab.id && <div className={styles.tabArrow} />}
               </button>
             ))}
           </div>
 
           {/* Search Box */}
-          <div className="hero-search-box">
+          <div className={styles.searchBox}>
             {/* Keyword Tab */}
             {activeTab === 'keyword' && (
               <>
                 {/* Desktop Layout */}
-                <div className="hero-search-keyword-desktop">
-                  <div className="hero-search-input-wrapper">
+                <div className={styles.keywordDesktop}>
+                  <div className={styles.inputWrapper}>
                     <input
                       type="text"
-                      className="hero-search-input"
+                      className={styles.searchInput}
                       placeholder="クリエイター名・作風・タグで検索..."
                       value={keyword}
                       onChange={(e) => setKeyword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
-                    <button className="hero-search-button" onClick={handleSearch}>
+                    <button className={`btn btn-primary ${styles.searchButton}`} onClick={handleSearch}>
                       検索
                     </button>
                   </div>
                   
                   {/* Popular Tags */}
-                  <div className="hero-popular-tags">
-                    <span className="hero-popular-label">
+                  <div className={styles.popularTags}>
+                    <span className={styles.popularLabel}>
                       <i className="fas fa-lightbulb"></i>
                       人気の検索
                     </span>
                     {popularTags.map((tag) => (
                       <span 
                         key={tag}
-                        className="hero-popular-tag"
+                        className={styles.popularTag}
                         onClick={() => handleTagClick(tag)}
                       >
                         {tag}
@@ -128,26 +129,26 @@ export default function HeroSection() {
                 </div>
 
                 {/* Mobile Layout */}
-                <div className="hero-search-keyword-mobile">
+                <div className={styles.keywordMobile}>
                   <input
                     type="text"
-                    className="hero-search-input"
+                    className={styles.searchInput}
                     placeholder="クリエイター名・作風・タグで検索..."
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
                   
-                  {/* Popular Tags - Between input and button on mobile */}
-                  <div className="hero-popular-tags">
-                    <span className="hero-popular-label">
+                  {/* Popular Tags */}
+                  <div className={styles.popularTags}>
+                    <span className={styles.popularLabel}>
                       <i className="fas fa-lightbulb"></i>
                       人気の検索
                     </span>
                     {popularTags.map((tag) => (
                       <span 
                         key={tag}
-                        className="hero-popular-tag"
+                        className={styles.popularTag}
                         onClick={() => handleTagClick(tag)}
                       >
                         {tag}
@@ -155,7 +156,7 @@ export default function HeroSection() {
                     ))}
                   </div>
 
-                  <button className="hero-search-button hero-search-button-full" onClick={handleSearch}>
+                  <button className={`btn btn-primary ${styles.searchButtonFull}`} onClick={handleSearch}>
                     検索
                   </button>
                 </div>
@@ -164,11 +165,11 @@ export default function HeroSection() {
 
             {/* Category Tab */}
             {activeTab === 'category' && (
-              <div className="hero-category-grid">
+              <div className={styles.categoryGrid}>
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    className="hero-category-button"
+                    className={styles.categoryButton}
                     onClick={() => handleCategoryClick(cat.id)}
                   >
                     <i className={`fas ${cat.icon}`}></i>
@@ -180,11 +181,11 @@ export default function HeroSection() {
 
             {/* Condition Tab */}
             {activeTab === 'condition' && (
-              <div className="hero-search-condition">
-                <div className="hero-condition-row">
-                  <span className="hero-condition-label">予算</span>
+              <div className={styles.conditionContent}>
+                <div className={styles.conditionRow}>
+                  <span className={styles.conditionLabel}>予算</span>
                   <select 
-                    className="hero-condition-select"
+                    className={styles.conditionSelect}
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
                   >
@@ -197,38 +198,36 @@ export default function HeroSection() {
                     <option value="100000">〜100,000円</option>
                   </select>
                 </div>
-                <div className="hero-condition-row">
-                  <span className="hero-condition-label">受付状況</span>
-                  <div 
-                    className={`hero-checkbox-wrapper ${acceptingOnly ? 'checked' : ''}`}
-                    onClick={() => setAcceptingOnly(!acceptingOnly)}
-                  >
-                    <div className="hero-checkbox">
-                      {acceptingOnly && <i className="fas fa-check"></i>}
-                    </div>
-                    <span className="hero-checkbox-label">
-                      受付中のクリエイターのみ表示
-                    </span>
-                  </div>
+                <div className={styles.conditionRow}>
+                  <span className={styles.conditionLabel}>受付状況</span>
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={acceptingOnly}
+                      onChange={(e) => setAcceptingOnly(e.target.checked)}
+                    />
+                    <span className="checkbox-mark"></span>
+                    受付中のクリエイターのみ表示
+                  </label>
                 </div>
-                <button className="hero-search-button hero-search-button-full" onClick={handleSearch}>
+                <button className={`btn btn-primary ${styles.searchButtonFull}`} onClick={handleSearch}>
                   この条件で検索
                 </button>
               </div>
             )}
           </div>
 
-          {/* CTA Buttons - 2つ横並び */}
-          <div className="hero-cta-buttons">
-            <Link href="/portfolio" className="hero-cta-button">
+          {/* CTA Buttons */}
+          <div className={styles.ctaButtons}>
+            <Link href="/portfolio" className={styles.ctaButton}>
               <i className="fas fa-images"></i>
               作品から探す
-              <i className="fas fa-arrow-right hero-cta-arrow"></i>
+              <i className={`fas fa-arrow-right ${styles.ctaArrow}`}></i>
             </Link>
-            <Link href="/requests" className="hero-cta-button hero-cta-button-secondary">
+            <Link href="/requests" className={`${styles.ctaButton} ${styles.ctaButtonSecondary}`}>
               <i className="fas fa-briefcase"></i>
               お仕事を探す
-              <i className="fas fa-arrow-right hero-cta-arrow"></i>
+              <i className={`fas fa-arrow-right ${styles.ctaArrow}`}></i>
             </Link>
           </div>
         </div>

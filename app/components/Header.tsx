@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { getUnreadCount, markAsRead } from '@/utils/notifications'
+import styles from './Header.module.css'
 
 type UnreadMessage = {
   chat_room_id: string
@@ -38,9 +39,26 @@ export default function Header() {
   const [draftCount, setDraftCount] = useState(0)
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   
   const router = useRouter()
   const pathname = usePathname()
+
+  // テーマの初期化
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light')
+    setTheme(initialTheme)
+    document.body.dataset.theme = initialTheme
+  }, [])
+
+  // テーマ切り替え
+  const toggleTheme = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme)
+    document.body.dataset.theme = newTheme
+    localStorage.setItem('theme', newTheme)
+  }
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768)
@@ -108,10 +126,12 @@ export default function Header() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      if (!target.closest('.profile-menu-container')) setIsMenuOpen(false)
-      if (!target.closest('.message-menu-container')) setIsMessageMenuOpen(false)
-      if (!target.closest('.notification-menu-container')) setIsNotificationMenuOpen(false)
-      if (!target.closest('.upload-menu-container')) setIsUploadMenuOpen(false)
+      if (!target.closest(`.${styles.profileMenuContainer}`)) setIsMenuOpen(false)
+      if (!target.closest(`.${styles.menuContainer}`)) {
+        setIsMessageMenuOpen(false)
+        setIsNotificationMenuOpen(false)
+      }
+      if (!target.closest(`.${styles.uploadMenuContainer}`)) setIsUploadMenuOpen(false)
     }
     if (isMenuOpen || isMessageMenuOpen || isNotificationMenuOpen || isUploadMenuOpen) {
       document.addEventListener('click', handleClickOutside)
@@ -296,53 +316,74 @@ export default function Header() {
     setIsUploadMenuOpen(false)
   }
 
+  // テーマスイッチコンポーネント
+  const ThemeSwitch = () => (
+    <div className="theme-switch theme-switch-sm">
+      <button
+        className={`theme-switch-btn ${theme === 'light' ? 'active' : ''}`}
+        onClick={() => toggleTheme('light')}
+        aria-label="ライトモード"
+      >
+        <i className="fas fa-sun"></i>
+      </button>
+      <button
+        className={`theme-switch-btn ${theme === 'dark' ? 'active' : ''}`}
+        onClick={() => toggleTheme('dark')}
+        aria-label="ダークモード"
+      >
+        <i className="fas fa-moon"></i>
+      </button>
+    </div>
+  )
+
   // メッセージメニュー
   const MessageMenu = () => (
-    <div className="message-menu-container" style={{ position: 'relative' }}>
+    <div className={styles.menuContainer}>
       <button
-        className="header-icon-btn"
+        className={styles.iconBtn}
         onClick={() => { closeAllMenus(); setIsMessageMenuOpen(!isMessageMenuOpen) }}
+        aria-label="メッセージ"
       >
         <i className="far fa-envelope"></i>
         {unreadCount > 0 && (
-          <span className="header-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+          <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
       </button>
 
       {isMessageMenuOpen && (
         <>
-          {isMobile && <div className="header-overlay" onClick={() => setIsMessageMenuOpen(false)} />}
-          <div className="header-dropdown" style={isMobile ? { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, borderRadius: 0, display: 'flex', flexDirection: 'column' } : {}}>
-            <div className="header-dropdown-header">メッセージ</div>
+          {isMobile && <div className={styles.overlay} onClick={() => setIsMessageMenuOpen(false)} />}
+          <div className={`${styles.dropdown} ${isMobile ? styles.dropdownMobile : ''}`}>
+            <div className={styles.dropdownHeader}>メッセージ</div>
             {recentMessages.length === 0 ? (
-              <div className="header-empty">新しいメッセージはありません</div>
+              <div className={styles.emptyState}>新しいメッセージはありません</div>
             ) : (
-              <div className="header-dropdown-content" style={isMobile ? { flex: 1 } : {}}>
+              <div className={styles.dropdownContent}>
                 {recentMessages.map((message, index) => (
                   <Link
                     key={`${message.chat_room_id}-${index}`}
                     href={`/messages/${message.chat_room_id}`}
-                    className="header-message-item"
+                    className={styles.messageItem}
                     onClick={() => setIsMessageMenuOpen(false)}
                   >
-                    <div className="header-message-avatar">
+                    <div className={`avatar avatar-sm ${styles.messageAvatar}`}>
                       {message.sender_avatar ? (
                         <img src={message.sender_avatar} alt="" />
                       ) : (
-                        <i className="fas fa-user" style={{ color: '#888888' }}></i>
+                        <i className="fas fa-user"></i>
                       )}
                     </div>
-                    <div className="header-message-content">
-                      <div className="header-message-name">{message.sender_name}</div>
-                      <div className="header-message-text">{truncateText(message.content, 40)}</div>
+                    <div className={styles.messageContent}>
+                      <div className={styles.messageName}>{message.sender_name}</div>
+                      <div className={styles.messageText}>{truncateText(message.content, 40)}</div>
                     </div>
-                    <div className="header-message-time">{formatMessageTime(message.created_at)}</div>
+                    <div className={styles.messageTime}>{formatMessageTime(message.created_at)}</div>
                   </Link>
                 ))}
               </div>
             )}
-            <div className="header-dropdown-footer">
-              <Link href="/messages" onClick={() => setIsMessageMenuOpen(false)}>
+            <div className={styles.dropdownFooter}>
+              <Link href="/messages" className="link" onClick={() => setIsMessageMenuOpen(false)}>
                 メッセージを確認する
               </Link>
             </div>
@@ -354,60 +395,61 @@ export default function Header() {
 
   // 通知メニュー
   const NotificationMenu = () => (
-    <div className="notification-menu-container" style={{ position: 'relative' }}>
+    <div className={styles.menuContainer}>
       <button
-        className="header-icon-btn"
+        className={styles.iconBtn}
         onClick={() => { closeAllMenus(); setIsNotificationMenuOpen(!isNotificationMenuOpen); setNotificationTab('notifications') }}
+        aria-label="通知"
       >
         <i className="far fa-bell"></i>
         {notificationUnreadCount > 0 && (
-          <span className="header-badge">{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</span>
+          <span className={styles.badge}>{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</span>
         )}
       </button>
 
       {isNotificationMenuOpen && (
         <>
-          {isMobile && <div className="header-overlay" onClick={() => setIsNotificationMenuOpen(false)} />}
-          <div className="header-dropdown" style={isMobile ? { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, borderRadius: 0, display: 'flex', flexDirection: 'column' } : {}}>
-            <div className="header-notification-tabs">
+          {isMobile && <div className={styles.overlay} onClick={() => setIsNotificationMenuOpen(false)} />}
+          <div className={`${styles.dropdown} ${isMobile ? styles.dropdownMobile : ''}`}>
+            <div className={styles.notificationTabs}>
               <button
-                className={`header-notification-tab ${notificationTab === 'notifications' ? 'active' : ''}`}
+                className={`${styles.notificationTab} ${notificationTab === 'notifications' ? styles.active : ''}`}
                 onClick={() => setNotificationTab('notifications')}
               >
                 通知
               </button>
               <button
-                className={`header-notification-tab ${notificationTab === 'announcements' ? 'active' : ''}`}
+                className={`${styles.notificationTab} ${notificationTab === 'announcements' ? styles.active : ''}`}
                 onClick={() => setNotificationTab('announcements')}
               >
                 お知らせ
               </button>
             </div>
-            <div className="header-dropdown-content" style={isMobile ? { flex: 1 } : {}}>
+            <div className={styles.dropdownContent}>
               {notificationTab === 'notifications' ? (
                 notifications.length === 0 ? (
-                  <div className="header-empty">新しい通知はありません</div>
+                  <div className={styles.emptyState}>新しい通知はありません</div>
                 ) : (
                   notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className="header-message-item"
+                      className={`${styles.messageItem} ${!notification.read ? styles.unread : ''}`}
                       onClick={() => handleNotificationClick(notification)}
-                      style={{ cursor: notification.link ? 'pointer' : 'default', backgroundColor: notification.read ? 'transparent' : '#EEF0F3' }}
+                      style={{ cursor: notification.link ? 'pointer' : 'default' }}
                     >
-                      <div className="header-message-avatar">
-                        <i className={`fas ${getNotificationIcon(notification.type)}`} style={{ color: '#5B7C99' }}></i>
+                      <div className={styles.notificationIcon}>
+                        <i className={`fas ${getNotificationIcon(notification.type)}`}></i>
                       </div>
-                      <div className="header-message-content">
-                        <div className="header-message-name">{notification.title}</div>
-                        <div className="header-message-text">{notification.message}</div>
+                      <div className={styles.messageContent}>
+                        <div className={styles.messageName}>{notification.title}</div>
+                        <div className={styles.messageText}>{notification.message}</div>
                       </div>
-                      <div className="header-message-time">{formatMessageTime(notification.created_at)}</div>
+                      <div className={styles.messageTime}>{formatMessageTime(notification.created_at)}</div>
                     </div>
                   ))
                 )
               ) : (
-                <div className="header-empty">新しいお知らせはありません</div>
+                <div className={styles.emptyState}>新しいお知らせはありません</div>
               )}
             </div>
           </div>
@@ -418,9 +460,9 @@ export default function Header() {
 
   // プロフィールメニュー
   const ProfileMenu = () => (
-    <div className="profile-menu-container" style={{ position: 'relative' }}>
-      <button className="header-avatar-btn" onClick={() => { closeAllMenus(); setIsMenuOpen(!isMenuOpen) }}>
-        <div className="header-avatar">
+    <div className={styles.profileMenuContainer}>
+      <button className={styles.avatarBtn} onClick={() => { closeAllMenus(); setIsMenuOpen(!isMenuOpen) }}>
+        <div className="avatar avatar-sm">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" />
           ) : (
@@ -431,13 +473,14 @@ export default function Header() {
 
       {isMenuOpen && (
         <>
-          {isMobile && <div className="header-overlay" onClick={() => setIsMenuOpen(false)} />}
-          <div className="header-dropdown" style={isMobile ? { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, borderRadius: 0 } : {}}>
-            <Link href="/dashboard" className="header-dropdown-item" onClick={() => setIsMenuOpen(false)}>
+          {isMobile && <div className={styles.overlay} onClick={() => setIsMenuOpen(false)} />}
+          <div className={`${styles.dropdown} ${styles.dropdownRight} ${isMobile ? styles.dropdownMobile : ''}`}>
+            <Link href="/dashboard" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}>
               <i className="fas fa-th-large"></i>
               ダッシュボード
             </Link>
-            <button className="header-dropdown-item" onClick={handleLogout}>
+            <div className={styles.dropdownDivider}></div>
+            <button className={styles.dropdownItem} onClick={handleLogout}>
               <i className="fas fa-sign-out-alt"></i>
               ログアウト
             </button>
@@ -449,26 +492,26 @@ export default function Header() {
 
   // 投稿メニュー
   const UploadMenu = () => (
-    <div className="upload-menu-container" style={{ position: 'relative' }}>
-      <div style={{ display: 'flex' }}>
-        <Link href="/portfolio/upload" className="header-upload-btn" style={{ borderRadius: '24px 0 0 24px', borderRight: '1px solid rgba(91, 124, 153, 0.2)' }}>
+    <div className={styles.uploadMenuContainer}>
+      <div className={styles.uploadBtnGroup}>
+        <Link href="/portfolio/upload" className="btn btn-primary btn-sm">
           <i className="fas fa-pen"></i>
-          {!isMobile && '投稿'}
+          {!isMobile && <span>投稿</span>}
         </Link>
         <button
-          className="header-upload-btn"
-          style={{ borderRadius: '0 24px 24px 0', padding: isMobile ? '8px 10px' : '10px 14px' }}
+          className={`btn btn-primary btn-sm ${styles.uploadDropdownBtn}`}
           onClick={() => { closeAllMenus(); setIsUploadMenuOpen(!isUploadMenuOpen) }}
+          aria-label="その他の投稿オプション"
         >
-          <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
+          <i className="fas fa-chevron-down"></i>
         </button>
       </div>
 
       {isUploadMenuOpen && (
         <>
-          {isMobile && <div className="header-overlay" onClick={() => setIsUploadMenuOpen(false)} />}
-          <div className="header-dropdown" style={isMobile ? { position: 'fixed', top: '60px', left: 0, right: 0, bottom: 0, borderRadius: 0 } : { minWidth: '180px' }}>
-            <Link href="/portfolio/drafts" className="header-dropdown-item" onClick={() => setIsUploadMenuOpen(false)}>
+          {isMobile && <div className={styles.overlay} onClick={() => setIsUploadMenuOpen(false)} />}
+          <div className={`${styles.dropdown} ${styles.dropdownRight} ${isMobile ? styles.dropdownMobile : ''}`}>
+            <Link href="/portfolio/drafts" className={styles.dropdownItem} onClick={() => setIsUploadMenuOpen(false)}>
               <i className="fas fa-file-alt"></i>
               下書き ({draftCount})
             </Link>
@@ -479,30 +522,33 @@ export default function Header() {
   )
 
   return (
-    <header className="header">
-      <div className="header-inner">
-        <Link href="/">
-          <img src="/logotype.png" alt="同人ワークス" className="header-logo" />
+    <header className={styles.header}>
+      <div className={styles.inner}>
+        <Link href="/" className={styles.logoLink}>
+          <img src="/logotype.png" alt="同人ワークス" className={styles.logo} />
         </Link>
 
-        {/* 検索ボックス（デスクトップ） */}
-        <div className="header-search hidden-mobile">
-          <i className="fas fa-search header-search-icon"></i>
-          <input
-            type="text"
-            placeholder="作品やクリエイターを検索"
-            className="header-search-input"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                const query = (e.target as HTMLInputElement).value
-                if (query.trim()) router.push(`/search?q=${encodeURIComponent(query)}`)
-              }
-            }}
-          />
-        </div>
+        {/* 検索バー（デスクトップ） */}
+        {!isMobile && (
+          <div className="search-bar">
+            <i className="fas fa-search search-icon"></i>
+            <input
+              type="text"
+              placeholder="作品やクリエイターを検索"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const query = (e.target as HTMLInputElement).value
+                  if (query.trim()) router.push(`/search?q=${encodeURIComponent(query)}`)
+                }
+              }}
+            />
+          </div>
+        )}
 
         {/* ナビゲーション */}
-        <nav className="header-nav">
+        <nav className={styles.nav}>
+          <ThemeSwitch />
+          
           {user ? (
             <>
               <MessageMenu />
@@ -511,14 +557,14 @@ export default function Header() {
               <UploadMenu />
             </>
           ) : (
-            <>
-              <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="header-auth-btn login">
+            <div className={styles.authButtons}>
+              <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} className="btn btn-secondary btn-sm">
                 ログイン
               </Link>
-              <Link href="/signup" className="header-auth-btn signup">
+              <Link href="/signup" className="btn btn-primary btn-sm">
                 会員登録
               </Link>
-            </>
+            </div>
           )}
         </nav>
       </div>

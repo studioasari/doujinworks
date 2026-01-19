@@ -33,19 +33,38 @@ export async function POST(request: NextRequest) {
     const contractId = session.metadata?.contract_id
 
     if (contractId) {
+      const paidAt = new Date().toISOString()
+
       // work_contracts テーブルを更新
-      const { error } = await supabase
+      const { data: contractData, error } = await supabase
         .from('work_contracts')
         .update({
           status: 'paid',
-          paid_at: new Date().toISOString(),
+          paid_at: paidAt,
           payment_intent_id: session.payment_intent as string,
         })
         .eq('id', contractId)
+        .select('work_request_id')
+        .single()
 
       if (error) {
         console.error('DB更新エラー:', error)
         return NextResponse.json({ error: 'Database Error' }, { status: 500 })
+      }
+
+      // work_requests テーブルも更新
+      if (contractData?.work_request_id) {
+        const { error: requestError } = await supabase
+          .from('work_requests')
+          .update({
+            status: 'paid',
+            paid_at: paidAt,
+          })
+          .eq('id', contractData.work_request_id)
+
+        if (requestError) {
+          console.error('work_requests更新エラー:', requestError)
+        }
       }
 
       console.log('仮払い完了 - 契約ID:', contractId)

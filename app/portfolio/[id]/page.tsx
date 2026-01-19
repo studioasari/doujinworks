@@ -8,7 +8,6 @@ import '../../globals.css'
 import { supabase } from '@/utils/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
-import LoadingScreen from '../../components/LoadingScreen'
 
 // 型定義（実際のDBスキーマに合わせる）
 type PortfolioItem = {
@@ -530,7 +529,23 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
     return []
   }
 
-  if (loading) return <LoadingScreen message="読み込み中..." />
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#E8ECEF',
+        color: '#888888'
+      }}>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <i className="fas fa-spinner fa-spin" style={{ fontSize: '48px', marginBottom: '16px' }}></i>
+        <p style={{ fontSize: '15px', margin: 0 }}>読み込み中...</p>
+      </div>
+    )
+  }
 
   if (!work || !creator) {
     return (
@@ -551,6 +566,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
       <div className="portfolio-detail-page">
         <div className="portfolio-detail-container">
@@ -787,7 +803,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                     <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#888', marginBottom: '12px' }}>タグ</h3>
                     <div className="portfolio-tags">
                       {work.tags.map((tag, index) => (
-                        <Link key={index} href={`/portfolio?tag=${encodeURIComponent(tag)}`} className="portfolio-tag">#{tag}</Link>
+                        <Link key={index} href={`/tags/${encodeURIComponent(tag)}`} className="portfolio-tag">#{tag}</Link>
                       ))}
                     </div>
                   </div>
@@ -826,7 +842,7 @@ export default function WorkDetailPage({ params }: { params: Promise<{ id: strin
                   )}
                   {currentUserId ? (
                     <>
-                      <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={replyingTo ? `@${replyingToUsername} に返信...` : 'コメントを入力...'} style={{ width: '100%', minHeight: '100px', padding: '16px', border: 'none', borderRadius: '12px', fontSize: '14px', resize: 'vertical', marginBottom: '12px', background: '#FFFFFF' }} />
+                      <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder={replyingTo ? `@${replyingToUsername} に返信...` : 'コメントを入力...'} style={{ width: '100%', minHeight: '100px', padding: '16px', border: 'none', borderRadius: '12px', fontSize: '14px', resize: 'vertical', marginBottom: '12px', background: '#E8ECEF', boxShadow: 'inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff', outline: 'none' }} />
                       <button onClick={handleCommentSubmit} className="btn-primary" disabled={!commentText.trim()}>{replyingTo ? '返信する' : 'コメントする'}</button>
                     </>
                   ) : (

@@ -1065,44 +1065,58 @@ export default function ContractDetailPage() {
   }
 
   async function handlePaymentSuccessFallback() {
-    try {
-      const { data: currentContract } = await supabase
-        .from('work_contracts')
-        .select('status, paid_at')
-        .eq('id', contractId)
-        .single()
+      try {
+        const { data: currentContract } = await supabase
+          .from('work_contracts')
+          .select('status, paid_at, work_request_id')
+          .eq('id', contractId)
+          .single()
 
-      if (currentContract?.status === 'paid' && currentContract?.paid_at) {
+        if (currentContract?.status === 'paid' && currentContract?.paid_at) {
+          alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+          await fetchContract()
+          return
+        }
+
+        const paidAt = new Date().toISOString()
+
+        // work_contracts を更新
+        await supabase
+          .from('work_contracts')
+          .update({
+            status: 'paid',
+            paid_at: paidAt
+          })
+          .eq('id', contractId)
+          .eq('status', 'contracted')
+
+        // work_requests も更新
+        if (currentContract?.work_request_id) {
+          await supabase
+            .from('work_requests')
+            .update({
+              status: 'paid',
+              paid_at: paidAt
+            })
+            .eq('id', currentContract.work_request_id)
+        }
+
+        if (contract?.contractor_id) {
+          await createNotification(
+            contract.contractor_id,
+            'paid',
+            '仮払いが完了しました',
+            `「${(contract.work_request as any)?.title}」の仮払いが完了しました。作業を開始してください。`,
+            `/requests/${requestId}/contracts/${contractId}`
+          )
+        }
+
         alert('仮払いが完了しました！クリエイターが作業を開始できます。')
         await fetchContract()
-        return
+      } catch (error) {
+        console.error('仮払い完了処理エラー:', error)
       }
-
-      await supabase
-        .from('work_contracts')
-        .update({
-          status: 'paid',
-          paid_at: new Date().toISOString()
-        })
-        .eq('id', contractId)
-        .eq('status', 'contracted')
-
-      if (contract?.contractor_id) {
-        await createNotification(
-          contract.contractor_id,
-          'paid',
-          '仮払いが完了しました',
-          `「${(contract.work_request as any)?.title}」の仮払いが完了しました。作業を開始してください。`,
-          `/requests/${requestId}/contracts/${contractId}`
-        )
-      }
-
-      alert('仮払いが完了しました！クリエイターが作業を開始できます。')
-      await fetchContract()
-    } catch (error) {
-      console.error('仮払い完了処理エラー:', error)
     }
-  }
 
   async function handleSubmitDelivery(e: React.FormEvent) {
     e.preventDefault()
@@ -1190,17 +1204,37 @@ export default function ContractDetailPage() {
         })
         .eq('id', selectedDeliveryId)
 
-      if (reviewAction === 'approve') {
-        await supabase
-          .from('work_contracts')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', contractId)
+        if (reviewAction === 'approve') {
+          await supabase
+            .from('work_contracts')
+            .update({
+              status: 'completed',
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', contractId)
 
-        if (contract?.contractor_id) {
-          await createNotification(
+          // paymentsレコードを作成（振込管理用）
+          if (contract) {
+            const finalPrice = contract.final_price
+            const platformFee = Math.floor(finalPrice * 0.12)
+            const creatorAmount = finalPrice - platformFee
+            const completedMonth = new Date().toISOString().slice(0, 7)
+
+            await supabase
+              .from('payments')
+              .insert({
+                work_request_id: contract.work_request_id,
+                creator_id: contract.contractor_id,
+                amount: creatorAmount,
+                status: 'pending',
+                completed_month: completedMonth,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+          }
+
+          if (contract?.contractor_id) {
+            await createNotification(
             contract.contractor_id,
             'completed',
             '検収が完了しました',

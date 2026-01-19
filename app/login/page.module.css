@@ -1,0 +1,215 @@
+/* ログインページ固有のレイアウト */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--bg-base);
+}
+
+.container {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-12);
+  max-width: 1200px;
+  width: 100%;
+}
+
+/* 左側：ロゴエリア */
+.logoArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  height: 50px;
+  width: auto;
+}
+
+/* 右側：フォームカード */
+.cardArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+/* フォームグループ */
+.formGroup {
+  margin-bottom: var(--space-5);
+}
+
+/* ラベル行（パスワードを忘れたリンク付き） */
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+/* 入力欄ラッパー（アイコン付き） */
+.inputWrapper {
+  position: relative;
+}
+
+/* パスワード表示切り替えボタン */
+.passwordToggle {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  color: var(--text-secondary);
+}
+
+.passwordToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 認証メール再送ボタン */
+.resendBtn {
+  display: block;
+  margin-top: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+}
+
+.resendBtn:hover {
+  color: var(--accent-primary-hover);
+}
+
+.resendBtn:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* 区切り線（または） */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.dividerText {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ソーシャルボタン群 */
+.socialButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.socialBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.socialBtn:hover {
+  background: var(--bg-hover);
+}
+
+.socialBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.socialBtn img {
+  width: 20px;
+  height: 20px;
+}
+
+/* フッター（新規登録リンク） */
+.footer {
+  text-align: center;
+  margin-top: var(--space-6);
+}
+
+/* 送信ボタン（幅100%） */
+.submitBtn {
+  width: 100%;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-4);
+    align-items: flex-start;
+    padding-top: var(--space-8);
+  }
+  
+  .container {
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .logoArea {
+    display: none;
+  }
+  
+  .card {
+    max-width: 100%;
+  }
+}

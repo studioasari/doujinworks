@@ -1,15 +1,11 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { Metadata } from 'next'
 import { UpdatePasswordClient } from './client'
 
-export default async function UpdatePasswordPage() {
-  // サーバー側でセッションチェック
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    redirect('/reset-password?error=invalid_session')
-  }
-  
+export const metadata: Metadata = {
+  title: '新しいパスワードを設定 | 同人ワークス',
+  description: '新しいパスワードを設定してください。',
+}
+
+export default function UpdatePasswordPage() {
   return <UpdatePasswordClient />
 }

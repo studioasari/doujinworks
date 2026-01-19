@@ -1,0 +1,285 @@
+/* サインアップページ固有のレイアウト */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--bg-base);
+}
+
+.container {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-12);
+  max-width: 1200px;
+  width: 100%;
+}
+
+/* 左側：ロゴエリア */
+.logoArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  height: 50px;
+  width: auto;
+}
+
+/* 右側：フォームカード */
+.cardArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+/* フォームグループ */
+.formGroup {
+  margin-bottom: var(--space-5);
+}
+
+/* ラベルのヒント */
+.labelHint {
+  font-weight: 400;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* 入力欄ラッパー（アイコン付き） */
+.inputWrapper {
+  position: relative;
+}
+
+.inputWrapper .formInput {
+  max-width: 100%;
+  padding-right: 48px;
+}
+
+/* パスワード表示切り替えボタン */
+.passwordToggle {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.passwordToggle:hover {
+  color: var(--text-secondary);
+}
+
+.passwordToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* チェックマークアイコン（パスワード一致時） */
+.checkIcon {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--status-success);
+  font-size: var(--text-sm);
+}
+
+/* フィールドエラーメッセージ */
+.fieldError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--status-error);
+  font-size: var(--text-xs);
+  margin-top: var(--space-2);
+}
+
+/* 区切り線（または） */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.dividerText {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ソーシャルボタン群 */
+.socialButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.socialBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.socialBtn:hover {
+  background: var(--bg-hover);
+}
+
+.socialBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.socialBtn img {
+  width: 20px;
+  height: 20px;
+}
+
+/* フッター（ログインリンク） */
+.footer {
+  text-align: center;
+  margin-top: var(--space-6);
+}
+
+/* チェックボックス行（リンク分離版） */
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkboxText {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* モーダル内チェックボックス行 */
+.modalCheckboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* 送信ボタン（幅100%） */
+.submitBtn {
+  width: 100%;
+}
+
+/* モーダル */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  padding: var(--space-4);
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.modalDescription {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  margin-bottom: var(--space-5);
+}
+
+.modalBody {
+  padding: var(--space-5);
+}
+
+.modalFooter {
+  padding: var(--space-5);
+  display: flex;
+  gap: var(--space-3);
+}
+
+.modalBtn {
+  flex: 1;
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-4);
+    align-items: flex-start;
+    padding-top: var(--space-8);
+  }
+  
+  .container {
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  
+  .logoArea {
+    display: none;
+  }
+  
+  .card {
+    max-width: 100%;
+  }
+}

@@ -14,6 +14,8 @@ type BankAccount = {
   account_type: string
   account_number: string
   account_holder_name: string
+  bank_code?: string
+  branch_code?: string
 }
 
 type BankSuggestion = {
@@ -119,6 +121,9 @@ export default function BankAccountClient() {
   const [searchingBank, setSearchingBank] = useState(false)
   const [searchingBranch, setSearchingBranch] = useState(false)
   
+  // 編集モード（既存データがある場合、銀行コードなしでも支店編集を許可）
+  const [isEditMode, setIsEditMode] = useState(false)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -172,6 +177,15 @@ export default function BankAccountClient() {
       setBankAccountType(data.account_type)
       setAccountNumber(data.account_number)
       setAccountHolderName(data.account_holder_name)
+      // 既存データがある場合は編集モードをON
+      setIsEditMode(true)
+      // bank_codeとbranch_codeがDBに保存されている場合は読み込む
+      if (data.bank_code) {
+        setBankCode(data.bank_code)
+      }
+      if (data.branch_code) {
+        setBranchCode(data.branch_code)
+      }
     }
   }
 
@@ -219,6 +233,7 @@ export default function BankAccountClient() {
     setBankCode('')
     setBranchName('')
     setBranchCode('')
+    setIsEditMode(false) // 銀行名を変更したら編集モード解除
     setShowBankSuggestions(true)
     searchBanks(value)
   }
@@ -237,7 +252,9 @@ export default function BankAccountClient() {
     setBranchName(value)
     setBranchCode('')
     setShowBranchSuggestions(true)
-    searchBranches(value)
+    if (bankCode) {
+      searchBranches(value)
+    }
   }
 
   // 支店選択時
@@ -246,6 +263,10 @@ export default function BankAccountClient() {
     setBranchCode(branch.code)
     setShowBranchSuggestions(false)
   }
+
+  // 支店入力が可能かどうかの判定
+  // bankCodeがある、または編集モードで銀行名が入力されている場合は編集可能
+  const canEditBranch = bankCode || (isEditMode && bankName.trim().length > 0)
 
   async function handleSaveBankAccount() {
     if (!bankName.trim() || !branchName.trim() || !accountNumber.trim() || !accountHolderName.trim()) {
@@ -261,40 +282,55 @@ export default function BankAccountClient() {
       branch_name: branchName.trim(),
       account_type: bankAccountType,
       account_number: accountNumber.trim(),
-      account_holder_name: accountHolderName.trim()
+      account_holder_name: accountHolderName.trim(),
+      // bank_codeとbranch_codeも保存（DBにカラムがあれば）
+      ...(bankCode && { bank_code: bankCode }),
+      ...(branchCode && { branch_code: branchCode })
     }
 
-    if (bankAccount) {
-      const { error } = await supabase
-        .from('bank_accounts')
-        .update({
-          ...bankData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', bankAccount.id)
+    try {
+      if (bankAccount) {
+        const { error } = await supabase
+          .from('bank_accounts')
+          .update({
+            ...bankData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bankAccount.id)
 
-      if (error) {
-        console.error('口座情報更新エラー:', error)
-        setToast({ message: '口座情報の更新に失敗しました', type: 'error' })
-      } else {
+        if (error) {
+          console.error('口座情報更新エラー:', error)
+          setToast({ message: '口座情報の更新に失敗しました', type: 'error' })
+          setProcessing(false)
+          return
+        }
+        
         setToast({ message: '口座情報を更新しました', type: 'success' })
-        setTimeout(() => router.push('/wallet/earnings'), 1500)
-      }
-    } else {
-      const { error } = await supabase
-        .from('bank_accounts')
-        .insert(bankData)
-
-      if (error) {
-        console.error('口座情報登録エラー:', error)
-        setToast({ message: '口座情報の登録に失敗しました', type: 'error' })
       } else {
-        setToast({ message: '口座情報を登録しました', type: 'success' })
-        setTimeout(() => router.push('/wallet/earnings'), 1500)
-      }
-    }
+        const { error } = await supabase
+          .from('bank_accounts')
+          .insert(bankData)
 
-    setProcessing(false)
+        if (error) {
+          console.error('口座情報登録エラー:', error)
+          setToast({ message: '口座情報の登録に失敗しました', type: 'error' })
+          setProcessing(false)
+          return
+        }
+        
+        setToast({ message: '口座情報を登録しました', type: 'success' })
+      }
+
+      // 成功時のみリダイレクト
+      // router.pushの代わりにwindow.location.hrefを使用して確実にリダイレクト
+      setTimeout(() => {
+        window.location.href = '/wallet/earnings'
+      }, 1500)
+    } catch (err) {
+      console.error('予期せぬエラー:', err)
+      setToast({ message: '予期せぬエラーが発生しました', type: 'error' })
+      setProcessing(false)
+    }
   }
 
   async function handleDeleteBankAccount() {
@@ -309,7 +345,9 @@ export default function BankAccountClient() {
       setToast({ message: '削除に失敗しました', type: 'error' })
     } else {
       setToast({ message: '口座情報を削除しました', type: 'success' })
-      setTimeout(() => router.push('/wallet/earnings'), 1500)
+      setTimeout(() => {
+        window.location.href = '/wallet/earnings'
+      }, 1500)
     }
   }
 
@@ -398,10 +436,10 @@ export default function BankAccountClient() {
                       type="text"
                       value={branchName}
                       onChange={(e) => handleBranchNameChange(e.target.value)}
-                      placeholder={!bankCode ? "先に銀行を選択してください" : "例: 新宿支店"}
-                      disabled={!bankCode}
+                      placeholder={!canEditBranch ? "先に銀行を選択してください" : "例: 新宿支店"}
+                      disabled={!canEditBranch}
                       autoComplete="off"
-                      className={`bank-form-input ${!bankCode ? 'disabled' : ''}`}
+                      className={`bank-form-input ${!canEditBranch ? 'disabled' : ''}`}
                       onFocus={() => bankCode && setShowBranchSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowBranchSuggestions(false), 200)}
                     />
@@ -424,6 +462,13 @@ export default function BankAccountClient() {
                           <div className="bank-suggestion-info">{branch.kana} · {branch.code}</div>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {/* 編集モードで銀行コードがない場合のヒント */}
+                  {isEditMode && !bankCode && bankName && (
+                    <div className="bank-form-hint">
+                      ※ 銀行名を変更する場合は、候補から選択し直してください
                     </div>
                   )}
                 </div>
