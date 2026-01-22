@@ -16,5 +16,17 @@ export default async function SignupCompletePage() {
     redirect('/login')
   }
 
+  // プロフィールが既に存在するか確認
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('account_type')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  // プロフィールが完成している場合はダッシュボードへリダイレクト
+  if (profile && profile.account_type) {
+    redirect('/dashboard')
+  }
+
   return <SignupCompleteClient user={user} />
 }

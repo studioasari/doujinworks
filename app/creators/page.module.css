@@ -1,0 +1,228 @@
+/**
+ * Creators Page Styles
+ * デザインシステム準拠
+ */
+
+/* ============================================
+   ページレイアウト
+   ============================================ */
+
+.page {
+  background: var(--bg-base);
+  min-height: 100vh;
+  padding: var(--space-6);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ============================================
+   ページヘッダー
+   ============================================ */
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.pageDescription {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   フィルターカード
+   ============================================ */
+
+.filterCard {
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  cursor: default;
+}
+
+.filterCard:hover {
+  background: var(--bg-elevated);
+}
+
+.searchSection {
+  flex: 1;
+}
+
+.searchSection .search-bar {
+  max-width: 100%;
+}
+
+.filterSection {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   検索結果
+   ============================================ */
+
+.resultCount {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.resultNumber {
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   ローディング状態
+   ============================================ */
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+  gap: var(--space-3);
+}
+
+.loadingState i {
+  font-size: 2rem;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   クリエイターグリッド
+   ============================================ */
+
+.creatorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+/* ============================================
+   クリエイターカード
+   ============================================ */
+
+.creatorCard {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  transition: all var(--transition-base);
+}
+
+.cardHeader {
+  padding: var(--space-6) var(--space-5) var(--space-4);
+  text-align: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.avatar {
+  margin: 0 auto var(--space-4);
+}
+
+.avatar.hasImage {
+  background: transparent;
+}
+
+.avatar img {
+  border-radius: var(--radius-full);
+}
+
+.avatarInitial {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: white;
+}
+
+.creatorName {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.creatorUsername {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+}
+
+.badgeGroup {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.cardBody {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  flex: 1;
+}
+
+.creatorBio {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (min-width: 768px) {
+  .filterCard {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .searchSection {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 767px) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .pageTitle {
+    font-size: var(--text-2xl);
+  }
+
+  .creatorsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 479px) {
+  .filterCard {
+    padding: var(--space-4);
+  }
+
+  .cardHeader {
+    padding: var(--space-5) var(--space-4) var(--space-3);
+  }
+
+  .cardBody {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+}

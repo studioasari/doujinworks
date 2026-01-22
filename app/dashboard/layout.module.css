@@ -1,0 +1,29 @@
+/* ============================================
+   dashboard/layout.module.css
+   ダッシュボードレイアウト
+   ============================================ */
+
+.dashboardLayout {
+  display: flex;
+  min-height: calc(100vh - 65px);
+  position: relative;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-base);
+  padding: var(--space-6);
+  overflow-x: hidden;
+}
+
+/* モバイル対応 */
+@media (max-width: 1023px) {
+  .dashboardLayout {
+    flex-direction: column;
+  }
+  
+  .mainContent {
+    padding: var(--space-4);
+  }
+}

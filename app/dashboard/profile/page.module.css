@@ -1,0 +1,495 @@
+/* ============================================
+   プロフィール編集ページ固有スタイル
+   ============================================ */
+
+/* コンテナ */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* カード */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* ローディング */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.loading i {
+  font-size: var(--text-2xl);
+}
+
+/* ============================================
+   ヘッダー画像
+   ============================================ */
+
+.headerWrapper {
+  position: relative;
+}
+
+.headerUpload {
+  position: relative;
+  aspect-ratio: 3 / 1;
+  background: var(--bg-sunken);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.headerUpload:hover {
+  background: var(--bg-hover);
+}
+
+.headerUpload:hover .uploadOverlay {
+  opacity: 1;
+}
+
+.headerUpload.dragging {
+  border: 2px dashed var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.headerUpload.uploading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.headerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity var(--transition-base);
+}
+
+.headerUpload:hover .headerImage {
+  opacity: 0.85;
+}
+
+.uploadOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.uploadOverlay i {
+  font-size: var(--text-2xl);
+}
+
+.uploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  color: var(--text-tertiary);
+}
+
+.uploadPlaceholder i {
+  font-size: var(--text-2xl);
+}
+
+.sizeHint {
+  font-size: var(--text-xs);
+  opacity: 0.8;
+}
+
+/* ============================================
+   アバター画像
+   ============================================ */
+
+.avatarSection {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -60px;
+  margin-bottom: var(--space-6);
+  padding: 0 var(--space-5);
+}
+
+.avatarWrapper {
+  position: relative;
+}
+
+.avatarUpload {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  border: 4px solid var(--bg-elevated);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.avatarUpload:hover {
+  background: var(--bg-hover);
+}
+
+.avatarUpload:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarUpload:hover .avatarImage {
+  opacity: 0.85;
+}
+
+.avatarUpload.dragging {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.avatarUpload.uploading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity var(--transition-base);
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+  border-radius: var(--radius-full);
+}
+
+.avatarOverlay i {
+  font-size: var(--text-xl);
+}
+
+.avatarPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-tertiary);
+}
+
+.avatarPlaceholder i {
+  font-size: var(--text-3xl);
+}
+
+.editBadge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: var(--text-sm);
+  border: 2px solid var(--bg-elevated);
+}
+
+/* 削除ボタン */
+.removeBtn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.removeBtn:hover {
+  background: var(--status-error);
+}
+
+.removeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.avatarRemoveBtn {
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  font-size: var(--text-xs);
+}
+
+/* ============================================
+   フォーム要素（ページ固有）
+   ============================================ */
+
+/* フォームグループの上書き - カード内パディング */
+.card :global(.form-group) {
+  padding: 0 var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+/* 入力欄の幅を100%に */
+.card :global(.form-input) {
+  max-width: 100%;
+}
+
+/* 読み取り専用フィールド */
+.readonlyField {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}
+
+/* ヒントテキスト */
+.hint {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* 必須マーク */
+.required {
+  color: var(--status-error);
+}
+
+/* SNSアイテム */
+.snsItem {
+  margin-top: var(--space-3);
+}
+
+.snsItem:first-child {
+  margin-top: 0;
+}
+
+.snsLabel {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+/* ============================================
+   アカウント種別選択（ラジオボタン形式）
+   ============================================ */
+
+.accountTypeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.accountTypeOptions :global(.radio) {
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.accountTypeOptions :global(.radio):hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.accountTypeOptions :global(.radio-mark) {
+  margin-top: var(--space-1);
+  flex-shrink: 0;
+}
+
+.accountTypeContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.accountTypeTitle {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.accountTypeDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* 無効状態 */
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.disabled:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+}
+
+/* ============================================
+   ビジネス情報セクション
+   ============================================ */
+
+.businessSection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-default);
+}
+
+.businessTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 var(--space-5) var(--space-2);
+}
+
+.businessDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 var(--space-5) var(--space-5);
+}
+
+/* トグルグループ（個人/法人） */
+.toggleGroup {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.toggleBtn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.toggleBtn.active {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: white;
+}
+
+/* フォーム行（2列） */
+.formRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.formRow > * {
+  flex: 1;
+}
+
+.formField {
+  flex: 1;
+}
+
+/* ============================================
+   アクションボタン
+   ============================================ */
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--border-default);
+  margin-top: var(--space-6);
+}
+
+/* アラートのマージン調整 */
+.card :global(.alert) {
+  margin: 0 var(--space-5) var(--space-4);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .container {
+    margin: 0;
+  }
+
+  .card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .avatarSection {
+    margin-top: -50px;
+  }
+
+  .avatarUpload {
+    width: 100px;
+    height: 100px;
+  }
+
+  .editBadge {
+    width: 28px;
+    height: 28px;
+    font-size: var(--text-xs);
+  }
+
+  .accountTypeOptions {
+    flex-direction: column;
+  }
+
+  .formRow {
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

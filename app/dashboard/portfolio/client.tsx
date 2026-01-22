@@ -1,12 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '@/app/components/Header'
-import Footer from '@/app/components/Footer'
-import DashboardSidebar from '@/app/components/DashboardSidebar'
+import styles from './page.module.css'
 
 type PortfolioItem = {
   id: string
@@ -18,23 +16,6 @@ type PortfolioItem = {
   is_public: boolean
   view_count: number
   created_at: string
-}
-
-// トーストコンポーネント
-function Toast({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose()
-    }, 3000)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  return (
-    <div className={`portfolio-manage-toast ${type}`}>
-      <i className={type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}></i>
-      <span>{message}</span>
-    </div>
-  )
 }
 
 // 確認モーダルコンポーネント
@@ -61,20 +42,21 @@ function ConfirmModal({
   }, [])
 
   return (
-    <div className="portfolio-manage-modal-overlay" onClick={onCancel}>
-      <div className="portfolio-manage-confirm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className={`portfolio-manage-confirm-icon ${isDestructive ? 'danger' : ''}`}>
-          <i className={isDestructive ? 'fas fa-trash-alt' : 'fas fa-question-circle'}></i>
+    <div className="modal-overlay active" onClick={onCancel}>
+      <div className={`modal ${styles.confirmModal}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`${styles.confirmIcon} ${isDestructive ? styles.danger : ''}`}>
+          <i className={isDestructive ? 'fa-solid fa-trash-can' : 'fa-solid fa-circle-question'}></i>
         </div>
-        <h2 className="portfolio-manage-confirm-title">{title}</h2>
-        <p className="portfolio-manage-confirm-message">{message}</p>
-        <div className="portfolio-manage-confirm-actions">
-          <button onClick={onCancel} className="portfolio-manage-btn secondary">
+        <h2 className={styles.confirmTitle}>{title}</h2>
+        <p className={styles.confirmMessage}>{message}</p>
+        <div className="button-group-equal">
+          <button type="button" onClick={onCancel} className="btn btn-secondary">
             キャンセル
           </button>
           <button 
+            type="button"
             onClick={onConfirm} 
-            className={`portfolio-manage-btn ${isDestructive ? 'danger' : 'primary'}`}
+            className={`btn ${isDestructive ? styles.btnDanger : 'btn-primary'}`}
           >
             {confirmLabel}
           </button>
@@ -85,18 +67,28 @@ function ConfirmModal({
 }
 
 export default function PortfolioManageClient() {
-  const [items, setItems] = useState<PortfolioItem[]>([])
+  const [allItems, setAllItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [accountType, setAccountType] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'public' | 'private'>('all')
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean
     itemId: string
     itemTitle: string
   }>({ show: false, itemId: '', itemTitle: '' })
   const router = useRouter()
+
+  // フィルター適用後のアイテム
+  const items = useMemo(() => {
+    if (filter === 'all') return allItems
+    if (filter === 'public') return allItems.filter(item => item.is_public)
+    return allItems.filter(item => !item.is_public)
+  }, [allItems, filter])
+
+  // 各カウント
+  const publicCount = useMemo(() => allItems.filter(item => item.is_public).length, [allItems])
+  const privateCount = useMemo(() => allItems.filter(item => !item.is_public).length, [allItems])
 
   useEffect(() => {
     checkAuth()
@@ -106,7 +98,7 @@ export default function PortfolioManageClient() {
     if (currentProfileId) {
       fetchMyPortfolio()
     }
-  }, [currentProfileId, filter])
+  }, [currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -126,32 +118,21 @@ export default function PortfolioManageClient() {
       setCurrentProfileId(user.id)
       setAccountType(profile.account_type)
     } else {
-      setToast({ message: 'プロフィールが見つかりません', type: 'error' })
       router.push('/profile')
     }
   }
 
   async function fetchMyPortfolio() {
-    setLoading(true)
-
-    let query = supabase
+    const { data, error } = await supabase
       .from('portfolio_items')
       .select('*')
       .eq('creator_id', currentProfileId)
       .order('created_at', { ascending: false })
 
-    if (filter === 'public') {
-      query = query.eq('is_public', true)
-    } else if (filter === 'private') {
-      query = query.eq('is_public', false)
-    }
-
-    const { data, error } = await query
-
     if (error) {
       console.error('作品取得エラー:', error)
     } else {
-      setItems(data || [])
+      setAllItems(data || [])
     }
 
     setLoading(false)
@@ -176,9 +157,7 @@ export default function PortfolioManageClient() {
 
     if (error) {
       console.error('削除エラー:', error)
-      setToast({ message: '削除に失敗しました', type: 'error' })
     } else {
-      setToast({ message: '作品を削除しました', type: 'success' })
       fetchMyPortfolio()
     }
   }
@@ -191,12 +170,7 @@ export default function PortfolioManageClient() {
 
     if (error) {
       console.error('公開設定変更エラー:', error)
-      setToast({ message: '公開設定の変更に失敗しました', type: 'error' })
     } else {
-      setToast({ 
-        message: currentStatus ? '非公開に変更しました' : '公開しました', 
-        type: 'success' 
-      })
       fetchMyPortfolio()
     }
   }
@@ -216,148 +190,138 @@ export default function PortfolioManageClient() {
     return category ? categories[category] || category : '未設定'
   }
 
+  if (loading) {
+    return (
+      <div className={styles.loading}>
+        <i className="fa-solid fa-spinner fa-spin"></i>
+        <span>読み込み中...</span>
+      </div>
+    )
+  }
+
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Header />
-      
-      <div className="portfolio-manage-page dashboard-layout">
-        <DashboardSidebar accountType={accountType} />
+      <div className={styles.container}>
+        {/* ヘッダー */}
+        <div className={styles.header}>
+          <h1 className={styles.title}>作品管理</h1>
+          <Link href="/dashboard/portfolio/upload" className="btn btn-primary">
+            <i className="fa-solid fa-plus"></i>
+            作品をアップロード
+          </Link>
+        </div>
 
-        {loading ? (
-          <div className="dashboard-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+        {/* フィルタータブ */}
+        <div className={styles.filterArea}>
+          <div className="tabs">
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className={`tab ${filter === 'all' ? 'active' : ''}`}
+            >
+              すべて ({allItems.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('public')}
+              className={`tab ${filter === 'public' ? 'active' : ''}`}
+            >
+              公開中 ({publicCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('private')}
+              className={`tab ${filter === 'private' ? 'active' : ''}`}
+            >
+              非公開 ({privateCount})
+            </button>
           </div>
-        ) : (
-          <main className="portfolio-manage-main">
-            <div className="portfolio-manage-container">
-              {/* ヘッダー */}
-              <div className="portfolio-manage-header">
-                <h1 className="portfolio-manage-title">作品管理</h1>
-                <Link href="/dashboard/portfolio/upload" className="portfolio-manage-btn primary">
-                  <i className="fas fa-plus"></i>
-                  作品をアップロード
+        </div>
+
+        {/* 作品一覧 */}
+        {items.length === 0 && (
+          <div className="empty-state">
+            <i className="fa-regular fa-images"></i>
+            <p>
+              {filter === 'all' 
+                ? 'まだ作品が登録されていません' 
+                : filter === 'public' 
+                  ? '公開中の作品はありません'
+                  : '非公開の作品はありません'
+              }
+            </p>
+            {filter === 'all' && (
+              <Link href="/dashboard/portfolio/upload" className="btn btn-primary">
+                作品をアップロード
+              </Link>
+            )}
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <div className={styles.grid}>
+            {items.map((item) => (
+              <div key={item.id} className={styles.card}>
+                {/* 画像 */}
+                <Link href={`/portfolio/${item.id}`} className={styles.cardImageLink}>
+                  <div className={styles.cardImage}>
+                    <img
+                      src={item.thumbnail_url || item.image_url}
+                      alt={item.title}
+                    />
+                    {/* 公開状態バッジ */}
+                    <span className={`${styles.statusBadge} ${item.is_public ? styles.public : styles.private}`}>
+                      {item.is_public ? '公開中' : '非公開'}
+                    </span>
+                  </div>
                 </Link>
-              </div>
 
-              {/* フィルター */}
-              <div className="portfolio-manage-filter-card">
-                <div className="portfolio-manage-filter-row">
-                  <div>
-                    <label className="portfolio-manage-filter-label">公開状態で絞り込み</label>
-                    <div className="portfolio-manage-filter-buttons">
-                      <button
-                        onClick={() => setFilter('all')}
-                        className={`portfolio-manage-filter-btn ${filter === 'all' ? 'active' : ''}`}
-                      >
-                        すべて
-                      </button>
-                      <button
-                        onClick={() => setFilter('public')}
-                        className={`portfolio-manage-filter-btn ${filter === 'public' ? 'active' : ''}`}
-                      >
-                        公開中
-                      </button>
-                      <button
-                        onClick={() => setFilter('private')}
-                        className={`portfolio-manage-filter-btn ${filter === 'private' ? 'active' : ''}`}
-                      >
-                        非公開
-                      </button>
-                    </div>
-                  </div>
-                  <div className="portfolio-manage-count">
-                    {items.length}件の作品
-                  </div>
-                </div>
-              </div>
+                {/* 情報 */}
+                <div className={styles.cardContent}>
+                  {/* カテゴリ */}
+                  {item.category && (
+                    <span className="badge">
+                      {getCategoryLabel(item.category)}
+                    </span>
+                  )}
 
-              {/* 作品一覧 */}
-              {items.length === 0 && (
-                <div className="portfolio-manage-empty">
-                  <i className="fas fa-images"></i>
-                  <p>まだ作品が登録されていません</p>
-                  <Link href="/dashboard/portfolio/upload" className="portfolio-manage-btn primary">
-                    作品をアップロード
+                  {/* タイトル */}
+                  <Link href={`/portfolio/${item.id}`}>
+                    <h3 className={styles.cardTitle}>
+                      {item.title}
+                    </h3>
                   </Link>
+
+                  {/* 統計 */}
+                  <div className={styles.cardMeta}>
+                    <span><i className="fa-regular fa-eye"></i> {item.view_count || 0}</span>
+                    <span>{new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
+                  </div>
+
+                  {/* アクションボタン */}
+                  <div className={styles.cardActions}>
+                    <button
+                      type="button"
+                      onClick={() => togglePublic(item.id, item.is_public)}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      {item.is_public ? '非公開にする' : '公開する'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showDeleteConfirm(item.id, item.title)}
+                      className={styles.btnIconDanger}
+                      title="削除"
+                    >
+                      <i className="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
                 </div>
-              )}
-
-              {items.length > 0 && (
-                <div className="portfolio-manage-grid">
-                  {items.map((item) => (
-                    <div key={item.id} className="portfolio-manage-card">
-                      {/* 画像 */}
-                      <Link href={`/portfolio/${item.id}`} className="portfolio-manage-card-image-link">
-                        <div className="portfolio-manage-card-image">
-                          <img
-                            src={item.thumbnail_url || item.image_url}
-                            alt={item.title}
-                          />
-                          {/* 公開状態バッジ */}
-                          <span className={`portfolio-manage-status-badge ${item.is_public ? 'public' : 'private'}`}>
-                            {item.is_public ? '公開中' : '非公開'}
-                          </span>
-                        </div>
-                      </Link>
-
-                      {/* 情報 */}
-                      <div className="portfolio-manage-card-content">
-                        {/* カテゴリ */}
-                        {item.category && (
-                          <span className="portfolio-manage-category-badge">
-                            {getCategoryLabel(item.category)}
-                          </span>
-                        )}
-
-                        {/* タイトル */}
-                        <Link href={`/portfolio/${item.id}`}>
-                          <h3 className="portfolio-manage-card-title">
-                            {item.title}
-                          </h3>
-                        </Link>
-
-                        {/* 統計 */}
-                        <div className="portfolio-manage-card-meta">
-                          <span><i className="fas fa-eye"></i> {item.view_count || 0}</span>
-                          <span>{new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
-                        </div>
-
-                        {/* アクションボタン */}
-                        <div className="portfolio-manage-card-actions">
-                          <button
-                            onClick={() => togglePublic(item.id, item.is_public)}
-                            className="portfolio-manage-btn secondary small"
-                          >
-                            {item.is_public ? '非公開にする' : '公開する'}
-                          </button>
-                          <button
-                            onClick={() => showDeleteConfirm(item.id, item.title)}
-                            className="portfolio-manage-btn danger small"
-                          >
-                            削除
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </main>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      <Footer />
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
 
       {confirmModal.show && (
         <ConfirmModal

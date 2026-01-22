@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '@/app/components/Header'
-import Footer from '@/app/components/Footer'
-import DashboardSidebar from '@/app/components/DashboardSidebar'
+// Header/Footer/DashboardSidebar は layout.tsx で管理
 
 type TabType = 'activity' | 'business'
 
@@ -625,43 +623,38 @@ export default function DashboardClient() {
   return (
     <>
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Header />
       
-      <div className="dashboard-page">
-        <DashboardSidebar accountType={accountType} />
-
-        {loading ? (
-          <div className="dashboard-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+      {loading ? (
+        <div className="dashboard-loading">
+          <i className="fas fa-spinner fa-spin"></i>
+          <span>読み込み中...</span>
+        </div>
+      ) : (
+        <div className="dashboard-container">
+          {/* ヘッダー */}
+          <div className="dashboard-header">
+            <h1 className="dashboard-title">ダッシュボード</h1>
           </div>
-        ) : (
-          <main className="dashboard-main">
-            <div className="dashboard-container">
-              {/* ヘッダー */}
-              <div className="dashboard-header">
-                <h1 className="dashboard-title">ダッシュボード</h1>
-              </div>
 
-              {/* タブ */}
-              {accountType === 'business' && (
-                <div className="dashboard-tabs">
-                  <button
-                    className={`dashboard-tab ${activeTab === 'activity' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('activity')}
-                  >
-                    <i className="fas fa-chart-line"></i>
-                    アクティビティ
-                  </button>
-                  <button
-                    className={`dashboard-tab ${activeTab === 'business' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('business')}
-                  >
-                    <i className="fas fa-briefcase"></i>
-                    ビジネス
-                  </button>
-                </div>
-              )}
+          {/* タブ */}
+          {accountType === 'business' && (
+            <div className="dashboard-tabs">
+              <button
+                className={`dashboard-tab ${activeTab === 'activity' ? 'active' : ''}`}
+                onClick={() => setActiveTab('activity')}
+              >
+                <i className="fas fa-chart-line"></i>
+                アクティビティ
+              </button>
+              <button
+                className={`dashboard-tab ${activeTab === 'business' ? 'active' : ''}`}
+                onClick={() => setActiveTab('business')}
+              >
+                <i className="fas fa-briefcase"></i>
+                ビジネス
+              </button>
+            </div>
+          )}
 
               {/* アクティビティタブ */}
               {activeTab === 'activity' && (
@@ -1023,33 +1016,17 @@ export default function DashboardClient() {
                 </div>
               )}
             </div>
-          </main>
-        )}
-      </div>
-
-      <Footer />
+          )}
 
       <style jsx>{`
-        .dashboard-page {
-          min-height: 100vh;
-          background: #E8ECEF;
-          display: flex;
-        }
-
         .dashboard-loading {
-          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 12px;
           font-size: 16px;
-          color: #6B7B8A;
-        }
-
-        .dashboard-main {
-          flex: 1;
-          padding: 32px;
-          overflow-x: hidden;
+          color: var(--text-secondary);
+          min-height: 400px;
         }
 
         .dashboard-container {
@@ -1064,40 +1041,39 @@ export default function DashboardClient() {
         .dashboard-title {
           font-size: 28px;
           font-weight: 700;
-          color: #2D3748;
+          color: var(--text-primary);
         }
 
         /* タブ */
         .dashboard-tabs {
           display: flex;
-          gap: 16px;
+          gap: 8px;
           margin-bottom: 24px;
         }
 
         .dashboard-tab {
-          width: 180px;
-          padding: 14px 24px;
+          padding: 12px 24px;
           font-size: 14px;
-          font-weight: 600;
-          color: #6B7B8A;
-          background: #E8ECEF;
-          border: none;
-          border-radius: 14px;
+          font-weight: 500;
+          color: var(--text-secondary);
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-md);
           cursor: pointer;
           display: flex;
           align-items: center;
-          justify-content: center;
           gap: 8px;
           transition: all 0.2s;
         }
 
         .dashboard-tab:hover:not(.active) {
-          color: #4A5568;
+          background: var(--bg-hover);
         }
 
         .dashboard-tab.active {
-          color: #5B7C99;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--accent-primary-subtle);
+          color: var(--accent-primary);
+          border-color: var(--accent-primary);
         }
 
         /* サマリーカード */
@@ -1109,10 +1085,10 @@ export default function DashboardClient() {
         }
 
         .summary-card {
-          background: #E8ECEF;
-          border-radius: 20px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-lg);
           padding: 24px;
-          box-shadow: 6px 6px 12px #c5c9cc, -6px -6px 12px #ffffff;
           display: flex;
           align-items: center;
           gap: 16px;
@@ -1121,22 +1097,21 @@ export default function DashboardClient() {
         .summary-icon {
           width: 56px;
           height: 56px;
-          border-radius: 16px;
+          border-radius: var(--radius-md);
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 24px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
         }
 
-        .summary-icon.views { color: #5B7C99; }
-        .summary-icon.likes { color: #E57373; }
-        .summary-icon.followers { color: #64B5F6; }
-        .summary-icon.comments { color: #81C784; }
-        .summary-icon.revenue { color: #FFB74D; }
-        .summary-icon.received { color: #5B7C99; }
-        .summary-icon.sent { color: #9575CD; }
-        .summary-icon.pending { color: #E57373; }
+        .summary-icon.views { background: rgba(91, 124, 153, 0.12); color: #5B7C99; }
+        .summary-icon.likes { background: rgba(255, 107, 138, 0.12); color: var(--color-like); }
+        .summary-icon.followers { background: rgba(59, 130, 246, 0.12); color: var(--status-info); }
+        .summary-icon.comments { background: rgba(34, 197, 94, 0.12); color: var(--status-success); }
+        .summary-icon.revenue { background: rgba(245, 158, 11, 0.12); color: var(--status-warning); }
+        .summary-icon.received { background: rgba(91, 124, 153, 0.12); color: #5B7C99; }
+        .summary-icon.sent { background: rgba(149, 117, 205, 0.12); color: #9575CD; }
+        .summary-icon.pending { background: rgba(239, 68, 68, 0.12); color: var(--status-error); }
 
         .summary-data {
           display: flex;
@@ -1146,13 +1121,13 @@ export default function DashboardClient() {
         .summary-value {
           font-size: 28px;
           font-weight: 700;
-          color: #2D3748;
+          color: var(--text-primary);
           line-height: 1.2;
         }
 
         .summary-label {
           font-size: 13px;
-          color: #6B7B8A;
+          color: var(--text-secondary);
           margin-top: 2px;
         }
 
@@ -1162,7 +1137,7 @@ export default function DashboardClient() {
         }
 
         .summary-change.positive {
-          color: #48BB78;
+          color: var(--status-success);
         }
 
         /* グリッド */
@@ -1178,10 +1153,10 @@ export default function DashboardClient() {
         }
 
         .dashboard-card {
-          background: #E8ECEF;
-          border-radius: 20px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-lg);
           padding: 24px;
-          box-shadow: 6px 6px 12px #c5c9cc, -6px -6px 12px #ffffff;
         }
 
         .dashboard-card.full-width {
@@ -1202,43 +1177,57 @@ export default function DashboardClient() {
         .card-header h2 {
           font-size: 16px;
           font-weight: 600;
-          color: #2D3748;
+          color: var(--text-primary);
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
         .card-header h2 i {
-          color: #5B7C99;
+          color: var(--accent-primary);
+        }
+
+        .section-link {
+          font-size: 13px;
+          color: var(--accent-primary);
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .section-link:hover {
+          text-decoration: underline;
         }
 
         /* 期間切り替え */
         .period-toggle {
           display: flex;
-          gap: 8px;
+          gap: 4px;
+          background: var(--bg-sunken);
+          padding: 4px;
+          border-radius: var(--radius-md);
         }
 
         .period-toggle button {
-          width: 56px;
-          padding: 8px 0;
+          padding: 6px 12px;
           font-size: 12px;
-          font-weight: 600;
-          color: #6B7B8A;
-          background: #E8ECEF;
+          font-weight: 500;
+          color: var(--text-secondary);
+          background: transparent;
           border: none;
-          border-radius: 8px;
+          border-radius: var(--radius-sm);
           cursor: pointer;
           transition: all 0.15s;
-          text-align: center;
         }
 
         .period-toggle button:hover:not(.active) {
-          color: #4A5568;
+          color: var(--text-primary);
         }
 
         .period-toggle button.active {
-          color: #5B7C99;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-elevated);
+          color: var(--accent-primary);
         }
 
         /* シンプルチャート */
@@ -1267,7 +1256,7 @@ export default function DashboardClient() {
         .chart-bar {
           width: 100%;
           max-width: 40px;
-          background: linear-gradient(180deg, #5B7C99 0%, #7BA3C4 100%);
+          background: var(--accent-gradient);
           border-radius: 6px 6px 0 0;
           position: relative;
           min-height: 4px;
@@ -1288,8 +1277,8 @@ export default function DashboardClient() {
           top: -28px;
           left: 50%;
           transform: translateX(-50%);
-          background: #2D3748;
-          color: #fff;
+          background: var(--text-primary);
+          color: var(--bg-base);
           padding: 4px 8px;
           border-radius: 4px;
           font-size: 11px;
@@ -1301,7 +1290,7 @@ export default function DashboardClient() {
 
         .chart-label {
           font-size: 10px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
           margin-top: 8px;
         }
 
@@ -1317,21 +1306,20 @@ export default function DashboardClient() {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: #E8ECEF;
-          border-radius: 12px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-sunken);
+          border-radius: var(--radius-md);
           text-decoration: none;
           transition: all 0.2s;
         }
 
         .popular-item:hover {
-          box-shadow: inset 1px 1px 2px #c5c9cc, inset -1px -1px 2px #ffffff;
+          background: var(--bg-hover);
         }
 
         .popular-rank {
           width: 24px;
           height: 24px;
-          background: #5B7C99;
+          background: var(--accent-gradient);
           color: #fff;
           border-radius: 6px;
           display: flex;
@@ -1346,11 +1334,11 @@ export default function DashboardClient() {
           height: 48px;
           border-radius: 8px;
           overflow: hidden;
-          background: #D0D5DA;
+          background: var(--bg-sunken);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         .popular-thumb img {
@@ -1368,7 +1356,7 @@ export default function DashboardClient() {
           display: block;
           font-size: 14px;
           font-weight: 600;
-          color: #2D3748;
+          color: var(--text-primary);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1376,7 +1364,7 @@ export default function DashboardClient() {
 
         .popular-views {
           font-size: 12px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
           display: flex;
           align-items: center;
           gap: 4px;
@@ -1394,9 +1382,8 @@ export default function DashboardClient() {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: #E8ECEF;
-          border-radius: 12px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-sunken);
+          border-radius: var(--radius-md);
         }
 
         .activity-avatar {
@@ -1404,11 +1391,11 @@ export default function DashboardClient() {
           height: 40px;
           border-radius: 50%;
           overflow: hidden;
-          background: #D0D5DA;
+          background: var(--accent-secondary);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #6B7B8A;
+          color: #fff;
           flex-shrink: 0;
         }
 
@@ -1426,17 +1413,17 @@ export default function DashboardClient() {
         .activity-text {
           display: block;
           font-size: 13px;
-          color: #4A5568;
+          color: var(--text-secondary);
           line-height: 1.4;
         }
 
         .activity-text strong {
-          color: #2D3748;
+          color: var(--text-primary);
         }
 
         .activity-time {
           font-size: 11px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         .activity-icon {
@@ -1450,18 +1437,18 @@ export default function DashboardClient() {
         }
 
         .activity-icon.like {
-          background: rgba(229, 115, 115, 0.15);
-          color: #E57373;
+          background: rgba(255, 107, 138, 0.15);
+          color: var(--color-like);
         }
 
         .activity-icon.follow {
-          background: rgba(100, 181, 246, 0.15);
-          color: #64B5F6;
+          background: rgba(59, 130, 246, 0.15);
+          color: var(--status-info);
         }
 
         .activity-icon.comment {
-          background: rgba(129, 199, 132, 0.15);
-          color: #81C784;
+          background: rgba(34, 197, 94, 0.15);
+          color: var(--status-success);
         }
 
         /* コメント */
@@ -1475,9 +1462,8 @@ export default function DashboardClient() {
           display: flex;
           gap: 12px;
           padding: 12px;
-          background: #E8ECEF;
-          border-radius: 12px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-sunken);
+          border-radius: var(--radius-md);
         }
 
         .comment-avatar {
@@ -1485,11 +1471,11 @@ export default function DashboardClient() {
           height: 36px;
           border-radius: 50%;
           overflow: hidden;
-          background: #D0D5DA;
+          background: var(--accent-secondary);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #6B7B8A;
+          color: #fff;
           flex-shrink: 0;
         }
 
@@ -1510,17 +1496,17 @@ export default function DashboardClient() {
         }
 
         .comment-header strong {
-          color: #2D3748;
+          color: var(--text-primary);
         }
 
         .comment-target {
-          color: #6B7B8A;
+          color: var(--text-tertiary);
           margin-left: 4px;
         }
 
         .comment-text {
           font-size: 13px;
-          color: #4A5568;
+          color: var(--text-secondary);
           line-height: 1.4;
           margin: 0;
           display: -webkit-box;
@@ -1531,7 +1517,7 @@ export default function DashboardClient() {
 
         .comment-time {
           font-size: 11px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         /* 評価バナー */
@@ -1540,9 +1526,9 @@ export default function DashboardClient() {
           align-items: center;
           gap: 12px;
           padding: 16px 24px;
-          background: #E8ECEF;
-          border-radius: 16px;
-          box-shadow: 6px 6px 12px #c5c9cc, -6px -6px 12px #ffffff;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-lg);
           margin-bottom: 24px;
         }
 
@@ -1552,23 +1538,23 @@ export default function DashboardClient() {
         }
 
         .rating-stars i {
-          color: #D0D5DA;
+          color: var(--border-default);
           font-size: 18px;
         }
 
         .rating-stars i.filled {
-          color: #FFB74D;
+          color: var(--color-star);
         }
 
         .rating-value {
           font-size: 24px;
           font-weight: 700;
-          color: #2D3748;
+          color: var(--text-primary);
         }
 
         .rating-count {
           font-size: 13px;
-          color: #6B7B8A;
+          color: var(--text-secondary);
         }
 
         /* プロジェクトテーブル */
@@ -1585,7 +1571,7 @@ export default function DashboardClient() {
           padding: 12px 16px;
           font-size: 12px;
           font-weight: 600;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         .project-row {
@@ -1593,18 +1579,17 @@ export default function DashboardClient() {
           grid-template-columns: 60px 1fr 120px 100px 80px 100px;
           gap: 12px;
           padding: 16px;
-          background: #E8ECEF;
-          border-radius: 12px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-sunken);
+          border-radius: var(--radius-md);
           text-decoration: none;
           font-size: 13px;
-          color: #4A5568;
+          color: var(--text-secondary);
           align-items: center;
           transition: all 0.2s;
         }
 
         .project-row:hover {
-          box-shadow: inset 1px 1px 2px #c5c9cc, inset -1px -1px 2px #ffffff;
+          background: var(--bg-hover);
         }
 
         .project-type {
@@ -1627,7 +1612,7 @@ export default function DashboardClient() {
 
         .project-title {
           font-weight: 600;
-          color: #2D3748;
+          color: var(--text-primary);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1649,9 +1634,8 @@ export default function DashboardClient() {
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: #E8ECEF;
-          border-radius: 12px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
+          background: var(--bg-sunken);
+          border-radius: var(--radius-md);
         }
 
         .transaction-icon {
@@ -1665,13 +1649,13 @@ export default function DashboardClient() {
         }
 
         .transaction-icon.income {
-          background: rgba(72, 187, 120, 0.15);
-          color: #48BB78;
+          background: rgba(34, 197, 94, 0.15);
+          color: var(--status-success);
         }
 
         .transaction-icon.expense {
-          background: rgba(229, 115, 115, 0.15);
-          color: #E57373;
+          background: rgba(239, 68, 68, 0.15);
+          color: var(--status-error);
         }
 
         .transaction-info {
@@ -1682,12 +1666,12 @@ export default function DashboardClient() {
           display: block;
           font-size: 13px;
           font-weight: 600;
-          color: #2D3748;
+          color: var(--text-primary);
         }
 
         .transaction-date {
           font-size: 11px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         .transaction-amount {
@@ -1696,11 +1680,11 @@ export default function DashboardClient() {
         }
 
         .transaction-amount.income {
-          color: #48BB78;
+          color: var(--status-success);
         }
 
         .transaction-amount.expense {
-          color: #E57373;
+          color: var(--status-error);
         }
 
         /* 空状態 */
@@ -1710,7 +1694,7 @@ export default function DashboardClient() {
           align-items: center;
           justify-content: center;
           padding: 40px 20px;
-          color: #6B7B8A;
+          color: var(--text-tertiary);
         }
 
         .empty-state.small {
@@ -1732,11 +1716,15 @@ export default function DashboardClient() {
           margin-top: 12px;
           padding: 8px 16px;
           font-size: 13px;
-          color: #5B7C99;
-          background: #E8ECEF;
-          border-radius: 8px;
+          color: var(--accent-primary);
+          background: var(--bg-elevated);
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-md);
           text-decoration: none;
-          box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
+        }
+
+        .empty-action:hover {
+          background: var(--bg-hover);
         }
 
         /* レスポンシブ */
@@ -1768,12 +1756,13 @@ export default function DashboardClient() {
           }
 
           .dashboard-tabs {
-            gap: 12px;
+            gap: 8px;
           }
 
           .dashboard-tab {
             flex: 1;
-            width: auto;
+            justify-content: center;
+            padding: 10px 16px;
           }
 
           .dashboard-summary {

@@ -1,16 +1,17 @@
+import { Metadata } from 'next'
 import PortfolioList from '@/app/components/PortfolioList'
 
-export const metadata = {
-  title: 'イラスト作品一覧 | 同人ワークス',
-  description: 'クリエイターが投稿したイラスト作品を閲覧できます。キャラクターイラスト、背景、アイコンなど様々なイラスト作品をご覧ください。',
+export const metadata: Metadata = {
+  title: 'イラスト作品一覧',
+  description: 'イラストレーターの作品一覧。',
 }
 
-export default function IllustrationPortfolioPage() {
+export default function IllustrationPage() {
   return (
     <PortfolioList 
       category="illustration"
-      pageTitle="イラスト作品"
-      pageDescription="クリエイターのイラスト作品を見る"
+      pageTitle="イラスト" 
+      pageDescription="イラスト作品を探す" 
     />
   )
 }

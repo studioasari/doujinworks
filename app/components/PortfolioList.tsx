@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import styles from './PortfolioList.module.css'
 
 type PortfolioItem = {
   id: string
@@ -51,7 +52,22 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState('newest')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
   const itemsPerPage = 24
+
+  // ドロップダウン外クリックで閉じる
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement
+      if (isSortDropdownOpen && !target.closest('.sort-dropdown-container')) {
+        setIsSortDropdownOpen(false)
+      }
+    }
+    if (isSortDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isSortDropdownOpen])
 
   useEffect(() => {
     fetchPortfolioItems()
@@ -157,32 +173,46 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
 
   function PortfolioCard({ item }: { item: PortfolioItem }) {
     return (
-      <Link href={`/portfolio/${item.id}`} className="list-card">
-        <div className="list-card-image ratio-portfolio">
-          <img src={item.thumbnail_url || item.image_url} alt={item.title} loading="lazy" />
-          <span className="list-card-badge">{getCategoryLabel(item.category)}</span>
+      <Link href={`/portfolio/${item.id}`} className={`card ${styles.workCard}`}>
+        <div className={`card-image ${styles.workCardImage}`}>
+          {item.thumbnail_url || item.image_url ? (
+            <Image 
+              src={item.thumbnail_url || item.image_url} 
+              alt={item.title} 
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              loading="lazy"
+            />
+          ) : (
+            <i className="fa-regular fa-image"></i>
+          )}
+          <span className="overlay-badge overlay-badge-top-left">
+            {getCategoryLabel(item.category)}
+          </span>
         </div>
-        <div className="list-card-content">
-          <h3 className="list-card-title">{item.title}</h3>
-          <div className="list-card-creator">
-            <div className="list-card-avatar">
-              {item.profiles?.avatar_url ? (
-                <Image src={item.profiles.avatar_url} alt="" width={24} height={24} />
-              ) : (
-                <i className="fas fa-user"></i>
-              )}
+        <div className={`card-body ${styles.workCardBody}`}>
+          <h3 className="card-title">{item.title}</h3>
+          <div className={styles.cardMeta}>
+            <div className={styles.cardCreator}>
+              <div className={`avatar avatar-xs ${styles.creatorAvatar} ${item.profiles?.avatar_url ? styles.hasImage : ''}`}>
+                {item.profiles?.avatar_url ? (
+                  <Image src={item.profiles.avatar_url} alt="" width={20} height={20} />
+                ) : (
+                  <i className="fas fa-user"></i>
+                )}
+              </div>
+              <span className={styles.creatorName}>{item.profiles?.display_name || '名前未設定'}</span>
             </div>
-            <span className="list-card-creator-name">{item.profiles?.display_name || '名前未設定'}</span>
-          </div>
-          <div className="list-card-stats">
-            <span className="likes">
-              <i className="fas fa-heart"></i>
-              {item.likeCount}
-            </span>
-            <span>
-              <i className="fas fa-comment"></i>
-              {item.commentCount}
-            </span>
+            <div className={styles.cardStats}>
+              <span className={styles.statItem}>
+                <i className="fas fa-heart icon-like"></i>
+                {item.likeCount}
+              </span>
+              <span className={styles.statItem}>
+                <i className="fas fa-comment"></i>
+                {item.commentCount}
+              </span>
+            </div>
           </div>
         </div>
       </Link>
@@ -199,30 +229,50 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4)
 
     if (startPage > 1) {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className="pagination-btn">1</button>)
-      if (startPage > 2) pages.push(<span key="start-dots" className="pagination-dots">...</span>)
+      pages.push(
+        <button key={1} onClick={() => setCurrentPage(1)} className={styles.pageBtn}>
+          1
+        </button>
+      )
+      if (startPage > 2) pages.push(<span key="start-dots" className={styles.pageDots}>...</span>)
     }
 
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
-        <button key={i} onClick={() => setCurrentPage(i)} className={`pagination-btn ${currentPage === i ? 'active' : ''}`}>
+        <button 
+          key={i} 
+          onClick={() => setCurrentPage(i)} 
+          className={`${styles.pageBtn} ${currentPage === i ? styles.active : ''}`}
+        >
           {i}
         </button>
       )
     }
 
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) pages.push(<span key="end-dots" className="pagination-dots">...</span>)
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className="pagination-btn">{totalPages}</button>)
+      if (endPage < totalPages - 1) pages.push(<span key="end-dots" className={styles.pageDots}>...</span>)
+      pages.push(
+        <button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={styles.pageBtn}>
+          {totalPages}
+        </button>
+      )
     }
 
     return (
-      <div className="list-pagination">
-        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="pagination-btn">
+      <div className={styles.pagination}>
+        <button 
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+          disabled={currentPage === 1} 
+          className={styles.pageBtn}
+        >
           <i className="fas fa-chevron-left"></i>
         </button>
         {pages}
-        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="pagination-btn">
+        <button 
+          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+          disabled={currentPage === totalPages} 
+          className={styles.pageBtn}
+        >
           <i className="fas fa-chevron-right"></i>
         </button>
       </div>
@@ -230,22 +280,28 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
   }
 
   return (
-    <div className="list-page">
+    <>
       <Header />
-      
-      <main className="list-page-main">
+      <div className={styles.page}>
         {/* サイドバー */}
-        <aside className="list-sidebar">
-          <nav className="mb-16">
-            <Link href="/portfolio" className={`sidebar-nav-item ${!category ? 'active' : ''}`}>
+        <aside className={styles.sidebar}>
+          <nav className={styles.sidebarNav}>
+            <Link 
+              href="/portfolio" 
+              className={`${styles.navItem} ${!category ? styles.active : ''}`}
+            >
               すべて
             </Link>
           </nav>
-          <div className="sidebar-separator"></div>
-          <div>
-            <div className="sidebar-section-title">カテゴリ</div>
+          <div className={styles.separator}></div>
+          <div className={styles.sidebarSection}>
+            <div className={styles.sectionTitle}>カテゴリ</div>
             {CATEGORIES.map((cat) => (
-              <Link key={cat.value} href={cat.path} className={`sidebar-nav-item ${category === cat.value ? 'active' : ''}`}>
+              <Link 
+                key={cat.value} 
+                href={cat.path} 
+                className={`${styles.navItem} ${category === cat.value ? styles.active : ''}`}
+              >
                 {cat.label}
               </Link>
             ))}
@@ -253,35 +309,54 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
         </aside>
 
         {/* メインコンテンツ */}
-        <div className="list-content">
-          <div className="list-content-inner">
+        <main className={styles.main}>
+          <div className={styles.mainInner}>
             {pageTitle && (
-              <div className="list-page-header">
-                <h1>{pageTitle}</h1>
-                {pageDescription && <p>{pageDescription}</p>}
+              <div className={styles.pageHeader}>
+                <h1 className={styles.pageTitle}>{pageTitle}</h1>
+                {pageDescription && <p className={styles.pageDescription}>{pageDescription}</p>}
               </div>
             )}
 
-            <div className="list-filter-bar">
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="filter-select">
-                {SORT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <span className="results-count">{filteredItems.length}件の作品</span>
+            <div className={styles.filterBar}>
+              <div className={`${styles.dropdown} sort-dropdown-container ${isSortDropdownOpen ? styles.dropdownActive : ''}`}>
+                <button 
+                  className={styles.dropdownTrigger}
+                  onClick={(e) => { e.stopPropagation(); setIsSortDropdownOpen(!isSortDropdownOpen) }}
+                >
+                  {SORT_OPTIONS.find(o => o.value === sortOrder)?.label}
+                  <i className="fas fa-chevron-down"></i>
+                </button>
+                <div className={styles.dropdownMenu}>
+                  {SORT_OPTIONS.map(option => (
+                    <div 
+                      key={option.value} 
+                      className={`${styles.dropdownItem} ${sortOrder === option.value ? styles.dropdownItemActive : ''}`}
+                      onClick={() => { setSortOrder(option.value); setIsSortDropdownOpen(false) }}
+                    >
+                      {option.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <span className={styles.resultCount}>
+                <span className={styles.resultNumber}>{filteredItems.length}</span>件の作品
+              </span>
             </div>
 
             {loading ? (
-              <div className="list-empty">
+              <div className={styles.loadingState}>
                 <i className="fas fa-spinner fa-spin"></i>
                 <p>読み込み中...</p>
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="list-empty">
-                <i className="fas fa-image"></i>
+              <div className="empty-state">
+                <i className="fa-regular fa-image"></i>
                 <p>作品がありません</p>
               </div>
             ) : (
               <>
-                <div className="list-grid portfolio">
+                <div className={styles.worksGrid}>
                   {filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
                     <PortfolioCard key={item.id} item={item} />
                   ))}
@@ -290,10 +365,9 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
               </>
             )}
           </div>
-        </div>
-      </main>
-
+        </main>
+      </div>
       <Footer />
-    </div>
+    </>
   )
 }

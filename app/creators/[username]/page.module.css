@@ -1,0 +1,605 @@
+/**
+ * Creator Detail Page Styles
+ * デザインシステム準拠
+ */
+
+/* ============================================
+   ローディング・エラー状態
+   ============================================ */
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  background: var(--bg-base);
+  color: var(--text-tertiary);
+  gap: var(--space-4);
+}
+
+.loadingContainer i {
+  font-size: 2.5rem;
+  color: var(--accent-primary);
+}
+
+.notFoundContainer {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--bg-base);
+}
+
+/* ============================================
+   ページレイアウト
+   ============================================ */
+
+.page {
+  background: var(--bg-base);
+  min-height: 100vh;
+  position: relative;
+}
+
+.headerBg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.headerBg img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.headerOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.2) 100%);
+  pointer-events: none;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  padding-top: 120px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   プロフィールカード
+   ============================================ */
+
+.profileCard {
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  cursor: default;
+}
+
+.profileCard:hover {
+  background: var(--bg-elevated);
+}
+
+.profileLayout {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+
+.avatar.hasImage {
+  background: transparent;
+}
+
+.avatar img {
+  border-radius: var(--radius-full);
+}
+
+.profileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.profileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.profileNames {
+  flex: 1;
+  min-width: 0;
+}
+
+.jobTitle {
+  display: inline-block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.displayName {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.username {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.actionButtons {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  padding: var(--space-2) !important;
+  width: 36px;
+  height: 36px;
+}
+
+/* 統計 */
+.stats {
+  display: flex;
+  gap: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.statItem strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* SNSリンク */
+.socialLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.socialIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.socialIcon:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+/* シェアドロップダウン */
+.shareContainer {
+  position: relative;
+}
+
+.shareDropdown {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  overflow: hidden;
+  min-width: 140px;
+}
+
+.shareItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.shareItem:hover {
+  background: var(--bg-hover);
+}
+
+/* 自己紹介 */
+.bio {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: var(--space-4);
+}
+
+/* 依頼ボタン */
+.requestBtn {
+  width: 100%;
+}
+
+/* ============================================
+   タブ（PC・スマホ共通で均等幅）
+   ============================================ */
+
+.container :global(.tabs) {
+  display: flex;
+  width: 100%;
+}
+
+.container :global(.tabs .tab) {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
+}
+
+/* ============================================
+   タブコンテンツ
+   ============================================ */
+
+.tabContent {
+  margin-top: var(--space-6);
+}
+
+.categoryFilter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.activeTag {
+  background: var(--accent-primary-subtle) !important;
+  color: var(--accent-primary) !important;
+}
+
+/* ローディング */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+  gap: var(--space-3);
+}
+
+.loadingState i {
+  font-size: 2rem;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   作品グリッド
+   ============================================ */
+
+.worksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.worksGrid :global(.card-image) {
+  aspect-ratio: 1;
+}
+
+.worksGrid :global(.card-body) {
+  padding: var(--space-3) var(--space-4);
+}
+
+.worksGrid :global(.card-title) {
+  font-size: var(--text-sm);
+  margin-bottom: 0;
+}
+
+/* ============================================
+   料金表グリッド
+   ============================================ */
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+.pricingCard {
+  text-decoration: none;
+}
+
+.pricingCategory {
+  display: inline-block;
+  font-size: var(--text-xs);
+  color: var(--accent-primary);
+  font-weight: 500;
+  margin-bottom: var(--space-1);
+}
+
+.pricingPrice {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-top: var(--space-2);
+}
+
+/* ============================================
+   レビュー
+   ============================================ */
+
+.reviewsLayout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.reviewsStatsCard {
+  padding: var(--space-5);
+  text-align: center;
+  position: sticky;
+  top: calc(80px + var(--space-6));
+  cursor: default;
+}
+
+.reviewsStatsCard:hover {
+  background: var(--bg-elevated);
+}
+
+.reviewsAvg {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: var(--space-2);
+}
+
+.reviewsStars {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.reviewsCount {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-5);
+}
+
+.ratingBars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ratingBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ratingLabel {
+  width: 16px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.ratingProgress {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.ratingFill {
+  height: 100%;
+  background: var(--color-star);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-base);
+}
+
+.ratingCount {
+  width: 24px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: left;
+}
+
+/* レビュー一覧 */
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.reviewCard {
+  padding: var(--space-5);
+  cursor: default;
+}
+
+.reviewCard:hover {
+  background: var(--bg-elevated);
+}
+
+.reviewHeader {
+  margin-bottom: var(--space-3);
+}
+
+.reviewerLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+}
+
+.reviewerLink:hover .reviewerName {
+  color: var(--accent-primary);
+}
+
+.reviewerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.reviewerAvatar {
+  flex-shrink: 0;
+}
+
+.reviewerAvatar.hasImage {
+  background: transparent;
+}
+
+.reviewerAvatar img {
+  border-radius: var(--radius-full);
+}
+
+.reviewerName {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  transition: color var(--transition-fast);
+}
+
+.reviewDate {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.reviewRating {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-2);
+}
+
+.reviewProject {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reviewComment {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 1023px) {
+  .reviewsLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewsStatsCard {
+    position: static;
+  }
+}
+
+@media (max-width: 767px) {
+  .container {
+    padding: var(--space-4);
+    padding-top: 100px;
+  }
+
+  .headerBg {
+    height: 160px;
+  }
+
+  .profileLayout {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profileHeader {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .profileNames {
+    text-align: center;
+  }
+
+  .displayName {
+    font-size: var(--text-xl);
+  }
+
+  .stats {
+    justify-content: center;
+  }
+
+  .socialLinks {
+    justify-content: center;
+  }
+
+  .worksGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 479px) {
+  .profileCard {
+    padding: var(--space-4);
+  }
+
+  .avatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  .worksGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

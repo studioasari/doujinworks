@@ -2,18 +2,67 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
+import styles from './DashboardSidebar.module.css'
 
 type DashboardSidebarProps = {
   accountType?: string | null
   isAdmin?: boolean
 }
 
+type MenuItem = {
+  href: string
+  icon: string
+  label: string
+  isAdmin?: boolean
+}
+
+type TooltipState = {
+  visible: boolean
+  text: string
+  top: number
+}
+
 export default function DashboardSidebar({ accountType = null, isAdmin = false }: DashboardSidebarProps) {
   const pathname = usePathname()
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(false)
   const [isToggleLoading, setIsToggleLoading] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, text: '', top: 0 })
+  const sidebarRef = useRef<HTMLElement>(null)
+
+  // 初回マウント時にlocalStorageから状態を復元
+  useEffect(() => {
+    setIsMounted(true)
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved !== null) {
+      setIsCollapsed(saved === 'true')
+    }
+  }, [])
+
+  // ツールチップ表示
+  const showTooltip = useCallback((text: string, element: HTMLElement) => {
+    if (!isCollapsed || !sidebarRef.current) return
+    const sidebarRect = sidebarRef.current.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+    const top = elementRect.top - sidebarRect.top + elementRect.height / 2
+    setTooltip({ visible: true, text, top })
+  }, [isCollapsed])
+
+  const hideTooltip = useCallback(() => {
+    setTooltip(prev => ({ ...prev, visible: false }))
+  }, [])
+
+  // 折りたたみ状態をlocalStorageに保存
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => {
+      const newState = !prev
+      localStorage.setItem('sidebar-collapsed', String(newState))
+      return newState
+    })
+  }, [])
 
   useEffect(() => {
     if (accountType === 'business') {
@@ -86,54 +135,88 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  // モバイル用メニュー項目（アイコン+短いラベル）
-  const mobileMenuItems = [
-    { href: '/dashboard', icon: 'home', label: 'ホーム' },
-    { href: '/dashboard/profile', icon: 'user-edit', label: 'プロフィール' },
-    { href: '/dashboard/pricing', icon: 'tags', label: '料金表' },
-    { href: '/dashboard/portfolio', icon: 'images', label: '作品' },
-    { href: '/requests/manage', icon: 'clipboard-list', label: '依頼管理' },
-    { href: '/requests/create', icon: 'plus-circle', label: '依頼作成' },
-    { href: '/dashboard/earnings', icon: 'chart-line', label: '売上' },
-    { href: '/dashboard/payments', icon: 'credit-card', label: '支払い' },
-    { href: '/dashboard/bank-account', icon: 'university', label: '振込先' },
-    { href: '/messages', icon: 'envelope', label: 'メッセージ' },
+  // メニュー項目
+  const menuItems: MenuItem[] = [
+    { href: '/dashboard', icon: 'fa-solid fa-house', label: 'ダッシュボード' },
+    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
+    { href: '/dashboard/pricing', icon: 'fa-solid fa-tags', label: '料金表管理' },
+    { href: '/dashboard/portfolio', icon: 'fa-solid fa-images', label: '作品管理' },
   ]
 
-  // ビジネスユーザー用
-  if (accountType === 'business') {
-    mobileMenuItems.push({ href: '/dashboard/business', icon: 'briefcase', label: 'ビジネス' })
-  }
+  const requestItems: MenuItem[] = [
+    { href: '/requests/manage', icon: 'fa-solid fa-clipboard-list', label: '依頼管理' },
+    { href: '/requests/create', icon: 'fa-solid fa-circle-plus', label: '依頼を作成' },
+  ]
 
-  // 管理者用メニュー
-  const adminMobileItems = isAdmin ? [
-    { href: '/admin', icon: 'cog', label: '管理' },
-    { href: '/admin/payments', icon: 'money-check', label: '振込管理' },
-    { href: '/admin/users', icon: 'users', label: 'ユーザー' },
+  const financeItems: MenuItem[] = [
+    { href: '/dashboard/earnings', icon: 'fa-solid fa-chart-line', label: '売上管理' },
+    { href: '/dashboard/payments', icon: 'fa-solid fa-credit-card', label: '支払い管理' },
+    { href: '/dashboard/bank-account', icon: 'fa-solid fa-building-columns', label: '振込先設定' },
+  ]
+
+  const otherItems: MenuItem[] = [
+    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
+    ...(accountType === 'business' ? [{ href: '/dashboard/business', icon: 'fa-solid fa-briefcase', label: 'ビジネス情報' }] : []),
+  ]
+
+  const adminItems: MenuItem[] = isAdmin ? [
+    { href: '/admin', icon: 'fa-solid fa-gauge-high', label: '管理ダッシュボード', isAdmin: true },
+    { href: '/admin/payments', icon: 'fa-solid fa-money-check-dollar', label: '振込管理', isAdmin: true },
+    { href: '/admin/users', icon: 'fa-solid fa-users-gear', label: 'ユーザー管理', isAdmin: true },
   ] : []
+
+  // モバイル用全メニュー
+  const allMobileItems = [...menuItems, ...requestItems, ...financeItems, ...otherItems, ...adminItems]
+
+  // サイドバーアイテムのレンダリング
+  const renderSidebarItem = (item: MenuItem) => (
+    <Link
+      key={item.href}
+      href={item.href}
+      className={`${styles.sidebarItem} ${isActive(item.href) ? styles.active : ''} ${item.isAdmin ? styles.admin : ''}`}
+      onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
+      onMouseLeave={hideTooltip}
+    >
+      <i className={item.icon}></i>
+      <span className={styles.label}>{item.label}</span>
+    </Link>
+  )
+
+  // SSR時のちらつき防止
+  if (!isMounted) {
+    return null
+  }
 
   return (
     <>
-      {/* モバイル: 上部横スクロールナビ */}
-      <nav className="dashboard-mobile-nav">
-        <div className="dashboard-mobile-nav-scroll">
-          {mobileMenuItems.map((item) => (
+      {/* モバイル: 横スクロールナビ */}
+      <nav className={styles.mobileNav}>
+        {/* モバイル用受付状態トグル（ビジネスユーザーのみ） */}
+        {accountType === 'business' && (
+          <div className={styles.mobileStatusBar}>
+            <div className={`${styles.mobileStatusIndicator} ${isAcceptingOrders ? styles.accepting : ''}`}>
+              <span className={styles.mobileStatusDot}></span>
+              <span>{isAcceptingOrders ? '受付中' : '停止中'}</span>
+            </div>
+            <button
+              onClick={toggleAcceptingOrders}
+              disabled={isToggleLoading}
+              className={`${styles.toggleSwitch} ${styles.toggleSwitchSm} ${isAcceptingOrders ? styles.on : ''} ${isToggleLoading ? styles.loading : ''}`}
+              aria-label={isAcceptingOrders ? '受付を停止する' : '受付を開始する'}
+            >
+              <span className={styles.toggleKnob}></span>
+            </button>
+          </div>
+        )}
+        
+        <div className={styles.mobileScroll}>
+          {allMobileItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`dashboard-mobile-nav-item ${isActive(item.href) ? 'active' : ''}`}
+              className={`${styles.mobileItem} ${isActive(item.href) ? styles.active : ''} ${item.isAdmin ? styles.admin : ''}`}
             >
-              <i className={`fas fa-${item.icon}`}></i>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-          {adminMobileItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`dashboard-mobile-nav-item admin ${isActive(item.href) ? 'active' : ''}`}
-            >
-              <i className={`fas fa-${item.icon}`}></i>
+              <i className={item.icon}></i>
               <span>{item.label}</span>
             </Link>
           ))}
@@ -141,101 +224,112 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       </nav>
 
       {/* PC: 左サイドバー */}
-      <aside className="dashboard-sidebar">
-        <nav className="dashboard-sidebar-nav">
-          {/* 受付中トグル（ビジネスユーザーのみ） */}
+      <aside 
+        ref={sidebarRef}
+        className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}
+      >
+        {/* ツールチップ（JS制御） */}
+        {isCollapsed && tooltip.visible && (
+          <div 
+            className={styles.tooltip}
+            style={{ top: tooltip.top }}
+          >
+            {tooltip.text}
+          </div>
+        )}
+
+        {/* 折りたたみボタン（右側の耳型） */}
+        <button
+          className={styles.collapseBtn}
+          onClick={toggleCollapse}
+          onMouseEnter={(e) => showTooltip(isCollapsed ? 'メニューを展開' : 'メニューを折りたたむ', e.currentTarget)}
+          onMouseLeave={hideTooltip}
+          aria-label={isCollapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
+        >
+          <i className={`fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-left'}`}></i>
+        </button>
+
+        <nav className={styles.sidebarNav}>
+          {/* 受付状態（ビジネスユーザーのみ） */}
           {accountType === 'business' && (
-            <div className={`dashboard-status-card ${isAcceptingOrders ? 'accepting' : 'paused'}`}>
-              <div className="dashboard-status-header">
-                <span className={`dashboard-status-label ${isAcceptingOrders ? 'accepting' : 'paused'}`}>
-                  <i className="fas fa-circle"></i>
-                  {isAcceptingOrders ? '受付中' : '受付停止中'}
-                </span>
-                
+            <div className={`${styles.statusCard} ${isAcceptingOrders ? styles.accepting : styles.paused}`}>
+              {isCollapsed ? (
+                // 折りたたみ時: アイコンのみ
                 <button
                   onClick={toggleAcceptingOrders}
                   disabled={isToggleLoading}
-                  className={`dashboard-toggle ${isAcceptingOrders ? 'on' : 'off'} ${isToggleLoading ? 'loading' : ''}`}
+                  className={`${styles.statusIconOnly} ${isAcceptingOrders ? styles.accepting : ''}`}
+                  onMouseEnter={(e) => showTooltip(isAcceptingOrders ? '受付中 - クリックで停止' : '停止中 - クリックで開始', e.currentTarget)}
+                  onMouseLeave={hideTooltip}
+                  aria-label={isAcceptingOrders ? '受付を停止する' : '受付を開始する'}
                 >
-                  <div className="dashboard-toggle-knob"></div>
+                  <i className={`fa-solid ${isAcceptingOrders ? 'fa-circle-check' : 'fa-circle-pause'}`}></i>
                 </button>
-              </div>
-              
-              <p className="dashboard-status-text">
-                {isAcceptingOrders 
-                  ? '新規依頼を受け付けています' 
-                  : '新規依頼を受け付けていません'}
-              </p>
+              ) : (
+                // 展開時: フルUI
+                <>
+                  <div className={styles.statusHeader}>
+                    <div className={`${styles.statusIndicator} ${isAcceptingOrders ? styles.accepting : styles.paused}`}>
+                      <span className={styles.statusDot}></span>
+                      <span className={styles.statusLabel}>
+                        {isAcceptingOrders ? '受付中' : '停止中'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={toggleAcceptingOrders}
+                      disabled={isToggleLoading}
+                      className={`${styles.toggleSwitch} ${isAcceptingOrders ? styles.on : ''} ${isToggleLoading ? styles.loading : ''}`}
+                      aria-label={isAcceptingOrders ? '受付を停止する' : '受付を開始する'}
+                    >
+                      <span className={styles.toggleKnob}></span>
+                    </button>
+                  </div>
+                  <p className={styles.statusText}>
+                    {isAcceptingOrders 
+                      ? '新規依頼を受け付けています' 
+                      : '新規依頼の受付を停止しています'}
+                  </p>
+                </>
+              )}
             </div>
           )}
 
-          <Link href="/dashboard" className={`dashboard-sidebar-item ${isActive('/dashboard') ? 'active' : ''}`}>
-            ダッシュボード
-          </Link>
-          
-          <Link href="/dashboard/profile" className={`dashboard-sidebar-item ${isActive('/dashboard/profile') ? 'active' : ''}`}>
-            プロフィール編集
-          </Link>
+          {/* メインメニュー */}
+          <div className={styles.menuGroup}>
+            {menuItems.map(renderSidebarItem)}
+          </div>
 
-          <Link href="/dashboard/pricing" className={`dashboard-sidebar-item ${isActive('/dashboard/pricing') ? 'active' : ''}`}>
-            料金表管理
-          </Link>
+          <div className={styles.divider}></div>
 
-          <Link href="/dashboard/portfolio" className={`dashboard-sidebar-item ${isActive('/dashboard/portfolio') ? 'active' : ''}`}>
-            作品管理
-          </Link>
+          {/* 依頼関連 */}
+          <div className={styles.menuGroup}>
+            {!isCollapsed && <span className={styles.groupLabel}>依頼</span>}
+            {requestItems.map(renderSidebarItem)}
+          </div>
 
-          <div className="dashboard-sidebar-divider"></div>
+          <div className={styles.divider}></div>
 
-          <Link href="/requests/manage" className={`dashboard-sidebar-item ${isActive('/requests/manage') ? 'active' : ''}`}>
-            依頼管理
-          </Link>
+          {/* 収支管理 */}
+          <div className={styles.menuGroup}>
+            {!isCollapsed && <span className={styles.groupLabel}>収支</span>}
+            {financeItems.map(renderSidebarItem)}
+          </div>
 
-          <Link href="/requests/create" className={`dashboard-sidebar-item ${isActive('/requests/create') ? 'active' : ''}`}>
-            依頼を作成
-          </Link>
+          <div className={styles.divider}></div>
 
-          <div className="dashboard-sidebar-divider"></div>
+          {/* その他 */}
+          <div className={styles.menuGroup}>
+            {otherItems.map(renderSidebarItem)}
+          </div>
 
-          <Link href="/dashboard/earnings" className={`dashboard-sidebar-item ${isActive('/dashboard/earnings') ? 'active' : ''}`}>
-            売上管理
-          </Link>
-
-          <Link href="/dashboard/payments" className={`dashboard-sidebar-item ${isActive('/dashboard/payments') ? 'active' : ''}`}>
-            支払い管理
-          </Link>
-
-          <Link href="/dashboard/bank-account" className={`dashboard-sidebar-item ${isActive('/dashboard/bank-account') ? 'active' : ''}`}>
-            振込先設定
-          </Link>
-
-          <div className="dashboard-sidebar-divider"></div>
-
-          <Link href="/messages" className={`dashboard-sidebar-item ${isActive('/messages') ? 'active' : ''}`}>
-            メッセージ
-          </Link>
-
-          {accountType === 'business' && (
-            <Link href="/dashboard/business" className={`dashboard-sidebar-item ${isActive('/dashboard/business') ? 'active' : ''}`}>
-              ビジネス情報
-            </Link>
-          )}
-
+          {/* 管理者メニュー */}
           {isAdmin && (
             <>
-              <div className="dashboard-sidebar-divider"></div>
-              
-              <Link href="/admin" className={`dashboard-sidebar-item ${isActive('/admin') ? 'active' : ''}`}>
-                管理ダッシュボード
-              </Link>
-
-              <Link href="/admin/payments" className={`dashboard-sidebar-item ${isActive('/admin/payments') ? 'active' : ''}`}>
-                振込管理
-              </Link>
-
-              <Link href="/admin/users" className={`dashboard-sidebar-item ${isActive('/admin/users') ? 'active' : ''}`}>
-                ユーザー管理
-              </Link>
+              <div className={styles.divider}></div>
+              <div className={styles.menuGroup}>
+                {!isCollapsed && <span className={`${styles.groupLabel} ${styles.adminLabel}`}>管理者</span>}
+                {adminItems.map(renderSidebarItem)}
+              </div>
             </>
           )}
         </nav>

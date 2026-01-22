@@ -595,10 +595,10 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <Link href="/news" className="link">
-              すべて見る <i className="fas fa-arrow-right"></i>
-            </Link>
           </div>
+          <Link href="/news" className={`link ${styles.newsMore}`}>
+            すべて見る <i className="fas fa-arrow-right"></i>
+          </Link>
         </div>
 
         {/* 統計バー */}
@@ -719,7 +719,7 @@ export default function HomePage() {
                         ) : (
                           <i className="fas fa-image"></i>
                         )}
-                        <span className="badge badge-accent">
+                        <span className={`badge badge-accent ${styles.workImageBadge}`}>
                           <i className="fas fa-fire"></i> HOT
                         </span>
                       </div>
@@ -801,9 +801,9 @@ export default function HomePage() {
                         {creator.is_accepting_orders ? '受付中' : '停止中'}
                       </span>
                       <div className={styles.creatorHeader}>
-                        <div className="avatar avatar-md">
+                        <div className="avatar avatar-sm">
                           {creator.avatar_url ? (
-                            <Image src={creator.avatar_url} alt="" width={48} height={48} />
+                            <Image src={creator.avatar_url} alt="" width={32} height={32} />
                           ) : (
                             <i className="fas fa-user"></i>
                           )}

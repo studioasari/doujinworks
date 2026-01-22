@@ -1,0 +1,593 @@
+/* ============================================
+   DashboardSidebar.module.css
+   デザインシステム準拠のサイドバースタイル
+   ============================================ */
+
+/* ============================================
+   PC: サイドバー
+   ============================================ */
+
+.sidebar {
+  width: 260px;
+  min-height: calc(100vh - 65px);
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-default);
+  padding: var(--space-4);
+  flex-shrink: 0;
+  position: relative;
+  transition: width 0.25s ease, padding 0.25s ease;
+  display: none;
+  flex-direction: column;
+  overflow: visible;
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    display: flex;
+  }
+}
+
+/* 折りたたみ状態 */
+.sidebar.collapsed {
+  width: 72px;
+  padding: var(--space-4) var(--space-3);
+}
+
+/* ============================================
+   折りたたみボタン（右側の耳型）
+   ============================================ */
+
+.collapseBtn {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  transform: translateX(100%);
+  width: 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-left: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+.collapseBtn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.collapseBtn i {
+  font-size: 12px;
+}
+
+.collapseBtn span {
+  display: none;
+}
+
+/* ============================================
+   サイドバーナビゲーション
+   ============================================ */
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding-bottom: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+/* メニューグループ */
+.menuGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* グループラベル */
+.groupLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.groupLabel.adminLabel {
+  color: var(--status-warning);
+}
+
+/* 区切り線 */
+.divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-3) 0;
+}
+
+/* ============================================
+   サイドバーアイテム
+   ============================================ */
+
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.sidebarItem i {
+  width: 20px;
+  font-size: var(--text-base);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebarItem .label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.2s ease;
+}
+
+.sidebarItem:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebarItem.active {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.sidebarItem.active i {
+  color: var(--accent-primary);
+}
+
+/* 管理者用アイテム */
+.sidebarItem.admin {
+  color: var(--text-tertiary);
+}
+
+.sidebarItem.admin:hover {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.sidebarItem.admin.active {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.sidebarItem.admin.active i {
+  color: var(--status-warning);
+}
+
+/* 折りたたみ時のスタイル */
+.collapsed .sidebarItem {
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.collapsed .sidebarItem .label {
+  display: none;
+}
+
+/* ============================================
+   ツールチップ（JS制御）
+   ============================================ */
+
+.tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  transform: translateY(-50%);
+  padding: var(--space-2) var(--space-3);
+  background: var(--text-primary);
+  color: var(--bg-base);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: tooltipFadeIn 0.15s ease;
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--text-primary);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ============================================
+   受付状態カード
+   ============================================ */
+
+.statusCard {
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  transition: all var(--transition-base);
+}
+
+.statusCard.accepting {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.statusCard.paused {
+  background: var(--bg-sunken);
+}
+
+/* 折りたたみ時 */
+.collapsed .statusCard,
+.collapsed .statusCard.accepting,
+.collapsed .statusCard.paused {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  display: flex;
+  justify-content: center;
+  border: none !important;
+  background: none !important;
+}
+
+/* ステータスヘッダー */
+.statusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* ステータスインジケーター */
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  position: relative;
+}
+
+.statusIndicator.accepting .statusDot {
+  background: var(--status-success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.statusIndicator.paused .statusDot {
+  background: var(--text-tertiary);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+}
+
+.statusLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statusIndicator.accepting .statusLabel {
+  color: var(--status-success);
+}
+
+.statusText {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ============================================
+   トグルスイッチ
+   ============================================ */
+
+.toggleSwitch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.toggleSwitch:hover {
+  border-color: var(--accent-primary);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: var(--radius-full);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.toggleSwitch.on {
+  background: var(--status-success);
+  border-color: var(--status-success);
+}
+
+.toggleSwitch.on .toggleKnob {
+  left: 22px;
+}
+
+.toggleSwitch.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.toggleSwitch:disabled {
+  cursor: not-allowed;
+}
+
+/* ============================================
+   折りたたみ時のステータスアイコン
+   ============================================ */
+
+.statusIconOnly {
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.statusIconOnly:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.statusIconOnly.accepting {
+  color: var(--status-success);
+}
+
+.statusIconOnly.accepting:hover {
+  background: var(--bg-hover);
+}
+
+.statusIconOnly:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   モバイル: 横スクロールナビ
+   ============================================ */
+
+.mobileNav {
+  display: block;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-default);
+  position: sticky;
+  top: 65px;
+  z-index: 90;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .mobileNav {
+    display: none;
+  }
+}
+
+.mobileScroll {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobileScroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* モバイル用受付状態バー */
+.mobileStatusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mobileStatusIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.mobileStatusIndicator.accepting {
+  color: var(--status-success);
+}
+
+.mobileStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+}
+
+.mobileStatusIndicator.accepting .mobileStatusDot {
+  background: var(--status-success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 小さいトグルスイッチ */
+.toggleSwitchSm {
+  width: 36px;
+  height: 20px;
+}
+
+.toggleSwitchSm .toggleKnob {
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  left: 2px;
+}
+
+.toggleSwitchSm.on .toggleKnob {
+  left: 18px;
+}
+
+/* ============================================
+   モバイルナビアイテム
+   ============================================ */
+
+.mobileItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  min-width: 64px;
+}
+
+.mobileItem i {
+  font-size: var(--text-base);
+  margin-bottom: 2px;
+}
+
+.mobileItem:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.mobileItem.active {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+/* モバイル管理者アイテム */
+.mobileItem.admin {
+  color: var(--text-tertiary);
+}
+
+.mobileItem.admin:hover {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.mobileItem.admin.active {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+/* ============================================
+   ダークモード調整
+   ============================================ */
+
+:global([data-theme="dark"]) .collapseBtn {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:global([data-theme="dark"]) .statusCard.accepting {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%);
+}
+
+:global([data-theme="dark"]) .toggleKnob {
+  background: var(--text-primary);
+}
+
+:global([data-theme="dark"]) .statusIconOnly.accepting {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+/* ============================================
+   アニメーション
+   ============================================ */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sidebarItem {
+  animation: slideIn 0.2s ease forwards;
+}
+
+.menuGroup .sidebarItem:nth-child(1) { animation-delay: 0s; }
+.menuGroup .sidebarItem:nth-child(2) { animation-delay: 0.02s; }
+.menuGroup .sidebarItem:nth-child(3) { animation-delay: 0.04s; }
+.menuGroup .sidebarItem:nth-child(4) { animation-delay: 0.06s; }
+.menuGroup .sidebarItem:nth-child(5) { animation-delay: 0.08s; }

@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase' 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import styles from './page.module.css'
 
 type Creator = {
   id: string
@@ -73,49 +75,52 @@ export default function CreatorsPage() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
-      <div className="creators-page">
-        <div className="creators-container">
-          {/* タイトル */}
-          <h1 className="creators-title">クリエイター一覧</h1>
+      <div className={styles.page}>
+        <div className={styles.container}>
+          {/* ヘッダー */}
+          <div className={styles.pageHeader}>
+            <h1 className={styles.pageTitle}>クリエイター一覧</h1>
+            <p className={styles.pageDescription}>
+              様々なジャンルで活躍するクリエイターを探してみましょう
+            </p>
+          </div>
 
           {/* 検索・フィルターエリア */}
-          <div className="creators-filter-box">
+          <div className={`card ${styles.filterCard}`}>
             {/* 検索ボックス */}
-            <div className="creators-search-group">
-              <label className="creators-label">キーワード検索</label>
-              <div className="creators-search-input-wrap">
-                <i className="fas fa-search"></i>
+            <div className={styles.searchSection}>
+              <label className="form-label">キーワード検索</label>
+              <div className="search-bar">
+                <i className="fa-solid fa-magnifying-glass search-icon"></i>
                 <input
                   type="text"
                   placeholder="クリエイター名やユーザーIDで検索..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="creators-search-input"
                 />
               </div>
             </div>
 
             {/* アカウント種別フィルター */}
-            <div className="creators-filter-group">
-              <label className="creators-label">アカウント種別</label>
-              <div className="creators-filter-tabs">
+            <div className={styles.filterSection}>
+              <label className="form-label">アカウント種別</label>
+              <div className="tabs">
                 <button
                   onClick={() => setAccountTypeFilter('all')}
-                  className={`creators-filter-tab ${accountTypeFilter === 'all' ? 'active' : ''}`}
+                  className={`tab ${accountTypeFilter === 'all' ? 'active' : ''}`}
                 >
                   すべて
                 </button>
                 <button
                   onClick={() => setAccountTypeFilter('casual')}
-                  className={`creators-filter-tab ${accountTypeFilter === 'casual' ? 'active' : ''}`}
+                  className={`tab ${accountTypeFilter === 'casual' ? 'active' : ''}`}
                 >
                   一般利用
                 </button>
                 <button
                   onClick={() => setAccountTypeFilter('business')}
-                  className={`creators-filter-tab ${accountTypeFilter === 'business' ? 'active' : ''}`}
+                  className={`tab ${accountTypeFilter === 'business' ? 'active' : ''}`}
                 >
                   ビジネス利用
                 </button>
@@ -124,13 +129,14 @@ export default function CreatorsPage() {
           </div>
 
           {/* 検索結果件数 */}
-          <p className="creators-result-count">
-            {filteredCreators.length}件のクリエイター
+          <p className={styles.resultCount}>
+            <span className={styles.resultNumber}>{filteredCreators.length}</span>
+            件のクリエイター
           </p>
 
           {/* ローディング */}
           {loading && (
-            <div className="creators-loading">
+            <div className={styles.loadingState}>
               <i className="fas fa-spinner fa-spin"></i>
               <span>読み込み中...</span>
             </div>
@@ -138,53 +144,57 @@ export default function CreatorsPage() {
 
           {/* 空状態 */}
           {!loading && filteredCreators.length === 0 && (
-            <div className="creators-empty">
-              <i className="fas fa-users-slash"></i>
+            <div className="empty-state">
+              <i className="fa-regular fa-user"></i>
               <p>クリエイターが見つかりませんでした</p>
             </div>
           )}
 
           {/* クリエイターカード一覧 */}
           {!loading && filteredCreators.length > 0 && (
-            <div className="creators-grid">
+            <div className={styles.creatorsGrid}>
               {filteredCreators.map((creator) => (
                 <Link
                   key={creator.id}
                   href={`/creators/${creator.username}`}
-                  className="creators-card"
+                  className={`card ${styles.creatorCard}`}
                 >
                   {/* カード上部 */}
-                  <div className="creators-card-header">
+                  <div className={styles.cardHeader}>
                     {/* アバター */}
-                    <div className="creators-avatar">
+                    <div className={`avatar avatar-lg ${styles.avatar} ${creator.avatar_url ? styles.hasImage : ''}`}>
                       {creator.avatar_url ? (
-                        <img
+                        <Image
                           src={creator.avatar_url}
                           alt={creator.display_name || ''}
+                          width={80}
+                          height={80}
                         />
                       ) : (
-                        <span>{creator.display_name?.charAt(0) || '?'}</span>
+                        <span className={styles.avatarInitial}>
+                          {creator.display_name?.charAt(0) || '?'}
+                        </span>
                       )}
                     </div>
 
                     {/* 表示名 */}
-                    <h2 className="creators-card-name">
+                    <h2 className={styles.creatorName}>
                       {creator.display_name || '名前未設定'}
                     </h2>
 
                     {/* Username */}
                     {creator.username && (
-                      <p className="creators-card-username">@{creator.username}</p>
+                      <p className={styles.creatorUsername}>@{creator.username}</p>
                     )}
 
                     {/* バッジエリア */}
-                    <div className="creators-card-badges">
-                      <span className="creators-type-badge">
+                    <div className={styles.badgeGroup}>
+                      <span className="badge">
                         {creator.account_type === 'business' ? 'ビジネス' : '一般'}
                       </span>
                       {creator.account_type === 'business' && (
-                        <span className={`creators-status-badge ${creator.is_accepting_orders ? 'accepting' : 'paused'}`}>
-                          <i className="fas fa-circle"></i>
+                        <span className={`badge ${creator.is_accepting_orders ? 'badge-open' : 'badge-closed'}`}>
+                          <i className="fa-solid fa-circle fa-xs"></i>
                           {creator.is_accepting_orders ? '受付中' : '受付停止'}
                         </span>
                       )}
@@ -192,8 +202,8 @@ export default function CreatorsPage() {
                   </div>
 
                   {/* カード下部 - 自己紹介 */}
-                  <div className="creators-card-body">
-                    <p className="creators-card-bio">
+                  <div className={styles.cardBody}>
+                    <p className={styles.creatorBio}>
                       {creator.bio || '自己紹介が登録されていません'}
                     </p>
                   </div>

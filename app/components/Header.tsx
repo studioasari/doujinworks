@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { getUnreadCount, markAsRead } from '@/utils/notifications'
+import { useDraftStore } from '@/stores/draftStore'
 import styles from './Header.module.css'
 
 type UnreadMessage = {
@@ -36,10 +37,13 @@ export default function Header() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [recentMessages, setRecentMessages] = useState<UnreadMessage[]>([])
   const [isMobile, setIsMobile] = useState(false)
-  const [draftCount, setDraftCount] = useState(0)
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  
+  // Zustandで下書きカウントを管理
+  const draftCount = useDraftStore((state) => state.count)
+  const recount = useDraftStore((state) => state.recount)
   
   const router = useRouter()
   const pathname = usePathname()
@@ -67,26 +71,12 @@ export default function Header() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // 下書きカウント（Zustand + storageイベント）
   useEffect(() => {
-    const countDrafts = () => {
-      try {
-        const genres = ['illustration_drafts', 'manga_drafts', 'novel_drafts', 'music_drafts', 'voice_drafts', 'video_drafts']
-        let totalCount = 0
-        genres.forEach(genre => {
-          const saved = localStorage.getItem(genre)
-          if (saved) {
-            totalCount += Object.keys(JSON.parse(saved)).length
-          }
-        })
-        setDraftCount(totalCount)
-      } catch (error) {
-        setDraftCount(0)
-      }
-    }
-    countDrafts()
-    const interval = setInterval(countDrafts, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    recount()
+    window.addEventListener('storage', recount)
+    return () => window.removeEventListener('storage', recount)
+  }, [recount])
 
   useEffect(() => {
     if (isMobile && (isMessageMenuOpen || isNotificationMenuOpen || isMenuOpen || isUploadMenuOpen)) {
@@ -117,9 +107,17 @@ export default function Header() {
   useEffect(() => {
     if (profile?.id) {
       loadUnreadMessages()
-      subscribeToMessages()
       loadNotifications()
-      subscribeToNotifications()
+      
+      // 購読を開始し、クリーンアップ関数を取得
+      const unsubscribeMessages = subscribeToMessages()
+      const unsubscribeNotifications = subscribeToNotifications()
+      
+      // コンポーネントのアンマウント時にチャンネルを削除
+      return () => {
+        unsubscribeMessages?.()
+        unsubscribeNotifications?.()
+      }
     }
   }, [profile])
 

@@ -4,10 +4,9 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import Header from '@/app/components/Header'
-import Footer from '@/app/components/Footer'
-import DashboardSidebar from '@/app/components/DashboardSidebar'
 import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
+import { useDraftStore } from '@/stores/draftStore'
+import styles from './page.module.css'
 
 // 画像圧縮関数
 async function compressImage(file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> {
@@ -138,6 +137,7 @@ function UploadNovelContent() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
+  const recount = useDraftStore((state) => state.recount)
 
   // エディタ機能: ルビ挿入
   function insertRuby() {
@@ -246,7 +246,7 @@ function UploadNovelContent() {
   }
 
   function convertPageBreak(text: string): string {
-    return text.replace(/───/g, '<div style="display: flex; align-items: center; justify-content: center; margin: 48px 0; padding: 16px; border: 2px solid #E5E5E5; border-radius: 8px; background-color: #FAFAFA; color: #6B6B6B; font-size: 14px; font-weight: bold;"><i class="fas fa-grip-lines" style="margin-right: 8px;"></i>ページ区切り</div>')
+    return text.replace(/───/g, '<div style="display: flex; align-items: center; justify-content: center; margin: 48px 0; padding: 16px; border: 2px solid #E5E5E5; border-radius: 8px; background-color: #FAFAFA; color: #6B6B6B; font-size: 14px; font-weight: bold;"><i class="fa-solid fa-grip-lines" style="margin-right: 8px;"></i>ページ区切り</div>')
   }
 
   function convertHeadings(text: string): string {
@@ -283,13 +283,42 @@ function UploadNovelContent() {
     loadDrafts()
   }, [])
 
-  // Toast自動消去
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000)
       return () => clearTimeout(timer)
     }
   }, [toast])
+
+  // モーダル表示時のスクロール禁止
+  useEffect(() => {
+    if (showConfirmModal || showDraftModal || showPreviewModal) {
+      const scrollY = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.overflow = 'hidden'
+    } else {
+      const scrollY = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflow = ''
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY) * -1)
+      }
+    }
+    return () => {
+      const scrollY = document.body.style.top
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      document.body.style.overflow = ''
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY) * -1)
+      }
+    }
+  }, [showConfirmModal, showDraftModal, showPreviewModal])
 
   function restoreDraft(draftId: string) {
     try {
@@ -342,12 +371,12 @@ function UploadNovelContent() {
   function loadDrafts() {
     try {
       const allCategories = [
-        { key: 'illustration_drafts', name: 'イラスト', icon: 'fas fa-image' },
-        { key: 'manga_drafts', name: 'マンガ', icon: 'fas fa-book' },
-        { key: 'novel_drafts', name: '小説', icon: 'fas fa-file-alt' },
-        { key: 'music_drafts', name: '音楽', icon: 'fas fa-music' },
-        { key: 'voice_drafts', name: 'ボイス', icon: 'fas fa-microphone' },
-        { key: 'video_drafts', name: '動画', icon: 'fas fa-video' }
+        { key: 'illustration_drafts', name: 'イラスト', icon: 'fa-solid fa-image' },
+        { key: 'manga_drafts', name: 'マンガ', icon: 'fa-solid fa-book' },
+        { key: 'novel_drafts', name: '小説', icon: 'fa-solid fa-file-lines' },
+        { key: 'music_drafts', name: '音楽', icon: 'fa-solid fa-music' },
+        { key: 'voice_drafts', name: 'ボイス', icon: 'fa-solid fa-microphone' },
+        { key: 'video_drafts', name: '動画', icon: 'fa-solid fa-video' }
       ]
 
       let allDrafts: Draft[] = []
@@ -418,6 +447,7 @@ function UploadNovelContent() {
         const allDrafts = JSON.parse(saved)
         delete allDrafts[draft.id]
         localStorage.setItem(storageKey, JSON.stringify(allDrafts))
+        recount()
         loadDrafts()
         setToast({ message: '下書きを削除しました', type: 'success' })
       }
@@ -451,13 +481,14 @@ function UploadNovelContent() {
         }
         
         localStorage.setItem('novel_drafts', JSON.stringify(allDrafts))
+        recount()
       } catch (error) {
         console.error('自動保存エラー:', error)
       }
     }, 2000)
 
     return () => clearTimeout(autoSaveTimer)
-  }, [title, synopsis, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId])
+  }, [title, synopsis, content, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId, recount])
 
   useEffect(() => {
     if (title.length > 200) {
@@ -716,453 +747,445 @@ function UploadNovelContent() {
     r18g: 'R-18G'
   }
 
+  if (loading) {
+    return (
+      <div className={styles.loading}>
+        <i className="fa-solid fa-spinner fa-spin"></i>
+        <span>読み込み中...</span>
+      </div>
+    )
+  }
+
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Header />
-      
       <Suspense fallback={null}>
         <DraftRestorer onRestore={restoreDraft} />
       </Suspense>
       
-      <div className="upload-illust-page">
-        <DashboardSidebar accountType={accountType} />
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>小説をアップロード</h1>
+          <button
+            type="button"
+            onClick={() => setShowDraftModal(true)}
+            className="btn btn-secondary btn-sm"
+          >
+            <i className="fa-solid fa-folder-open"></i>
+            下書き ({drafts.length})
+          </button>
+        </div>
 
-        {loading ? (
-          <div className="upload-illust-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+        {compressing && (
+          <div className="alert alert-info">
+            <i className="fa-solid fa-spinner fa-spin alert-icon"></i>
+            <span>画像を圧縮しています...</span>
           </div>
-        ) : (
-          <main className="upload-illust-main">
-            <div className="upload-illust-container">
-              {/* ヘッダー */}
-              <div className="upload-illust-header">
-                <h1 className="upload-illust-title">小説をアップロード</h1>
-                <button
-                  type="button"
-                  onClick={() => setShowDraftModal(true)}
-                  className="upload-illust-draft-btn"
-                >
-                  <i className="fas fa-folder-open"></i>
-                  下書き ({drafts.length})
+        )}
+
+        <form onSubmit={handlePreSubmit} className={styles.form}>
+          {/* サムネイル画像 */}
+          <div className={styles.section}>
+            <label className="form-label">サムネイル画像（任意）</label>
+            <p className={styles.hint}>自動圧縮あり</p>
+
+            {!thumbnailPreview ? (
+              <div
+                className={`${styles.dropzone} ${thumbnailDragging ? styles.dragging : ''}`}
+                onClick={handleImageClick}
+                onDragOver={(e) => { e.preventDefault(); setThumbnailDragging(true) }}
+                onDragLeave={() => setThumbnailDragging(false)}
+                onDrop={handleImageDrop}
+              >
+                <div className={styles.dropzoneIcon}>
+                  <i className="fa-solid fa-image"></i>
+                </div>
+                <p className={styles.dropzoneText}>
+                  クリックまたはドラッグしてサムネイルを追加
+                </p>
+                <p className={styles.dropzoneHint}>
+                  JPEG / PNG / GIF • 32MB以内
+                </p>
+              </div>
+            ) : (
+              <div className={styles.thumbnailPreview}>
+                <img src={thumbnailPreview} alt="サムネイル" />
+                <button type="button" onClick={removeThumbnail} className={styles.thumbnailRemove}>
+                  <i className="fa-solid fa-xmark"></i>
+                  削除
                 </button>
               </div>
+            )}
 
-              {/* 圧縮中 */}
-              {compressing && (
-                <div className="upload-illust-alert info">
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <span>画像を圧縮しています...</span>
-                </div>
-              )}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif"
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+          </div>
 
-              <form onSubmit={handlePreSubmit} className="upload-illust-form">
-                {/* サムネイル画像 */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">サムネイル画像（任意）</label>
-                  <p className="upload-illust-hint">自動圧縮あり</p>
+          {/* タイトル */}
+          <div className={styles.section}>
+            <label className="form-label">
+              タイトル <span className={styles.required}>*</span>
+            </label>
+            <p className={styles.hint}>{title.length}/200文字</p>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="小説のタイトル"
+              maxLength={200}
+              className={`form-input ${errors.title ? 'error' : ''}`}
+              style={{ maxWidth: '100%' }}
+            />
+            {errors.title && (
+              <p className="form-error">
+                <i className="fa-solid fa-circle-exclamation"></i> {errors.title}
+              </p>
+            )}
+          </div>
 
-                  {!thumbnailPreview ? (
-                    <div
-                      className={`upload-illust-dropzone ${thumbnailDragging ? 'dragging' : ''}`}
-                      onClick={handleImageClick}
-                      onDragOver={(e) => { e.preventDefault(); setThumbnailDragging(true) }}
-                      onDragLeave={() => setThumbnailDragging(false)}
-                      onDrop={handleImageDrop}
-                    >
-                      <div className="upload-illust-dropzone-icon">
-                        <i className="fas fa-image"></i>
-                      </div>
-                      <p className="upload-illust-dropzone-text">
-                        クリックまたはドラッグしてサムネイルを追加
-                      </p>
-                      <p className="upload-illust-dropzone-hint">
-                        JPEG / PNG / GIF • 32MB以内
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="upload-music-thumbnail-preview">
-                      <img src={thumbnailPreview} alt="サムネイル" />
-                      <button type="button" onClick={removeThumbnail} className="thumbnail-remove">
-                        <i className="fas fa-times"></i>
-                        削除
+          {/* あらすじ */}
+          <div className={styles.section}>
+            <label className="form-label">あらすじ</label>
+            <p className={styles.hint}>{synopsis.length}/2000文字</p>
+            <textarea
+              value={synopsis}
+              onChange={(e) => setSynopsis(e.target.value)}
+              placeholder="作品のあらすじを入力してください"
+              rows={4}
+              maxLength={2000}
+              className="form-input"
+              style={{ maxWidth: '100%', resize: 'vertical' }}
+            />
+          </div>
+
+          {/* 本文 */}
+          <div className={`${styles.section} ${styles.contentSection}`}>
+            <div className={styles.contentHeader}>
+              <div>
+                <label className="form-label">
+                  本文 <span className={styles.required}>*</span>
+                </label>
+                <p className={styles.hint}>{content.length.toLocaleString()}/100,000文字</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                disabled={!title.trim() && !content.trim()}
+                className={styles.previewBtn}
+              >
+                <i className="fa-solid fa-eye"></i>
+                プレビュー
+              </button>
+            </div>
+
+            {/* ツールバー */}
+            <div className={styles.toolbar}>
+              <div className={styles.headingWrapper}>
+                <button
+                  type="button"
+                  onClick={() => setShowHeadingMenu(!showHeadingMenu)}
+                  className={styles.toolbarBtn}
+                >
+                  <i className="fa-solid fa-heading"></i>
+                  見出し
+                  <i className="fa-solid fa-chevron-down"></i>
+                </button>
+                
+                {showHeadingMenu && (
+                  <>
+                    <div className={styles.headingOverlay} onClick={() => setShowHeadingMenu(false)} />
+                    <div className={styles.headingMenu}>
+                      <button type="button" onClick={() => { insertHeading(1); setShowHeadingMenu(false) }}>
+                        # 見出し1
+                      </button>
+                      <button type="button" onClick={() => { insertHeading(2); setShowHeadingMenu(false) }}>
+                        ## 見出し2
+                      </button>
+                      <button type="button" onClick={() => { insertHeading(3); setShowHeadingMenu(false) }}>
+                        ### 見出し3
                       </button>
                     </div>
-                  )}
+                  </>
+                )}
+              </div>
 
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif"
-                    onChange={handleImageChange}
-                    style={{ display: 'none' }}
-                  />
-                </div>
+              <button type="button" onClick={insertEmphasis} className={styles.toolbarBtn}>
+                <i className="fa-solid fa-bold"></i>
+                強調
+              </button>
 
-                {/* タイトル */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">
-                    タイトル <span className="required">*</span>
-                  </label>
-                  <p className="upload-illust-hint">{title.length}/200文字</p>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="小説のタイトル"
-                    maxLength={200}
-                    className={`upload-illust-input ${errors.title ? 'error' : ''}`}
-                  />
-                  {errors.title && (
-                    <div className="upload-illust-error">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.title}
-                    </div>
-                  )}
-                </div>
+              <button type="button" onClick={insertRuby} className={styles.toolbarBtn}>
+                <i className="fa-solid fa-language"></i>
+                ルビ
+              </button>
+              
+              <button type="button" onClick={insertPageBreak} className={styles.toolbarBtn}>
+                <i className="fa-solid fa-grip-lines"></i>
+                改ページ
+              </button>
+            </div>
 
-                {/* あらすじ */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">あらすじ</label>
-                  <p className="upload-illust-hint">{synopsis.length}/2000文字</p>
-                  <textarea
-                    value={synopsis}
-                    onChange={(e) => setSynopsis(e.target.value)}
-                    placeholder="作品のあらすじを入力してください"
-                    rows={4}
-                    maxLength={2000}
-                    className="upload-illust-textarea"
-                  />
-                </div>
+            <textarea
+              ref={contentRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="本文を入力してください"
+              rows={20}
+              className={`${styles.contentTextarea} ${errors.content ? styles.error : ''}`}
+            />
+            {errors.content && (
+              <p className="form-error">
+                <i className="fa-solid fa-circle-exclamation"></i> {errors.content}
+              </p>
+            )}
+            
+            {/* 記法の説明 */}
+            <div className={styles.syntaxHelp}>
+              <div className={styles.syntaxTitle}>
+                <i className="fa-solid fa-circle-info"></i>
+                記法の使い方
+              </div>
+              <div className={styles.syntaxItem}>見出し1: <code># 見出し</code></div>
+              <div className={styles.syntaxItem}>見出し2: <code>## 見出し</code></div>
+              <div className={styles.syntaxItem}>見出し3: <code>### 見出し</code></div>
+              <div className={styles.syntaxItem}>強調（太字）: <code>**強調したいテキスト**</code></div>
+              <div className={styles.syntaxItem}>ルビ: <code>漢字《かんじ》</code></div>
+              <div className={styles.syntaxItem}>改ページ: <code>───</code></div>
+            </div>
+          </div>
 
-                {/* 本文 */}
-                <div className="upload-illust-section upload-novel-content-section">
-                  <div className="upload-novel-content-header">
-                    <div>
-                      <label className="upload-illust-label">
-                        本文 <span className="required">*</span>
-                      </label>
-                      <p className="upload-illust-hint">{content.length.toLocaleString()}/100,000文字</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPreviewModal(true)}
-                      disabled={!title.trim() && !content.trim()}
-                      className="upload-novel-preview-btn"
-                    >
-                      <i className="fas fa-eye"></i>
-                      プレビュー
-                    </button>
-                  </div>
-
-                  {/* ツールバー */}
-                  <div className="upload-novel-toolbar">
-                    <div className="upload-novel-heading-wrapper">
-                      <button
-                        type="button"
-                        onClick={() => setShowHeadingMenu(!showHeadingMenu)}
-                        className="upload-novel-toolbar-btn"
-                      >
-                        <i className="fas fa-heading"></i>
-                        見出し
-                        <i className="fas fa-chevron-down"></i>
-                      </button>
-                      
-                      {showHeadingMenu && (
-                        <>
-                          <div className="upload-novel-heading-overlay" onClick={() => setShowHeadingMenu(false)} />
-                          <div className="upload-novel-heading-menu">
-                            <button type="button" onClick={() => { insertHeading(1); setShowHeadingMenu(false) }}>
-                              # 見出し1
-                            </button>
-                            <button type="button" onClick={() => { insertHeading(2); setShowHeadingMenu(false) }}>
-                              ## 見出し2
-                            </button>
-                            <button type="button" onClick={() => { insertHeading(3); setShowHeadingMenu(false) }}>
-                              ### 見出し3
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <button type="button" onClick={insertEmphasis} className="upload-novel-toolbar-btn">
-                      <i className="fas fa-bold"></i>
-                      強調
-                    </button>
-
-                    <button type="button" onClick={insertRuby} className="upload-novel-toolbar-btn">
-                      <i className="fas fa-language"></i>
-                      ルビ
-                    </button>
-                    
-                    <button type="button" onClick={insertPageBreak} className="upload-novel-toolbar-btn">
-                      <i className="fas fa-grip-lines"></i>
-                      改ページ
-                    </button>
-                  </div>
-
-                  <textarea
-                    ref={contentRef}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="本文を入力してください"
-                    rows={20}
-                    className={`upload-novel-textarea ${errors.content ? 'error' : ''}`}
-                  />
-                  {errors.content && (
-                    <div className="upload-illust-error">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.content}
-                    </div>
-                  )}
-                  
-                  {/* 記法の説明 */}
-                  <div className="upload-novel-syntax-help">
-                    <div className="syntax-title">
-                      <i className="fas fa-info-circle"></i>
-                      記法の使い方
-                    </div>
-                    <div className="syntax-item">見出し1: <code># 見出し</code></div>
-                    <div className="syntax-item">見出し2: <code>## 見出し</code></div>
-                    <div className="syntax-item">見出し3: <code>### 見出し</code></div>
-                    <div className="syntax-item">強調（太字）: <code>**強調したいテキスト**</code></div>
-                    <div className="syntax-item">ルビ: <code>漢字《かんじ》</code></div>
-                    <div className="syntax-item">改ページ: <code>───</code></div>
-                  </div>
-                </div>
-
-                {/* タグ入力 */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">
-                    タグを追加 <span className="required">*</span>
-                  </label>
-                  <p className="upload-illust-hint">
-                    最大10個まで（1個以上必須）{selectedTags.length}/10
-                  </p>
-                  
-                  <div className="upload-illust-tags-input">
-                    {selectedTags.map((tag, index) => (
-                      <div key={index} className="upload-illust-tag">
-                        <span>#{tag}</span>
-                        <button type="button" onClick={() => removeTag(tag)}>
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    ))}
-                    <input
-                      type="text"
-                      value={customTag}
-                      onChange={(e) => setCustomTag(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          addCustomTag()
-                        }
-                      }}
-                      placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
-                      disabled={selectedTags.length >= 10}
-                    />
-                  </div>
-                </div>
-
-                {/* プリセットタグ */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label-sub">プリセットタグから選択</label>
-                  <div className="upload-illust-preset-tags">
-                    {presetTags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => togglePresetTag(tag)}
-                        className={`upload-illust-preset-tag ${selectedTags.includes(tag) ? 'active' : ''}`}
-                      >
-                        #{tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 年齢制限 */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">
-                    年齢制限 <span className="required">*</span>
-                  </label>
-                  <div className="upload-illust-options">
-                    {(['general', 'r18', 'r18g'] as const).map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setRating(value)}
-                        className={`upload-illust-option ${rating === value ? 'active' : ''}`}
-                      >
-                        {ratingLabels[value]}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="upload-illust-hint">
-                    R-18: 性的表現を含む / R-18G: 暴力的・グロテスク表現を含む
-                  </p>
-                </div>
-
-                {/* オリジナル作品 */}
-                <div className="upload-illust-section">
-                  <label className={`upload-illust-checkbox ${isOriginal ? 'checked' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={isOriginal}
-                      onChange={(e) => setIsOriginal(e.target.checked)}
-                    />
-                    <div className="upload-illust-checkbox-content">
-                      <span className="upload-illust-checkbox-title">オリジナル作品</span>
-                      <span className="upload-illust-checkbox-desc">
-                        二次創作ではない、独自に創作した作品の場合はチェック
-                      </span>
-                    </div>
-                  </label>
-                </div>
-
-                {/* コメント設定 */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">作品へのコメント</label>
-                  <div className="upload-illust-options">
-                    <button
-                      type="button"
-                      onClick={() => setAllowComments(true)}
-                      className={`upload-illust-option ${allowComments ? 'active' : ''}`}
-                    >
-                      <i className="fas fa-comment"></i>
-                      許可する
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAllowComments(false)}
-                      className={`upload-illust-option ${!allowComments ? 'active' : ''}`}
-                    >
-                      <i className="fas fa-comment-slash"></i>
-                      許可しない
-                    </button>
-                  </div>
-                </div>
-
-                {/* 公開範囲 */}
-                <div className="upload-illust-section">
-                  <label className="upload-illust-label">
-                    公開範囲 <span className="required">*</span>
-                  </label>
-                  <div className="upload-illust-options three">
-                    {([
-                      { value: 'public', icon: 'fa-globe', label: '全体公開' },
-                      { value: 'followers', icon: 'fa-users', label: 'フォロワー限定' },
-                      { value: 'private', icon: 'fa-lock', label: '非公開' }
-                    ] as const).map((item) => (
-                      <button
-                        key={item.value}
-                        type="button"
-                        onClick={() => setVisibility(item.value)}
-                        className={`upload-illust-option ${visibility === item.value ? 'active' : ''}`}
-                      >
-                        <i className={`fas ${item.icon}`}></i>
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 利用規約同意 */}
-                <div className="upload-illust-section">
-                  <label className={`upload-illust-checkbox terms ${agreedToTerms ? 'checked' : ''} ${errors.terms ? 'error' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={agreedToTerms}
-                      onChange={(e) => {
-                        setAgreedToTerms(e.target.checked)
-                        if (e.target.checked) {
-                          setErrors(prev => ({ ...prev, terms: '' }))
-                        }
-                      }}
-                    />
-                    <div className="upload-illust-checkbox-content">
-                      <span className="upload-illust-checkbox-title">
-                        利用規約への同意 <span className="required">*</span>
-                      </span>
-                      <span className="upload-illust-checkbox-desc">
-                        <Link href="/terms" target="_blank">利用規約</Link>や
-                        <Link href="/guideline" target="_blank">ガイドライン</Link>
-                        に違反する作品は削除の対象となります
-                      </span>
-                    </div>
-                  </label>
-                  {errors.terms && (
-                    <div className="upload-illust-error">
-                      <i className="fas fa-exclamation-circle"></i>
-                      {errors.terms}
-                    </div>
-                  )}
-                </div>
-
-                {/* ボタン */}
-                <div className="upload-illust-actions">
-                  <Link href="/dashboard/portfolio/upload" className="upload-illust-cancel">
-                    キャンセル
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={!isFormValid}
-                    className={`upload-illust-submit ${!isFormValid ? 'disabled' : ''}`}
-                  >
-                    {uploading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        アップロード中...
-                      </>
-                    ) : (
-                      '確認画面へ'
-                    )}
+          {/* タグ入力 */}
+          <div className={styles.section}>
+            <label className="form-label">
+              タグを追加 <span className={styles.required}>*</span>
+            </label>
+            <p className={styles.hint}>
+              最大10個まで（1個以上必須）{selectedTags.length}/10
+            </p>
+            
+            <div className={styles.tagsInput}>
+              {selectedTags.map((tag, index) => (
+                <div key={index} className={styles.tagItem}>
+                  <span>#{tag}</span>
+                  <button type="button" onClick={() => removeTag(tag)}>
+                    <i className="fa-solid fa-xmark"></i>
                   </button>
                 </div>
-              </form>
+              ))}
+              <input
+                type="text"
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addCustomTag()
+                  }
+                }}
+                placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
+                disabled={selectedTags.length >= 10}
+              />
             </div>
-          </main>
-        )}
+          </div>
+
+          {/* プリセットタグ */}
+          <div className={styles.section}>
+            <label className={styles.labelSub}>プリセットタグから選択</label>
+            <div className={styles.presetTags}>
+              {presetTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => togglePresetTag(tag)}
+                  className={`${styles.presetTag} ${selectedTags.includes(tag) ? styles.active : ''}`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 年齢制限 */}
+          <div className={styles.section}>
+            <label className="form-label">
+              年齢制限 <span className={styles.required}>*</span>
+            </label>
+            <div className={styles.optionsEqual}>
+              {(['general', 'r18', 'r18g'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRating(value)}
+                  className={`${styles.option} ${rating === value ? styles.active : ''}`}
+                >
+                  {ratingLabels[value]}
+                </button>
+              ))}
+            </div>
+            <p className={styles.hint}>
+              R-18: 性的表現を含む / R-18G: 暴力的・グロテスク表現を含む
+            </p>
+          </div>
+
+          {/* オリジナル作品 */}
+          <div className={styles.section}>
+            <label className={`${styles.checkboxCard} ${isOriginal ? styles.checked : ''}`}>
+              <input
+                type="checkbox"
+                checked={isOriginal}
+                onChange={(e) => setIsOriginal(e.target.checked)}
+              />
+              <div className={styles.checkboxContent}>
+                <span className={styles.checkboxTitle}>オリジナル作品</span>
+                <span className={styles.checkboxDesc}>
+                  二次創作ではない、独自に創作した作品の場合はチェック
+                </span>
+              </div>
+            </label>
+          </div>
+
+          {/* コメント設定 */}
+          <div className={styles.section}>
+            <label className="form-label">作品へのコメント</label>
+            <div className={`${styles.options} ${styles.optionsThree}`}>
+              <button
+                type="button"
+                onClick={() => setAllowComments(true)}
+                className={`${styles.option} ${allowComments ? styles.active : ''}`}
+              >
+                <i className="fa-solid fa-comment"></i>
+                許可する
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllowComments(false)}
+                className={`${styles.option} ${!allowComments ? styles.active : ''}`}
+              >
+                <i className="fa-solid fa-comment-slash"></i>
+                許可しない
+              </button>
+            </div>
+          </div>
+
+          {/* 公開範囲 */}
+          <div className={styles.section}>
+            <label className="form-label">
+              公開範囲 <span className={styles.required}>*</span>
+            </label>
+            <div className={`${styles.options} ${styles.optionsThree}`}>
+              {([
+                { value: 'public', icon: 'fa-globe', label: '全体公開' },
+                { value: 'followers', icon: 'fa-users', label: 'フォロワー限定' },
+                { value: 'private', icon: 'fa-lock', label: '非公開' }
+              ] as const).map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setVisibility(item.value)}
+                  className={`${styles.option} ${visibility === item.value ? styles.active : ''}`}
+                >
+                  <i className={`fa-solid ${item.icon}`}></i>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 利用規約同意 */}
+          <div className={styles.section}>
+            <label className={`${styles.checkboxCard} ${styles.terms} ${agreedToTerms ? styles.checked : ''} ${errors.terms ? styles.error : ''}`}>
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => {
+                  setAgreedToTerms(e.target.checked)
+                  if (e.target.checked) {
+                    setErrors(prev => ({ ...prev, terms: '' }))
+                  }
+                }}
+              />
+              <div className={styles.checkboxContent}>
+                <span className={styles.checkboxTitle}>
+                  利用規約への同意 <span className={styles.required}>*</span>
+                </span>
+                <span className={styles.checkboxDesc}>
+                  <Link href="/terms" target="_blank" className="link">利用規約</Link>や
+                  <Link href="/guideline" target="_blank" className="link">ガイドライン</Link>
+                  に違反する作品は削除の対象となります
+                </span>
+              </div>
+            </label>
+            {errors.terms && (
+              <p className="form-error">
+                <i className="fa-solid fa-circle-exclamation"></i> {errors.terms}
+              </p>
+            )}
+          </div>
+
+          {/* ボタン */}
+          <div className={styles.actions}>
+            <Link href="/dashboard/portfolio/upload" className="btn btn-secondary">
+              キャンセル
+            </Link>
+            <button
+              type="submit"
+              disabled={!isFormValid}
+              className="btn btn-primary"
+            >
+              {uploading ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  アップロード中...
+                </>
+              ) : (
+                '確認画面へ'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* プレビューモーダル */}
       {showPreviewModal && (
-        <div className="upload-illust-modal-overlay" onClick={() => setShowPreviewModal(false)}>
-          <div className="upload-illust-modal preview" onClick={(e) => e.stopPropagation()}>
-            <div className="upload-novel-preview-header">
-              <h2>
-                <i className="fas fa-eye"></i>
+        <div className="modal-overlay active" onClick={() => setShowPreviewModal(false)}>
+          <div className={`modal ${styles.previewModal}`} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <i className="fa-solid fa-eye" style={{ marginRight: 'var(--space-2)' }}></i>
                 プレビュー
-              </h2>
-              <button onClick={() => setShowPreviewModal(false)} className="close-btn">
-                <i className="fas fa-times"></i>
+              </h3>
+              <button className="modal-close" onClick={() => setShowPreviewModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
-            <h1 className="upload-novel-preview-title">
-              {title || '（タイトルなし）'}
-            </h1>
+            <div className="modal-body">
+              <h1 className={styles.previewTitle}>
+                {title || '（タイトルなし）'}
+              </h1>
 
-            {synopsis && (
-              <div className="upload-novel-preview-synopsis">
-                <div className="synopsis-label">あらすじ</div>
-                <div className="synopsis-content">{synopsis}</div>
-              </div>
-            )}
-
-            <div className="upload-novel-preview-content">
-              {content ? (
-                <div dangerouslySetInnerHTML={{ __html: formatContent(content) }} />
-              ) : (
-                <div className="empty">本文が入力されていません</div>
+              {synopsis && (
+                <div className={styles.previewSynopsis}>
+                  <div className={styles.synopsisLabel}>あらすじ</div>
+                  <div className={styles.synopsisContent}>{synopsis}</div>
+                </div>
               )}
+
+              <div className={styles.previewContent}>
+                {content ? (
+                  <div dangerouslySetInnerHTML={{ __html: formatContent(content) }} />
+                ) : (
+                  <div className={styles.empty}>本文が入力されていません</div>
+                )}
+              </div>
             </div>
 
-            <div className="upload-novel-preview-footer">
-              <button onClick={() => setShowPreviewModal(false)} className="close-btn-bottom">
+            <div className="modal-footer">
+              <button onClick={() => setShowPreviewModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>
                 閉じる
               </button>
             </div>
@@ -1172,70 +1195,77 @@ function UploadNovelContent() {
 
       {/* 確認モーダル */}
       {showConfirmModal && (
-        <div className="upload-illust-modal-overlay" onClick={() => setShowConfirmModal(false)}>
-          <div className="upload-illust-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="upload-illust-modal-title">
-              <i className="fas fa-check-circle"></i>
-              アップロード内容の確認
-            </h2>
+        <div className="modal-overlay active" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <i className="fa-solid fa-circle-check" style={{ color: 'var(--status-success)', marginRight: 'var(--space-2)' }}></i>
+                アップロード内容の確認
+              </h3>
+              <button className="modal-close" onClick={() => setShowConfirmModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
 
-            {thumbnailPreview && (
-              <div className="upload-music-confirm-thumbnail">
-                <img src={thumbnailPreview} alt="サムネイル" />
+            <div className="modal-body">
+              {thumbnailPreview && (
+                <div className={styles.confirmThumbnail}>
+                  <img src={thumbnailPreview} alt="サムネイル" />
+                </div>
+              )}
+
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>タイトル</span>
+                <span className={styles.confirmValue}>{title}</span>
               </div>
-            )}
 
-            <div className="upload-illust-confirm-item">
-              <span className="label">タイトル</span>
-              <span className="value title">{title}</span>
-            </div>
+              {synopsis && (
+                <div className={styles.confirmItem}>
+                  <span className={styles.confirmLabel}>あらすじ</span>
+                  <span className={styles.confirmValue}>{synopsis}</span>
+                </div>
+              )}
 
-            {synopsis && (
-              <div className="upload-illust-confirm-item">
-                <span className="label">あらすじ</span>
-                <span className="value">{synopsis}</span>
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>本文</span>
+                <span className={styles.confirmValue}>{content.length.toLocaleString()}文字</span>
               </div>
-            )}
 
-            <div className="upload-illust-confirm-item">
-              <span className="label">本文</span>
-              <span className="value">{content.length.toLocaleString()}文字</span>
-            </div>
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>タグ ({selectedTags.length}個)</span>
+                <div className={styles.confirmTags}>
+                  {selectedTags.map((tag, i) => (
+                    <span key={i} className="badge">#{tag}</span>
+                  ))}
+                </div>
+              </div>
 
-            <div className="upload-illust-confirm-item">
-              <span className="label">タグ ({selectedTags.length}個)</span>
-              <div className="upload-illust-confirm-tags">
-                {selectedTags.map((tag, i) => (
-                  <span key={i} className="tag">#{tag}</span>
-                ))}
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>年齢制限</span>
+                <span className={styles.confirmValue}>{ratingLabels[rating]}</span>
+              </div>
+
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>作品種別</span>
+                <span className={styles.confirmValue}>{isOriginal ? 'オリジナル作品' : '二次創作'}</span>
+              </div>
+
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>コメント</span>
+                <span className={styles.confirmValue}>{allowComments ? '許可する' : '許可しない'}</span>
+              </div>
+
+              <div className={styles.confirmItem}>
+                <span className={styles.confirmLabel}>公開範囲</span>
+                <span className={styles.confirmValue}>{visibilityLabels[visibility]}</span>
               </div>
             </div>
 
-            <div className="upload-illust-confirm-item">
-              <span className="label">年齢制限</span>
-              <span className="value">{ratingLabels[rating]}</span>
-            </div>
-
-            <div className="upload-illust-confirm-item">
-              <span className="label">作品種別</span>
-              <span className="value">{isOriginal ? 'オリジナル作品' : '二次創作'}</span>
-            </div>
-
-            <div className="upload-illust-confirm-item">
-              <span className="label">コメント</span>
-              <span className="value">{allowComments ? '許可する' : '許可しない'}</span>
-            </div>
-
-            <div className="upload-illust-confirm-item">
-              <span className="label">公開範囲</span>
-              <span className="value">{visibilityLabels[visibility]}</span>
-            </div>
-
-            <div className="upload-illust-modal-actions">
-              <button onClick={() => setShowConfirmModal(false)} className="secondary">
+            <div className="modal-footer button-group-equal">
+              <button onClick={() => setShowConfirmModal(false)} className="btn btn-secondary">
                 修正する
               </button>
-              <button onClick={handleConfirmedSubmit} className="primary">
+              <button onClick={handleConfirmedSubmit} className="btn btn-primary">
                 確定してアップロード
               </button>
             </div>
@@ -1245,67 +1275,76 @@ function UploadNovelContent() {
 
       {/* 下書きモーダル */}
       {showDraftModal && (
-        <div className="upload-illust-modal-overlay" onClick={() => setShowDraftModal(false)}>
-          <div className="upload-illust-modal draft" onClick={(e) => e.stopPropagation()}>
-            <h2 className="upload-illust-modal-title">
-              <i className="fas fa-folder-open"></i>
-              保存済みの下書き ({drafts.length}件)
-            </h2>
+        <div className="modal-overlay active" onClick={() => setShowDraftModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <i className="fa-solid fa-folder-open" style={{ marginRight: 'var(--space-2)' }}></i>
+                保存済みの下書き ({drafts.length}件)
+              </h3>
+              <button className="modal-close" onClick={() => setShowDraftModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
 
-            {drafts.length === 0 ? (
-              <div className="upload-illust-draft-empty">
-                <i className="fas fa-file-alt"></i>
-                <p>保存された下書きはありません</p>
-              </div>
-            ) : (
-              <div className="upload-illust-draft-list">
-                {drafts.map((draft) => (
-                  <div key={`${draft.category}-${draft.id}`} className="upload-illust-draft-item">
-                    <div className="draft-content" onClick={() => loadDraft(draft)}>
-                      <div className="draft-badges">
-                        {draft.categoryName && (
-                          <span className="category-badge">
-                            <i className={draft.categoryIcon}></i>
-                            {draft.categoryName}
-                          </span>
-                        )}
-                        {draft.id === 'autosave' && (
-                          <span className="autosave-badge">自動保存</span>
-                        )}
-                      </div>
-                      <h3>{draft.title || '（タイトルなし）'}</h3>
-                      <p className="draft-date">
-                        {new Date(draft.timestamp).toLocaleString('ja-JP')} · {(draft.content || '').length.toLocaleString()}文字
-                      </p>
-                      {draft.selectedTags.length > 0 && (
-                        <div className="draft-tags">
-                          {draft.selectedTags.slice(0, 5).map((tag, i) => (
-                            <span key={i}>#{tag}</span>
-                          ))}
-                          {draft.selectedTags.length > 5 && (
-                            <span className="more">+{draft.selectedTags.length - 5}</span>
+            <div className="modal-body">
+              {drafts.length === 0 ? (
+                <div className="empty-state">
+                  <i className="fa-regular fa-file-lines"></i>
+                  <p>保存された下書きはありません</p>
+                </div>
+              ) : (
+                <div className={styles.draftList}>
+                  {drafts.map((draft) => (
+                    <div key={`${draft.category}-${draft.id}`} className={styles.draftItem}>
+                      <div className={styles.draftContent} onClick={() => loadDraft(draft)}>
+                        <div className={styles.draftBadges}>
+                          {draft.categoryName && (
+                            <span className={styles.categoryBadge}>
+                              <i className={draft.categoryIcon}></i> {draft.categoryName}
+                            </span>
+                          )}
+                          {draft.id === 'autosave' && (
+                            <span className={styles.autosaveBadge}>自動保存</span>
                           )}
                         </div>
-                      )}
+                        <h4 className={styles.draftTitle}>{draft.title || '（タイトルなし）'}</h4>
+                        <p className={styles.draftDate}>
+                          {new Date(draft.timestamp).toLocaleString('ja-JP')} · {(draft.content || '').length.toLocaleString()}文字
+                        </p>
+                        {draft.selectedTags.length > 0 && (
+                          <div className={styles.draftTags}>
+                            {draft.selectedTags.slice(0, 5).map((tag, i) => (
+                              <span key={i}>#{tag}</span>
+                            ))}
+                            {draft.selectedTags.length > 5 && (
+                              <span className={styles.more}>+{draft.selectedTags.length - 5}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm('この下書きを削除しますか？')) {
+                            deleteDraft(draft)
+                          }
+                        }}
+                        className={styles.deleteBtn}
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                        削除
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (confirm('この下書きを削除しますか？')) {
-                          deleteDraft(draft)
-                        }
-                      }}
-                      className="draft-delete"
-                    >
-                      削除
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <div className="upload-illust-modal-close">
-              <button onClick={() => setShowDraftModal(false)}>閉じる</button>
+            <div className="modal-footer">
+              <button onClick={() => setShowDraftModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>
+                閉じる
+              </button>
             </div>
           </div>
         </div>
@@ -1313,13 +1352,11 @@ function UploadNovelContent() {
 
       {/* トースト */}
       {toast && (
-        <div className={`upload-illust-toast ${toast.type}`}>
-          <i className={toast.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}></i>
+        <div className={`${styles.toast} ${styles[toast.type]}`}>
+          <i className={toast.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-exclamation'}></i>
           <span>{toast.message}</span>
         </div>
       )}
-
-      <Footer />
     </>
   )
 }

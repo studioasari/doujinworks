@@ -395,6 +395,10 @@ a {
   background: var(--accent-secondary);
 }
 
+.avatar:has(img) {
+  background: transparent;
+}
+
 .card-stats {
   color: var(--text-tertiary);
 }
@@ -698,6 +702,7 @@ a {
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
   background: var(--bg-sunken);
+  border: none;  /* ← 追加 */
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   color: var(--text-secondary);
@@ -1414,7 +1419,7 @@ button:focus-visible,
 
 [data-theme="dark"] .tag {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* border: 1px solid rgba(255, 255, 255, 0.15); */
 }
 
 /* ============================================
@@ -1516,12 +1521,21 @@ button:focus-visible,
   color: var(--status-info);
 }
 
-/* カード画像のプレースホルダー */
+/* カード画像 - aspect-ratio固定 */
 .card-image {
+  aspect-ratio: 1.91 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg-sunken);
+  overflow: hidden;
+  position: relative;
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-image i {
@@ -1537,3 +1551,4 @@ button:focus-visible,
 .avatar i {
   color: white;
 }
+

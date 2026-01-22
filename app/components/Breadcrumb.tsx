@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
+import styles from './Breadcrumb.module.css'
 
 type BreadcrumbItem = {
   label: string
@@ -205,24 +206,25 @@ export default function Breadcrumb() {
   }
 
   return (
-    <nav className="breadcrumb">
-      <div className="breadcrumb-inner">
-        <div className="breadcrumb-card">
+    <nav className={styles.breadcrumb} aria-label="パンくずリスト">
+      <div className={styles.breadcrumbInner}>
+        <ol className={styles.breadcrumbList}>
           {breadcrumbs.map((item, index) => (
-            <div key={index} className="breadcrumb-item">
+            <li key={index} className={styles.breadcrumbItem}>
               {index > 0 && (
-                <i className="fas fa-chevron-right breadcrumb-separator"></i>
+                <i className={`fas fa-chevron-right ${styles.breadcrumbSeparator}`} aria-hidden="true"></i>
               )}
               {index === breadcrumbs.length - 1 ? (
-                <span className="breadcrumb-current">{item.label}</span>
+                <span className={styles.breadcrumbCurrent} aria-current="page">{item.label}</span>
               ) : (
-                <Link href={item.href} className="breadcrumb-link">
-                  {item.label}
+                <Link href={item.href} className={styles.breadcrumbLink}>
+                  {index === 0 && <i className={`fas fa-house ${styles.homeIcon}`} aria-hidden="true"></i>}
+                  <span>{item.label}</span>
                 </Link>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </nav>
   )
