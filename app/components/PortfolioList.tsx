@@ -319,19 +319,19 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
             )}
 
             <div className={styles.filterBar}>
-              <div className={`${styles.dropdown} sort-dropdown-container ${isSortDropdownOpen ? styles.dropdownActive : ''}`}>
+              <div className={`dropdown sort-dropdown-container ${isSortDropdownOpen ? 'active' : ''}`}>
                 <button 
-                  className={styles.dropdownTrigger}
+                  className="dropdown-trigger"
                   onClick={(e) => { e.stopPropagation(); setIsSortDropdownOpen(!isSortDropdownOpen) }}
                 >
                   {SORT_OPTIONS.find(o => o.value === sortOrder)?.label}
-                  <i className="fas fa-chevron-down"></i>
+                  <i className="fa-solid fa-chevron-down"></i>
                 </button>
-                <div className={styles.dropdownMenu}>
+                <div className="dropdown-menu">
                   {SORT_OPTIONS.map(option => (
                     <div 
                       key={option.value} 
-                      className={`${styles.dropdownItem} ${sortOrder === option.value ? styles.dropdownItemActive : ''}`}
+                      className="dropdown-item"
                       onClick={() => { setSortOrder(option.value); setIsSortDropdownOpen(false) }}
                     >
                       {option.label}
