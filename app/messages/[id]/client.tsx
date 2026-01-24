@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '@/utils/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../../components/Header'
+import Header from '@/app/components/Header'
+import styles from './page.module.css'
 
 type Message = {
   id: string
@@ -73,13 +74,13 @@ const MESSAGES_PER_PAGE = 30
 
 function SidebarSkeleton() {
   return (
-    <div className="chat-sidebar-list">
+    <div className={styles.sidebarSkeleton}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="chat-room-item" style={{ opacity: 0.6 }}>
-          <div className="chat-room-avatar" style={{ background: '#DDE1E4' }} />
-          <div className="chat-room-content">
-            <div style={{ height: '14px', width: '80px', background: '#DDE1E4', borderRadius: '4px', marginBottom: '8px' }} />
-            <div style={{ height: '12px', width: '140px', background: '#DDE1E4', borderRadius: '4px' }} />
+        <div key={i} className={styles.skeletonRoom}>
+          <div className={`${styles.skeletonAvatar} ${styles.skeleton}`} />
+          <div className={styles.skeletonContent}>
+            <div className={`${styles.skeletonText} ${styles.skeleton}`} style={{ width: '80px' }} />
+            <div className={`${styles.skeletonText} ${styles.skeletonTextShort} ${styles.skeleton}`} />
           </div>
         </div>
       ))}
@@ -90,11 +91,11 @@ function SidebarSkeleton() {
 // メッセージスケルトン
 function MessagesSkeleton() {
   return (
-    <div className="chat-messages-skeleton">
+    <div className={styles.messagesSkeleton}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className={`chat-skeleton-row ${i % 2 === 0 ? 'sent' : 'received'}`}>
-          {i % 2 !== 0 && <div className="chat-skeleton-avatar" />}
-          <div className="chat-skeleton-bubble" style={{ width: `${100 + (i * 30)}px` }} />
+        <div key={i} className={`${styles.skeletonRow} ${i % 2 === 0 ? styles.sent : ''}`}>
+          {i % 2 !== 0 && <div className={`${styles.skeletonAvatar} ${styles.skeleton}`} />}
+          <div className={`${styles.skeletonBubble} ${styles.skeleton}`} style={{ width: `${100 + (i * 30)}px` }} />
         </div>
       ))}
     </div>
@@ -103,13 +104,13 @@ function MessagesSkeleton() {
 
 function RequestCardComponent({ request }: { request: WorkRequest }) {
   return (
-    <div className="chat-request-card">
-      <div className="chat-request-card-header">
+    <div className={styles.requestCard}>
+      <div className={styles.requestCardHeader}>
         <i className="fas fa-clipboard-list"></i>
         <span>お仕事の依頼</span>
       </div>
-      <h3 className="chat-request-card-title">{request.title}</h3>
-      <div className="chat-request-card-meta">
+      <h3 className={styles.requestCardTitle}>{request.title}</h3>
+      <div className={styles.requestCardMeta}>
         {(request.budget_min || request.budget_max) && (
           <div>予算: {request.budget_min?.toLocaleString() || '未設定'}〜{request.budget_max?.toLocaleString() || '未設定'}円</div>
         )}
@@ -117,9 +118,9 @@ function RequestCardComponent({ request }: { request: WorkRequest }) {
           <div>納期: {new Date(request.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}</div>
         )}
       </div>
-      <p className="chat-request-card-desc">{request.description}</p>
-      <Link href={`/requests/${request.id}`} className="chat-request-card-link">
-        依頼詳細を見る <i className="fas fa-arrow-right" style={{ fontSize: '11px' }}></i>
+      <p className={styles.requestCardDesc}>{request.description}</p>
+      <Link href={`/requests/${request.id}`} className={styles.requestCardLink}>
+        依頼詳細を見る <i className="fas fa-arrow-right"></i>
       </Link>
     </div>
   )
@@ -1070,46 +1071,45 @@ export default function ChatRoomPage() {
   return (
     <>
       <Header />
-      <div className="chat-page">
+      <div className={styles.chatContainer}>
         {/* サイドバー */}
-        <aside className="chat-sidebar hidden-mobile">
+        <aside className={styles.sidebar}>
           {sidebarLoading ? (
             <SidebarSkeleton />
           ) : chatRooms.length === 0 ? (
-            <div className="empty-state" style={{ padding: '40px 20px' }}>
-              <p className="text-gray text-small">メッセージがありません</p>
+            <div className={styles.emptyState}>
+              <p>メッセージがありません</p>
             </div>
           ) : (
-            <div className="chat-sidebar-list">
+            <div className={styles.sidebarList}>
               {chatRooms.map((room) => (
                 <div
                   key={room.id}
                   onClick={() => switchRoom(room.id)}
                   onContextMenu={(e) => handleRoomContextMenu(e, room)}
-                  className={`chat-room-item ${room.id === selectedRoomId ? 'active' : ''}`}
-                  style={{ cursor: 'pointer' }}
+                  className={`${styles.roomItem} ${room.id === selectedRoomId ? styles.active : ''}`}
                 >
-                  {room.pinned && <i className="fas fa-thumbtack chat-room-pin"></i>}
+                  {room.pinned && <i className={`fas fa-thumbtack ${styles.roomPinIcon}`}></i>}
                   
-                  <div className="chat-room-avatar">
+                  <div className={styles.roomAvatar}>
                     {room.other_user.avatar_url ? (
                       <img src={room.other_user.avatar_url} alt={room.other_user.display_name || ''} loading="lazy" />
                     ) : (
                       room.other_user.display_name?.charAt(0) || '?'
                     )}
                     {room.unread_count > 0 && (
-                      <span className="chat-room-badge">{room.unread_count > 99 ? '99+' : room.unread_count}</span>
+                      <span className={styles.roomUnreadBadge}>{room.unread_count > 99 ? '99+' : room.unread_count}</span>
                     )}
                   </div>
 
-                  <div className="chat-room-content">
-                    <div className="chat-room-header">
-                      <h3 className={`chat-room-name ${room.unread_count > 0 ? 'unread' : ''}`}>
+                  <div className={styles.roomContent}>
+                    <div className={styles.roomHeader}>
+                      <h3 className={`${styles.roomName} ${room.unread_count > 0 ? styles.unread : ''}`}>
                         {room.other_user.display_name || '名前未設定'}
                       </h3>
-                      <span className="chat-room-time">{room.last_message && formatMessageTime(room.last_message.created_at)}</span>
+                      <span className={styles.roomTime}>{room.last_message && formatMessageTime(room.last_message.created_at)}</span>
                     </div>
-                    <p className={`chat-room-text ${room.unread_count > 0 ? 'unread' : ''}`}>
+                    <p className={`${styles.roomLastMessage} ${room.unread_count > 0 ? styles.unread : ''}`}>
                       {getLastMessageText(room.last_message)}
                     </p>
                   </div>
@@ -1121,71 +1121,66 @@ export default function ChatRoomPage() {
 
         {/* メインエリア */}
         <div 
-          className="chat-main"
+          className={styles.main}
           onDragOver={handleDragOver}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           {isDragging && (
-            <div className="chat-drag-overlay">
-              <div className="chat-drag-content">
-                <i className="fas fa-cloud-upload-alt"></i>
-                <p>ファイルをドロップして送信</p>
-              </div>
+            <div className={styles.dropZone}>
+              <i className="fas fa-cloud-upload-alt"></i>
+              <p>ファイルをドロップして送信</p>
             </div>
           )}
 
           {/* モバイルヘッダー */}
-          <div className="chat-mobile-header">
-            {otherUser && (
-              <>
-                <Link href="/messages" className="chat-mobile-back"><i className="fas fa-arrow-left"></i></Link>
-                <div className="chat-mobile-avatar" onClick={() => setShowProfileModal(true)}>
-                  {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
-                </div>
-                <span className="chat-mobile-name" onClick={() => setShowProfileModal(true)}>{otherUser.display_name || '名前未設定'}</span>
-              </>
-            )}
-          </div>
+          {otherUser && (
+            <div className={styles.mobileHeader}>
+              <div className={styles.mobileAvatar} onClick={() => setShowProfileModal(true)}>
+                {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
+              </div>
+              <span className={styles.mobileName} onClick={() => setShowProfileModal(true)}>{otherUser.display_name || '名前未設定'}</span>
+            </div>
+          )}
 
           {/* 関連依頼バー */}
           {relatedRequests.length > 0 && (
-            <div className="chat-request-bar">
+            <div className={styles.requestBar}>
               {relatedRequests.map((req) => (
-                <Link key={req.id} href={`/requests/${req.id}`} className="chat-request-item">
-                  <i className="fas fa-clipboard-list chat-request-icon"></i>
-                  <div className="chat-request-content">
-                    <div className="chat-request-label">お仕事の依頼</div>
-                    <div className="chat-request-title">{req.title}</div>
+                <Link key={req.id} href={`/requests/${req.id}`} className={styles.requestBarItem}>
+                  <i className={`fas fa-clipboard-list ${styles.requestBarIcon}`}></i>
+                  <div className={styles.requestBarContent}>
+                    <div className={styles.requestBarLabel}>お仕事の依頼</div>
+                    <div className={styles.requestBarTitle}>{req.title}</div>
                   </div>
-                  <div className="chat-request-meta">
+                  <div className={styles.requestBarMeta}>
                     {(req.budget_min || req.budget_max) && (
-                      <div className="chat-request-budget">{req.budget_min?.toLocaleString()}〜{req.budget_max?.toLocaleString()}円</div>
+                      <div>{req.budget_min?.toLocaleString()}〜{req.budget_max?.toLocaleString()}円</div>
                     )}
                     {req.deadline && (
-                      <div className="chat-request-deadline">{new Date(req.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}</div>
+                      <div>{new Date(req.deadline).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}</div>
                     )}
                   </div>
-                  <i className="fas fa-chevron-right chat-request-arrow"></i>
+                  <i className="fas fa-chevron-right"></i>
                 </Link>
               ))}
             </div>
           )}
 
           {/* メッセージエリア */}
-          <div className="chat-messages" ref={messagesContainerRef}>
+          <div className={styles.messagesArea} ref={messagesContainerRef}>
             {loadingMore && (
-              <div style={{ textAlign: 'center', padding: '12px' }}>
-                <span className="text-gray text-small">読み込み中...</span>
+              <div className={styles.loadingMore}>
+                <i className="fas fa-spinner fa-spin"></i> 読み込み中...
               </div>
             )}
 
             {messagesLoading ? (
               <MessagesSkeleton />
             ) : messages.length === 0 ? (
-              <div className="empty-state">
-                <i className="far fa-comments" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}></i>
+              <div className={styles.emptyState}>
+                <i className="far fa-comments"></i>
                 <p>メッセージがありません</p>
               </div>
             ) : (
@@ -1200,85 +1195,87 @@ export default function ChatRoomPage() {
 
                   return (
                     <div key={message.id}>
-                      {showDate && <div className="chat-date-divider"><span>{formatDate(message.created_at)}</span></div>}
+                      {showDate && <div className={styles.dateDivider}><span className={styles.dateDividerText}>{formatDate(message.created_at)}</span></div>}
 
                       <div 
-                        className={`chat-message-row ${isCurrentUser ? 'sent' : 'received'} ${message._optimistic ? 'optimistic' : ''} ${message._failed ? 'failed' : ''}`}
+                        className={`${styles.messageRow} ${isCurrentUser ? styles.sent : styles.received} ${message._optimistic ? styles.optimistic : ''} ${message._failed ? styles.failed : ''}`}
                         onTouchStart={(e) => handleTouchStart(e, message)}
                         onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                       >
-                        {!isCurrentUser && otherUser && (
-                          <div className="chat-message-avatar" onClick={() => setShowProfileModal(true)}>
-                            {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
-                          </div>
-                        )}
-
-                        <div className="chat-message-content">
-                          {message.request_card_id && requestCards[message.request_card_id] && (
-                            <RequestCardComponent request={requestCards[message.request_card_id]} />
-                          )}
-
-                          {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
-                            <div className="chat-media" onContextMenu={(e) => handleMessageContextMenu(e, message)}>
-                              {message.file_type === 'image' ? (
-                                <img 
-                                  src={signedUrl} 
-                                  alt="" 
-                                  loading="lazy"
-                                  onLoad={() => handleMediaLoad(message.id)} 
-                                  onClick={() => !message._optimistic && setEnlargedMedia({ url: signedUrl, type: 'image' })} 
-                                />
-                              ) : (
-                                <video 
-                                  src={signedUrl} 
-                                  controls 
-                                  preload="metadata"
-                                  onLoadedData={() => handleMediaLoad(message.id)} 
-                                  onClick={() => !message._optimistic && setEnlargedMedia({ url: signedUrl, type: 'video' })} 
-                                />
-                              )}
-                              {!message._optimistic && (
-                                <button className="chat-media-download" onClick={() => handleDownload(message.file_url!, message.file_name || (message.file_type === 'image' ? '画像.jpg' : '動画.mp4'))}>
-                                  <i className="fas fa-download"></i> 保存
-                                </button>
-                              )}
+                        <div className={styles.messageBubbleArea}>
+                          {!isCurrentUser && otherUser && (
+                            <div className={styles.messageAvatar} onClick={() => setShowProfileModal(true)}>
+                              {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
                             </div>
                           )}
 
-                          {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
-                            <a href={signedUrl} download={message.file_name} target="_blank" rel="noopener noreferrer" className="chat-file" onContextMenu={(e) => handleMessageContextMenu(e, message)}>
-                              <i className={`fas ${getFileIcon(message.file_type)} chat-file-icon`}></i>
-                              <div className="chat-file-info">
-                                <div className="chat-file-name">{message.file_name}</div>
-                                <div className="chat-file-type">{message.file_type?.toUpperCase()}</div>
+                          <div className={styles.messageContent}>
+                            {message.request_card_id && requestCards[message.request_card_id] && (
+                              <RequestCardComponent request={requestCards[message.request_card_id]} />
+                            )}
+
+                            {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
+                              <div className={styles.mediaWrapper} onContextMenu={(e) => handleMessageContextMenu(e, message)}>
+                                {message.file_type === 'image' ? (
+                                  <img 
+                                    src={signedUrl} 
+                                    alt="" 
+                                    loading="lazy"
+                                    onLoad={() => handleMediaLoad(message.id)} 
+                                    onClick={() => !message._optimistic && setEnlargedMedia({ url: signedUrl, type: 'image' })} 
+                                  />
+                                ) : (
+                                  <video 
+                                    src={signedUrl} 
+                                    controls 
+                                    preload="metadata"
+                                    onLoadedData={() => handleMediaLoad(message.id)} 
+                                    onClick={() => !message._optimistic && setEnlargedMedia({ url: signedUrl, type: 'video' })} 
+                                  />
+                                )}
+                                {!message._optimistic && (
+                                  <button className={styles.mediaDownload} onClick={() => handleDownload(message.file_url!, message.file_name || (message.file_type === 'image' ? '画像.jpg' : '動画.mp4'))}>
+                                    <i className="fas fa-download"></i> 保存
+                                  </button>
+                                )}
                               </div>
-                              <i className="fas fa-download chat-file-download"></i>
-                            </a>
-                          )}
-
-                          {message.content && (
-                            <div className={`chat-bubble ${isCurrentUser ? 'sent' : 'received'}`} onContextMenu={(e) => handleMessageContextMenu(e, message)}>
-                              {message.content}
-                            </div>
-                          )}
-
-                          <div className="chat-message-meta">
-                            {message._optimistic && !message._failed && (
-                              <span className="chat-message-sending">送信中...</span>
                             )}
-                            {message._failed && (
-                              <button className="chat-message-retry" onClick={() => retryMessage(message)}>
-                                <i className="fas fa-exclamation-circle"></i> 再送信
-                              </button>
+
+                            {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
+                              <a href={signedUrl} download={message.file_name} target="_blank" rel="noopener noreferrer" className={styles.fileMessage} onContextMenu={(e) => handleMessageContextMenu(e, message)}>
+                                <i className={`fas ${getFileIcon(message.file_type)} ${styles.fileIcon}`}></i>
+                                <div className={styles.fileInfo}>
+                                  <div className={styles.fileName}>{message.file_name}</div>
+                                  <div className={styles.fileType}>{message.file_type?.toUpperCase()}</div>
+                                </div>
+                                <i className={`fas fa-download ${styles.fileDownloadIcon}`}></i>
+                              </a>
                             )}
-                            {!message._optimistic && !message._failed && (
-                              <>
-                                <span>{formatTime(message.created_at)}</span>
-                                {isCurrentUser && isMessageRead(message) && <span className="chat-message-read">既読</span>}
-                              </>
+
+                            {message.content && (
+                              <div className={`${styles.bubble} ${isCurrentUser ? styles.sent : styles.received}`} onContextMenu={(e) => handleMessageContextMenu(e, message)}>
+                                {message.content}
+                              </div>
                             )}
                           </div>
+                        </div>
+
+                        <div className={styles.messageMeta}>
+                          {message._optimistic && !message._failed && (
+                            <span className={styles.messageSending}>送信中...</span>
+                          )}
+                          {message._failed && (
+                            <button className={styles.messageRetry} onClick={() => retryMessage(message)}>
+                              <i className="fas fa-exclamation-circle"></i> 再送信
+                            </button>
+                          )}
+                          {!message._optimistic && !message._failed && (
+                            <>
+                              <span>{formatTime(message.created_at)}</span>
+                              {isCurrentUser && isMessageRead(message) && <span className={styles.messageRead}>既読</span>}
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1289,7 +1286,7 @@ export default function ChatRoomPage() {
             )}
 
             {showNewMessageButton && (
-              <button className="chat-new-message-btn" onClick={handleNewMessageButtonClick}>
+              <button className={styles.newMessageBtn} onClick={handleNewMessageButtonClick}>
                 <i className="fas fa-arrow-down"></i>
                 {newMessageCount > 0 && <span>{newMessageCount}件の新着メッセージ</span>}
               </button>
@@ -1297,34 +1294,34 @@ export default function ChatRoomPage() {
           </div>
 
           {/* 入力エリア */}
-          <div className="chat-input-area">
+          <div className={styles.inputArea}>
             {selectedFile && (
-              <div className="chat-file-preview">
-                <div className="chat-file-preview-inner">
+              <div className={styles.filePreview}>
+                <div className={styles.filePreviewInner}>
                   {selectedFile.type.startsWith('image/') && previewUrl && <img src={previewUrl} alt="プレビュー" />}
                   {selectedFile.type.startsWith('video/') && previewUrl && <video src={previewUrl} controls />}
                   {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
-                    <div className="chat-file-preview-info">
-                      <i className={`fas ${getFileIcon(getFileType(selectedFile))}`} style={{ fontSize: '32px', color: '#5B7C99' }}></i>
+                    <div className={styles.filePreviewInfo}>
+                      <i className={`fas ${getFileIcon(getFileType(selectedFile))} ${styles.fileIcon}`}></i>
                       <div>
-                        <div style={{ fontWeight: 600, color: '#222222' }}>{selectedFile.name}</div>
-                        <div className="text-gray text-small">{getFileType(selectedFile).toUpperCase()}</div>
+                        <div className={styles.filePreviewName}>{selectedFile.name}</div>
+                        <div className={styles.filePreviewType}>{getFileType(selectedFile).toUpperCase()}</div>
                       </div>
                     </div>
                   )}
-                  <button className="chat-file-preview-remove" onClick={handleRemoveFile}><i className="fas fa-times"></i></button>
+                  <button className={styles.filePreviewRemove} onClick={handleRemoveFile}><i className="fas fa-times"></i></button>
                 </div>
               </div>
             )}
 
-            <div className="chat-input-row">
+            <div className={styles.inputRow}>
               <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf,application/zip" onChange={handleFileSelect} style={{ display: 'none' }} />
-              <button className="chat-attach-btn" onClick={() => fileInputRef.current?.click()} disabled={sending || uploading}>
+              <button className={styles.attachBtn} onClick={() => fileInputRef.current?.click()} disabled={sending || uploading}>
                 <i className="fas fa-paperclip"></i>
               </button>
               <textarea
                 ref={textareaRef}
-                className="chat-input"
+                className={styles.inputField}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => {
@@ -1337,7 +1334,7 @@ export default function ChatRoomPage() {
                 disabled={sending}
                 rows={1}
               />
-              <button className="chat-send-btn" onClick={sendMessage} disabled={(!newMessage.trim() && !selectedFile) || sending}>
+              <button className={styles.sendBtn} onClick={sendMessage} disabled={(!newMessage.trim() && !selectedFile) || sending}>
                 {uploading ? 'アップロード中...' : '送信'}
               </button>
             </div>
@@ -1347,21 +1344,21 @@ export default function ChatRoomPage() {
 
       {/* コンテキストメニュー */}
       {contextMenu && (
-        <div className="chat-context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.contextMenu} style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
           {contextMenu.type === 'room' && (
             <>
-              <button className="chat-context-item" onClick={() => handleTogglePin(contextMenu.roomId!, contextMenu.isPinned!)}>
-                <i className="fas fa-thumbtack chat-context-icon"></i>
+              <button className={styles.contextItem} onClick={() => handleTogglePin(contextMenu.roomId!, contextMenu.isPinned!)}>
+                <i className={`fas fa-thumbtack ${styles.contextIcon}`}></i>
                 {contextMenu.isPinned ? 'ピン止めを外す' : 'ピン止め'}
               </button>
-              <button className="chat-context-item danger" onClick={() => handleHideRoom(contextMenu.roomId!)}>
-                <i className="fas fa-trash chat-context-icon"></i>トークを削除
+              <button className={`${styles.contextItem} ${styles.danger}`} onClick={() => handleHideRoom(contextMenu.roomId!)}>
+                <i className={`fas fa-trash ${styles.contextIcon}`}></i>トークを削除
               </button>
             </>
           )}
           {contextMenu.type === 'message' && (
-            <button className="chat-context-item danger" onClick={() => handleDeleteMessage(contextMenu.messageId!)}>
-              <i className="fas fa-trash chat-context-icon"></i>メッセージを削除
+            <button className={`${styles.contextItem} ${styles.danger}`} onClick={() => handleDeleteMessage(contextMenu.messageId!)}>
+              <i className={`fas fa-trash ${styles.contextIcon}`}></i>メッセージを削除
             </button>
           )}
         </div>
@@ -1369,8 +1366,8 @@ export default function ChatRoomPage() {
 
       {/* メディア拡大モーダル */}
       {enlargedMedia && (
-        <div className="chat-media-modal" onClick={() => setEnlargedMedia(null)}>
-          <button className="chat-media-close" onClick={() => setEnlargedMedia(null)}><i className="fas fa-times"></i></button>
+        <div className={styles.mediaModal} onClick={() => setEnlargedMedia(null)}>
+          <button className={styles.mediaModalClose} onClick={() => setEnlargedMedia(null)}><i className="fas fa-times"></i></button>
           {enlargedMedia.type === 'image' ? (
             <img src={enlargedMedia.url} alt="" onClick={(e) => e.stopPropagation()} />
           ) : (
@@ -1381,19 +1378,19 @@ export default function ChatRoomPage() {
 
       {/* プロフィールモーダル */}
       {showProfileModal && otherUser && (
-        <div className="chat-profile-modal" onClick={() => setShowProfileModal(false)}>
-          <div className="chat-profile-card" onClick={(e) => e.stopPropagation()}>
-            <div className="chat-profile-avatar">
+        <div className={styles.profileModal} onClick={() => setShowProfileModal(false)}>
+          <div className={styles.profileCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.profileAvatar}>
               {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" /> : <i className="fas fa-user"></i>}
             </div>
-            <h2 className="chat-profile-name">{otherUser.display_name || '名前未設定'}</h2>
-            {otherUser.username && <p className="chat-profile-username">@{otherUser.username}</p>}
-            {otherUser.bio && <p className="chat-profile-bio">{otherUser.bio}</p>}
-            <div className="flex flex-col gap-12">
+            <h2 className={styles.profileName}>{otherUser.display_name || '名前未設定'}</h2>
+            {otherUser.username && <p className={styles.profileUsername}>@{otherUser.username}</p>}
+            {otherUser.bio && <p className={styles.profileBio}>{otherUser.bio}</p>}
+            <div className={styles.profileActions}>
               {otherUser.username && (
-                <Link href={`/creators/${otherUser.username}`} className="btn-primary" style={{ textAlign: 'center' }}>プロフィールを見る</Link>
+                <Link href={`/creators/${otherUser.username}`} className="btn btn-primary">プロフィールを見る</Link>
               )}
-              <button className="btn-secondary" onClick={() => setShowProfileModal(false)}>閉じる</button>
+              <button className="btn btn-secondary" onClick={() => setShowProfileModal(false)}>閉じる</button>
             </div>
           </div>
         </div>

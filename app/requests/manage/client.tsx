@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
-import DashboardSidebar from '../../components/DashboardSidebar'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import DashboardSidebar from '@/app/components/DashboardSidebar'
+import styles from './page.module.css'
 
 type WorkRequest = {
   id: string
@@ -271,33 +272,32 @@ export default function DashboardPage() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
-      <div className="requests-manage-page dashboard-layout">
+      <div className={styles.pageWrapper}>
         <DashboardSidebar accountType={accountType} isAdmin={isAdmin} />
 
         {loading ? (
-          <div className="dashboard-loading">
+          <div className={styles.loading}>
             <i className="fas fa-spinner fa-spin"></i>
             <span>読み込み中...</span>
           </div>
         ) : (
-          <main className="requests-manage-main">
-            <div className="requests-manage-container">
-              <h1 className="requests-manage-title">依頼管理</h1>
+          <main className={styles.main}>
+            <div className={styles.container}>
+              <h1 className={styles.title}>依頼管理</h1>
 
               {/* ビュー切り替え */}
-              <div className="requests-manage-view-toggle">
+              <div className={styles.viewToggle}>
                 <button
                   onClick={() => setView('requester')}
-                  className={`requests-manage-view-btn ${view === 'requester' ? 'active' : ''}`}
+                  className={`${styles.viewBtn} ${view === 'requester' ? styles.active : ''}`}
                 >
                   <i className="fas fa-briefcase"></i>
                   依頼者として
                 </button>
                 <button
                   onClick={() => setView('creator')}
-                  className={`requests-manage-view-btn ${view === 'creator' ? 'active' : ''}`}
+                  className={`${styles.viewBtn} ${view === 'creator' ? styles.active : ''}`}
                 >
                   <i className="fas fa-palette"></i>
                   クリエイターとして
@@ -308,38 +308,38 @@ export default function DashboardPage() {
               {view === 'requester' && (
                 <>
                   {/* 統計 */}
-                  <div className="requests-manage-stats">
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{requestStats.total}</div>
-                      <div className="requests-manage-stat-label">総依頼数</div>
+                  <div className={styles.stats}>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{requestStats.total}</div>
+                      <div className={styles.statLabel}>総依頼数</div>
                     </div>
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{requestStats.active}</div>
-                      <div className="requests-manage-stat-label">進行中</div>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{requestStats.active}</div>
+                      <div className={styles.statLabel}>進行中</div>
                     </div>
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{requestStats.completed}</div>
-                      <div className="requests-manage-stat-label">完了</div>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{requestStats.completed}</div>
+                      <div className={styles.statLabel}>完了</div>
                     </div>
                   </div>
 
                   {/* タブ */}
-                  <div className="requests-manage-tabs">
+                  <div className={styles.tabs}>
                     <button
                       onClick={() => setRequestTab('active')}
-                      className={`requests-manage-tab ${requestTab === 'active' ? 'active' : ''}`}
+                      className={`${styles.tab} ${requestTab === 'active' ? styles.active : ''}`}
                     >
                       進行中 ({requestStats.active})
                     </button>
                     <button
                       onClick={() => setRequestTab('open')}
-                      className={`requests-manage-tab ${requestTab === 'open' ? 'active' : ''}`}
+                      className={`${styles.tab} ${requestTab === 'open' ? styles.active : ''}`}
                     >
                       募集中 ({requestStats.open})
                     </button>
                     <button
                       onClick={() => setRequestTab('completed')}
-                      className={`requests-manage-tab ${requestTab === 'completed' ? 'active' : ''}`}
+                      className={`${styles.tab} ${requestTab === 'completed' ? styles.active : ''}`}
                     >
                       完了 ({requestStats.completed})
                     </button>
@@ -347,47 +347,47 @@ export default function DashboardPage() {
 
                   {/* 依頼一覧 */}
                   {filteredRequests.length === 0 ? (
-                    <div className="requests-manage-empty">
+                    <div className={styles.empty}>
                       <i className="fas fa-inbox"></i>
                       <p>該当する依頼がありません</p>
-                      <Link href="/requests/create" className="requests-manage-btn primary">
+                      <Link href="/requests/create" className={styles.emptyBtn}>
                         <i className="fas fa-plus"></i>
                         新しい依頼を作成
                       </Link>
                     </div>
                   ) : (
-                    <div className="requests-manage-list">
+                    <div className={styles.list}>
                       {filteredRequests.map((request) => (
                         <Link
                           key={request.id}
                           href={request.status === 'open' ? `/requests/${request.id}/manage` : `/requests/${request.id}/status`}
-                          className="requests-manage-card"
+                          className={styles.card}
                         >
-                          <div className="requests-manage-card-header">
-                            <h3 className="requests-manage-card-title">{request.title}</h3>
-                            <span className={`requests-manage-status-badge ${request.status}`}>
+                          <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>{request.title}</h3>
+                            <span className={`${styles.statusBadge} ${styles[request.status]}`}>
                               {getStatusLabel(request.status)}
                             </span>
                           </div>
 
-                          <div className="requests-manage-card-meta">
-                            <span className="requests-manage-category-badge">
+                          <div className={styles.cardMeta}>
+                            <span className={styles.categoryBadge}>
                               {getCategoryLabel(request.category)}
                             </span>
                             {request.final_price && (
-                              <span className="requests-manage-price">
+                              <span className={styles.price}>
                                 {request.final_price.toLocaleString()}円
                               </span>
                             )}
-                            <span className="requests-manage-date">
+                            <span className={styles.date}>
                               <i className="fas fa-calendar"></i>
                               {formatDate(request.created_at)}
                             </span>
                           </div>
 
                           {request.selected_applicant && (
-                            <div className="requests-manage-card-creator">
-                              <div className="requests-manage-avatar">
+                            <div className={styles.cardUser}>
+                              <div className={styles.avatar}>
                                 {request.selected_applicant.avatar_url ? (
                                   <img src={request.selected_applicant.avatar_url} alt="" />
                                 ) : (
@@ -408,38 +408,38 @@ export default function DashboardPage() {
               {view === 'creator' && (
                 <>
                   {/* 統計 */}
-                  <div className="requests-manage-stats">
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{applicationStats.total}</div>
-                      <div className="requests-manage-stat-label">総応募数</div>
+                  <div className={styles.stats}>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{applicationStats.total}</div>
+                      <div className={styles.statLabel}>総応募数</div>
                     </div>
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{applicationStats.accepted}</div>
-                      <div className="requests-manage-stat-label">進行中</div>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{applicationStats.accepted}</div>
+                      <div className={styles.statLabel}>進行中</div>
                     </div>
-                    <div className="requests-manage-stat-card">
-                      <div className="requests-manage-stat-value">{applicationStats.completed}</div>
-                      <div className="requests-manage-stat-label">完了</div>
+                    <div className={styles.statCard}>
+                      <div className={styles.statValue}>{applicationStats.completed}</div>
+                      <div className={styles.statLabel}>完了</div>
                     </div>
                   </div>
 
                   {/* タブ */}
-                  <div className="requests-manage-tabs">
+                  <div className={styles.tabs}>
                     <button
                       onClick={() => setApplicationTab('accepted')}
-                      className={`requests-manage-tab ${applicationTab === 'accepted' ? 'active' : ''}`}
+                      className={`${styles.tab} ${applicationTab === 'accepted' ? styles.active : ''}`}
                     >
                       受注中 ({applicationStats.accepted})
                     </button>
                     <button
                       onClick={() => setApplicationTab('pending')}
-                      className={`requests-manage-tab ${applicationTab === 'pending' ? 'active' : ''}`}
+                      className={`${styles.tab} ${applicationTab === 'pending' ? styles.active : ''}`}
                     >
                       応募中 ({applicationStats.pending})
                     </button>
                     <button
                       onClick={() => setApplicationTab('completed')}
-                      className={`requests-manage-tab ${applicationTab === 'completed' ? 'active' : ''}`}
+                      className={`${styles.tab} ${applicationTab === 'completed' ? styles.active : ''}`}
                     >
                       完了 ({applicationStats.completed})
                     </button>
@@ -447,49 +447,49 @@ export default function DashboardPage() {
 
                   {/* 応募一覧 */}
                   {filteredApplications.length === 0 ? (
-                    <div className="requests-manage-empty">
+                    <div className={styles.empty}>
                       <i className="fas fa-inbox"></i>
                       <p>該当する応募がありません</p>
-                      <Link href="/requests" className="requests-manage-btn primary">
+                      <Link href="/requests" className={styles.emptyBtn}>
                         <i className="fas fa-search"></i>
                         依頼を探す
                       </Link>
                     </div>
                   ) : (
-                    <div className="requests-manage-list">
+                    <div className={styles.list}>
                       {filteredApplications.map((application) => (
                         <Link
                           key={application.id}
                           href={getCreatorLink(application)}
-                          className="requests-manage-card"
+                          className={styles.card}
                         >
-                          <div className="requests-manage-card-header">
-                            <h3 className="requests-manage-card-title">{application.work_request?.title}</h3>
-                            <span className={`requests-manage-status-badge ${application.status === 'accepted' ? (application.work_request?.status || '') : application.status}`}>
+                          <div className={styles.cardHeader}>
+                            <h3 className={styles.cardTitle}>{application.work_request?.title}</h3>
+                            <span className={`${styles.statusBadge} ${styles[application.status === 'accepted' ? (application.work_request?.status || '') : application.status]}`}>
                               {application.status === 'accepted' 
                                 ? getStatusLabel(application.work_request?.status || '') 
                                 : getStatusLabel(application.status)}
                             </span>
                           </div>
 
-                          <div className="requests-manage-card-meta">
-                            <span className="requests-manage-category-badge">
+                          <div className={styles.cardMeta}>
+                            <span className={styles.categoryBadge}>
                               {getCategoryLabel(application.work_request?.category || '')}
                             </span>
                             {application.work_request?.final_price && (
-                              <span className="requests-manage-price">
+                              <span className={styles.price}>
                                 {application.work_request.final_price.toLocaleString()}円
                               </span>
                             )}
-                            <span className="requests-manage-date">
+                            <span className={styles.date}>
                               <i className="fas fa-calendar"></i>
                               {formatDate(application.created_at)}
                             </span>
                           </div>
 
                           {application.work_request?.requester && (
-                            <div className="requests-manage-card-creator">
-                              <div className="requests-manage-avatar">
+                            <div className={styles.cardUser}>
+                              <div className={styles.avatar}>
                                 {application.work_request.requester.avatar_url ? (
                                   <img src={application.work_request.requester.avatar_url} alt="" />
                                 ) : (

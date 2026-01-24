@@ -1,0 +1,234 @@
+/* ============================================
+   メッセージ一覧ページ
+   ============================================ */
+
+.pageWrapper {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - 120px);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+/* ============================================
+   ヘッダー
+   ============================================ */
+
+.header {
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ============================================
+   メッセージリスト
+   ============================================ */
+
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.messageItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.messageItem:hover {
+  background: var(--bg-hover);
+}
+
+/* ピン留めアイコン */
+.pinIcon {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   アバター
+   ============================================ */
+
+.avatarWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-weight: 600;
+  font-size: var(--text-lg);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 未読バッジ */
+.unreadBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  background: var(--accent-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   コンテンツ
+   ============================================ */
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.contentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.name {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name.unread {
+  font-weight: 600;
+}
+
+.time {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.lastMessage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lastMessage.unread {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ============================================
+   空状態・ローディング
+   ============================================ */
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-tertiary);
+}
+
+.emptyState i {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.emptyState p {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.loading i {
+  font-size: var(--text-xl);
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pageWrapper {
+    flex-direction: column;
+  }
+
+  .main {
+    width: 100%;
+    padding: var(--space-4);
+  }
+
+  .header {
+    margin-bottom: var(--space-4);
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .messageItem {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+}

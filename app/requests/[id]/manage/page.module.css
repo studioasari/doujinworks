@@ -1,0 +1,647 @@
+/* ============================================
+   応募管理ページ
+   ============================================ */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+/* ============================================
+   ヘッダー
+   ============================================ */
+
+.header {
+  margin-bottom: var(--space-8);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.badge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.badge.open {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.badge.closed {
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+}
+
+.badge.cancelled {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+.badge.info {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   セクション
+   ============================================ */
+
+.section {
+  margin-bottom: var(--space-8);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4);
+}
+
+.sectionTitle i {
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   統計カード
+   ============================================ */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.statCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.statLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statValue.pending {
+  color: var(--status-warning);
+}
+
+.statValue.accepted {
+  color: var(--status-success);
+}
+
+.statValue.rejected {
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   カードリスト
+   ============================================ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.card.contracted {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.card.accepted {
+  border-left: 3px solid var(--status-success);
+}
+
+.card.rejected {
+  opacity: 0.6;
+}
+
+/* カードヘッダー */
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.cardUser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cardAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-size: var(--text-base);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.cardAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cardUserInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.cardName {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.cardName:hover {
+  color: var(--accent-primary);
+}
+
+.cardDate {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ステータスバッジ */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.statusBadge.contracted {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.statusBadge.paid {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.statusBadge.delivered {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+.statusBadge.completed {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.statusBadge.accepted {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.statusBadge.rejected {
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+}
+
+.statusBadge.cancelled {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+/* カード本文 */
+.cardMessage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 var(--space-4);
+  white-space: pre-wrap;
+}
+
+/* 価格表示 */
+.cardPrice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.cardPriceLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.cardPriceValue {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* カードアクション */
+.cardActions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.cardActions .btn {
+  flex: 1;
+  max-width: 160px;
+}
+
+.positionsFull {
+  flex: 1;
+  max-width: 160px;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* ============================================
+   空状態
+   ============================================ */
+
+.empty {
+  text-align: center;
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.empty i {
+  font-size: var(--text-3xl);
+  margin-bottom: var(--space-3);
+  display: block;
+}
+
+.empty p {
+  margin: 0;
+}
+
+/* ============================================
+   キャンセルセクション
+   ============================================ */
+
+.dangerSection {
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.dangerTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.dangerDescription {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-4);
+}
+
+/* ============================================
+   募集終了案内
+   ============================================ */
+
+.closed {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.closed p {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-4);
+}
+
+/* ============================================
+   ボタン
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  border: none;
+}
+
+.btn.primary {
+  background: var(--accent-gradient);
+  color: white;
+}
+
+.btn.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn.secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.btn.secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn.danger {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+  border: 1px solid transparent;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: var(--status-error);
+  color: white;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   モーダル
+   ============================================ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.modalTitle {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-5);
+}
+
+.modalGroup {
+  margin-bottom: var(--space-5);
+}
+
+.modalLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.required {
+  color: var(--status-error);
+}
+
+.modalPriceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.modalInput {
+  flex: 1;
+  padding: var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.modalInput.full {
+  width: 100%;
+}
+
+.modalUnit {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.modalHint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
+/* モーダル情報 */
+.modalInfo {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+.modalInfo i {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.modalButtons {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.modalButtons .btn {
+  flex: 1;
+}
+
+/* ============================================
+   ローディング・エラー
+   ============================================ */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+  gap: var(--space-3);
+}
+
+.loading i {
+  font-size: var(--text-2xl);
+  color: var(--accent-primary);
+}
+
+.error {
+  text-align: center;
+  padding: var(--space-12);
+}
+
+.error i {
+  font-size: 3rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.error h1 {
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .headerTop {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions .btn {
+    flex: 1;
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cardHeader {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .cardActions {
+    flex-direction: column;
+  }
+
+  .cardActions .btn {
+    max-width: none;
+    width: 100%;
+  }
+
+  .modal {
+    padding: var(--space-4);
+  }
+
+  .modalButtons {
+    flex-direction: column;
+  }
+}

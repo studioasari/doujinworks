@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '@/utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import styles from './page.module.css'
 
 type WorkRequest = {
   id: string
@@ -39,33 +40,18 @@ type WorkRequest = {
 }
 
 const CATEGORY_LABELS: { [key: string]: string } = {
-  illustration: 'イラスト',
-  manga: 'マンガ',
-  novel: '小説',
-  music: '音楽',
-  voice: 'ボイス',
-  video: '動画',
-  logo: 'ロゴ',
-  design: 'デザイン',
-  other: 'その他'
+  illustration: 'イラスト', manga: 'マンガ', novel: '小説', music: '音楽',
+  voice: 'ボイス', video: '動画', logo: 'ロゴ', design: 'デザイン', other: 'その他'
 }
 
 const STATUS_LABELS: { [key: string]: string } = {
-  open: '募集中',
-  closed: '募集終了',
-  contracted: '仮払い待ち',
-  paid: '作業中',
-  delivered: '納品済み',
-  completed: '完了',
-  cancelled: 'キャンセル'
+  open: '募集中', closed: '募集終了', contracted: '仮払い待ち', paid: '作業中',
+  delivered: '納品済み', completed: '完了', cancelled: 'キャンセル'
 }
 
 const JOB_FEATURE_LABELS: { [key: string]: string } = {
-  no_skill: 'スキル不要',
-  skill_welcome: '専門スキル歓迎',
-  one_time: '単発',
-  continuous: '継続あり',
-  flexible_time: 'スキマ時間歓迎'
+  no_skill: 'スキル不要', skill_welcome: '専門スキル歓迎', one_time: '単発',
+  continuous: '継続あり', flexible_time: 'スキマ時間歓迎'
 }
 
 function formatDate(dateString: string) {
@@ -92,9 +78,7 @@ export default function RequestDetailPage() {
   const router = useRouter()
   const requestId = params.id as string
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  useEffect(() => { checkAuth() }, [])
 
   useEffect(() => {
     if (requestId) {
@@ -104,20 +88,14 @@ export default function RequestDetailPage() {
   }, [requestId, currentProfileId])
 
   useEffect(() => {
-    if (requestId && currentProfileId) {
-      checkMyContract()
-    }
+    if (requestId && currentProfileId) { checkMyContract() }
   }, [requestId, currentProfileId])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       setIsLoggedIn(true)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
+      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
       if (profile) setCurrentProfileId(profile.id)
     }
   }
@@ -152,7 +130,6 @@ export default function RequestDetailPage() {
 
   async function checkMyContract() {
     if (!currentProfileId) return
-    
     const { data, error } = await supabase
       .from('work_contracts')
       .select('id')
@@ -160,17 +137,12 @@ export default function RequestDetailPage() {
       .eq('contractor_id', currentProfileId)
       .single()
 
-    if (!error && data) {
-      setMyContractId(data.id)
-    }
+    if (!error && data) setMyContractId(data.id)
   }
 
   async function handleSubmitApplication(e: React.FormEvent) {
     e.preventDefault()
-    if (!applicationMessage.trim()) {
-      alert('応募メッセージを入力してください')
-      return
-    }
+    if (!applicationMessage.trim()) { alert('応募メッセージを入力してください'); return }
 
     setProcessing(true)
     const { error } = await supabase
@@ -267,12 +239,13 @@ export default function RequestDetailPage() {
   if (loading) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="req-detail-page">
-          <div className="req-detail-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+        <div className={styles.page}>
+          <div className={styles.container}>
+            <div className={styles.loading}>
+              <i className="fas fa-spinner fa-spin"></i>
+              <span>読み込み中...</span>
+            </div>
           </div>
         </div>
         <Footer />
@@ -283,13 +256,14 @@ export default function RequestDetailPage() {
   if (!request) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="req-detail-page">
-          <div className="req-detail-error">
-            <i className="fas fa-exclamation-circle"></i>
-            <h1>依頼が見つかりませんでした</h1>
-            <Link href="/requests" className="req-detail-btn primary">依頼一覧に戻る</Link>
+        <div className={styles.page}>
+          <div className={styles.container}>
+            <div className={styles.error}>
+              <i className="fas fa-exclamation-circle"></i>
+              <h1>依頼が見つかりませんでした</h1>
+              <Link href="/requests" className={`${styles.btn} ${styles.primary}`}>依頼一覧に戻る</Link>
+            </div>
           </div>
         </div>
         <Footer />
@@ -301,35 +275,40 @@ export default function RequestDetailPage() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
-      <div className="req-detail-page">
-        <div className="req-detail-container">
-          <div className="req-detail-layout">
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.layout}>
             {/* メインコンテンツ */}
-            <div className="req-detail-main">
-              <h1 className="req-detail-title">{request.title}</h1>
-
-              <div className="req-detail-badges">
-                <span className="req-detail-badge category">{CATEGORY_LABELS[request.category] || request.category}</span>
-                <span className={`req-detail-badge status ${request.status}`}>{STATUS_LABELS[request.status] || request.status}</span>
+            <div className={styles.main}>
+              {/* ヘッダー */}
+              <div className={styles.header}>
+                <div>
+                  <span className="badge badge-accent">
+                    {CATEGORY_LABELS[request.category] || request.category}
+                  </span>
+                  <h1 className={styles.title}>{request.title}</h1>
+                </div>
+                <span className={`${styles.statusBadge} ${styles[request.status]}`}>
+                  {STATUS_LABELS[request.status] || request.status}
+                </span>
               </div>
 
               {/* 仕事の概要 */}
-              <div className="req-detail-section">
-                <h2 className="req-detail-section-title">仕事の概要</h2>
-                <div className="req-detail-info-card">
-                  <div className="req-detail-info-row">
-                    <span className="req-detail-info-label">支払い方式</span>
-                    <span className="req-detail-info-value">
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>仕事の概要</h2>
+                <div className={styles.infoCard}>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>支払い方式</span>
+                    <span className={styles.infoValue}>
                       {request.payment_type === 'hourly' ? '時間単価制' : '固定報酬制'}
                     </span>
                   </div>
-                  <div className="req-detail-info-row">
-                    <span className="req-detail-info-label">
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>
                       {request.payment_type === 'hourly' ? '時給' : '予算'}
                     </span>
-                    <span className="req-detail-info-value price">
+                    <span className={`${styles.infoValue} ${styles.price}`}>
                       {request.payment_type === 'hourly' ? (
                         request.hourly_rate_min && request.hourly_rate_max
                           ? `${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}円/時`
@@ -348,30 +327,30 @@ export default function RequestDetailPage() {
                     </span>
                   </div>
                   {request.payment_type === 'hourly' && request.estimated_hours && (
-                    <div className="req-detail-info-row">
-                      <span className="req-detail-info-label">想定作業時間</span>
-                      <span className="req-detail-info-value">{request.estimated_hours}時間</span>
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>想定作業時間</span>
+                      <span className={styles.infoValue}>{request.estimated_hours}時間</span>
                     </div>
                   )}
                   {request.deadline && (
-                    <div className="req-detail-info-row">
-                      <span className="req-detail-info-label">納品希望日</span>
-                      <span className="req-detail-info-value">{formatDate(request.deadline)}</span>
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>納品希望日</span>
+                      <span className={styles.infoValue}>{formatDate(request.deadline)}</span>
                     </div>
                   )}
-                  <div className="req-detail-info-row">
-                    <span className="req-detail-info-label">掲載日</span>
-                    <span className="req-detail-info-value">{formatDate(request.created_at)}</span>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>掲載日</span>
+                    <span className={styles.infoValue}>{formatDate(request.created_at)}</span>
                   </div>
                   {request.application_deadline && (
-                    <div className="req-detail-info-row">
-                      <span className="req-detail-info-label">応募期限</span>
-                      <span className="req-detail-info-value">
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>応募期限</span>
+                      <span className={styles.infoValue}>
                         {formatDate(request.application_deadline)}
                         {(() => {
                           const daysUntil = Math.ceil((new Date(request.application_deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                          if (daysUntil > 0) return <span className="req-detail-deadline-badge">あと{daysUntil}日</span>
-                          if (daysUntil === 0) return <span className="req-detail-deadline-badge urgent">本日締切</span>
+                          if (daysUntil > 0) return <span className={styles.deadlineBadge}>あと{daysUntil}日</span>
+                          if (daysUntil === 0) return <span className={`${styles.deadlineBadge} ${styles.urgent}`}>本日締切</span>
                           return null
                         })()}
                       </span>
@@ -381,33 +360,37 @@ export default function RequestDetailPage() {
               </div>
 
               {/* 応募状況 */}
-              <div className="req-detail-section">
-                <h2 className="req-detail-section-title">応募状況</h2>
-                <div className="req-detail-stats">
-                  <div className="req-detail-stat-card">
-                    <div className="req-detail-stat-label">応募した人</div>
-                    <div className="req-detail-stat-value">{applicationCount}<span className="req-detail-stat-unit">人</span></div>
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>応募状況</h2>
+                <div className={styles.stats}>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>応募した人</div>
+                    <div className={styles.statValue}>
+                      {applicationCount}<span className={styles.statUnit}>人</span>
+                    </div>
                   </div>
-                  <div className="req-detail-stat-card">
-                    <div className="req-detail-stat-label">募集人数</div>
-                    <div className="req-detail-stat-value">{request.number_of_positions || 1}<span className="req-detail-stat-unit">人</span></div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>募集人数</div>
+                    <div className={styles.statValue}>
+                      {request.number_of_positions || 1}<span className={styles.statUnit}>人</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 仕事の詳細 */}
-              <div className="req-detail-section">
-                <h2 className="req-detail-section-title">仕事の詳細</h2>
-                <div className="req-detail-description">{request.description}</div>
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>仕事の詳細</h2>
+                <div className={styles.description}>{request.description}</div>
               </div>
 
               {/* 参考URL */}
               {request.reference_urls && request.reference_urls.length > 0 && (
-                <div className="req-detail-section">
-                  <h2 className="req-detail-section-title">参考URL</h2>
-                  <div className="req-detail-links">
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>参考URL</h2>
+                  <div className={styles.links}>
                     {request.reference_urls.map((url, index) => (
-                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="req-detail-link">
+                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className={styles.link}>
                         <i className="fas fa-external-link-alt"></i>
                         <span>{url}</span>
                       </a>
@@ -418,13 +401,13 @@ export default function RequestDetailPage() {
 
               {/* 添付ファイル */}
               {request.attached_file_urls && request.attached_file_urls.length > 0 && (
-                <div className="req-detail-section">
-                  <h2 className="req-detail-section-title">添付ファイル</h2>
-                  <div className="req-detail-files">
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>添付ファイル</h2>
+                  <div className={styles.files}>
                     {request.attached_file_urls.map((fileUrl, index) => {
                       const fileName = fileUrl.split('/').pop() || `file_${index + 1}`
                       return (
-                        <a key={index} href={fileUrl} target="_blank" rel="noopener noreferrer" className="req-detail-file">
+                        <a key={index} href={fileUrl} target="_blank" rel="noopener noreferrer" className={styles.file}>
                           <i className="fas fa-file-download"></i>
                           <span>{fileName}</span>
                         </a>
@@ -436,155 +419,192 @@ export default function RequestDetailPage() {
 
               {/* 求めるスキル */}
               {request.required_skills && request.required_skills.length > 0 && (
-                <div className="req-detail-section">
-                  <h2 className="req-detail-section-title">求めるスキル</h2>
-                  <div className="req-detail-tags">
-                    {request.required_skills.map((skill, index) => <span key={index} className="req-detail-tag">{skill}</span>)}
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>求めるスキル</h2>
+                  <div className={styles.tags}>
+                    {request.required_skills.map((skill, index) => (
+                      <span key={index} className={styles.tag}>{skill}</span>
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* この仕事の特徴 */}
               {request.job_features && request.job_features.length > 0 && (
-                <div className="req-detail-section">
-                  <h2 className="req-detail-section-title">この仕事の特徴</h2>
-                  <div className="req-detail-tags">
-                    {request.job_features.map((feature, index) => <span key={index} className="req-detail-tag">{JOB_FEATURE_LABELS[feature] || feature}</span>)}
+                <div className={styles.section}>
+                  <h2 className={styles.sectionTitle}>この仕事の特徴</h2>
+                  <div className={styles.tags}>
+                    {request.job_features.map((feature, index) => (
+                      <span key={index} className={styles.tag}>{JOB_FEATURE_LABELS[feature] || feature}</span>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* クライアント情報 */}
-              <div className="req-detail-section">
-                <h2 className="req-detail-section-title">クライアント情報</h2>
-                <div className="req-detail-client-card">
-                  <div className="req-detail-client-avatar">
+              {/* 依頼者情報（メイン下部） */}
+              {request.profiles?.username ? (
+                <Link href={`/creators/${request.profiles.username}`} className={styles.creatorCard}>
+                  <div className={styles.creatorAvatar}>
                     {request.profiles?.avatar_url ? (
                       <img src={request.profiles.avatar_url} alt={request.profiles.display_name || ''} />
                     ) : (
                       <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
                     )}
                   </div>
-                  <div className="req-detail-client-info">
-                    <div className="req-detail-client-name">
-                      {request.profiles?.display_name || '名前未設定'}
-                    </div>
-                    {request.profiles?.username && (
-                      <Link href={`/creators/${request.profiles.username}`} className="req-detail-client-link">
-                        プロフィールを見る
-                        <i className="fas fa-chevron-right"></i>
-                      </Link>
-                    )}
+                  <div className={styles.creatorInfo}>
+                    <div className={styles.creatorName}>{request.profiles?.display_name || '名前未設定'}</div>
+                    <div className={styles.creatorMeta}>依頼者のプロフィールを見る</div>
+                  </div>
+                  <i className="fas fa-chevron-right" style={{ color: 'var(--text-tertiary)' }}></i>
+                </Link>
+              ) : (
+                <div className={styles.creatorCard}>
+                  <div className={styles.creatorAvatar}>
+                    <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
+                  </div>
+                  <div className={styles.creatorInfo}>
+                    <div className={styles.creatorName}>{request.profiles?.display_name || '名前未設定'}</div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* サイドバー */}
-            <div className="req-detail-sidebar">
-              {/* 応募ボタン */}
-              {request.status === 'open' && !isRequester && (
-                <>
-                  {isLoggedIn ? (
-                    hasApplied ? (
-                      <div className="req-detail-applied-badge">
-                        <i className="fas fa-check-circle"></i>
-                        応募済みです
-                      </div>
+            <div className={styles.sidebar}>
+              {/* 予算 + 応募カード */}
+              <div className={styles.actionCard}>
+                <div className={styles.priceSection}>
+                  <div className={styles.priceLabel}>
+                    {request.payment_type === 'hourly' ? '時給' : '予算'}
+                  </div>
+                  <div className={styles.priceValue}>
+                    {request.payment_type === 'hourly' ? (
+                      request.hourly_rate_min && request.hourly_rate_max
+                        ? `¥${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}`
+                        : request.hourly_rate_min
+                        ? `¥${request.hourly_rate_min.toLocaleString()}〜`
+                        : request.hourly_rate_max
+                        ? `〜¥${request.hourly_rate_max.toLocaleString()}`
+                        : '応相談'
+                    ) : request.price_negotiable ? (
+                      '相談して決める'
+                    ) : (request.budget_min || request.budget_max) ? (
+                      <>
+                        ¥{request.budget_min?.toLocaleString() || '0'}
+                        <span className={styles.priceSuffix}>〜</span>
+                        {request.budget_max && `¥${request.budget_max.toLocaleString()}`}
+                      </>
                     ) : (
-                      <button onClick={() => setShowApplicationForm(!showApplicationForm)} className="req-detail-btn primary full">
-                        応募画面へ
-                      </button>
-                    )
-                  ) : (
-                    <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`} className="req-detail-btn primary full">
-                      ログインして応募する
-                    </Link>
+                      '金額未設定'
+                    )}
+                  </div>
+                  {request.payment_type === 'hourly' && (
+                    <div className={styles.priceUnit}>/時間</div>
                   )}
-                </>
-              )}
+                </div>
 
-              {/* 依頼者向けリンク */}
-              {isRequester && (
-                request.status === 'open' ? (
-                  <Link href={`/requests/${requestId}/manage`} className="req-detail-btn primary full">
-                    <i className="fas fa-cog"></i>
-                    応募を管理する
+                {/* 応募ボタン */}
+                {request.status === 'open' && !isRequester && (
+                  <>
+                    {isLoggedIn ? (
+                      hasApplied ? (
+                        <div className={styles.appliedBadge}>
+                          <i className="fas fa-check-circle"></i>応募済みです
+                        </div>
+                      ) : (
+                        <button onClick={() => setShowApplicationForm(!showApplicationForm)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                          応募画面へ
+                        </button>
+                      )
+                    ) : (
+                      <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                        ログインして応募する
+                      </Link>
+                    )}
+                  </>
+                )}
+
+                {/* 依頼者向けリンク */}
+                {isRequester && (
+                  request.status === 'open' ? (
+                    <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      <i className="fas fa-cog"></i>応募を管理する
+                    </Link>
+                  ) : (
+                    <Link href={`/requests/${requestId}/status`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      <i className="fas fa-tasks"></i>契約進捗を確認
+                    </Link>
+                  )
+                )}
+
+                {/* クリエイター向けリンク（契約済み） */}
+                {!isRequester && myContractId && (
+                  <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                    <i className="fas fa-tasks"></i>契約進捗を確認
                   </Link>
-                ) : (
-                  <Link href={`/requests/${requestId}/status`} className="req-detail-btn primary full">
-                    <i className="fas fa-tasks"></i>
-                    契約進捗を確認
-                  </Link>
-                )
-              )}
-
-              {/* クリエイター向けリンク（契約済み） */}
-              {!isRequester && myContractId && (
-                <Link href={`/requests/${requestId}/contracts/${myContractId}`} className="req-detail-btn primary full">
-                  <i className="fas fa-tasks"></i>
-                  契約進捗を確認
-                </Link>
-              )}
-
-              {/* メッセージ */}
-              <div className="req-detail-message-card">
-                <h3 className="req-detail-message-title">メッセージで相談</h3>
-                <form onSubmit={handleSendMessage}>
-                  <textarea
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="このお仕事に少しでも疑問があるときは、気軽に相談してみましょう"
-                    rows={4}
-                    disabled={sendingMessage}
-                    className="req-detail-message-textarea"
-                  />
-                  <button type="submit" disabled={sendingMessage || !messageText.trim()} className="req-detail-btn secondary full">
-                    {sendingMessage ? '送信中...' : 'メッセージを送る'}
-                  </button>
-                </form>
+                )}
               </div>
+
+              {/* メッセージカード（依頼者以外に表示） */}
+              {!isRequester && (
+                <div className={styles.messageCard}>
+                  <h3 className={styles.messageTitle}>メッセージで相談</h3>
+                  <form onSubmit={handleSendMessage}>
+                    <textarea
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder="このお仕事に少しでも疑問があるときは、気軽に相談してみましょう"
+                      rows={4}
+                      disabled={sendingMessage}
+                      className={styles.messageTextarea}
+                    />
+                    <button type="submit" disabled={sendingMessage || !messageText.trim()} className={`${styles.btn} ${styles.secondary} ${styles.full}`}>
+                      {sendingMessage ? '送信中...' : 'メッセージを送る'}
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* 応募フォームモーダル */}
         {showApplicationForm && (
-          <div className="req-detail-modal-overlay" onClick={() => setShowApplicationForm(false)}>
-            <div className="req-detail-modal" onClick={(e) => e.stopPropagation()}>
-              <h2 className="req-detail-modal-title">この依頼に応募する</h2>
+          <div className={styles.modalOverlay} onClick={() => setShowApplicationForm(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h2 className={styles.modalTitle}>この依頼に応募する</h2>
               <form onSubmit={handleSubmitApplication}>
-                <div className="req-detail-modal-group">
-                  <label className="req-detail-modal-label">
-                    応募メッセージ <span className="req-detail-required">*</span>
+                <div className={styles.modalGroup}>
+                  <label className={styles.modalLabel}>
+                    応募メッセージ <span className={styles.required}>*</span>
                   </label>
                   <textarea
                     value={applicationMessage}
                     onChange={(e) => setApplicationMessage(e.target.value)}
                     placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください"
                     required
-                    className="req-detail-modal-textarea"
+                    className={styles.modalTextarea}
                   />
                 </div>
-                <div className="req-detail-modal-group">
-                  <label className="req-detail-modal-label">希望金額</label>
-                  <div className="req-detail-modal-price-row">
+                <div className={styles.modalGroup}>
+                  <label className={styles.modalLabel}>希望金額</label>
+                  <div className={styles.modalPriceRow}>
                     <input
                       type="number"
                       value={proposedPrice}
                       onChange={(e) => setProposedPrice(e.target.value)}
                       placeholder="希望する金額"
                       min="0"
-                      className="req-detail-modal-input"
+                      className={styles.modalInput}
                     />
-                    <span className="req-detail-modal-unit">円</span>
+                    <span className={styles.modalUnit}>円</span>
                   </div>
                 </div>
-                <div className="req-detail-modal-buttons">
-                  <button type="button" onClick={() => setShowApplicationForm(false)} disabled={processing} className="req-detail-btn secondary">
+                <div className={styles.modalButtons}>
+                  <button type="button" onClick={() => setShowApplicationForm(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>
                     キャンセル
                   </button>
-                  <button type="submit" disabled={processing} className="req-detail-btn primary">
+                  <button type="submit" disabled={processing} className={`${styles.btn} ${styles.primary}`}>
                     {processing ? '送信中...' : '応募する'}
                   </button>
                 </div>

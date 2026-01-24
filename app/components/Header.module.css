@@ -43,13 +43,13 @@
 }
 
 .logo {
-  height: 24px;
+  height: 20px;
   width: auto;
 }
 
 @media (max-width: 768px) {
   .logo {
-    height: 24px;
+    height: 20px;
   }
 }
 

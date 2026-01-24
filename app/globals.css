@@ -508,6 +508,11 @@ a {
   color: var(--accent-primary);
 }
 
+/* ダークモードでバッジにボーダー追加 */
+[data-theme="dark"] .badge {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 /* フォーム */
 .form-group {
   margin-bottom: var(--space-5);

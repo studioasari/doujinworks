@@ -1,0 +1,264 @@
+/* ============================================
+   コンテナ
+   ============================================ */
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ============================================
+   ローディング
+   ============================================ */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.loading i {
+  font-size: var(--text-2xl);
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   ヘッダー
+   ============================================ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* ============================================
+   アラート
+   ============================================ */
+
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--status-error-bg);
+  border-radius: var(--radius-md);
+  color: var(--status-error);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.headerActions :global(.btn) {
+  white-space: nowrap;
+}
+
+/* ============================================
+   プラン一覧
+   ============================================ */
+
+.listSection {
+  margin-top: var(--space-6);
+}
+
+.listTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-5);
+}
+
+.planList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.planCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
+}
+
+.planCard:hover {
+  background: var(--bg-hover);
+}
+
+.planThumbnail {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.planContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.planTags {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.planName {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.planPrice {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin: 0;
+}
+
+.planActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.planActions :global(.btn) {
+  justify-content: center;
+  min-width: 80px;
+}
+
+/* ============================================
+   モーダル
+   ============================================ */
+
+.confirmModal {
+  text-align: center;
+  max-width: 400px;
+  padding: var(--space-6);
+}
+
+.confirmIcon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xl);
+  color: var(--accent-primary);
+}
+
+.confirmIcon.danger {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+.confirmTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.confirmMessage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6);
+  line-height: 1.6;
+}
+
+.btnDanger {
+  background: var(--status-error);
+  color: white;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btnDanger:hover {
+  background: #dc2626;
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+
+  .headerActions {
+    flex-direction: column;
+  }
+
+  .headerActions :global(.btn) {
+    justify-content: center;
+  }
+
+  .planCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .planThumbnail {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1.91 / 1;
+  }
+
+  .planActions {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-subtle);
+  }
+}

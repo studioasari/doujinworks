@@ -1,0 +1,388 @@
+/* ============================================
+   アラート
+   ============================================ */
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--status-info-bg);
+  border-radius: var(--radius-md);
+  color: var(--status-info);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--status-error-bg);
+  border-radius: var(--radius-md);
+  color: var(--status-error);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.alertClose {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+/* ============================================
+   フォームカード
+   ============================================ */
+
+.formCard {
+  padding: var(--space-6);
+}
+
+.formCard :global(.form-input) {
+  max-width: none;
+}
+
+/* selectタグのスタイル */
+.formCard select:global(.form-input) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-4) center;
+  padding-right: var(--space-10);
+  cursor: pointer;
+}
+
+.formCard select:global(.form-input):hover {
+  background-color: var(--bg-hover);
+}
+
+.formTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.required {
+  color: var(--status-error);
+}
+
+.formHint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-2);
+}
+
+/* ============================================
+   アップロードエリア
+   ============================================ */
+
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  aspect-ratio: 1.91 / 1;
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.uploadArea:hover,
+.uploadArea.dragging {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.uploadArea.error {
+  border-color: var(--status-error);
+}
+
+.uploadArea i {
+  font-size: var(--text-3xl);
+  color: var(--text-tertiary);
+}
+
+.uploadArea span {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.uploadHint {
+  font-size: var(--text-xs) !important;
+  color: var(--text-tertiary) !important;
+}
+
+/* ============================================
+   サムネイルプレビュー
+   ============================================ */
+
+.thumbnailPreview {
+  position: relative;
+  aspect-ratio: 1.91 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.thumbnailPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageRemoveBtn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.imageRemoveBtn:hover {
+  background: var(--status-error);
+}
+
+/* ============================================
+   サンプル画像グリッド
+   ============================================ */
+
+.sampleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.sampleItem {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.sampleItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sampleAdd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  aspect-ratio: 1;
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sampleAdd:hover,
+.sampleAdd.dragging {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.sampleAdd i {
+  font-size: var(--text-lg);
+  color: var(--text-tertiary);
+}
+
+.sampleAdd span {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   価格入力
+   ============================================ */
+
+.priceInput {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 200px;
+}
+
+.priceSymbol {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   公開範囲オプション
+   ============================================ */
+
+.visibilityOptions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.visibilityBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.visibilityBtn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.visibilityBtn.active {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   フォームアクション
+   ============================================ */
+
+.formActions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ============================================
+   モーダル
+   ============================================ */
+
+.saveModal {
+  text-align: center;
+  max-width: 400px;
+  padding: var(--space-6);
+}
+
+.confirmIcon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xl);
+  color: var(--accent-primary);
+}
+
+.confirmTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.confirmMessage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-6);
+  line-height: 1.6;
+}
+
+/* 保存プレビュー */
+.savePreview {
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  text-align: left;
+}
+
+.savePreviewItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+}
+
+.savePreviewItem + .savePreviewItem {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.savePreviewLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.savePreviewValue {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.priceValue {
+  color: var(--accent-primary);
+  font-family: var(--font-display);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .visibilityOptions {
+    grid-template-columns: 1fr;
+  }
+
+  .visibilityBtn {
+    justify-content: center;
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+  }
+
+  .formActions :global(.btn) {
+    justify-content: center;
+  }
+
+  .sampleGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

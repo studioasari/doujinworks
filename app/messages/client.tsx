@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import DashboardSidebar from '../components/DashboardSidebar'
+import styles from './page.module.css'
 
 type ChatRoom = {
   id: string
@@ -180,68 +181,71 @@ export default function MessagesPage() {
   return (
     <>
       <Header />
-      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+      <div className={styles.pageWrapper}>
         <DashboardSidebar />
 
-        <main className="messages-page" style={{ flex: 1 }}>
-          <div className="messages-header">
-            <h1 className="page-title">メッセージ</h1>
+        <main className={styles.main}>
+          <div className={styles.header}>
+            <h1 className={styles.title}>メッセージ</h1>
           </div>
 
           {loading && (
-            <div className="empty-state">
-              <p className="text-gray">読み込み中...</p>
+            <div className={styles.loading}>
+              <i className="fas fa-spinner fa-spin"></i>
+              <span>読み込み中...</span>
             </div>
           )}
 
           {!loading && chatRooms.length === 0 && (
-            <div className="empty-state">
+            <div className={styles.emptyState}>
               <i className="far fa-comments"></i>
               <p>メッセージはまだありません</p>
-              <Link href="/creators" className="btn-primary" style={{ marginTop: '16px' }}>
+              <Link href="/creators" className="btn btn-primary">
                 クリエイターを探す
               </Link>
             </div>
           )}
 
           {!loading && chatRooms.length > 0 && (
-            <div className="messages-list">
+            <div className={styles.messageList}>
               {chatRooms.map((room) => (
                 <Link
                   key={room.id}
                   href={`/messages/${room.id}`}
-                  className="message-item"
+                  className={styles.messageItem}
                 >
                   {room.pinned && (
-                    <i className="fas fa-thumbtack message-item-pin"></i>
+                    <i className={`fas fa-thumbtack ${styles.pinIcon}`}></i>
                   )}
 
-                  <div className="message-item-avatar">
-                    {room.other_user.avatar_url ? (
-                      <img
-                        src={room.other_user.avatar_url}
-                        alt={room.other_user.display_name || ''}
-                      />
-                    ) : (
-                      room.other_user.display_name?.charAt(0) || '?'
-                    )}
+                  <div className={styles.avatarWrapper}>
+                    <div className={styles.avatar}>
+                      {room.other_user.avatar_url ? (
+                        <img
+                          src={room.other_user.avatar_url}
+                          alt={room.other_user.display_name || ''}
+                        />
+                      ) : (
+                        room.other_user.display_name?.charAt(0) || '?'
+                      )}
+                    </div>
                     {room.unread_count > 0 && (
-                      <span className="message-item-badge">
+                      <span className={styles.unreadBadge}>
                         {room.unread_count > 99 ? '99+' : room.unread_count}
                       </span>
                     )}
                   </div>
 
-                  <div className="message-item-content">
-                    <div className="message-item-header">
-                      <h3 className={`message-item-name ${room.unread_count > 0 ? 'unread' : ''}`}>
+                  <div className={styles.content}>
+                    <div className={styles.contentHeader}>
+                      <h3 className={`${styles.name} ${room.unread_count > 0 ? styles.unread : ''}`}>
                         {room.other_user.display_name || '名前未設定'}
                       </h3>
-                      <span className="message-item-time">
+                      <span className={styles.time}>
                         {room.last_message && formatMessageTime(room.last_message.created_at)}
                       </span>
                     </div>
-                    <p className={`message-item-text ${room.unread_count > 0 ? 'unread' : ''}`}>
+                    <p className={`${styles.lastMessage} ${room.unread_count > 0 ? styles.unread : ''}`}>
                       {getLastMessageText(room.last_message)}
                     </p>
                   </div>
