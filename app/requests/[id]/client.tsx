@@ -88,8 +88,8 @@ export default function RequestDetailPage() {
   }, [requestId, currentProfileId])
 
   useEffect(() => {
-    if (requestId && currentProfileId) { checkMyContract() }
-  }, [requestId, currentProfileId])
+    if (requestId && currentProfileId && request) { checkMyContract() }
+  }, [requestId, currentProfileId, request])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -129,13 +129,22 @@ export default function RequestDetailPage() {
   }
 
   async function checkMyContract() {
-    if (!currentProfileId) return
-    const { data, error } = await supabase
+    if (!currentProfileId || !request) return
+    
+    // クリエイターの場合：自分が契約者の契約を取得
+    // 依頼者の場合：この依頼に紐づく契約を取得
+    const isReq = request.requester_id === currentProfileId
+    
+    let query = supabase
       .from('work_contracts')
       .select('id')
       .eq('work_request_id', requestId)
-      .eq('contractor_id', currentProfileId)
-      .single()
+    
+    if (!isReq) {
+      query = query.eq('contractor_id', currentProfileId)
+    }
+    
+    const { data, error } = await query.single()
 
     if (!error && data) setMyContractId(data.id)
   }
@@ -530,11 +539,11 @@ export default function RequestDetailPage() {
                     <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                       <i className="fas fa-cog"></i>応募を管理する
                     </Link>
-                  ) : (
-                    <Link href={`/requests/${requestId}/status`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                  ) : myContractId ? (
+                    <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                       <i className="fas fa-tasks"></i>契約進捗を確認
                     </Link>
-                  )
+                  ) : null
                 )}
 
                 {/* クリエイター向けリンク（契約済み） */}
@@ -551,6 +560,8 @@ export default function RequestDetailPage() {
                   <h3 className={styles.messageTitle}>メッセージで相談</h3>
                   <form onSubmit={handleSendMessage}>
                     <textarea
+                      id="consultation-message"
+                      name="consultation-message"
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="このお仕事に少しでも疑問があるときは、気軽に相談してみましょう"
@@ -575,10 +586,12 @@ export default function RequestDetailPage() {
               <h2 className={styles.modalTitle}>この依頼に応募する</h2>
               <form onSubmit={handleSubmitApplication}>
                 <div className={styles.modalGroup}>
-                  <label className={styles.modalLabel}>
+                  <label className={styles.modalLabel} htmlFor="application-message">
                     応募メッセージ <span className={styles.required}>*</span>
                   </label>
                   <textarea
+                    id="application-message"
+                    name="application-message"
                     value={applicationMessage}
                     onChange={(e) => setApplicationMessage(e.target.value)}
                     placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください"
@@ -587,9 +600,11 @@ export default function RequestDetailPage() {
                   />
                 </div>
                 <div className={styles.modalGroup}>
-                  <label className={styles.modalLabel}>希望金額</label>
+                  <label className={styles.modalLabel} htmlFor="proposed-price">希望金額</label>
                   <div className={styles.modalPriceRow}>
                     <input
+                      id="proposed-price"
+                      name="proposed-price"
                       type="number"
                       value={proposedPrice}
                       onChange={(e) => setProposedPrice(e.target.value)}

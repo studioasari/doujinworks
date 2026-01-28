@@ -448,6 +448,7 @@
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--status-success);
+  margin-bottom: var(--space-3);
 }
 
 .appliedBadge i {

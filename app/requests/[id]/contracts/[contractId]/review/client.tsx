@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Header from '../../../../../components/Header'
 import Footer from '../../../../../components/Footer'
 import { createNotification } from '../../../../../../utils/notifications'
+import styles from './page.module.css'
 
 type ReviewTarget = {
   id: string
@@ -20,6 +21,22 @@ type ExistingReview = {
   rating: number
   comment: string | null
   created_at: string
+}
+
+// ローディングドット
+function LoadingDots() {
+  return (
+    <div className={styles.loadingDots}>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  )
 }
 
 export default function ReviewClient() {
@@ -36,6 +53,7 @@ export default function ReviewClient() {
   const [hoverRating, setHoverRating] = useState<number>(0)
   const [comment, setComment] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const params = useParams()
   const router = useRouter()
@@ -45,6 +63,18 @@ export default function ReviewClient() {
   useEffect(() => {
     checkAuthAndLoadData()
   }, [])
+
+  // モーダル表示時に背景スクロール固定
+  useEffect(() => {
+    if (showConfirmModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showConfirmModal])
 
   async function checkAuthAndLoadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -160,6 +190,12 @@ export default function ReviewClient() {
       return
     }
 
+    // 確認モーダルを表示
+    setShowConfirmModal(true)
+  }
+
+  async function submitReview() {
+    setShowConfirmModal(false)
     setSubmitting(true)
 
     try {
@@ -188,7 +224,6 @@ export default function ReviewClient() {
         `/creators/${reviewTarget!.username}`
       )
 
-      alert('レビューを送信しました！')
       router.push(`/requests/${requestId}/contracts/${contractId}`)
     } catch (err: any) {
       console.error('レビュー送信エラー:', err)
@@ -209,12 +244,13 @@ export default function ReviewClient() {
   if (loading) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="review-page">
-          <div className="review-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+        <div className={styles.page}>
+          <div className={styles.container}>
+            <div className={styles.loading}>
+              <LoadingDots />
+              <span>読み込み中...</span>
+            </div>
           </div>
         </div>
         <Footer />
@@ -225,15 +261,16 @@ export default function ReviewClient() {
   if (error) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="review-page">
-          <div className="review-error">
-            <i className="fas fa-exclamation-circle"></i>
-            <h1>{error}</h1>
-            <Link href={`/requests/${requestId}/contracts/${contractId}`} className="review-link-btn">
-              契約詳細に戻る
-            </Link>
+        <div className={styles.page}>
+          <div className={styles.container}>
+            <div className={styles.error}>
+              <i className="fas fa-exclamation-circle"></i>
+              <h1 className={styles.errorTitle}>{error}</h1>
+              <Link href={`/requests/${requestId}/contracts/${contractId}`} className={`${styles.btn} ${styles.primary}`}>
+                契約詳細に戻る
+              </Link>
+            </div>
           </div>
         </div>
         <Footer />
@@ -243,82 +280,90 @@ export default function ReviewClient() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
-      <div className="review-page">
-        <div className="review-container">
-          {/* レビュー対象 */}
-          <div className="review-target">
-            <div className="review-target-avatar">
-              {reviewTarget?.avatar_url ? (
-                <img src={reviewTarget.avatar_url} alt="" />
-              ) : (
-                <i className="fas fa-user"></i>
-              )}
-            </div>
-            <div className="review-target-info">
-              <div className="review-target-name">
-                {reviewTarget?.display_name || '名前未設定'}
+      <div className={styles.page}>
+        <div className={styles.container}>
+          <div className={styles.card}>
+            {/* レビュー対象 */}
+            <div className={styles.target}>
+              <div className={styles.targetAvatar}>
+                {reviewTarget?.avatar_url ? (
+                  <img src={reviewTarget.avatar_url} alt="" />
+                ) : (
+                  <i className="fas fa-user"></i>
+                )}
               </div>
-              <div className="review-target-role">
-                {isRequester ? 'クリエイター' : '依頼者'}
-              </div>
-            </div>
-          </div>
-
-          {existingReview ? (
-            /* 既存のレビュー表示 */
-            <div className="review-existing">
-              <div className="review-field">
-                <label className="review-label">評価</label>
-                <div className="review-existing-stars">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <i
-                      key={star}
-                      className={`fas fa-star ${star <= existingReview.rating ? 'active' : ''}`}
-                    ></i>
-                  ))}
+              <div className={styles.targetInfo}>
+                <h2 className={styles.targetName}>
+                  {reviewTarget?.display_name || '名前未設定'}
+                </h2>
+                <div className={styles.targetRole}>
+                  {isRequester ? 'クリエイター' : '依頼者'}
                 </div>
               </div>
-              {existingReview.comment && (
-                <div className="review-field">
-                  <label className="review-label">コメント</label>
-                  <div className="review-existing-comment">
-                    {existingReview.comment}
+            </div>
+
+            {existingReview ? (
+              /* 既存のレビュー表示 */
+              <div className={styles.existing}>
+                <div className={styles.field}>
+                  <label className={styles.label}>評価</label>
+                  <div className={styles.existingStars}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <i
+                        key={star}
+                        className={`fas fa-star ${star <= existingReview.rating ? styles.active : ''}`}
+                      ></i>
+                    ))}
                   </div>
                 </div>
-              )}
-              <p className="review-existing-date">
-                {formatDate(existingReview.created_at)}に投稿
-              </p>
-            </div>
-          ) : (
-            /* レビューフォーム */
-            <form onSubmit={handleSubmitReview} className="review-form">
-              {/* 星評価 */}
-              <div className="review-field">
-                <label className="review-label">評価 <span className="review-required">*</span></label>
-                <div className="review-stars">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      className={`review-star ${star <= (hoverRating || rating) ? 'active' : ''}`}
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                    >
-                      <i className="fas fa-star"></i>
-                    </button>
-                  ))}
-                </div>
+                {existingReview.comment && (
+                  <div className={styles.field}>
+                    <label className={styles.label}>コメント</label>
+                    <div className={styles.existingComment}>
+                      {existingReview.comment}
+                    </div>
+                  </div>
+                )}
+                <p className={styles.existingDate}>
+                  {formatDate(existingReview.created_at)}に投稿
+                </p>
+                <Link href={`/requests/${requestId}/contracts/${contractId}`} className={styles.backLink}>
+                  <i className="fas fa-arrow-left"></i>
+                  契約詳細に戻る
+                </Link>
               </div>
+            ) : (
+              /* レビューフォーム */
+              <form onSubmit={handleSubmitReview} className={styles.form}>
+                {/* 星評価 */}
+                <div className={styles.field}>
+                  <label className={styles.label}>
+                    評価<span className={styles.required}>*</span>
+                  </label>
+                  <div className={styles.stars}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className={`${styles.star} ${star <= (hoverRating || rating) ? styles.active : ''}`}
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        aria-label={`${star}つ星`}
+                      >
+                        <i className="fas fa-star"></i>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* コメント */}
-              <div className="review-field">
-                <label className="review-label">コメント（任意）</label>
-                <div className="review-textarea-wrap">
+                {/* コメント */}
+                <div className={styles.field}>
+                  <label htmlFor="review-comment" className={styles.label}>コメント（任意）</label>
                   <textarea
+                    id="review-comment"
+                    name="review-comment"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder={isRequester 
@@ -326,324 +371,78 @@ export default function ReviewClient() {
                       : 'コミュニケーション、要望の明確さ、スムーズな進行などについてコメントしてください'
                     }
                     rows={5}
-                    className="review-textarea"
+                    className={styles.textarea}
                     maxLength={1000}
                   />
+                  <div className={styles.charCount}>{comment.length}/1000</div>
                 </div>
-                <div className="review-char-count">{comment.length}/1000</div>
-              </div>
 
-              {/* ボタン */}
-              <div className="review-actions">
-                <Link 
-                  href={`/requests/${requestId}/contracts/${contractId}`} 
-                  className="review-cancel"
-                  style={{
-                    flex: 1,
-                    display: 'block',
-                    padding: '14px 24px',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    color: '#555555'
-                  }}
-                >
-                  キャンセル
-                </Link>
-                <button 
-                  type="submit" 
-                  disabled={submitting || rating === 0}
-                  className="review-submit"
-                >
-                  {submitting ? '送信中...' : '送信する'}
-                </button>
-              </div>
-            </form>
-          )}
+                {/* ボタン */}
+                <div className={styles.actions}>
+                  <Link 
+                    href={`/requests/${requestId}/contracts/${contractId}`} 
+                    className={`${styles.btn} ${styles.secondary}`}
+                  >
+                    キャンセル
+                  </Link>
+                  <button 
+                    type="submit" 
+                    disabled={submitting || rating === 0}
+                    className={`${styles.btn} ${styles.primary}`}
+                  >
+                    {submitting ? '送信中...' : '送信する'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* 確認モーダル */}
+      {showConfirmModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowConfirmModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>レビューを送信</h2>
+            <p className={styles.modalText}>
+              この内容でレビューを送信しますか？<br />
+              送信後の変更はできません。
+            </p>
+            <div className={styles.modalPreview}>
+              <div className={styles.previewStars}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <i
+                    key={star}
+                    className={`fas fa-star ${star <= rating ? styles.active : ''}`}
+                  ></i>
+                ))}
+              </div>
+              {comment && (
+                <div className={styles.previewComment}>{comment}</div>
+              )}
+            </div>
+            <div className={styles.modalButtons}>
+              <button 
+                type="button" 
+                onClick={() => setShowConfirmModal(false)} 
+                className={`${styles.btn} ${styles.secondary}`}
+              >
+                戻る
+              </button>
+              <button 
+                type="button" 
+                onClick={submitReview}
+                disabled={submitting}
+                className={`${styles.btn} ${styles.primary}`}
+              >
+                {submitting ? '送信中...' : '送信する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
-
-      <style jsx>{`
-        .review-page {
-          min-height: calc(100vh - 140px);
-          background: #E8ECEF;
-          padding: 40px 16px;
-        }
-
-        .review-container {
-          max-width: 500px;
-          margin: 0 auto;
-          background: #E8ECEF;
-          border-radius: 16px;
-          padding: 28px 24px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-        }
-
-        .review-loading,
-        .review-error {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          min-height: 400px;
-          gap: 16px;
-          color: #555555;
-        }
-
-        .review-error i {
-          font-size: 48px;
-          color: #C05656;
-        }
-
-        .review-error h1 {
-          font-size: 18px;
-          font-weight: 700;
-          color: #222222;
-        }
-
-        .review-link-btn {
-          padding: 12px 24px;
-          background: #5B7C99;
-          color: #fff;
-          border-radius: 8px;
-          text-decoration: none;
-          font-weight: 700;
-          font-size: 14px;
-        }
-
-        /* レビュー対象 */
-        .review-target {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          margin-bottom: 28px;
-        }
-
-        .review-target-avatar {
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background: #E8ECEF;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-
-        .review-target-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .review-target-avatar i {
-          font-size: 22px;
-          color: #888888;
-        }
-
-        .review-target-info {
-          flex: 1;
-        }
-
-        .review-target-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: #222222;
-        }
-
-        .review-target-role {
-          font-size: 13px;
-          color: #555555;
-          margin-top: 2px;
-        }
-
-        /* フォーム */
-        .review-form {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .review-field {
-        }
-
-        .review-label {
-          display: block;
-          font-size: 14px;
-          font-weight: 600;
-          color: #222222;
-          margin-bottom: 10px;
-        }
-
-        .review-required {
-          color: #C05656;
-        }
-
-        /* 星評価 */
-        .review-stars {
-          display: flex;
-          gap: 6px;
-        }
-
-        .review-star {
-          background: none;
-          border: none;
-          padding: 0;
-          cursor: pointer;
-          font-size: 36px;
-          color: #D0D5DA;
-          transition: color 0.15s, transform 0.15s;
-          line-height: 1;
-        }
-
-        .review-star:hover {
-          transform: scale(1.1);
-        }
-
-        .review-star.active {
-          color: #C7A23A;
-        }
-
-        /* テキストエリア */
-        .review-textarea-wrap {
-          background: #E8ECEF;
-          border-radius: 8px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-        }
-
-        .review-textarea {
-          width: 100%;
-          padding: 14px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          resize: vertical;
-          min-height: 120px;
-          font-family: inherit;
-          color: #222222;
-          background: transparent;
-        }
-
-        .review-textarea::placeholder {
-          color: #888888;
-        }
-
-        .review-textarea:focus {
-          outline: none;
-        }
-
-        .review-char-count {
-          text-align: right;
-          font-size: 12px;
-          color: #888888;
-          margin-top: 6px;
-        }
-
-        /* ボタン */
-        .review-actions {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-top: 8px;
-        }
-
-        .review-cancel {
-          flex: 1;
-          display: block;
-          padding: 14px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 700;
-          text-align: center;
-          text-decoration: none;
-          color: #555555;
-          background: #E8ECEF;
-          box-shadow: 3px 3px 6px #c5c9cc, -3px -3px 6px #ffffff;
-          transition: box-shadow 0.2s;
-        }
-
-        .review-cancel:hover {
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-        }
-
-        .review-submit {
-          flex: 1;
-          padding: 14px 24px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          text-align: center;
-          border: none;
-          background: #5B7C99;
-          color: #FFFFFF;
-          transition: background 0.2s;
-        }
-
-        .review-submit:hover:not(:disabled) {
-          background: #4F6D86;
-        }
-
-        .review-submit:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        /* 既存レビュー表示 */
-        .review-existing {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .review-existing-stars {
-          display: flex;
-          gap: 6px;
-        }
-
-        .review-existing-stars i {
-          font-size: 32px;
-          color: #D0D5DA;
-        }
-
-        .review-existing-stars i.active {
-          color: #C7A23A;
-        }
-
-        .review-existing-comment {
-          font-size: 14px;
-          color: #222222;
-          line-height: 1.7;
-          background: #E8ECEF;
-          padding: 14px;
-          border-radius: 8px;
-          box-shadow: inset 2px 2px 4px #c5c9cc, inset -2px -2px 4px #ffffff;
-        }
-
-        .review-existing-date {
-          font-size: 13px;
-          color: #888888;
-          margin: 0;
-        }
-
-        @media (max-width: 640px) {
-          .review-page {
-            padding: 24px 16px;
-          }
-
-          .review-container {
-            padding: 24px 20px;
-          }
-
-          .review-star {
-            font-size: 32px;
-          }
-        }
-      `}</style>
     </>
   )
 }

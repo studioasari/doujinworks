@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '../../../../../utils/supabase'
+import { supabase } from '@/utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '../../../../components/Header'
-import Footer from '../../../../components/Footer'
-import { createNotification } from '../../../../../utils/notifications'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import { createNotification } from '@/utils/notifications'
+import styles from './page.module.css'
 
 const MESSAGES_PER_PAGE = 30
 
@@ -69,14 +70,44 @@ type Message = {
   _failed?: boolean
 }
 
+type CancellationRequest = {
+  id: string
+  work_contract_id: string
+  requester_id: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+  resolved_at: string | null
+  requester: {
+    id: string
+    display_name: string | null
+  }
+}
+
+// ローディングドット（8個の円形）
+function LoadingDots() {
+  return (
+    <div className={styles.loadingDots}>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  )
+}
+
 // メッセージスケルトン
 function MessagesSkeleton() {
   return (
-    <div className="chat-messages-skeleton">
+    <div className={styles.messagesSkeleton}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className={`chat-skeleton-row ${i % 2 === 0 ? 'sent' : 'received'}`}>
-          {i % 2 !== 0 && <div className="chat-skeleton-avatar" />}
-          <div className="chat-skeleton-bubble" style={{ width: `${100 + (i * 30)}px` }} />
+        <div key={i} className={`${styles.skeletonRow} ${i % 2 === 0 ? styles.sent : ''}`}>
+          {i % 2 !== 0 && <div className={styles.skeletonAvatar} />}
+          <div className={styles.skeletonBubble} style={{ width: `${100 + (i * 30)}px` }} />
         </div>
       ))}
     </div>
@@ -138,6 +169,14 @@ export default function ContractDetailPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [showNewMessageButton, setShowNewMessageButton] = useState(false)
   const [newMessageCount, setNewMessageCount] = useState(0)
+
+  // キャンセル関連
+  const [cancellationRequest, setCancellationRequest] = useState<CancellationRequest | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelType, setCancelType] = useState<'free' | 'overdue'>('free')
+  const [showCancellationResponseModal, setShowCancellationResponseModal] = useState(false)
+  const [cancellationResponseAction, setCancellationResponseAction] = useState<'approve' | 'reject'>('approve')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -146,6 +185,8 @@ export default function ContractDetailPage() {
   const isInitialLoadRef = useRef(true)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+  const activeTabRef = useRef(activeTab)
+  const processedMsgIdsRef = useRef<Set<string>>(new Set())
 
   const params = useParams()
   const router = useRouter()
@@ -155,6 +196,21 @@ export default function ContractDetailPage() {
   useEffect(() => {
     checkAuth()
   }, [])
+
+  // activeTabRefを同期
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  // モーダル表示時に背景スクロール固定
+  useEffect(() => {
+    if (showDeliveryModal || showReviewModal || enlargedMedia || showCancelModal || showCancellationResponseModal) {
+      document.body.classList.add('modal-open')
+    } else {
+      document.body.classList.remove('modal-open')
+    }
+    return () => document.body.classList.remove('modal-open')
+  }, [showDeliveryModal, showReviewModal, enlargedMedia, showCancelModal, showCancellationResponseModal])
 
   useEffect(() => {
     if (contractId && currentProfileId) {
@@ -169,6 +225,13 @@ export default function ContractDetailPage() {
       }
     }
   }, [contractId, currentProfileId])
+
+  // キャンセル申請取得
+  useEffect(() => {
+    if (contractId && currentProfileId && contract) {
+      fetchCancellationRequest()
+    }
+  }, [contractId, currentProfileId, contract?.status])
 
   useEffect(() => {
     if (contract && currentProfileId) {
@@ -201,10 +264,10 @@ export default function ContractDetailPage() {
     if (textareaRef.current) {
       const textarea = textareaRef.current
       if (newMessage === '') {
-        textarea.style.height = '44px'
+        textarea.style.height = '40px'
         textarea.style.overflowY = 'hidden'
       } else {
-        textarea.style.height = '44px'
+        textarea.style.height = '40px'
         const newHeight = Math.min(textarea.scrollHeight, 120)
         textarea.style.height = newHeight + 'px'
         textarea.style.overflowY = newHeight >= 120 ? 'auto' : 'hidden'
@@ -272,7 +335,7 @@ export default function ContractDetailPage() {
 
   function isNearBottom() {
     const container = messagesContainerRef.current
-    if (!container) return true
+    if (!container) return false
     return container.scrollHeight - container.scrollTop - container.clientHeight < 100
   }
 
@@ -354,6 +417,33 @@ export default function ContractDetailPage() {
       console.error('納品履歴取得エラー:', error)
     } else {
       setDeliveries(data || [])
+    }
+  }
+
+  async function fetchCancellationRequest() {
+    if (contract?.status === 'cancelled') {
+      setCancellationRequest(null)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('cancellation_requests')
+      .select(`
+        *,
+        requester:profiles!cancellation_requests_requester_id_fkey(id, display_name)
+      `)
+      .eq('work_contract_id', contractId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('キャンセル申請取得エラー:', error)
+    } else if (data) {
+      setCancellationRequest(data as CancellationRequest)
+    } else {
+      setCancellationRequest(null)
     }
   }
 
@@ -583,7 +673,15 @@ export default function ContractDetailPage() {
         (payload) => {
           const newMsg = payload.new as Message
           if (!newMsg.deleted) {
+            // 既に処理済みならスキップ
+            if (processedMsgIdsRef.current.has(newMsg.id)) {
+              return
+            }
+            processedMsgIdsRef.current.add(newMsg.id)
+            
             const nearBottom = isNearBottom()
+            const isOnChatTab = activeTabRef.current === 'chat'
+            
             // 楽観的UIで既に追加済みの場合は、_optimisticフラグを外すだけ
             setMessages(prev => {
               const existingIndex = prev.findIndex(m => m.id === newMsg.id)
@@ -594,18 +692,21 @@ export default function ContractDetailPage() {
               }
               // 自分が送ったメッセージでない場合のみ追加
               if (newMsg.sender_id !== currentProfileId) {
-                if (!nearBottom) {
-                  setShowNewMessageButton(true)
-                  setNewMessageCount(prev => prev + 1)
-                }
                 return [...prev, newMsg]
               }
               return prev
             })
+            
+            // カウント更新（相手からのメッセージのみ）
             if (newMsg.sender_id !== currentProfileId) {
+              if (!isOnChatTab || !nearBottom) {
+                setShowNewMessageButton(true)
+                setNewMessageCount(prev => prev + 1)
+              }
               updateLastReadAt()
             }
-            if (nearBottom) {
+            
+            if (isOnChatTab && nearBottom) {
               requestAnimationFrame(() => {
                 const container = messagesContainerRef.current
                 if (container) {
@@ -1274,6 +1375,178 @@ export default function ContractDetailPage() {
     }
   }
 
+  // キャンセル関連
+  function isOverdue(): boolean {
+    if (!contract?.deadline) return false
+    const deadline = new Date(contract.deadline)
+    const sevenDaysAfter = new Date(deadline)
+    sevenDaysAfter.setDate(sevenDaysAfter.getDate() + 7)
+    return new Date() > sevenDaysAfter
+  }
+
+  function openCancelModal(type: 'free' | 'overdue') {
+    setCancelType(type)
+    setCancelReason('')
+    setShowCancelModal(true)
+  }
+
+  async function handleSubmitCancel(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (!cancelReason.trim()) {
+      alert('キャンセル理由を入力してください')
+      return
+    }
+
+    setProcessing(true)
+
+    try {
+      const { error: cancelError } = await supabase
+        .from('cancellation_requests')
+        .insert({
+          work_contract_id: contractId,
+          requester_id: currentProfileId,
+          reason: cancelReason.trim(),
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+
+      if (cancelError) {
+        console.error('キャンセル申請エラー:', cancelError)
+        throw new Error('キャンセル申請に失敗しました')
+      }
+
+      const recipientId = isRequester ? contract?.contractor_id : contract?.work_request?.requester_id
+      if (recipientId && contract) {
+        const notificationMessage = cancelType === 'free' 
+          ? `「${(contract.work_request as any)?.title}」についてキャンセル申請がありました。7日以内に同意または拒否してください。応答がない場合は自動的にキャンセルされます。`
+          : `「${(contract.work_request as any)?.title}」について納期超過によるキャンセル申請がありました。`
+        
+        await createNotification(
+          recipientId,
+          'cancellation_request',
+          'キャンセル申請がありました',
+          notificationMessage,
+          `/requests/${requestId}/contracts/${contractId}`
+        )
+      }
+
+      const successMessage = cancelType === 'free'
+        ? 'キャンセル申請を送信しました。相手が7日以内に応答しない場合、自動的にキャンセルされます。'
+        : 'キャンセル申請を送信しました。運営が確認し、対応いたします。'
+
+      alert(successMessage)
+      setShowCancelModal(false)
+      setCancelReason('')
+      fetchContract()
+      fetchCancellationRequest()
+
+    } catch (error) {
+      console.error('キャンセル申請エラー:', error)
+      alert(error instanceof Error ? error.message : 'キャンセル申請に失敗しました')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  function openCancellationResponseModal(action: 'approve' | 'reject') {
+    setCancellationResponseAction(action)
+    setShowCancellationResponseModal(true)
+  }
+
+  async function handleCancellationResponse(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (!cancellationRequest) return
+
+    const isApproval = cancellationResponseAction === 'approve'
+
+    if (!confirm(
+      isApproval 
+        ? 'キャンセル申請に同意しますか？\n※契約が解除され、仮払い済みの場合は返金されます。'
+        : 'キャンセル申請を拒否しますか？'
+    )) return
+
+    setProcessing(true)
+
+    try {
+      const { error: updateError } = await supabase
+        .from('cancellation_requests')
+        .update({
+          status: isApproval ? 'approved' : 'rejected',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', cancellationRequest.id)
+
+      if (updateError) {
+        throw new Error('応答処理に失敗しました')
+      }
+
+      if (isApproval) {
+        await supabase
+          .from('work_contracts')
+          .update({
+            status: 'cancelled'
+          })
+          .eq('id', contractId)
+
+        // 仮払い済みの場合は返金処理
+        if (contract?.payment_intent_id) {
+          try {
+            const refundResponse = await fetch('/api/refund', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                workContractId: contractId,
+                reason: 'キャンセル申請の承認による返金'
+              })
+            })
+
+            if (!refundResponse.ok) {
+              console.error('返金処理に失敗しました')
+              // 返金失敗しても契約解除は完了させる
+            }
+          } catch (refundError) {
+            console.error('返金APIエラー:', refundError)
+          }
+        }
+
+        await createNotification(
+          cancellationRequest.requester_id,
+          'cancelled',
+          'キャンセルが承認されました',
+          `「${(contract?.work_request as any)?.title}」のキャンセル申請が承認されました。契約が解除されました。`,
+          `/requests/${requestId}/contracts/${contractId}`
+        )
+
+        alert('キャンセル申請を承認しました。契約が解除されました。')
+        router.push('/requests/manage')
+      } else {
+        await createNotification(
+          cancellationRequest.requester_id,
+          'cancelled',
+          'キャンセル申請が拒否されました',
+          `「${(contract?.work_request as any)?.title}」のキャンセル申請が拒否されました。`,
+          `/requests/${requestId}/contracts/${contractId}`
+        )
+
+        alert('キャンセル申請を拒否しました。契約は継続されます。')
+      }
+
+      setShowCancellationResponseModal(false)
+      fetchContract()
+      fetchCancellationRequest()
+
+    } catch (error) {
+      console.error('キャンセル応答エラー:', error)
+      alert(error instanceof Error ? error.message : '処理に失敗しました')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   function getStatusLabel(status: string) {
     const statuses: { [key: string]: string } = {
       contracted: '仮払い待ち',
@@ -1317,11 +1590,10 @@ export default function ContractDetailPage() {
   if (loading) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="req-status-page">
-          <div className="req-status-loading">
-            <i className="fas fa-spinner fa-spin"></i>
+        <div className={styles.page}>
+          <div className={styles.loading}>
+            <LoadingDots />
             <span>読み込み中...</span>
           </div>
         </div>
@@ -1333,13 +1605,12 @@ export default function ContractDetailPage() {
   if (debugInfo || !contract) {
     return (
       <>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <Header />
-        <div className="req-status-page">
-          <div className="req-status-error">
+        <div className={styles.page}>
+          <div className={styles.error}>
             <i className="fas fa-exclamation-circle"></i>
             <h1>契約が見つかりませんでした</h1>
-            <Link href="/requests/manage" className="req-status-btn primary">依頼管理に戻る</Link>
+            <Link href="/requests/manage" className={`${styles.btn} ${styles.primary}`}>依頼管理に戻る</Link>
           </div>
         </div>
         <Footer />
@@ -1354,17 +1625,17 @@ export default function ContractDetailPage() {
   const renderActionBar = () => {
     if (contract.status === 'contracted' && isRequester) {
       return (
-        <div className="req-status-action-bar">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon warning">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.warning}`}>
               <i className="fas fa-credit-card"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>仮払いを行ってください</h3>
               <p>仮払いを行うと、クリエイターが作業を開始できます。</p>
             </div>
           </div>
-          <button onClick={handlePayment} disabled={processing} className="req-status-action-bar-btn">
+          <button onClick={handlePayment} disabled={processing} className={styles.actionBarBtn}>
             {processing ? '処理中...' : '仮払いする'}
           </button>
         </div>
@@ -1373,12 +1644,12 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'contracted' && isContractor) {
       return (
-        <div className="req-status-action-bar waiting">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon info">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.info}`}>
               <i className="fas fa-clock"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>仮払いをお待ちください</h3>
               <p>依頼者が仮払いを完了すると、作業を開始できます。</p>
             </div>
@@ -1389,17 +1660,17 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'paid' && isContractor) {
       return (
-        <div className="req-status-action-bar">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon info">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.info}`}>
               <i className="fas fa-upload"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>作業を進めてください</h3>
               <p>作業が完了したら、成果物を納品してください。</p>
             </div>
           </div>
-          <button onClick={() => setShowDeliveryModal(true)} className="req-status-action-bar-btn">
+          <button onClick={() => setShowDeliveryModal(true)} className={styles.actionBarBtn}>
             納品する
           </button>
         </div>
@@ -1408,12 +1679,12 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'paid' && isRequester) {
       return (
-        <div className="req-status-action-bar waiting">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon info">
-              <i className="fas fa-spinner fa-pulse"></i>
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.info}`}>
+              <LoadingDots />
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>作業中です</h3>
               <p>クリエイターが作業を進めています。納品をお待ちください。</p>
             </div>
@@ -1424,12 +1695,12 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'delivered' && isRequester && pendingDeliveries.length > 0) {
       return (
-        <div className="req-status-action-bar">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon success">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.info}`}>
               <i className="fas fa-box-open"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>納品物を確認してください</h3>
               <p>クリエイターから納品物が提出されました。下記から検収を行ってください。</p>
             </div>
@@ -1440,12 +1711,12 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'delivered' && isContractor) {
       return (
-        <div className="req-status-action-bar waiting">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon warning">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.info}`}>
               <i className="fas fa-hourglass-half"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>検収をお待ちください</h3>
               <p>依頼者が検収を行っています。しばらくお待ちください。</p>
             </div>
@@ -1456,24 +1727,24 @@ export default function ContractDetailPage() {
 
     if (contract.status === 'completed') {
       return (
-        <div className="req-status-action-bar completed">
-          <div className="req-status-action-bar-content">
-            <div className="req-status-action-bar-icon success">
+        <div className={styles.actionBar}>
+          <div className={styles.actionBarContent}>
+            <div className={`${styles.actionBarIcon} ${styles.success}`}>
               <i className="fas fa-check-circle"></i>
             </div>
-            <div className="req-status-action-bar-text">
+            <div className={styles.actionBarText}>
               <h3>取引が完了しました</h3>
               <p>お疲れ様でした！</p>
             </div>
           </div>
           {!hasReviewed && (
-            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className="req-status-action-bar-btn review">
+            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className={`${styles.actionBarBtn} ${styles.review}`}>
               <i className="fas fa-star"></i>
               レビューを書く
             </Link>
           )}
           {hasReviewed && (
-            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className="req-status-action-bar-btn secondary">
+            <Link href={`/requests/${requestId}/contracts/${contractId}/review`} className={`${styles.actionBarBtn} ${styles.secondary}`}>
               <i className="fas fa-check"></i>
               レビュー済み
             </Link>
@@ -1487,16 +1758,24 @@ export default function ContractDetailPage() {
 
   const renderMainContent = () => (
     <>
-      {renderActionBar()}
+      <div className={styles.mainCard}>
+      {/* タイトル */}
+      <div className={styles.mainSection}>
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{workRequest?.title}</h1>
+          <span className={`${styles.badge} ${styles[contract.status]}`}>{getStatusLabel(contract.status)}</span>
+        </div>
+      </div>
 
-      <div className="req-status-steps">
-        <div className="req-status-steps-bar">
-          <div className="req-status-steps-line">
-            <div className="req-status-steps-line-fill" style={{ width: `${getProgressLineWidth()}%` }}></div>
+      {/* 進捗ステップ */}
+      <div className={styles.mainSection}>
+        <div className={styles.stepsBar}>
+          <div className={styles.stepsLine}>
+            <div className={styles.stepsLineFill} style={{ width: `${getProgressLineWidth()}%` }}></div>
           </div>
           {progressSteps.map((step, index) => (
-            <div key={step.key} className={`req-status-step ${step.done ? 'done' : ''} ${step.active ? 'active' : ''}`}>
-              <div className="req-status-step-icon">
+            <div key={step.key} className={`${styles.step} ${step.done ? styles.done : ''} ${step.active ? styles.active : ''}`}>
+              <div className={styles.stepIcon}>
                 {step.done ? (
                   <i className="fas fa-check"></i>
                 ) : step.active ? (
@@ -1505,59 +1784,73 @@ export default function ContractDetailPage() {
                   <span>{index + 1}</span>
                 )}
               </div>
-              <div className="req-status-step-label">{step.label}</div>
-              {step.date && <div className="req-status-step-date">{formatShortDate(step.date)}</div>}
+              <div className={styles.stepLabel}>{step.label}</div>
+              {step.date && <div className={styles.stepDate}>{formatShortDate(step.date)}</div>}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="req-status-info-card">
-        <h2 className="req-status-info-title">契約情報</h2>
-        <div className="req-status-info-grid-2col">
-          <div className="req-status-info-item">
-            <div className="req-status-info-item-label">契約金額</div>
-            <div className="req-status-info-item-value price">{contract.final_price?.toLocaleString()}円</div>
+      {/* 契約情報 */}
+      <div className={styles.mainSection}>
+        <h2 className={styles.sectionTitle}>契約情報</h2>
+        <div className={styles.infoGrid}>
+          <div className={styles.infoItem}>
+            <div className={styles.infoItemLabel}>契約金額</div>
+            <div className={`${styles.infoItemValue} ${styles.price}`}>{contract.final_price?.toLocaleString()}円</div>
           </div>
-          <div className="req-status-info-item">
-            <div className="req-status-info-item-label">納期</div>
-            <div className="req-status-info-item-value">
+          <div className={styles.infoItem}>
+            <div className={styles.infoItemLabel}>納期</div>
+            <div className={styles.infoItemValue}>
               {contract.deadline ? formatDate(contract.deadline) : '未設定'}
             </div>
           </div>
         </div>
       </div>
 
+      {/* 仕事詳細 */}
+      <div className={styles.mainSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>依頼内容</h2>
+          <Link href={`/requests/${requestId}`} className={styles.detailLink}>
+            依頼詳細を見る
+            <i className="fas fa-chevron-right"></i>
+          </Link>
+        </div>
+        <p className={styles.description}>{workRequest?.description}</p>
+      </div>
+
+      {/* 納品履歴 */}
       {deliveries.length > 0 && (
-        <div className="req-status-deliveries">
-          <h2 className="req-status-deliveries-title">納品履歴 ({deliveries.length}件)</h2>
-          <div className="req-status-deliveries-list">
+        <div className={styles.mainSection}>
+          <h2 className={styles.sectionTitle}>納品履歴 ({deliveries.length}件)</h2>
+          <div className={styles.deliveriesList}>
             {deliveries.map((delivery) => (
-              <div key={delivery.id} className={`req-status-delivery-card ${delivery.status === 'approved' ? 'approved' : ''}`}>
-                <div className="req-status-delivery-header">
-                  <div className="req-status-delivery-date">{formatDateTime(delivery.created_at)}</div>
-                  <span className={`req-status-delivery-badge ${delivery.status}`}>
+              <div key={delivery.id} className={styles.deliveryCard}>
+                <div className={styles.deliveryHeader}>
+                  <div className={styles.deliveryDate}>{formatDateTime(delivery.created_at)}</div>
+                  <span className={`${styles.deliveryBadge} ${styles[delivery.status]}`}>
                     {delivery.status === 'pending' && '検収待ち'}
                     {delivery.status === 'approved' && '承認済み'}
                     {delivery.status === 'rejected' && '差戻し'}
                   </span>
                 </div>
-                <p className="req-status-delivery-message">{delivery.message}</p>
+                <p className={styles.deliveryMessage}>{delivery.message}</p>
                 {delivery.delivery_url && (
-                  <a href={delivery.delivery_url} target="_blank" rel="noopener noreferrer" className="req-status-delivery-url">
+                  <a href={delivery.delivery_url} target="_blank" rel="noopener noreferrer" className={styles.deliveryUrl}>
                     <i className="fas fa-external-link-alt"></i>納品物を確認
                   </a>
                 )}
                 {delivery.feedback && (
-                  <div className={`req-status-delivery-feedback ${delivery.status === 'rejected' ? 'rejected' : ''}`}>
-                    <div className="req-status-delivery-feedback-label"><i className="fas fa-comment"></i>フィードバック</div>
-                    <p className="req-status-delivery-feedback-text">{delivery.feedback}</p>
+                  <div className={`${styles.deliveryFeedback} ${delivery.status === 'rejected' ? styles.rejected : ''}`}>
+                    <div className={styles.deliveryFeedbackLabel}><i className="fas fa-comment"></i>フィードバック</div>
+                    <p className={styles.deliveryFeedbackText}>{delivery.feedback}</p>
                   </div>
                 )}
                 {isRequester && delivery.status === 'pending' && (
-                  <div className="req-status-delivery-actions">
-                    <button onClick={() => openReviewModal(delivery.id, 'reject')} disabled={processing} className="req-status-btn secondary flex-1">差し戻す</button>
-                    <button onClick={() => openReviewModal(delivery.id, 'approve')} disabled={processing} className="req-status-btn primary flex-1">承認して完了</button>
+                  <div className={styles.deliveryActions}>
+                    <button onClick={() => openReviewModal(delivery.id, 'reject')} disabled={processing} className={`${styles.btn} ${styles.secondary} ${styles.flex1}`}>差し戻す</button>
+                    <button onClick={() => openReviewModal(delivery.id, 'approve')} disabled={processing} className={`${styles.btn} ${styles.primary} ${styles.flex1}`}>承認して完了</button>
                   </div>
                 )}
               </div>
@@ -1565,12 +1858,74 @@ export default function ContractDetailPage() {
           </div>
         </div>
       )}
+    </div>
+
+      {/* キャンセル申請（相手から）*/}
+      {cancellationRequest && cancellationRequest.requester_id !== currentProfileId && (
+        <div className={styles.cancelRequestCard}>
+          <h3 className={styles.cancelRequestTitle}>
+            <i className="fas fa-exclamation-circle"></i>
+            キャンセル申請があります
+          </h3>
+          <div className={styles.cancelRequestContent}>
+            <div className={styles.cancelRequestMeta}>
+              申請者: {cancellationRequest.requester.display_name || '名前未設定'}<br />
+              申請日: {formatDateTime(cancellationRequest.created_at)}
+            </div>
+            <div className={styles.cancelRequestLabel}>理由:</div>
+            <p className={styles.cancelRequestReason}>{cancellationRequest.reason}</p>
+          </div>
+          <div className={styles.cancelRequestWarning}>
+            <i className="fas fa-info-circle"></i>
+            7日以内に応答しない場合、自動的に同意したものとみなされます。
+          </div>
+          <div className={styles.cancelRequestActions}>
+            <button onClick={() => openCancellationResponseModal('reject')} disabled={processing} className={`${styles.btn} ${styles.secondary} ${styles.flex1}`}>拒否する</button>
+            <button onClick={() => openCancellationResponseModal('approve')} disabled={processing} className={`${styles.btn} ${styles.danger} ${styles.flex1}`}>同意する</button>
+          </div>
+        </div>
+      )}
+
+      {/* 自分のキャンセル申請 */}
+      {cancellationRequest && cancellationRequest.requester_id === currentProfileId && (
+        <div className={styles.cancelPendingCard}>
+          <i className="fas fa-clock"></i>
+          <h3>キャンセル申請中</h3>
+          <p>相手の応答を待っています。7日以内に応答がない場合、自動的に承認されます。</p>
+          <span className={styles.cancelPendingDate}>申請日: {formatDateTime(cancellationRequest.created_at)}</span>
+        </div>
+      )}
+
+      {/* キャンセルボタン（キャンセル申請がない場合のみ） */}
+      {!cancellationRequest && contract.status !== 'completed' && contract.status !== 'cancelled' && contract.status !== 'delivered' && (
+        <div className={styles.cancelSection}>
+          <h3 className={styles.cancelSectionTitle}>
+            {contract.status === 'paid' && isRequester && isOverdue() ? 'キャンセルについて' : '契約のキャンセル'}
+          </h3>
+          <p className={styles.cancelSectionDesc}>
+            {contract.status === 'paid' && isRequester && isOverdue() 
+              ? '納期から7日以上経過しています。キャンセル申請を行うと、運営が確認後に返金処理を行います。'
+              : 'キャンセル申請を送信すると、相手に通知されます。相手が同意するか、7日以内に応答がない場合に契約が解除されます。'
+            }
+          </p>
+          {contract.status === 'paid' && isRequester && isOverdue() ? (
+            <button onClick={() => openCancelModal('overdue')} disabled={processing} className={styles.cancelSectionBtn}>
+              <i className="fas fa-exclamation-triangle"></i>
+              納期超過のためキャンセル申請
+            </button>
+          ) : (
+            <button onClick={() => openCancelModal('free')} disabled={processing} className={styles.cancelSectionBtn}>
+              キャンセル申請
+            </button>
+          )}
+        </div>
+      )}
     </>
   )
 
   const renderChatContent = () => (
     <div 
-      className="chat-container"
+      className={styles.chat}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -1578,43 +1933,43 @@ export default function ContractDetailPage() {
     >
       {/* ドラッグオーバーレイ */}
       {isDragging && (
-        <div className="chat-drag-overlay">
-          <div className="chat-drag-content">
+        <div className={styles.chatDragOverlay}>
+          <div className={styles.chatDragContent}>
             <i className="fas fa-cloud-upload-alt"></i>
             <p>ファイルをドロップして送信</p>
           </div>
         </div>
       )}
 
-      <div className="chat-header" onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
-        <div className="chat-header-avatar">
+      <div className={styles.chatHeader} onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
+        <div className={styles.chatHeaderAvatar}>
           {otherUser?.avatar_url ? (
             <img src={otherUser.avatar_url} alt="" loading="lazy" />
           ) : (
             <span>{otherUser?.display_name?.charAt(0) || '?'}</span>
           )}
         </div>
-        <div className="chat-header-info">
-          <div className="chat-header-name">{otherUser?.display_name || '名前未設定'}</div>
-          <div className="chat-header-status">{isRequester ? 'クリエイター' : '依頼者'}</div>
+        <div className={styles.chatHeaderInfo}>
+          <div className={styles.chatHeaderName}>{otherUser?.display_name || '名前未設定'}</div>
+          <div className={styles.chatHeaderStatus}>{isRequester ? 'クリエイター' : '依頼者'}</div>
         </div>
-        {otherUser?.username && <i className="fas fa-chevron-right chat-header-arrow"></i>}
+        {otherUser?.username && <i className={`fas fa-chevron-right ${styles.chatHeaderArrow}`}></i>}
       </div>
 
-      <div className="chat-messages" ref={messagesContainerRef}>
+      <div className={styles.chatMessages} ref={messagesContainerRef}>
         {loadingMore && (
-          <div className="chat-loading-more">
-            <i className="fas fa-spinner fa-spin"></i>
+          <div className={styles.chatLoadingMore}>
+            <LoadingDots />
             <span>読み込み中...</span>
           </div>
         )}
         {chatLoading ? (
           <MessagesSkeleton />
         ) : messages.length === 0 ? (
-          <div className="chat-empty">
+          <div className={styles.chatEmpty}>
             <i className="far fa-comments"></i>
             <p>メッセージはまだありません</p>
-            <p className="chat-empty-hint">気軽にメッセージを送ってみましょう</p>
+            <p className={styles.chatEmptyHint}>気軽にメッセージを送ってみましょう</p>
           </div>
         ) : (
           <>
@@ -1631,12 +1986,12 @@ export default function ContractDetailPage() {
               return (
                 <div key={message.id}>
                   {showDate && (
-                    <div className="chat-date-divider">
+                    <div className={styles.chatDateDivider}>
                       <span>{formatChatDate(message.created_at)}</span>
                     </div>
                   )}
                   <div 
-                    className={`chat-message ${isCurrentUser ? 'sent' : 'received'} ${message._optimistic ? 'optimistic' : ''} ${message._failed ? 'failed' : ''}`}
+                    className={`${styles.chatMessage} ${isCurrentUser ? styles.sent : styles.received} ${message._optimistic ? styles.optimistic : ''} ${message._failed ? styles.failed : ''}`}
                     onContextMenu={(e) => {
                       if (isCurrentUser && !message._optimistic) {
                         e.preventDefault()
@@ -1648,7 +2003,7 @@ export default function ContractDetailPage() {
                     onTouchEnd={handleTouchEnd}
                   >
                     {!isCurrentUser && (
-                      <div className="chat-message-avatar" onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
+                      <div className={styles.chatMessageAvatar} onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
                         {otherUser?.avatar_url ? (
                           <img src={otherUser.avatar_url} alt="" loading="lazy" />
                         ) : (
@@ -1656,9 +2011,9 @@ export default function ContractDetailPage() {
                         )}
                       </div>
                     )}
-                    <div className="chat-message-content">
+                    <div className={styles.chatMessageContent}>
                       {(message.file_type === 'image' || message.file_type === 'video') && signedUrl && (
-                        <div className="chat-media">
+                        <div className={styles.chatMedia}>
                           {message.file_type === 'image' ? (
                             <img 
                               src={signedUrl} 
@@ -1678,7 +2033,7 @@ export default function ContractDetailPage() {
                           )}
                           {!message._optimistic && (
                             <button 
-                              className="chat-media-download" 
+                              className={styles.chatMediaDownload} 
                               onClick={() => handleDownload(message.file_url!, message.file_name || (message.file_type === 'image' ? '画像.jpg' : '動画.mp4'))}
                             >
                               <i className="fas fa-download"></i> 保存
@@ -1687,23 +2042,23 @@ export default function ContractDetailPage() {
                         </div>
                       )}
                       {(message.file_type === 'pdf' || message.file_type === 'zip' || message.file_type === 'file') && signedUrl && (
-                        <a href={signedUrl} download={message.file_name} target="_blank" rel="noopener noreferrer" className="chat-file">
-                          <i className={`fas ${getFileIcon(message.file_type)} chat-file-icon`}></i>
-                          <div className="chat-file-info">
-                            <div className="chat-file-name">{message.file_name}</div>
-                            <div className="chat-file-type">{message.file_type?.toUpperCase()}</div>
+                        <a href={signedUrl} download={message.file_name} target="_blank" rel="noopener noreferrer" className={styles.chatFile}>
+                          <i className={`fas ${getFileIcon(message.file_type)} ${styles.chatFileIcon}`}></i>
+                          <div className={styles.chatFileInfo}>
+                            <div className={styles.chatFileName}>{message.file_name}</div>
+                            <div className={styles.chatFileType}>{message.file_type?.toUpperCase()}</div>
                           </div>
                         </a>
                       )}
                       {message.content && (
-                        <div className="chat-message-bubble">{message.content}</div>
+                        <div className={styles.chatMessageBubble}>{message.content}</div>
                       )}
-                      <div className="chat-message-time">
+                      <div className={styles.chatMessageTime}>
                         {message._optimistic && !message._failed && (
-                          <span className="chat-message-sending">送信中...</span>
+                          <span className={styles.chatMessageSending}>送信中...</span>
                         )}
                         {message._failed && (
-                          <button className="chat-message-retry" onClick={() => retryMessage(message)}>
+                          <button className={styles.chatMessageRetry} onClick={() => retryMessage(message)}>
                             <i className="fas fa-exclamation-circle"></i> 再送信
                           </button>
                         )}
@@ -1711,7 +2066,7 @@ export default function ContractDetailPage() {
                           <>
                             {formatTime(message.created_at)}
                             {isCurrentUser && isMessageRead(message) && (
-                              <span className="chat-message-read"> 既読</span>
+                              <span className={styles.chatMessageRead}> 既読</span>
                             )}
                           </>
                         )}
@@ -1727,7 +2082,7 @@ export default function ContractDetailPage() {
 
         {/* 新着メッセージボタン */}
         {showNewMessageButton && (
-          <button className="chat-new-message-btn" onClick={handleNewMessageButtonClick}>
+          <button className={styles.chatNewMessageBtn} onClick={handleNewMessageButtonClick}>
             <i className="fas fa-arrow-down"></i>
             {newMessageCount > 0 && <span>{newMessageCount}件の新着メッセージ</span>}
           </button>
@@ -1735,33 +2090,37 @@ export default function ContractDetailPage() {
       </div>
 
       {selectedFile && (
-        <div className="chat-file-preview">
-          <div className="chat-file-preview-inner">
+        <div className={styles.chatFilePreview}>
+          <div className={styles.chatFilePreviewInner}>
             {selectedFile.type.startsWith('image/') && previewUrl && <img src={previewUrl} alt="プレビュー" />}
             {selectedFile.type.startsWith('video/') && previewUrl && <video src={previewUrl} controls />}
             {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
-              <div className="chat-file-preview-info">
+              <div className={styles.chatFilePreviewInfo}>
                 <i className={`fas ${getFileIcon(getFileType(selectedFile))}`}></i>
                 <span>{selectedFile.name}</span>
               </div>
             )}
-            <button className="chat-file-preview-remove" onClick={handleRemoveFile}><i className="fas fa-times"></i></button>
+            <button className={styles.chatFilePreviewRemove} onClick={handleRemoveFile}><i className="fas fa-times"></i></button>
           </div>
         </div>
       )}
 
-      <div className="chat-input-container">
+      <div className={styles.chatInputContainer}>
         <input
+          id="chat-file-input"
+          name="chat-file-input"
           ref={fileInputRef}
           type="file"
           accept="image/*,video/*,application/pdf,application/zip"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
         />
-        <button className="chat-attach-btn" onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || uploading}>
+        <button className={styles.chatAttachBtn} onClick={() => fileInputRef.current?.click()} disabled={sendingMessage || uploading}>
           <i className="fas fa-paperclip"></i>
         </button>
         <textarea
+          id="chat-message-input"
+          name="chat-message-input"
           ref={textareaRef}
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
@@ -1777,12 +2136,12 @@ export default function ContractDetailPage() {
           placeholder="メッセージを入力..."
           disabled={sendingMessage || chatLoading}
           rows={1}
-          className="chat-input"
+          className={styles.chatInput}
         />
         <button
           onClick={sendMessage}
-          disabled={sendingMessage || chatLoading}
-          className="chat-send-btn"
+          disabled={sendingMessage || chatLoading || (!newMessage.trim() && !selectedFile)}
+          className={styles.chatSendBtn}
         >
           {uploading ? 'アップロード中...' : '送信'}
         </button>
@@ -1792,54 +2151,61 @@ export default function ContractDetailPage() {
 
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
       <Header />
-      <div className="req-status-page">
-        <div className="req-status-container">
-          {/* ヘッダー */}
-          <div className="req-status-header">
-            <h1 className="req-status-title">{workRequest?.title}</h1>
-            {/* <div className="req-status-badges">
-              <span className={`req-status-badge ${contract.status}`}>{getStatusLabel(contract.status)}</span>
-            </div> */}
-          </div>
-
+      <div className={styles.page}>
+        <div className={styles.container}>
           {/* スマホ用タブ */}
-          <div className="mobile-tabs">
+          <div className={styles.mobileTabs}>
             <button 
-              className={`mobile-tab ${activeTab === 'status' ? 'active' : ''}`}
+              className={`${styles.mobileTab} ${activeTab === 'status' ? styles.active : ''}`}
               onClick={() => setActiveTab('status')}
             >
               <i className="fas fa-clipboard-list"></i>
               <span>進捗</span>
             </button>
             <button 
-              className={`mobile-tab ${activeTab === 'chat' ? 'active' : ''}`}
-              onClick={() => setActiveTab('chat')}
+              className={`${styles.mobileTab} ${activeTab === 'chat' ? styles.active : ''}`}
+              onClick={() => {
+                setActiveTab('chat')
+                setNewMessageCount(0)
+                setShowNewMessageButton(false)
+                // 少し遅延させてスクロール
+                setTimeout(() => {
+                  const container = messagesContainerRef.current
+                  if (container) {
+                    container.scrollTop = container.scrollHeight
+                  }
+                }, 100)
+              }}
             >
               <i className="fas fa-comments"></i>
               <span>チャット</span>
+              {activeTab !== 'chat' && newMessageCount > 0 && (
+                <span className={styles.tabBadge}>{newMessageCount}</span>
+              )}
             </button>
           </div>
 
           {/* PC用2カラムレイアウト */}
-          <div className="req-status-layout desktop-only">
-            <div className="req-status-main">
+          <div className={styles.layout}>
+            <div className={styles.main}>
+              {renderActionBar()}
               {renderMainContent()}
             </div>
-            <div className="req-status-chat">
+            <div className={styles.chatWrapper}>
               {renderChatContent()}
             </div>
           </div>
 
           {/* スマホ用タブコンテンツ */}
-          <div className="mobile-content">
+          <div className={styles.mobileContent}>
             {activeTab === 'status' ? (
-              <div className="mobile-main">
+              <div className={styles.mobileMain}>
+                {renderActionBar()}
                 {renderMainContent()}
               </div>
             ) : (
-              <div className="mobile-chat">
+              <div className={styles.mobileChat}>
                 {renderChatContent()}
               </div>
             )}
@@ -1849,22 +2215,22 @@ export default function ContractDetailPage() {
 
       {/* 納品モーダル */}
       {showDeliveryModal && (
-        <div className="req-status-modal-overlay" onClick={() => setShowDeliveryModal(false)}>
-          <div className="req-status-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="req-status-modal-title">納品する</h2>
+        <div className={styles.modalOverlay} onClick={() => setShowDeliveryModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>納品する</h2>
             <form onSubmit={handleSubmitDelivery}>
-              <div className="req-status-modal-group">
-                <label className="req-status-modal-label">納品物のURL</label>
-                <input type="url" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} placeholder="https://..." className="req-status-modal-input" />
-                <div className="req-status-modal-hint">ギガファイル便、Google Driveなどの共有URLを入力</div>
+              <div className={styles.modalGroup}>
+                <label htmlFor="delivery-url" className={styles.modalLabel}>納品物のURL</label>
+                <input id="delivery-url" name="delivery-url" type="url" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} placeholder="https://..." className={styles.modalInput} />
+                <div className={styles.modalHint}>ギガファイル便、Google Driveなどの共有URLを入力</div>
               </div>
-              <div className="req-status-modal-group">
-                <label className="req-status-modal-label">納品メッセージ <span className="req-status-required">*</span></label>
-                <textarea value={deliveryMessage} onChange={(e) => setDeliveryMessage(e.target.value)} placeholder="納品物の説明を記入してください" required rows={5} className="req-status-modal-textarea" />
+              <div className={styles.modalGroup}>
+                <label htmlFor="delivery-message" className={styles.modalLabel}>納品メッセージ <span className={styles.required}>*</span></label>
+                <textarea id="delivery-message" name="delivery-message" value={deliveryMessage} onChange={(e) => setDeliveryMessage(e.target.value)} placeholder="納品物の説明を記入してください" required rows={5} className={styles.modalTextarea} />
               </div>
-              <div className="req-status-modal-buttons">
-                <button type="button" onClick={() => setShowDeliveryModal(false)} disabled={processing} className="req-status-btn secondary">キャンセル</button>
-                <button type="submit" disabled={processing} className="req-status-btn primary">{processing ? '送信中...' : '納品する'}</button>
+              <div className={styles.modalButtons}>
+                <button type="button" onClick={() => setShowDeliveryModal(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>キャンセル</button>
+                <button type="submit" disabled={processing} className={`${styles.btn} ${styles.primary}`}>{processing ? '送信中...' : '納品する'}</button>
               </div>
             </form>
           </div>
@@ -1873,17 +2239,76 @@ export default function ContractDetailPage() {
 
       {/* 検収モーダル */}
       {showReviewModal && (
-        <div className="req-status-modal-overlay" onClick={() => setShowReviewModal(false)}>
-          <div className="req-status-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="req-status-modal-title">{reviewAction === 'approve' ? '納品を承認' : '納品を差し戻す'}</h2>
+        <div className={styles.modalOverlay} onClick={() => setShowReviewModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>{reviewAction === 'approve' ? '納品を承認' : '納品を差し戻す'}</h2>
             <form onSubmit={handleSubmitReview}>
-              <div className="req-status-modal-group">
-                <label className="req-status-modal-label">フィードバック {reviewAction === 'reject' && <span className="req-status-required">*</span>}</label>
-                <textarea value={reviewFeedback} onChange={(e) => setReviewFeedback(e.target.value)} placeholder={reviewAction === 'approve' ? '任意' : '修正が必要な点を記入してください'} required={reviewAction === 'reject'} rows={5} className="req-status-modal-textarea" />
+              <div className={styles.modalGroup}>
+                <label htmlFor="review-feedback" className={styles.modalLabel}>フィードバック {reviewAction === 'reject' && <span className={styles.required}>*</span>}</label>
+                <textarea id="review-feedback" name="review-feedback" value={reviewFeedback} onChange={(e) => setReviewFeedback(e.target.value)} placeholder={reviewAction === 'approve' ? '任意' : '修正が必要な点を記入してください'} required={reviewAction === 'reject'} rows={5} className={styles.modalTextarea} />
               </div>
-              <div className="req-status-modal-buttons">
-                <button type="button" onClick={() => setShowReviewModal(false)} disabled={processing} className="req-status-btn secondary">キャンセル</button>
-                <button type="submit" disabled={processing} className="req-status-btn primary">{processing ? '処理中...' : reviewAction === 'approve' ? '承認する' : '差し戻す'}</button>
+              <div className={styles.modalButtons}>
+                <button type="button" onClick={() => setShowReviewModal(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>キャンセル</button>
+                <button type="submit" disabled={processing} className={`${styles.btn} ${styles.primary}`}>{processing ? '処理中...' : reviewAction === 'approve' ? '承認する' : '差し戻す'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* キャンセル申請モーダル */}
+      {showCancelModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCancelModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>{cancelType === 'free' ? 'キャンセル申請' : 'キャンセル申請（納期超過）'}</h2>
+            <form onSubmit={handleSubmitCancel}>
+              <div className={styles.modalGroup}>
+                <label htmlFor="cancel-reason" className={styles.modalLabel}>キャンセル理由 <span className={styles.required}>*</span></label>
+                <textarea id="cancel-reason" name="cancel-reason" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="キャンセル理由を入力してください" required rows={5} className={styles.modalTextarea} />
+              </div>
+              {cancelType === 'free' && (
+                <div className={styles.modalInfo}>
+                  <i className="fas fa-info-circle"></i>
+                  キャンセル申請を送信します。相手が同意すると契約が解除されます。<br />
+                  ※相手が7日以内に応答しない場合、自動的にキャンセルされます。
+                </div>
+              )}
+              {cancelType === 'overdue' && (
+                <div className={`${styles.modalInfo} ${styles.warning}`}>
+                  <i className="fas fa-exclamation-triangle"></i>
+                  納期超過のためキャンセル申請を行います。運営が内容を確認し、承認された場合は返金処理が行われます。
+                </div>
+              )}
+              <div className={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCancelModal(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>戻る</button>
+                <button type="submit" disabled={processing} className={`${styles.btn} ${styles.danger}`}>{processing ? '送信中...' : '申請する'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* キャンセル申請応答モーダル */}
+      {showCancellationResponseModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCancellationResponseModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>{cancellationResponseAction === 'approve' ? 'キャンセルに同意' : 'キャンセルを拒否'}</h2>
+            <form onSubmit={handleCancellationResponse}>
+              {cancellationResponseAction === 'approve' && (
+                <div className={`${styles.modalInfo} ${styles.warning}`}>
+                  <i className="fas fa-exclamation-triangle"></i>
+                  同意すると契約が解除されます。仮払い済みの場合は返金処理が行われます。
+                </div>
+              )}
+              {cancellationResponseAction === 'reject' && (
+                <div className={styles.modalInfo}>
+                  <i className="fas fa-info-circle"></i>
+                  拒否すると、契約は継続されます。
+                </div>
+              )}
+              <div className={styles.modalButtons}>
+                <button type="button" onClick={() => setShowCancellationResponseModal(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>戻る</button>
+                <button type="submit" disabled={processing} className={cancellationResponseAction === 'approve' ? `${styles.btn} ${styles.danger}` : `${styles.btn} ${styles.primary}`}>{processing ? '処理中...' : cancellationResponseAction === 'approve' ? '同意する' : '拒否する'}</button>
               </div>
             </form>
           </div>
@@ -1893,7 +2318,7 @@ export default function ContractDetailPage() {
       {/* コンテキストメニュー */}
       {contextMenu && (
         <div 
-          className="context-menu"
+          className={styles.contextMenu}
           style={{ 
             position: 'fixed', 
             top: contextMenu.y, 
@@ -1903,7 +2328,7 @@ export default function ContractDetailPage() {
           onClick={(e) => e.stopPropagation()}
         >
           <button 
-            className="context-menu-item delete"
+            className={`${styles.contextMenuItem} ${styles.delete}`}
             onClick={() => deleteMessage(contextMenu.messageId)}
           >
             <i className="fas fa-trash"></i>
@@ -1914,8 +2339,8 @@ export default function ContractDetailPage() {
 
       {/* メディア拡大モーダル */}
       {enlargedMedia && (
-        <div className="chat-media-modal" onClick={() => setEnlargedMedia(null)}>
-          <button className="chat-media-close" onClick={() => setEnlargedMedia(null)}>
+        <div className={styles.mediaModal} onClick={() => setEnlargedMedia(null)}>
+          <button className={styles.mediaClose} onClick={() => setEnlargedMedia(null)}>
             <i className="fas fa-times"></i>
           </button>
           {enlargedMedia.type === 'image' ? (

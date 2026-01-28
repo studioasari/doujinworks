@@ -17,6 +17,7 @@ type WorkRequest = {
   created_at: string
   deadline: string | null
   category: string
+  contract_id?: string | null
   selected_applicant?: {
     display_name: string | null
     avatar_url: string | null
@@ -115,17 +116,30 @@ export default function DashboardPage() {
 
     const requestsWithApplicants = await Promise.all(
       (data || []).map(async (request) => {
-        if (!request.selected_applicant_id) {
-          return { ...request, selected_applicant: undefined }
+        let selected_applicant = undefined
+        let contract_id = null
+
+        // 選択された応募者の情報を取得
+        if (request.selected_applicant_id) {
+          const { data: applicantData } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url')
+            .eq('id', request.selected_applicant_id)
+            .single()
+          selected_applicant = applicantData || undefined
         }
 
-        const { data: applicantData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', request.selected_applicant_id)
-          .single()
+        // 契約IDを取得（open以外のステータスの場合）
+        if (request.status !== 'open') {
+          const { data: contractData } = await supabase
+            .from('work_contracts')
+            .select('id')
+            .eq('work_request_id', request.id)
+            .single()
+          contract_id = contractData?.id || null
+        }
 
-        return { ...request, selected_applicant: applicantData || undefined }
+        return { ...request, selected_applicant, contract_id }
       })
     )
 
@@ -360,7 +374,13 @@ export default function DashboardPage() {
                       {filteredRequests.map((request) => (
                         <Link
                           key={request.id}
-                          href={request.status === 'open' ? `/requests/${request.id}/manage` : `/requests/${request.id}/status`}
+                          href={
+                            request.status === 'open' 
+                              ? `/requests/${request.id}/manage` 
+                              : request.contract_id 
+                                ? `/requests/${request.id}/contracts/${request.contract_id}`
+                                : `/requests/${request.id}`
+                          }
                           className={styles.card}
                         >
                           <div className={styles.cardHeader}>

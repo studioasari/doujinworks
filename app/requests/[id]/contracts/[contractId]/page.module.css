@@ -1,0 +1,1622 @@
+/* ============================================
+   契約詳細ページ
+   ============================================ */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+/* ============================================
+   メインカード（左カラム全体）
+   ============================================ */
+
+.mainCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.mainSection {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.mainSection:last-child {
+  border-bottom: none;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+.sectionTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4);
+}
+
+.badge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.badge.contracted {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.badge.paid {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.badge.delivered {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+.badge.completed {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.badge.cancelled {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+/* ============================================
+   レイアウト
+   ============================================ */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.chatWrapper {
+  position: sticky;
+  top: var(--space-4);
+  height: calc(100vh - 80px);
+  height: calc(100dvh - 80px);
+}
+
+/* ============================================
+   モバイルタブ
+   ============================================ */
+
+.mobileTabs {
+  display: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.mobileTab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.mobileTab.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.tabBadge {
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobileContent {
+  display: none;
+}
+
+/* ============================================
+   アクションバー（カード外・上部）
+   ============================================ */
+
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+.actionBarContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.actionBarIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xl);
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.actionBarIcon.warning {
+  color: var(--status-warning);
+}
+
+.actionBarIcon.info {
+  color: var(--accent-primary);
+}
+
+.actionBarIcon.success {
+  color: var(--status-success);
+}
+
+/* 共通ローディングドット（大きいサイズ） */
+.loadingDots {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.loadingDots span {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  animation: dotFade 1.5s ease-in-out infinite;
+}
+
+.loadingDots span:nth-child(1) { top: 0; left: 50%; margin-left: -2px; animation-delay: 0s; }
+.loadingDots span:nth-child(2) { top: 3px; right: 3px; animation-delay: 0.1875s; }
+.loadingDots span:nth-child(3) { top: 50%; right: 0; margin-top: -2px; animation-delay: 0.375s; }
+.loadingDots span:nth-child(4) { bottom: 3px; right: 3px; animation-delay: 0.5625s; }
+.loadingDots span:nth-child(5) { bottom: 0; left: 50%; margin-left: -2px; animation-delay: 0.75s; }
+.loadingDots span:nth-child(6) { bottom: 3px; left: 3px; animation-delay: 0.9375s; }
+.loadingDots span:nth-child(7) { top: 50%; left: 0; margin-top: -2px; animation-delay: 1.125s; }
+.loadingDots span:nth-child(8) { top: 3px; left: 3px; animation-delay: 1.3125s; }
+
+@keyframes dotFade {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.actionBarText h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+}
+
+.actionBarText p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.actionBarBtn {
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.actionBarBtn i {
+  line-height: 1;
+}
+
+.actionBarBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.actionBarBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionBarBtn.review {
+  background: var(--status-warning);
+}
+
+.actionBarBtn.secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+/* ============================================
+   進捗ステップ
+   ============================================ */
+
+.stepsBar {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.stepsLine {
+  position: absolute;
+  top: 16px;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  background: var(--border-default);
+}
+
+.stepsLineFill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.5s ease;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  z-index: 1;
+}
+
+.stepIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.step.done .stepIcon {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.step.active .stepIcon {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.stepLabel {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.step.done .stepLabel,
+.step.active .stepLabel {
+  color: var(--text-primary);
+}
+
+.stepDate {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   契約情報
+   ============================================ */
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.infoItemLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.infoItemValue {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.infoItemValue.price {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   仕事詳細
+   ============================================ */
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.detailLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.detailLink:hover {
+  color: var(--accent-primary);
+}
+
+.detailLink i {
+  font-size: 10px;
+}
+
+/* ============================================
+   納品履歴
+   ============================================ */
+
+.deliveriesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.deliveryCard {
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.deliveryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.deliveryDate {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.deliveryBadge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.deliveryBadge.pending {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.deliveryBadge.approved {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.deliveryBadge.rejected {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+}
+
+.deliveryMessage {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-3);
+  white-space: pre-wrap;
+}
+
+.deliveryUrl {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--accent-primary);
+  text-decoration: none;
+  margin-bottom: var(--space-3);
+}
+
+.deliveryUrl:hover {
+  text-decoration: underline;
+}
+
+.deliveryFeedback {
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.deliveryFeedback.rejected {
+  background: var(--status-error-bg);
+}
+
+.deliveryFeedbackLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.deliveryFeedbackText {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.deliveryActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ============================================
+   ボタン
+   ============================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  border: none;
+}
+
+.btn.primary {
+  background: var(--accent-gradient);
+  color: white;
+  border: 1px solid transparent;
+}
+
+.btn.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn.secondary {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.btn.secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.flex1 {
+  flex: 1;
+}
+
+/* ============================================
+   チャット
+   ============================================ */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.chatDragOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  border: 2px dashed var(--accent-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.chatDragContent {
+  text-align: center;
+  color: var(--accent-primary);
+}
+
+.chatDragContent i {
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+  display: block;
+}
+
+.chatDragContent p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.chatHeaderAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.chatHeaderAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chatHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatHeaderName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chatHeaderStatus {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.chatHeaderArrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* メッセージエリア */
+.chatMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.chatLoadingMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.chatEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.chatEmpty i {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-3);
+}
+
+.chatEmpty p {
+  margin: 0;
+}
+
+.chatEmptyHint {
+  font-size: var(--text-xs);
+  margin-top: var(--space-2);
+}
+
+.chatDateDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) 0;
+}
+
+.chatDateDivider span {
+  padding: var(--space-1) var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* メッセージ */
+.chatMessage {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 80%;
+}
+
+.chatMessage.sent {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.chatMessage.received {
+  margin-right: auto;
+}
+
+.chatMessage.optimistic {
+  opacity: 0.7;
+}
+
+.chatMessage.failed {
+  opacity: 1;
+}
+
+.chatMessageAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.chatMessageAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chatMessageContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.chatMessageBubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.chatMessage.sent .chatMessageBubble {
+  background: var(--accent-primary);
+  color: white;
+  border-top-right-radius: var(--radius-sm);
+}
+
+.chatMessage.received .chatMessageBubble {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-top-left-radius: var(--radius-sm);
+}
+
+.chatMessageTime {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chatMessage.sent .chatMessageTime {
+  justify-content: flex-end;
+}
+
+.chatMessageSending {
+  color: var(--text-tertiary);
+}
+
+.chatMessageRetry {
+  background: none;
+  border: none;
+  color: var(--status-error);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chatMessageRead {
+  color: var(--accent-primary);
+}
+
+/* メディア */
+.chatMedia {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  max-width: 240px;
+}
+
+.chatMedia img,
+.chatMedia video {
+  width: 100%;
+  display: block;
+}
+
+.chatMediaDownload {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.chatMedia:hover .chatMediaDownload {
+  opacity: 1;
+}
+
+/* ファイル */
+.chatFile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.chatFile:hover {
+  background: var(--bg-hover);
+}
+
+.chatFileIcon {
+  font-size: var(--text-xl);
+  color: var(--accent-primary);
+}
+
+.chatFileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.chatFileName {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatFileType {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* 新着メッセージボタン */
+.chatNewMessageBtn {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-md);
+}
+
+/* ファイルプレビュー */
+.chatFilePreview {
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+}
+
+.chatFilePreviewInner {
+  position: relative;
+  display: inline-block;
+  max-width: 120px;
+}
+
+.chatFilePreview img,
+.chatFilePreview video {
+  max-width: 100%;
+  max-height: 80px;
+  border-radius: var(--radius-md);
+}
+
+.chatFilePreviewInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.chatFilePreviewInfo i {
+  color: var(--accent-primary);
+}
+
+.chatFilePreviewRemove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: var(--status-error);
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 入力エリア */
+.chatInputContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chatAttachBtn {
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.chatAttachBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chatInput {
+  flex: 1;
+  padding: 10px var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--text-primary);
+  resize: none;
+  height: 40px;
+  min-height: 40px;
+  max-height: 120px;
+  box-sizing: border-box;
+}
+
+.chatInput:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.chatSendBtn {
+  height: 40px;
+  padding: 0 var(--space-4);
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.chatSendBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.chatSendBtn:disabled {
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* ============================================
+   モーダル
+   ============================================ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-4);
+}
+
+:global(body.modal-open) {
+  overflow: hidden !important;
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.modalTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-5);
+}
+
+.modalGroup {
+  margin-bottom: var(--space-4);
+}
+
+.modalLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.required {
+  color: var(--status-error);
+}
+
+.modalInput {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.modalTextarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.modalTextarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.modalHint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
+.modalButtons {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.modalButtons .btn {
+  flex: 1;
+}
+
+/* ============================================
+   コンテキストメニュー
+   ============================================ */
+
+.contextMenu {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.contextMenuItem {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.contextMenuItem:hover {
+  background: var(--bg-hover);
+}
+
+.contextMenuItem.delete {
+  color: var(--status-error);
+}
+
+/* ============================================
+   メディアモーダル
+   ============================================ */
+
+.mediaModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: var(--space-4);
+}
+
+.mediaClose {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: var(--text-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mediaModal img,
+.mediaModal video {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+/* ============================================
+   スケルトン
+   ============================================ */
+
+.messagesSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.skeletonRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.skeletonRow.sent {
+  justify-content: flex-end;
+}
+
+.skeletonAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeletonBubble {
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   ローディング・エラー
+   ============================================ */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+  gap: var(--space-3);
+}
+
+.error {
+  text-align: center;
+  padding: var(--space-12);
+}
+
+.error i {
+  font-size: 3rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.error h1 {
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .layout {
+    display: none;
+  }
+
+  .mobileTabs {
+    display: flex;
+  }
+
+  .mobileContent {
+    display: block;
+  }
+
+  .mobileMain {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .mobileChat {
+    height: calc(100vh - 180px);
+    height: calc(100dvh - 180px);
+    min-height: 400px;
+  }
+
+  .mobileChat .chat {
+    height: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--space-4);
+  }
+
+  .title {
+    font-size: var(--text-lg);
+  }
+
+  .actionBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .actionBarContent {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .actionBarBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stepsBar {
+    gap: var(--space-1);
+  }
+
+  .stepLabel {
+    font-size: 10px;
+  }
+
+  .stepDate {
+    display: none;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .deliveryActions {
+    flex-direction: column;
+  }
+
+  .deliveryActions .btn {
+    width: 100%;
+  }
+
+  .chatMessage {
+    max-width: 90%;
+  }
+
+  .modal {
+    padding: var(--space-4);
+  }
+}
+
+/* ============================================
+   追加スタイル
+   ============================================ */
+
+.chatFileIcon {
+  font-size: var(--text-xl);
+  color: var(--accent-primary);
+}
+
+.chatMessage.optimistic {
+  opacity: 0.7;
+}
+
+.chatMessage.failed {
+  opacity: 1;
+}
+
+/* ============================================
+   キャンセル関連
+   ============================================ */
+
+.cancelRequestCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--status-error);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.cancelRequestTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--status-error);
+  margin: 0 0 var(--space-4);
+}
+
+.cancelRequestContent {
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.cancelRequestMeta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
+  line-height: 1.6;
+}
+
+.cancelRequestLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.cancelRequestReason {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.cancelRequestWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--status-warning);
+  margin-bottom: var(--space-4);
+  line-height: 1.5;
+}
+
+.cancelRequestActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.cancelPendingCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.cancelPendingCard i {
+  font-size: 32px;
+  color: var(--status-warning);
+  margin-bottom: var(--space-3);
+}
+
+.cancelPendingCard h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.cancelPendingCard p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+  line-height: 1.6;
+}
+
+.cancelPendingDate {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.cancelSection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cancelSectionTitle {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-2);
+}
+
+.cancelSectionDesc {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-3);
+}
+
+.cancelSectionBtn {
+  background: transparent;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-default);
+  font-size: var(--text-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.cancelSectionBtn:hover:not(:disabled) {
+  background: var(--status-error-bg);
+  color: var(--status-error);
+  border-color: var(--status-error);
+}
+
+.cancelSectionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.danger {
+  background: var(--status-error);
+  color: white;
+  border: 1px solid transparent;
+}
+
+.btn.danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.modalInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--accent-primary-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--accent-primary);
+  line-height: 1.6;
+  margin-bottom: var(--space-4);
+}
+
+.modalInfo i {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.modalInfo.warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+/* モバイル調整 */
+@media (max-width: 1024px) {
+  .mobileChat .chat {
+    border-radius: var(--radius-lg);
+  }
+}

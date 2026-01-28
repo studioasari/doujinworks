@@ -70,12 +70,23 @@ export default function RequestManagePage() {
   const [contractDeadline, setContractDeadline] = useState('')
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
   const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null)
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null)
 
   const params = useParams()
   const router = useRouter()
   const requestId = params.id as string
 
   useEffect(() => { checkAuth() }, [])
+
+  // モーダル表示時に背景スクロール固定
+  useEffect(() => {
+    if (showContractModal || selectedApplication) {
+      document.body.classList.add('modal-open')
+    } else {
+      document.body.classList.remove('modal-open')
+    }
+    return () => document.body.classList.remove('modal-open')
+  }, [showContractModal, selectedApplication])
 
   useEffect(() => {
     if (requestId && currentProfileId) {
@@ -309,13 +320,6 @@ export default function RequestManagePage() {
           <div className={styles.header}>
             <div className={styles.headerTop}>
               <h1 className={styles.title}>{request.title}</h1>
-              <div className={styles.headerActions}>
-                {request.status === 'open' && contracts.length > 0 && (
-                  <button onClick={handleCloseRecruitment} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>
-                    <i className="fas fa-stop"></i>募集終了
-                  </button>
-                )}
-              </div>
             </div>
             <div className={styles.badges}>
               <span className={`${styles.badge} ${styles[request.status]}`}>{getStatusLabel(request.status)}</span>
@@ -334,21 +338,27 @@ export default function RequestManagePage() {
                   <div key={contract.id} className={`${styles.card} ${styles.contracted}`}>
                     <div className={styles.cardHeader}>
                       <div className={styles.cardUser}>
-                        <div className={styles.cardAvatar}>
-                          {contract.profiles?.avatar_url ? (
-                            <img src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} />
-                          ) : (
-                            <span>{contract.profiles?.display_name?.charAt(0) || '?'}</span>
-                          )}
-                        </div>
+                        {contract.profiles?.username ? (
+                          <Link href={`/creators/${contract.profiles.username}`} className={styles.cardAvatarLink}>
+                            <div className={styles.cardAvatar}>
+                              {contract.profiles?.avatar_url ? (
+                                <img src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} />
+                              ) : (
+                                <span>{contract.profiles?.display_name?.charAt(0) || '?'}</span>
+                              )}
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className={styles.cardAvatar}>
+                            {contract.profiles?.avatar_url ? (
+                              <img src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} />
+                            ) : (
+                              <span>{contract.profiles?.display_name?.charAt(0) || '?'}</span>
+                            )}
+                          </div>
+                        )}
                         <div className={styles.cardUserInfo}>
-                          {contract.profiles?.username ? (
-                            <Link href={`/creators/${contract.profiles.username}`} className={styles.cardName}>
-                              {contract.profiles.display_name || '名前未設定'}
-                            </Link>
-                          ) : (
-                            <div className={styles.cardName}>{contract.profiles?.display_name || '名前未設定'}</div>
-                          )}
+                          <div className={styles.cardName}>{contract.profiles?.display_name || '名前未設定'}</div>
                           <div className={styles.cardDate}>{formatDate(contract.created_at)}</div>
                         </div>
                       </div>
@@ -377,100 +387,167 @@ export default function RequestManagePage() {
               <i className="fas fa-users"></i>応募一覧 ({applications.length}件)
             </h2>
 
-            <div className={styles.stats}>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>未対応</div>
-                <div className={`${styles.statValue} ${styles.pending}`}>{pendingApplications.length}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>採用済み</div>
-                <div className={`${styles.statValue} ${styles.accepted}`}>{acceptedApplications.length}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>却下済み</div>
-                <div className={`${styles.statValue} ${styles.rejected}`}>{rejectedApplications.length}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>残り枠</div>
-                <div className={styles.statValue}>{remainingPositions}</div>
-              </div>
-            </div>
-
             {applications.length === 0 ? (
               <div className={styles.empty}>
                 <i className="fas fa-inbox"></i>
                 <p>まだ応募がありません</p>
               </div>
             ) : (
-              <div className={styles.list}>
-                {applications.map((app) => {
-                  const isContracted = contracts.some(c => c.contractor_id === app.applicant_id)
-                  return (
-                    <div key={app.id} className={`${styles.card} ${styles[app.status]}`}>
-                      <div className={styles.cardHeader}>
-                        <div className={styles.cardUser}>
-                          <div className={styles.cardAvatar}>
-                            {app.profiles?.avatar_url ? (
-                              <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
-                            ) : (
-                              <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
-                            )}
-                          </div>
-                          <div className={styles.cardUserInfo}>
+              <div className={styles.applicationGroups}>
+                {/* 未対応 */}
+                {pendingApplications.length > 0 && (
+                  <div className={styles.applicationGroup}>
+                    <h3 className={styles.groupTitle}>
+                      <span className={`${styles.groupDot} ${styles.pending}`}></span>
+                      未対応 ({pendingApplications.length})
+                    </h3>
+                    <div className={styles.applicationList}>
+                      {pendingApplications.map((app) => (
+                        <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
+                          <div className={styles.applicationMain}>
                             {app.profiles?.username ? (
-                              <Link href={`/creators/${app.profiles.username}`} className={styles.cardName}>
-                                {app.profiles.display_name || '名前未設定'}
+                              <Link 
+                                href={`/creators/${app.profiles.username}`} 
+                                className={styles.applicationAvatarLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className={styles.applicationAvatar}>
+                                  {app.profiles?.avatar_url ? (
+                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                  ) : (
+                                    <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                  )}
+                                </div>
                               </Link>
                             ) : (
-                              <div className={styles.cardName}>{app.profiles?.display_name || '名前未設定'}</div>
+                              <div className={styles.applicationAvatar}>
+                                {app.profiles?.avatar_url ? (
+                                  <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                ) : (
+                                  <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                )}
+                              </div>
                             )}
-                            <div className={styles.cardDate}>{formatDate(app.created_at)}</div>
+                            <div className={styles.applicationInfo}>
+                              <span className={styles.applicationName}>{app.profiles?.display_name || '名前未設定'}</span>
+                              <span className={styles.applicationMeta}>
+                                {app.proposed_price ? `¥${app.proposed_price.toLocaleString()}` : '金額未指定'}
+                              </span>
+                            </div>
                           </div>
+                          <i className="fas fa-chevron-right" style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}></i>
                         </div>
-                        {app.status === 'accepted' && (
-                          <span className={`${styles.statusBadge} ${styles.accepted}`}>
-                            <i className="fas fa-check"></i>採用済み
-                          </span>
-                        )}
-                        {app.status === 'rejected' && (
-                          <span className={`${styles.statusBadge} ${styles.rejected}`}>却下済み</span>
-                        )}
-                      </div>
-
-                      <p className={styles.cardMessage}>{app.message}</p>
-
-                      {app.proposed_price && (
-                        <div className={styles.cardPrice}>
-                          <span className={styles.cardPriceLabel}>希望金額</span>
-                          <span className={styles.cardPriceValue}>{app.proposed_price.toLocaleString()}円</span>
-                        </div>
-                      )}
-
-                      {app.status === 'pending' && request.status === 'open' && (
-                        <div className={styles.cardActions}>
-                          <button onClick={() => handleRejectApplication(app.id)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>
-                            却下
-                          </button>
-                          {remainingPositions > 0 ? (
-                            <button onClick={() => handleAcceptApplicationClick(app.id, app.applicant_id, app.proposed_price)} disabled={processing || isContracted} className={`${styles.btn} ${styles.primary}`}>
-                              <i className="fas fa-check"></i>採用する
-                            </button>
-                          ) : (
-                            <span className={styles.positionsFull}>募集枠が埋まっています</span>
-                          )}
-                        </div>
-                      )}
-
-                      {isContracted && app.status === 'accepted' && (
-                        <div className={styles.cardActions}>
-                          <Link href={`/requests/${requestId}/contracts/${contracts.find(c => c.contractor_id === app.applicant_id)?.id}`} className={`${styles.btn} ${styles.primary}`}>
-                            契約詳細を見る
-                          </Link>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  )
-                })}
+                  </div>
+                )}
+
+                {/* 採用済み */}
+                {acceptedApplications.length > 0 && (
+                  <div className={styles.applicationGroup}>
+                    <h3 className={styles.groupTitle}>
+                      <span className={`${styles.groupDot} ${styles.accepted}`}></span>
+                      採用済み ({acceptedApplications.length})
+                    </h3>
+                    <div className={styles.applicationList}>
+                      {acceptedApplications.map((app) => {
+                        const contract = contracts.find(c => c.contractor_id === app.applicant_id)
+                        return (
+                          <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
+                            <div className={styles.applicationMain}>
+                              {app.profiles?.username ? (
+                                <Link 
+                                  href={`/creators/${app.profiles.username}`} 
+                                  className={styles.applicationAvatarLink}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className={styles.applicationAvatar}>
+                                    {app.profiles?.avatar_url ? (
+                                      <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                    ) : (
+                                      <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                    )}
+                                  </div>
+                                </Link>
+                              ) : (
+                                <div className={styles.applicationAvatar}>
+                                  {app.profiles?.avatar_url ? (
+                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                  ) : (
+                                    <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                  )}
+                                </div>
+                              )}
+                              <div className={styles.applicationInfo}>
+                                <span className={styles.applicationName}>{app.profiles?.display_name || '名前未設定'}</span>
+                                <span className={styles.applicationMeta}>
+                                  {contract ? `¥${contract.final_price.toLocaleString()} で契約` : ''}
+                                </span>
+                              </div>
+                            </div>
+                            {contract && (
+                              <Link 
+                                href={`/requests/${requestId}/contracts/${contract.id}`} 
+                                className={styles.linkBtn}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                契約詳細 <i className="fas fa-chevron-right"></i>
+                              </Link>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 却下済み */}
+                {rejectedApplications.length > 0 && (
+                  <div className={styles.applicationGroup}>
+                    <h3 className={styles.groupTitle}>
+                      <span className={`${styles.groupDot} ${styles.rejected}`}></span>
+                      却下済み ({rejectedApplications.length})
+                    </h3>
+                    <div className={styles.applicationList}>
+                      {rejectedApplications.map((app) => (
+                        <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
+                          <div className={styles.applicationMain}>
+                            {app.profiles?.username ? (
+                              <Link 
+                                href={`/creators/${app.profiles.username}`} 
+                                className={styles.applicationAvatarLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className={styles.applicationAvatar}>
+                                  {app.profiles?.avatar_url ? (
+                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                  ) : (
+                                    <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                  )}
+                                </div>
+                              </Link>
+                            ) : (
+                              <div className={styles.applicationAvatar}>
+                                {app.profiles?.avatar_url ? (
+                                  <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                ) : (
+                                  <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
+                                )}
+                              </div>
+                            )}
+                            <div className={styles.applicationInfo}>
+                              <span className={styles.applicationName}>{app.profiles?.display_name || '名前未設定'}</span>
+                              <span className={styles.applicationMeta}>
+                                {app.proposed_price ? `¥${app.proposed_price.toLocaleString()}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <i className="fas fa-chevron-right" style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}></i>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -483,8 +560,22 @@ export default function RequestManagePage() {
                 依頼をキャンセルすると、募集が終了し、この依頼への応募ができなくなります。
                 未対応の応募がある場合は、すべて却下されます。
               </p>
-              <button onClick={handleCancelRequest} disabled={processing} className={`${styles.btn} ${styles.danger}`}>
-                <i className="fas fa-times"></i>依頼をキャンセルする
+              <button onClick={handleCancelRequest} disabled={processing} className={styles.dangerBtn}>
+                <i className="fas fa-times"></i>依頼をキャンセル
+              </button>
+            </div>
+          )}
+
+          {/* 募集終了（契約がある時のみ表示） */}
+          {request.status === 'open' && contracts.length > 0 && (
+            <div className={styles.dangerSection}>
+              <h3 className={styles.dangerTitle}>募集を終了する</h3>
+              <p className={styles.dangerDescription}>
+                募集を終了すると、この依頼への新規応募ができなくなります。
+                未対応の応募がある場合は、すべて却下されます。
+              </p>
+              <button onClick={handleCloseRecruitment} disabled={processing} className={styles.dangerBtn}>
+                <i className="fas fa-stop"></i>募集を終了
               </button>
             </div>
           )}
@@ -529,6 +620,108 @@ export default function RequestManagePage() {
                 {processing ? '処理中...' : '採用して契約確定'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 応募詳細モーダル */}
+      {selectedApplication && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedApplication(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            {/* ヘッダー */}
+            <div className={styles.appModalHeader}>
+              <div className={styles.appModalUser}>
+                {selectedApplication.profiles?.username ? (
+                  <Link 
+                    href={`/creators/${selectedApplication.profiles.username}`}
+                    className={styles.appModalAvatarLink}
+                    onClick={() => setSelectedApplication(null)}
+                  >
+                    <div className={styles.appModalAvatar}>
+                      {selectedApplication.profiles?.avatar_url ? (
+                        <img src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} />
+                      ) : (
+                        <span>{selectedApplication.profiles?.display_name?.charAt(0) || '?'}</span>
+                      )}
+                    </div>
+                  </Link>
+                ) : (
+                  <div className={styles.appModalAvatar}>
+                    {selectedApplication.profiles?.avatar_url ? (
+                      <img src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} />
+                    ) : (
+                      <span>{selectedApplication.profiles?.display_name?.charAt(0) || '?'}</span>
+                    )}
+                  </div>
+                )}
+                <div className={styles.appModalName}>{selectedApplication.profiles?.display_name || '名前未設定'}</div>
+              </div>
+              <button onClick={() => setSelectedApplication(null)} className={styles.modalClose}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* 応募情報 */}
+            <div className={styles.appModalInfo}>
+              <div className={styles.appModalInfoRow}>
+                <span className={styles.appModalInfoLabel}>希望金額</span>
+                <span className={styles.appModalInfoValue}>
+                  {selectedApplication.proposed_price 
+                    ? `¥${selectedApplication.proposed_price.toLocaleString()}` 
+                    : '未指定'}
+                </span>
+              </div>
+              <div className={styles.appModalInfoRow}>
+                <span className={styles.appModalInfoLabel}>応募日</span>
+                <span className={styles.appModalInfoValue}>{formatDate(selectedApplication.created_at)}</span>
+              </div>
+            </div>
+
+            {/* メッセージ */}
+            <div className={styles.appModalMessage}>
+              <div className={styles.appModalMessageLabel}>応募メッセージ</div>
+              <p className={styles.appModalMessageText}>{selectedApplication.message}</p>
+            </div>
+
+            {/* アクション */}
+            {selectedApplication.status === 'pending' && request.status === 'open' && (
+              <div className={styles.appModalActions}>
+                <button 
+                  onClick={() => { handleRejectApplication(selectedApplication.id); setSelectedApplication(null); }} 
+                  disabled={processing} 
+                  className={`${styles.btn} ${styles.secondary}`}
+                >
+                  却下する
+                </button>
+                {remainingPositions > 0 ? (
+                  <button 
+                    onClick={() => { 
+                      handleAcceptApplicationClick(selectedApplication.id, selectedApplication.applicant_id, selectedApplication.proposed_price); 
+                      setSelectedApplication(null); 
+                    }} 
+                    disabled={processing} 
+                    className={`${styles.btn} ${styles.primary}`}
+                  >
+                    採用する
+                  </button>
+                ) : (
+                  <span className={styles.positionsFull}>募集枠が埋まっています</span>
+                )}
+              </div>
+            )}
+
+            {selectedApplication.status === 'accepted' && (
+              <div className={styles.appModalStatus}>
+                <i className="fas fa-check-circle"></i>
+                採用済み
+              </div>
+            )}
+
+            {selectedApplication.status === 'rejected' && (
+              <div className={styles.appModalStatusRejected}>
+                却下済み
+              </div>
+            )}
           </div>
         </div>
       )}
