@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Header from '@/app/components/Header'
-import Footer from '@/app/components/Footer'
-import DashboardSidebar from '@/app/components/DashboardSidebar'
+import styles from './page.module.css'
 
 type PaidContract = {
   id: string
@@ -43,8 +41,6 @@ type ReceiptEditData = {
 export default function PaymentsClient() {
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
-  const [accountType, setAccountType] = useState<string | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [paidContracts, setPaidContracts] = useState<PaidContract[]>([])
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([])
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
@@ -83,15 +79,12 @@ export default function PaymentsClient() {
     
     if (profile) {
       setCurrentProfileId(profile.id)
-      setAccountType(profile.account_type)
-      setIsAdmin(profile.is_admin || false)
     }
     
     setLoading(false)
   }
 
   async function loadPaidContracts() {
-    // work_contractsから支払い済みのデータを取得
     const { data: contracts, error } = await supabase
       .from('work_contracts')
       .select(`
@@ -122,7 +115,6 @@ export default function PaymentsClient() {
       return
     }
 
-    // 自分が依頼者のもののみフィルター＆整形
     const myContracts = (contracts || [])
       .filter((c: any) => c.work_request?.requester_id === currentProfileId)
       .map((c: any) => ({
@@ -192,7 +184,6 @@ export default function PaymentsClient() {
   }
 
   async function openReceiptEditor(contract: PaidContract) {
-    // 既存の領収書メタデータをチェック
     const { data: existingMetadata } = await supabase
       .from('receipt_metadata')
       .select('*')
@@ -200,7 +191,6 @@ export default function PaymentsClient() {
       .single()
 
     if (existingMetadata) {
-      // 既に生成済み - DBの内容を使用（編集不可）
       setEditingReceipt({
         requestId: contract.work_request_id,
         addressee: existingMetadata.addressee,
@@ -208,7 +198,6 @@ export default function PaymentsClient() {
         isFirstTime: false
       })
     } else {
-      // 初回生成 - デフォルト値を設定（編集可能）
       const { data: requesterBusiness } = await supabase
         .from('business_profiles')
         .select('*')
@@ -238,13 +227,11 @@ export default function PaymentsClient() {
   async function openConfirmModal() {
     if (!editingReceipt) return
     
-    // 再発行の場合は確認不要
     if (!editingReceipt.isFirstTime) {
       await generateReceipt()
       return
     }
     
-    // 入力チェック
     if (!editingReceipt.addressee.trim()) {
       alert('宛名を入力してください')
       return
@@ -270,7 +257,6 @@ export default function PaymentsClient() {
         return
       }
 
-      // 初回生成の場合、メタデータをDBに保存
       if (editingReceipt.isFirstTime) {
         const { error: saveError } = await supabase
           .from('receipt_metadata')
@@ -387,13 +373,13 @@ export default function PaymentsClient() {
     return statuses[status] || status
   }
 
-  function getStatusClass(status: string) {
+  function getStatusBadgeClass(status: string) {
     const classes: { [key: string]: string } = {
-      contracted: 'contracted',
-      paid: 'working',
-      delivered: 'delivered',
-      completed: 'completed',
-      cancelled: 'cancelled'
+      contracted: '',
+      paid: 'badge-progress',
+      delivered: 'badge-accent',
+      completed: 'badge-open',
+      cancelled: 'badge-closed'
     }
     return classes[status] || ''
   }
@@ -408,328 +394,319 @@ export default function PaymentsClient() {
     .reduce((sum, c) => sum + (c.final_price || 0), 0)
   const activeContracts = paidContracts.filter(c => ['paid', 'delivered'].includes(c.status)).length
 
+  if (loading) {
+    return (
+      <div className={styles.loading}>
+        <i className="fa-solid fa-spinner fa-spin"></i>
+        <span>読み込み中...</span>
+      </div>
+    )
+  }
+
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Header />
-      
-      <div className="payments-page dashboard-layout">
-        <DashboardSidebar accountType={accountType} isAdmin={isAdmin} />
-        
-        {loading ? (
-          <div className="dashboard-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
-          </div>
-        ) : (
-          <main className="payments-main">
-            <div className="payments-container">
-              <h1 className="payments-title">支払い管理</h1>
+      <div className={styles.container}>
+        <h1 className={styles.pageTitle}>支払い管理</h1>
 
-              {/* タブ */}
-              <div className="payments-tabs">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`payments-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                >
-                  概要
-                </button>
-                <button
-                  onClick={() => setActiveTab('monthly')}
-                  className={`payments-tab ${activeTab === 'monthly' ? 'active' : ''}`}
-                >
-                  月別支払い
-                </button>
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`payments-tab ${activeTab === 'history' ? 'active' : ''}`}
-                >
-                  支払い履歴
-                </button>
+        {/* タブ */}
+        <div className={`tabs ${styles.tabs}`}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
+          >
+            概要
+          </button>
+          <button
+            onClick={() => setActiveTab('monthly')}
+            className={`tab ${activeTab === 'monthly' ? 'active' : ''}`}
+          >
+            月別支払い
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`tab ${activeTab === 'history' ? 'active' : ''}`}
+          >
+            支払い履歴
+          </button>
+        </div>
+
+        {/* 概要タブ */}
+        {activeTab === 'overview' && (
+          <div className={styles.tabContent}>
+            {/* サマリー */}
+            <div className={styles.summaryGrid}>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>
+                  {totalPaid.toLocaleString()}<span className={styles.summaryUnit}>円</span>
+                </div>
+                <div className={styles.summaryLabel}>総支払額</div>
               </div>
+              <div className={`${styles.summaryCard} ${styles.highlight}`}>
+                <div className={styles.summaryValue}>
+                  {thisMonthPaid.toLocaleString()}<span className={styles.summaryUnit}>円</span>
+                </div>
+                <div className={styles.summaryLabel}>今月の支払額</div>
+              </div>
+              <div className={styles.summaryCard}>
+                <div className={styles.summaryValue}>
+                  {activeContracts}<span className={styles.summaryUnit}>件</span>
+                </div>
+                <div className={styles.summaryLabel}>進行中の依頼</div>
+              </div>
+            </div>
 
-              {/* 概要タブ */}
-              {activeTab === 'overview' && (
-                <>
-                  {/* サマリー */}
-                  <div className="payments-summary-grid">
-                    <div className="payments-summary-card">
-                      <div className="payments-summary-value">
-                        {totalPaid.toLocaleString()}<span className="payments-summary-unit">円</span>
-                      </div>
-                      <div className="payments-summary-label">総支払額</div>
-                    </div>
-                    <div className="payments-summary-card highlight">
-                      <div className="payments-summary-value">
-                        {thisMonthPaid.toLocaleString()}<span className="payments-summary-unit">円</span>
-                      </div>
-                      <div className="payments-summary-label">今月の支払額</div>
-                    </div>
-                    <div className="payments-summary-card">
-                      <div className="payments-summary-value">
-                        {activeContracts}<span className="payments-summary-unit">件</span>
-                      </div>
-                      <div className="payments-summary-label">進行中の依頼</div>
-                    </div>
-                  </div>
+            {/* 最近の支払い */}
+            <div className={styles.recentCard}>
+              <h2 className={styles.recentTitle}>
+                <i className="fa-solid fa-clock"></i>
+                最近の支払い
+              </h2>
 
-                  {/* 最近の支払い */}
-                  <div className="payments-recent-card">
-                    <h2 className="payments-recent-title">
-                      <i className="fas fa-clock"></i>
-                      最近の支払い
-                    </h2>
-
-                    {paidContracts.length === 0 ? (
-                      <div className="payments-empty-inline">
-                        <p>支払い履歴はまだありません</p>
-                      </div>
-                    ) : (
-                      <div className="payments-recent-list">
-                        {paidContracts.slice(0, 5).map((contract) => (
-                          <Link
-                            key={contract.id}
-                            href={`/requests/${contract.work_request_id}`}
-                            className="payments-recent-item"
-                          >
-                            <div className="payments-recent-info">
-                              <div className="payments-recent-item-title">{contract.work_request.title}</div>
-                              <div className="payments-recent-meta">
-                                <div className="payments-avatar">
-                                  {contract.contractor.avatar_url ? (
-                                    <img src={contract.contractor.avatar_url} alt="" />
-                                  ) : (
-                                    <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
-                                  )}
-                                </div>
-                                <span className="payments-creator-name">
-                                  {contract.contractor.display_name || '名前未設定'}
-                                </span>
-                                <span className={`payments-status-badge ${getStatusClass(contract.status)}`}>
-                                  {getStatusLabel(contract.status)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="payments-recent-amount">
-                              <div className="payments-price">{contract.final_price?.toLocaleString()}円</div>
-                              <div className="payments-date">{formatDate(contract.paid_at)}</div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* 月別支払いタブ */}
-              {activeTab === 'monthly' && (
-                <div className="payments-monthly">
-                  {monthlyPayments.length === 0 ? (
-                    <div className="payments-empty">
-                      <i className="fas fa-calendar-alt"></i>
-                      <p>支払い履歴はまだありません</p>
-                    </div>
-                  ) : (
-                    <div className="payments-monthly-list">
-                      {monthlyPayments.map((monthData) => {
-                        const isExpanded = expandedMonths.has(monthData.month)
-
-                        return (
-                          <div
-                            key={monthData.month}
-                            className={`payments-month-card ${isExpanded ? 'expanded' : ''}`}
-                          >
-                            <div 
-                              className="payments-month-header"
-                              onClick={() => toggleMonth(monthData.month)}
-                            >
-                              <div className="payments-month-info">
-                                <div className="payments-month-title">
-                                  <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                  {formatMonth(monthData.month)}
-                                </div>
-                                <div className="payments-month-count">
-                                  {monthData.contracts.length}件の支払い
-                                </div>
-                              </div>
-                              <div className="payments-month-total">
-                                {monthData.total_amount.toLocaleString()}円
-                              </div>
-                            </div>
-
-                            {isExpanded && (
-                              <div className="payments-month-works">
-                                {monthData.contracts.map((contract) => (
-                                  <div
-                                    key={contract.id}
-                                    className="payments-work-item"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Link
-                                      href={`/requests/${contract.work_request_id}`}
-                                      className="payments-work-link"
-                                    >
-                                      <div className="payments-work-title">{contract.work_request.title}</div>
-                                      <div className="payments-work-date">支払日: {formatDate(contract.paid_at)}</div>
-                                      <div className="payments-work-creator">
-                                        <div className="payments-avatar small">
-                                          {contract.contractor.avatar_url ? (
-                                            <img src={contract.contractor.avatar_url} alt="" />
-                                          ) : (
-                                            <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
-                                          )}
-                                        </div>
-                                        <span>{contract.contractor.display_name || '名前未設定'}</span>
-                                      </div>
-                                    </Link>
-                                    <div className="payments-work-amount">
-                                      <div className="payments-work-price">
-                                        {contract.final_price?.toLocaleString()}円
-                                      </div>
-                                      <button
-                                        onClick={() => openReceiptEditor(contract)}
-                                        className="payments-btn secondary small"
-                                      >
-                                        領収書
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+              {paidContracts.length === 0 ? (
+                <div className={styles.emptyInline}>
+                  <p>支払い履歴はまだありません</p>
+                </div>
+              ) : (
+                <div className={styles.recentList}>
+                  {paidContracts.slice(0, 5).map((contract) => (
+                    <Link
+                      key={contract.id}
+                      href={`/requests/${contract.work_request_id}`}
+                      className={styles.recentItem}
+                    >
+                      <div className={styles.recentInfo}>
+                        <div className={styles.recentItemTitle}>{contract.work_request.title}</div>
+                        <div className={styles.recentMeta}>
+                          <div className="avatar avatar-xs">
+                            {contract.contractor.avatar_url ? (
+                              <img src={contract.contractor.avatar_url} alt="" />
+                            ) : (
+                              <i className="fa-solid fa-user"></i>
                             )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 支払い履歴タブ */}
-              {activeTab === 'history' && (
-                <div className="payments-history">
-                  {paidContracts.length === 0 ? (
-                    <div className="payments-empty">
-                      <i className="fas fa-receipt"></i>
-                      <p>支払い履歴はまだありません</p>
-                      <Link href="/requests/create" className="payments-btn primary">
-                        依頼を作成
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="payments-history-list">
-                      {paidContracts.map((contract) => (
-                        <div key={contract.id} className="payments-history-card">
-                          <Link href={`/requests/${contract.work_request_id}`} className="payments-history-link">
-                            <div className="payments-history-title">{contract.work_request.title}</div>
-                            <div className="payments-history-badges">
-                              <span className="payments-category-badge">
-                                {getCategoryLabel(contract.work_request.category)}
-                              </span>
-                              <span className={`payments-status-badge ${getStatusClass(contract.status)}`}>
-                                {getStatusLabel(contract.status)}
-                              </span>
-                              <span className="payments-history-date">
-                                支払日: {formatDate(contract.paid_at)}
-                              </span>
-                            </div>
-                            <div className="payments-history-creator">
-                              <div className="payments-avatar">
-                                {contract.contractor.avatar_url ? (
-                                  <img src={contract.contractor.avatar_url} alt="" />
-                                ) : (
-                                  <span>{contract.contractor.display_name?.charAt(0) || '?'}</span>
-                                )}
-                              </div>
-                              <span>{contract.contractor.display_name || '名前未設定'}</span>
-                            </div>
-                          </Link>
-                          <div className="payments-history-amount">
-                            <div className="payments-history-price">
-                              {contract.final_price?.toLocaleString()}円
-                            </div>
-                            <button
-                              onClick={() => openReceiptEditor(contract)}
-                              className="payments-btn secondary"
-                            >
-                              <i className="fas fa-download"></i>
-                              領収書
-                            </button>
-                          </div>
+                          <span className={styles.creatorName}>
+                            {contract.contractor.display_name || '名前未設定'}
+                          </span>
+                          <span className={`badge ${getStatusBadgeClass(contract.status)}`}>
+                            {getStatusLabel(contract.status)}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                      <div className={styles.recentAmount}>
+                        <div className={styles.price}>{contract.final_price?.toLocaleString()}円</div>
+                        <div className={styles.date}>{formatDate(contract.paid_at)}</div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
-          </main>
+          </div>
+        )}
+
+        {/* 月別支払いタブ */}
+        {activeTab === 'monthly' && (
+          <div className={styles.tabContent}>
+            {monthlyPayments.length === 0 ? (
+              <div className="empty-state">
+                <i className="fa-regular fa-calendar"></i>
+                <p>支払い履歴はまだありません</p>
+              </div>
+            ) : (
+              <div className={styles.monthlyList}>
+                {monthlyPayments.map((monthData) => {
+                  const isExpanded = expandedMonths.has(monthData.month)
+
+                  return (
+                    <div key={monthData.month} className={styles.monthCard}>
+                      <div 
+                        className={styles.monthHeader}
+                        onClick={() => toggleMonth(monthData.month)}
+                      >
+                        <div className={styles.monthInfo}>
+                          <div className={styles.monthTitle}>
+                            <i className={`fa-solid fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
+                            {formatMonth(monthData.month)}
+                          </div>
+                          <div className={styles.monthCount}>
+                            {monthData.contracts.length}件の支払い
+                          </div>
+                        </div>
+                        <div className={styles.monthTotal}>
+                          {monthData.total_amount.toLocaleString()}円
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className={styles.monthWorks}>
+                          {monthData.contracts.map((contract) => (
+                            <div
+                              key={contract.id}
+                              className={styles.workItem}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Link
+                                href={`/requests/${contract.work_request_id}`}
+                                className={styles.workLink}
+                              >
+                                <div className={styles.workTitle}>{contract.work_request.title}</div>
+                                <div className={styles.workDate}>支払日: {formatDate(contract.paid_at)}</div>
+                                <div className={styles.workCreator}>
+                                  <div className="avatar avatar-xs">
+                                    {contract.contractor.avatar_url ? (
+                                      <img src={contract.contractor.avatar_url} alt="" />
+                                    ) : (
+                                      <i className="fa-solid fa-user"></i>
+                                    )}
+                                  </div>
+                                  <span>{contract.contractor.display_name || '名前未設定'}</span>
+                                </div>
+                              </Link>
+                              <div className={styles.workAmount}>
+                                <div className={styles.workPrice}>
+                                  {contract.final_price?.toLocaleString()}円
+                                </div>
+                                <button
+                                  onClick={() => openReceiptEditor(contract)}
+                                  className="btn btn-secondary btn-sm"
+                                >
+                                  領収書
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 支払い履歴タブ */}
+        {activeTab === 'history' && (
+          <div className={styles.tabContent}>
+            {paidContracts.length === 0 ? (
+              <div className="empty-state">
+                <i className="fa-regular fa-file-lines"></i>
+                <p>支払い履歴はまだありません</p>
+                <Link href="/requests/create" className="btn btn-primary">
+                  依頼を作成
+                </Link>
+              </div>
+            ) : (
+              <div className={styles.historyList}>
+                {paidContracts.map((contract) => (
+                  <div key={contract.id} className={styles.historyCard}>
+                    <Link href={`/requests/${contract.work_request_id}`} className={styles.historyLink}>
+                      <div className={styles.historyTitle}>{contract.work_request.title}</div>
+                      <div className={styles.historyBadges}>
+                        <span className="badge">
+                          {getCategoryLabel(contract.work_request.category)}
+                        </span>
+                        <span className={`badge ${getStatusBadgeClass(contract.status)}`}>
+                          {getStatusLabel(contract.status)}
+                        </span>
+                        <span className={styles.historyDate}>
+                          支払日: {formatDate(contract.paid_at)}
+                        </span>
+                      </div>
+                      <div className={styles.historyCreator}>
+                        <div className="avatar avatar-sm">
+                          {contract.contractor.avatar_url ? (
+                            <img src={contract.contractor.avatar_url} alt="" />
+                          ) : (
+                            <i className="fa-solid fa-user"></i>
+                          )}
+                        </div>
+                        <span>{contract.contractor.display_name || '名前未設定'}</span>
+                      </div>
+                    </Link>
+                    <div className={styles.historyAmount}>
+                      <div className={styles.historyPrice}>
+                        {contract.final_price?.toLocaleString()}円
+                      </div>
+                      <button
+                        onClick={() => openReceiptEditor(contract)}
+                        className="btn btn-secondary btn-sm"
+                      >
+                        <i className="fa-solid fa-download"></i>
+                        領収書
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
       {/* 領収書編集モーダル */}
       {showEditModal && editingReceipt && (
-        <div className="payments-modal-overlay" onClick={() => { setShowEditModal(false); setEditingReceipt(null); }}>
-          <div className="payments-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="payments-modal-title">
-              {editingReceipt.isFirstTime ? '領収書の作成' : '領収書の再発行'}
-            </h2>
-            
-            <p className="payments-modal-note">
-              {editingReceipt.isFirstTime 
-                ? '※ 一度生成すると、宛名と但し書きは変更できません。'
-                : '※ 既に生成された領収書です。宛名と但し書きは変更できません。'
-              }
-            </p>
-
-            {/* 宛名 */}
-            <div className="payments-form-group">
-              <label className="payments-form-label">宛名</label>
-              <textarea
-                value={editingReceipt.addressee}
-                onChange={(e) => editingReceipt.isFirstTime && setEditingReceipt({ ...editingReceipt, addressee: e.target.value })}
-                rows={3}
-                disabled={!editingReceipt.isFirstTime}
-                className={`payments-form-textarea ${!editingReceipt.isFirstTime ? 'disabled' : ''}`}
-                placeholder="例: 株式会社サンプル&#10;山田 太郎 様"
-              />
+        <div className="modal-overlay active" onClick={() => { setShowEditModal(false); setEditingReceipt(null); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {editingReceipt.isFirstTime ? '領収書の作成' : '領収書の再発行'}
+              </h3>
+              <button className="modal-close" onClick={() => { setShowEditModal(false); setEditingReceipt(null); }}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
+            <div className="modal-body">
+              <p className={styles.modalNote}>
+                {editingReceipt.isFirstTime 
+                  ? '※ 一度生成すると、宛名と但し書きは変更できません。'
+                  : '※ 既に生成された領収書です。宛名と但し書きは変更できません。'
+                }
+              </p>
 
-            {/* 但し書き */}
-            <div className="payments-form-group">
-              <label className="payments-form-label">但し書き</label>
-              <input
-                type="text"
-                value={editingReceipt.purpose}
-                onChange={(e) => editingReceipt.isFirstTime && setEditingReceipt({ ...editingReceipt, purpose: e.target.value })}
-                disabled={!editingReceipt.isFirstTime}
-                className={`payments-form-input ${!editingReceipt.isFirstTime ? 'disabled' : ''}`}
-                placeholder="例: イラスト制作費として"
-              />
-            </div>
+              <div className="form-group">
+                <label className="form-label">宛名</label>
+                <textarea
+                  value={editingReceipt.addressee}
+                  onChange={(e) => editingReceipt.isFirstTime && setEditingReceipt({ ...editingReceipt, addressee: e.target.value })}
+                  rows={3}
+                  disabled={!editingReceipt.isFirstTime}
+                  className={`form-input ${styles.textarea}`}
+                  placeholder="例: 株式会社サンプル&#10;山田 太郎 様"
+                />
+              </div>
 
-            {/* 金額 */}
-            <div className="payments-form-group">
-              <label className="payments-form-label">金額（変更不可）</label>
-              <div className="payments-form-amount">
-                {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+              <div className="form-group">
+                <label className="form-label">但し書き</label>
+                <input
+                  type="text"
+                  value={editingReceipt.purpose}
+                  onChange={(e) => editingReceipt.isFirstTime && setEditingReceipt({ ...editingReceipt, purpose: e.target.value })}
+                  disabled={!editingReceipt.isFirstTime}
+                  className="form-input"
+                  placeholder="例: イラスト制作費として"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">金額（変更不可）</label>
+                <div className={styles.formAmount}>
+                  {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                </div>
               </div>
             </div>
-
-            {/* ボタン */}
-            <div className="payments-modal-actions">
+            <div className="modal-footer button-group-equal">
               <button
                 onClick={() => { setShowEditModal(false); setEditingReceipt(null); }}
                 disabled={generatingPdf}
-                className="payments-btn secondary"
+                className="btn btn-secondary"
               >
                 キャンセル
               </button>
               <button
                 onClick={openConfirmModal}
                 disabled={generatingPdf}
-                className={`payments-btn primary ${generatingPdf ? 'disabled' : ''}`}
+                className="btn btn-primary"
               >
                 {editingReceipt.isFirstTime ? '内容を確認' : '領収書を再発行'}
               </button>
@@ -740,50 +717,53 @@ export default function PaymentsClient() {
 
       {/* 確認モーダル */}
       {showConfirmModal && editingReceipt && (
-        <div className="payments-modal-overlay confirm" onClick={() => setShowConfirmModal(false)}>
-          <div className="payments-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="payments-modal-title">内容を確認してください</h2>
-            
-            <div className="payments-confirm-warning">
-              <i className="fas fa-exclamation-triangle"></i>
-              <span>一度生成すると、宛名と但し書きは変更できません。内容をよく確認してください。</span>
+        <div className="modal-overlay active" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">内容を確認してください</h3>
+              <button className="modal-close" onClick={() => setShowConfirmModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
+            <div className="modal-body">
+              <div className="alert alert-warning">
+                <i className="fa-solid fa-triangle-exclamation alert-icon"></i>
+                一度生成すると、宛名と但し書きは変更できません。内容をよく確認してください。
+              </div>
 
-            {/* 確認内容 */}
-            <div className="payments-confirm-preview">
-              <div className="payments-confirm-item">
-                <div className="payments-confirm-label">宛名</div>
-                <div className="payments-confirm-value">{editingReceipt.addressee}</div>
-              </div>
-              <div className="payments-confirm-item">
-                <div className="payments-confirm-label">但し書き</div>
-                <div className="payments-confirm-value">{editingReceipt.purpose}</div>
-              </div>
-              <div className="payments-confirm-item">
-                <div className="payments-confirm-label">金額</div>
-                <div className="payments-confirm-value large">
-                  {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+              <div className={styles.confirmPreview}>
+                <div className={styles.confirmItem}>
+                  <div className={styles.confirmLabel}>宛名</div>
+                  <div className={styles.confirmValue}>{editingReceipt.addressee}</div>
+                </div>
+                <div className={styles.confirmItem}>
+                  <div className={styles.confirmLabel}>但し書き</div>
+                  <div className={styles.confirmValue}>{editingReceipt.purpose}</div>
+                </div>
+                <div className={styles.confirmItem}>
+                  <div className={styles.confirmLabel}>金額</div>
+                  <div className={`${styles.confirmValue} ${styles.large}`}>
+                    {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                  </div>
                 </div>
               </div>
             </div>
-
-            {/* ボタン */}
-            <div className="payments-modal-actions">
+            <div className="modal-footer button-group-equal">
               <button
                 onClick={() => setShowConfirmModal(false)}
                 disabled={generatingPdf}
-                className="payments-btn secondary"
+                className="btn btn-secondary"
               >
                 修正する
               </button>
               <button
                 onClick={generateReceipt}
                 disabled={generatingPdf}
-                className={`payments-btn primary ${generatingPdf ? 'disabled' : ''}`}
+                className="btn btn-primary"
               >
                 {generatingPdf ? (
                   <>
-                    <i className="fas fa-spinner fa-spin"></i>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
                     生成中...
                   </>
                 ) : (
@@ -794,8 +774,6 @@ export default function PaymentsClient() {
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   )
 }

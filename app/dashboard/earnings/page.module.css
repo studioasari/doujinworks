@@ -1,0 +1,461 @@
+/* ============================================
+   売上管理ページ固有スタイル
+   ============================================ */
+
+/* コンテナ */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ページタイトル */
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+}
+
+/* ローディング */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.loading i {
+  font-size: var(--text-2xl);
+}
+
+/* ============================================
+   タブ（幅均等）
+   ============================================ */
+
+.tabs {
+  display: flex;
+}
+
+.tabs :global(.tab) {
+  flex: 1;
+  text-align: center;
+}
+
+/* タブコンテンツ */
+.tabContent {
+  margin-top: var(--space-6);
+}
+
+/* ============================================
+   口座未登録アラート
+   ============================================ */
+
+.bankAlert {
+  margin-bottom: var(--space-6);
+}
+
+.alertText {
+  flex: 1;
+}
+
+/* ============================================
+   サマリーカード
+   ============================================ */
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.summaryCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.summaryCard.highlight {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+}
+
+.summaryValue {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.summaryCard.highlight .summaryValue {
+  color: var(--accent-primary);
+}
+
+.summaryUnit {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  margin-left: var(--space-1);
+}
+
+.summaryLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+}
+
+/* ============================================
+   振込予定カード
+   ============================================ */
+
+.transferCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.transferTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.transferTitle i {
+  color: var(--accent-primary);
+}
+
+.transferTotal {
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.transferRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.transferRow.sub {
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.transferRow.final {
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+  font-weight: 600;
+}
+
+.transferAmount {
+  font-weight: 600;
+}
+
+.transferFinal {
+  font-size: var(--text-lg);
+  color: var(--accent-primary);
+}
+
+.transferNotice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--status-info-bg);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--status-info);
+}
+
+.transferNotice.warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+  margin-top: var(--space-3);
+}
+
+/* ============================================
+   情報カード
+   ============================================ */
+
+.infoCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.infoTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.infoTitle i {
+  color: var(--text-tertiary);
+}
+
+.infoContent {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.infoList {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.infoList li {
+  margin-bottom: var(--space-2);
+}
+
+.infoList li:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   月別リスト（アコーディオン）
+   ============================================ */
+
+.monthlyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.monthCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.monthHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.monthHeader:hover {
+  background: var(--bg-hover);
+}
+
+.monthInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.monthTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.monthTitle i {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  width: 12px;
+}
+
+.monthCount {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.monthAmount {
+  text-align: right;
+}
+
+.monthTotal {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.monthDetail {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* 月内の仕事リスト */
+.monthWorks {
+  border-top: 1px solid var(--border-default);
+}
+
+.workItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+
+.workItem:last-child {
+  border-bottom: none;
+}
+
+.workItem:hover {
+  background: var(--bg-hover);
+}
+
+.workInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.workTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.requesterName {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.workAmount {
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: var(--space-4);
+}
+
+.workPrice {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workDate {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   振込履歴サマリー
+   ============================================ */
+
+.historySummary {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-sunken);
+}
+
+.historyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.historyRow.total {
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pageTitle {
+    font-size: var(--text-xl);
+  }
+
+  /* タブを全幅に */
+  .tabs {
+    margin-left: calc(var(--space-4) * -1);
+    margin-right: calc(var(--space-4) * -1);
+  }
+
+  /* アラート内でボタンを下に */
+  .bankAlert {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bankAlert :global(.btn) {
+    margin-top: var(--space-3);
+    width: 100%;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryValue {
+    font-size: var(--text-2xl);
+  }
+
+  .monthHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .monthAmount {
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .workItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .workAmount {
+    text-align: left;
+    margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}

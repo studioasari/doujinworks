@@ -1,0 +1,527 @@
+/* ============================================
+   支払い管理ページ固有スタイル
+   ============================================ */
+
+/* コンテナ */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ページタイトル */
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+}
+
+/* ローディング */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-12);
+  color: var(--text-tertiary);
+}
+
+.loading i {
+  font-size: var(--text-2xl);
+}
+
+/* ============================================
+   タブ（幅均等）
+   ============================================ */
+
+.tabs {
+  display: flex;
+}
+
+.tabs :global(.tab) {
+  flex: 1;
+  text-align: center;
+}
+
+/* タブコンテンツ */
+.tabContent {
+  margin-top: var(--space-6);
+}
+
+/* ============================================
+   サマリーカード
+   ============================================ */
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.summaryCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.summaryCard.highlight {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+}
+
+.summaryValue {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.summaryCard.highlight .summaryValue {
+  color: var(--accent-primary);
+}
+
+.summaryUnit {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  margin-left: var(--space-1);
+}
+
+.summaryLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+}
+
+/* ============================================
+   最近の支払いカード
+   ============================================ */
+
+.recentCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.recentTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+  margin: 0;
+}
+
+.recentTitle i {
+  color: var(--accent-primary);
+}
+
+.emptyInline {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+}
+
+.recentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+
+.recentItem:last-child {
+  border-bottom: none;
+}
+
+.recentItem:hover {
+  background: var(--bg-hover);
+}
+
+.recentInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.recentItemTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.creatorName {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.recentAmount {
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: var(--space-4);
+}
+
+.price {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.date {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   月別リスト（アコーディオン）
+   ============================================ */
+
+.monthlyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.monthCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.monthHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.monthHeader:hover {
+  background: var(--bg-hover);
+}
+
+.monthInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.monthTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.monthTitle i {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  width: 12px;
+}
+
+.monthCount {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.monthTotal {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* 月内の仕事リスト */
+.monthWorks {
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-sunken);
+}
+
+.workItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.workItem:last-child {
+  border-bottom: none;
+}
+
+.workLink {
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.workLink:hover .workTitle {
+  color: var(--accent-primary);
+}
+
+.workTitle {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  transition: color var(--transition-fast);
+}
+
+.workDate {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.workCreator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.workAmount {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  margin-left: var(--space-4);
+}
+
+.workPrice {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ============================================
+   支払い履歴リスト
+   ============================================ */
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.historyCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  transition: background var(--transition-fast);
+}
+
+.historyCard:hover {
+  background: var(--bg-hover);
+}
+
+.historyLink {
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.historyTitle {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.historyBadges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.historyDate {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.historyCreator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.historyAmount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: var(--space-4);
+}
+
+.historyPrice {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   モーダル固有スタイル
+   ============================================ */
+
+.modalNote {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formAmount {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* 確認モーダル */
+.confirmPreview {
+  margin-top: var(--space-4);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.confirmItem {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.confirmItem:last-child {
+  border-bottom: none;
+}
+
+.confirmLabel {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.confirmValue {
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.confirmValue.large {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pageTitle {
+    font-size: var(--text-xl);
+  }
+
+  /* タブを全幅に */
+  .tabs {
+    margin-left: calc(var(--space-4) * -1);
+    margin-right: calc(var(--space-4) * -1);
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryValue {
+    font-size: var(--text-2xl);
+  }
+
+  .recentItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .recentAmount {
+    text-align: left;
+    margin-left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .monthHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .workItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .workAmount {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .historyCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .historyAmount {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-left: 0;
+  }
+}

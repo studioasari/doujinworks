@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/app/components/Header'
-import Footer from '@/app/components/Footer'
-import DashboardSidebar from '@/app/components/DashboardSidebar'
+import styles from './page.module.css'
 
 type BankAccount = {
   id: string
@@ -40,8 +38,8 @@ function Toast({ message, type, onClose }: { message: string; type: 'success' | 
   }, [onClose])
 
   return (
-    <div className={`bank-toast ${type}`}>
-      <i className={type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'}></i>
+    <div className={`${styles.toast} ${styles[type]}`}>
+      <i className={type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'}></i>
       <span>{message}</span>
     </div>
   )
@@ -71,20 +69,20 @@ function ConfirmModal({
   }, [])
 
   return (
-    <div className="bank-modal-overlay" onClick={onCancel}>
-      <div className="bank-confirm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className={`bank-confirm-icon ${isDestructive ? 'danger' : ''}`}>
-          <i className={isDestructive ? 'fas fa-trash-alt' : 'fas fa-question-circle'}></i>
+    <div className="modal-overlay active" onClick={onCancel}>
+      <div className={`modal ${styles.confirmModal}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`${styles.confirmIcon} ${isDestructive ? styles.danger : ''}`}>
+          <i className={isDestructive ? 'fa-solid fa-trash' : 'fa-solid fa-circle-question'}></i>
         </div>
-        <h2 className="bank-confirm-title">{title}</h2>
-        <p className="bank-confirm-message">{message}</p>
-        <div className="bank-confirm-actions">
-          <button onClick={onCancel} className="bank-btn secondary">
+        <h2 className={styles.confirmTitle}>{title}</h2>
+        <p className={styles.confirmMessage}>{message}</p>
+        <div className="button-group-equal">
+          <button onClick={onCancel} className="btn btn-secondary">
             キャンセル
           </button>
           <button 
             onClick={onConfirm} 
-            className={`bank-btn ${isDestructive ? 'danger' : 'primary'}`}
+            className={`btn ${isDestructive ? styles.btnDanger : 'btn-primary'}`}
           >
             {confirmLabel}
           </button>
@@ -97,8 +95,6 @@ function ConfirmModal({
 export default function BankAccountClient() {
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
-  const [profileAccountType, setProfileAccountType] = useState<string | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [processing, setProcessing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -139,7 +135,7 @@ export default function BankAccountClient() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/wallet/bank-account')}`)
+      router.push(`/login?redirect=${encodeURIComponent('/dashboard/bank-account')}`)
       return
     }
 
@@ -151,8 +147,6 @@ export default function BankAccountClient() {
     
     if (profile) {
       setCurrentProfileId(profile.id)
-      setProfileAccountType(profile.account_type)
-      setIsAdmin(profile.is_admin || false)
     }
     
     setLoading(false)
@@ -177,9 +171,7 @@ export default function BankAccountClient() {
       setBankAccountType(data.account_type)
       setAccountNumber(data.account_number)
       setAccountHolderName(data.account_holder_name)
-      // 既存データがある場合は編集モードをON
       setIsEditMode(true)
-      // bank_codeとbranch_codeがDBに保存されている場合は読み込む
       if (data.bank_code) {
         setBankCode(data.bank_code)
       }
@@ -233,7 +225,7 @@ export default function BankAccountClient() {
     setBankCode('')
     setBranchName('')
     setBranchCode('')
-    setIsEditMode(false) // 銀行名を変更したら編集モード解除
+    setIsEditMode(false)
     setShowBankSuggestions(true)
     searchBanks(value)
   }
@@ -265,7 +257,6 @@ export default function BankAccountClient() {
   }
 
   // 支店入力が可能かどうかの判定
-  // bankCodeがある、または編集モードで銀行名が入力されている場合は編集可能
   const canEditBranch = bankCode || (isEditMode && bankName.trim().length > 0)
 
   async function handleSaveBankAccount() {
@@ -283,7 +274,6 @@ export default function BankAccountClient() {
       account_type: bankAccountType,
       account_number: accountNumber.trim(),
       account_holder_name: accountHolderName.trim(),
-      // bank_codeとbranch_codeも保存（DBにカラムがあれば）
       ...(bankCode && { bank_code: bankCode }),
       ...(branchCode && { branch_code: branchCode })
     }
@@ -321,10 +311,8 @@ export default function BankAccountClient() {
         setToast({ message: '口座情報を登録しました', type: 'success' })
       }
 
-      // 成功時のみリダイレクト
-      // router.pushの代わりにwindow.location.hrefを使用して確実にリダイレクト
       setTimeout(() => {
-        window.location.href = '/wallet/earnings'
+        window.location.href = '/dashboard/earnings'
       }, 1500)
     } catch (err) {
       console.error('予期せぬエラー:', err)
@@ -346,223 +334,213 @@ export default function BankAccountClient() {
     } else {
       setToast({ message: '口座情報を削除しました', type: 'success' })
       setTimeout(() => {
-        window.location.href = '/wallet/earnings'
+        window.location.href = '/dashboard/earnings'
       }, 1500)
     }
   }
 
+  if (loading) {
+    return (
+      <div className={styles.loading}>
+        <i className="fa-solid fa-spinner fa-spin"></i>
+        <span>読み込み中...</span>
+      </div>
+    )
+  }
+
   return (
     <>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-      <Header />
-      
-      <div className="bank-page dashboard-layout">
-        <DashboardSidebar accountType={profileAccountType} isAdmin={isAdmin} />
-        
-        {loading ? (
-          <div className="dashboard-loading">
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
+      <div className={styles.container}>
+        <h1 className={styles.pageTitle}>
+          振込先口座の{bankAccount ? '編集' : '登録'}
+        </h1>
+
+        {/* 注意事項 */}
+        <div className="alert alert-warning">
+          <i className="fa-solid fa-circle-info alert-icon"></i>
+          <div>
+            <div className={styles.noticeTitle}>重要な注意事項</div>
+            <div className={styles.noticeContent}>
+              ・口座情報は正確に入力してください<br />
+              ・誤った情報による振込エラーの責任は負いかねます<br />
+              ・口座名義はカタカナで入力してください<br />
+              ・変更は次回振込から反映されます
+            </div>
           </div>
-        ) : (
-          <main className="bank-main">
-            <div className="bank-container">
-              <h1 className="bank-title">
-                振込先口座の{bankAccount ? '編集' : '登録'}
-              </h1>
+        </div>
 
-              {/* 注意事項 */}
-              <div className="bank-notice">
-                <div className="bank-notice-title">
-                  <i className="fas fa-info-circle"></i>
-                  重要な注意事項
-                </div>
-                <div className="bank-notice-content">
-                  ・口座情報は正確に入力してください<br />
-                  ・誤った情報による振込エラーの責任は負いかねます<br />
-                  ・口座名義はカタカナで入力してください<br />
-                  ・変更は次回振込から反映されます
-                </div>
-              </div>
-
-              {/* 入力フォーム */}
-              <div className="bank-form-card">
-                {/* 銀行名 */}
-                <div className="bank-form-group">
-                  <label className="bank-form-label">
-                    銀行名 <span className="bank-required">*</span>
-                  </label>
-                  <div className="bank-input-wrapper">
-                    <input
-                      type="text"
-                      value={bankName}
-                      onChange={(e) => handleBankNameChange(e.target.value)}
-                      placeholder="例: みずほ銀行"
-                      autoComplete="off"
-                      className="bank-form-input"
-                      onFocus={() => setShowBankSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowBankSuggestions(false), 200)}
-                    />
-                    {searchingBank && (
-                      <div className="bank-input-spinner">
-                        <i className="fas fa-spinner fa-spin"></i>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {showBankSuggestions && bankSuggestions.length > 0 && (
-                    <div className="bank-suggestions">
-                      {bankSuggestions.map((bank) => (
-                        <div
-                          key={bank.code}
-                          onClick={() => handleBankSelect(bank)}
-                          className="bank-suggestion-item"
-                        >
-                          <div className="bank-suggestion-name">{bank.name}</div>
-                          <div className="bank-suggestion-info">{bank.kana} · {bank.code}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* 支店名 */}
-                <div className="bank-form-group">
-                  <label className="bank-form-label">
-                    支店名 <span className="bank-required">*</span>
-                  </label>
-                  <div className="bank-input-wrapper">
-                    <input
-                      type="text"
-                      value={branchName}
-                      onChange={(e) => handleBranchNameChange(e.target.value)}
-                      placeholder={!canEditBranch ? "先に銀行を選択してください" : "例: 新宿支店"}
-                      disabled={!canEditBranch}
-                      autoComplete="off"
-                      className={`bank-form-input ${!canEditBranch ? 'disabled' : ''}`}
-                      onFocus={() => bankCode && setShowBranchSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowBranchSuggestions(false), 200)}
-                    />
-                    {searchingBranch && (
-                      <div className="bank-input-spinner">
-                        <i className="fas fa-spinner fa-spin"></i>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {showBranchSuggestions && branchSuggestions.length > 0 && (
-                    <div className="bank-suggestions">
-                      {branchSuggestions.map((branch) => (
-                        <div
-                          key={branch.code}
-                          onClick={() => handleBranchSelect(branch)}
-                          className="bank-suggestion-item"
-                        >
-                          <div className="bank-suggestion-name">{branch.name}</div>
-                          <div className="bank-suggestion-info">{branch.kana} · {branch.code}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* 編集モードで銀行コードがない場合のヒント */}
-                  {isEditMode && !bankCode && bankName && (
-                    <div className="bank-form-hint">
-                      ※ 銀行名を変更する場合は、候補から選択し直してください
-                    </div>
-                  )}
-                </div>
-
-                {/* 口座種別 */}
-                <div className="bank-form-group">
-                  <label className="bank-form-label">
-                    口座種別 <span className="bank-required">*</span>
-                  </label>
-                  <select
-                    value={bankAccountType}
-                    onChange={(e) => setBankAccountType(e.target.value as 'savings' | 'checking')}
-                    className="bank-form-select"
-                  >
-                    <option value="savings">普通</option>
-                    <option value="checking">当座</option>
-                  </select>
-                </div>
-
-                {/* 口座番号 */}
-                <div className="bank-form-group">
-                  <label className="bank-form-label">
-                    口座番号 <span className="bank-required">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="1234567"
-                    maxLength={7}
-                    className="bank-form-input"
-                  />
-                  <div className="bank-form-hint">数字のみ7桁以内で入力してください</div>
-                </div>
-
-                {/* 口座名義 */}
-                <div className="bank-form-group">
-                  <label className="bank-form-label">
-                    口座名義 <span className="bank-required">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accountHolderName}
-                    onChange={(e) => setAccountHolderName(e.target.value)}
-                    placeholder="ヤマダ タロウ"
-                    className="bank-form-input"
-                  />
-                  <div className="bank-form-hint">カタカナで入力してください（姓と名の間にスペース）</div>
-                </div>
-
-                {/* ボタン */}
-                <div className="bank-form-actions">
-                  <button
-                    onClick={() => router.push('/wallet/earnings')}
-                    disabled={processing}
-                    className="bank-btn secondary"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    onClick={handleSaveBankAccount}
-                    disabled={processing}
-                    className={`bank-btn primary ${processing ? 'disabled' : ''}`}
-                  >
-                    {processing ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin"></i>
-                        保存中...
-                      </>
-                    ) : (
-                      bankAccount ? '更新する' : '登録する'
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* 削除ボタン（編集時のみ） */}
-              {bankAccount && (
-                <div className="bank-delete-section">
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="bank-delete-link"
-                  >
-                    <i className="fas fa-trash-alt"></i>
-                    口座情報を削除
-                  </button>
+        {/* 入力フォーム */}
+        <div className={styles.formCard}>
+          {/* 銀行名 */}
+          <div className="form-group">
+            <label className="form-label">
+              銀行名 <span className={styles.required}>*</span>
+            </label>
+            <div className={styles.inputWrapper}>
+              <input
+                type="text"
+                value={bankName}
+                onChange={(e) => handleBankNameChange(e.target.value)}
+                placeholder="例: みずほ銀行"
+                autoComplete="off"
+                className="form-input"
+                onFocus={() => setShowBankSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowBankSuggestions(false), 200)}
+              />
+              {searchingBank && (
+                <div className={styles.inputSpinner}>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
                 </div>
               )}
             </div>
-          </main>
+            
+            {showBankSuggestions && bankSuggestions.length > 0 && (
+              <div className={styles.suggestions}>
+                {bankSuggestions.map((bank) => (
+                  <div
+                    key={bank.code}
+                    onClick={() => handleBankSelect(bank)}
+                    className={styles.suggestionItem}
+                  >
+                    <div className={styles.suggestionName}>{bank.name}</div>
+                    <div className={styles.suggestionInfo}>{bank.kana} · {bank.code}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 支店名 */}
+          <div className="form-group">
+            <label className="form-label">
+              支店名 <span className={styles.required}>*</span>
+            </label>
+            <div className={styles.inputWrapper}>
+              <input
+                type="text"
+                value={branchName}
+                onChange={(e) => handleBranchNameChange(e.target.value)}
+                placeholder={!canEditBranch ? "先に銀行を選択してください" : "例: 新宿支店"}
+                disabled={!canEditBranch}
+                autoComplete="off"
+                className="form-input"
+                onFocus={() => bankCode && setShowBranchSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowBranchSuggestions(false), 200)}
+              />
+              {searchingBranch && (
+                <div className={styles.inputSpinner}>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                </div>
+              )}
+            </div>
+            
+            {showBranchSuggestions && branchSuggestions.length > 0 && (
+              <div className={styles.suggestions}>
+                {branchSuggestions.map((branch) => (
+                  <div
+                    key={branch.code}
+                    onClick={() => handleBranchSelect(branch)}
+                    className={styles.suggestionItem}
+                  >
+                    <div className={styles.suggestionName}>{branch.name}</div>
+                    <div className={styles.suggestionInfo}>{branch.kana} · {branch.code}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {isEditMode && !bankCode && bankName && (
+              <div className={styles.formHint}>
+                ※ 銀行名を変更する場合は、候補から選択し直してください
+              </div>
+            )}
+          </div>
+
+          {/* 口座種別 */}
+          <div className="form-group">
+            <label className="form-label">
+              口座種別 <span className={styles.required}>*</span>
+            </label>
+            <select
+              value={bankAccountType}
+              onChange={(e) => setBankAccountType(e.target.value as 'savings' | 'checking')}
+              className="form-input"
+            >
+              <option value="savings">普通</option>
+              <option value="checking">当座</option>
+            </select>
+          </div>
+
+          {/* 口座番号 */}
+          <div className="form-group">
+            <label className="form-label">
+              口座番号 <span className={styles.required}>*</span>
+            </label>
+            <input
+              type="text"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="1234567"
+              maxLength={7}
+              className="form-input"
+            />
+            <div className={styles.formHint}>数字のみ7桁以内で入力してください</div>
+          </div>
+
+          {/* 口座名義 */}
+          <div className="form-group">
+            <label className="form-label">
+              口座名義 <span className={styles.required}>*</span>
+            </label>
+            <input
+              type="text"
+              value={accountHolderName}
+              onChange={(e) => setAccountHolderName(e.target.value)}
+              placeholder="ヤマダ タロウ"
+              className="form-input"
+            />
+            <div className={styles.formHint}>カタカナで入力してください（姓と名の間にスペース）</div>
+          </div>
+
+          {/* ボタン */}
+          <div className={styles.formActions}>
+            <button
+              onClick={() => router.push('/dashboard/earnings')}
+              disabled={processing}
+              className="btn btn-secondary"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={handleSaveBankAccount}
+              disabled={processing}
+              className="btn btn-primary"
+            >
+              {processing ? (
+                <>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  保存中...
+                </>
+              ) : (
+                bankAccount ? '更新する' : '登録する'
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* 削除ボタン（編集時のみ） */}
+        {bankAccount && (
+          <div className={styles.deleteSection}>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className={styles.deleteLink}
+            >
+              <i className="fa-solid fa-trash"></i>
+              口座情報を削除
+            </button>
+          </div>
         )}
       </div>
-
-      <Footer />
 
       {toast && (
         <Toast
