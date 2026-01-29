@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import styles from './PricingList.module.css'
 
 type PricingPlan = {
   id: string
@@ -186,44 +187,6 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
     return CATEGORIES.find(c => c.value === cat)?.label || cat
   }
 
-  function PricingCard({ plan }: { plan: PricingPlan }) {
-    return (
-      <Link href={`/pricing/${plan.id}`} className="list-card">
-        <div className="list-card-image ratio-pricing">
-          <img src={plan.thumbnail_url} alt={plan.plan_name} loading="lazy" />
-          <span className="list-card-badge">{getCategoryLabel(plan.category)}</span>
-        </div>
-        <div className="list-card-content">
-          <h3 className="list-card-title">{plan.plan_name}</h3>
-          <p className="list-card-price">¥{plan.minimum_price.toLocaleString()}〜</p>
-          <div className="list-card-creator">
-            <div className="list-card-avatar">
-              {plan.profiles.avatar_url ? (
-                <Image src={plan.profiles.avatar_url} alt="" width={28} height={28} />
-              ) : (
-                <i className="fas fa-user"></i>
-              )}
-            </div>
-            <span className="list-card-creator-name">{plan.profiles.display_name || '名前未設定'}</span>
-          </div>
-          <div className="list-card-meta">
-            {plan.reviewCount > 0 ? (
-              <span className="list-card-rating">
-                <i className="fas fa-star"></i>
-                {plan.averageRating.toFixed(1)}
-                <span className="count">({plan.reviewCount})</span>
-              </span>
-            ) : <span></span>}
-            <div className={`status-badge ${plan.profiles.is_accepting_orders ? 'accepting' : 'not-accepting'}`}>
-              <i className="fas fa-circle"></i>
-              {plan.profiles.is_accepting_orders ? '受付中' : '受付停止'}
-            </div>
-          </div>
-        </div>
-      </Link>
-    )
-  }
-
   function Pagination() {
     const totalPages = Math.ceil(filteredPlans.length / itemsPerPage)
     if (totalPages <= 1) return null
@@ -234,30 +197,50 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
     if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4)
 
     if (startPage > 1) {
-      pages.push(<button key={1} onClick={() => setCurrentPage(1)} className="pagination-btn">1</button>)
-      if (startPage > 2) pages.push(<span key="start-dots" className="pagination-dots">...</span>)
+      pages.push(
+        <button key={1} onClick={() => setCurrentPage(1)} className={styles.pageBtn}>
+          1
+        </button>
+      )
+      if (startPage > 2) pages.push(<span key="start-dots" className={styles.pageDots}>...</span>)
     }
 
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
-        <button key={i} onClick={() => setCurrentPage(i)} className={`pagination-btn ${currentPage === i ? 'active' : ''}`}>
+        <button 
+          key={i} 
+          onClick={() => setCurrentPage(i)} 
+          className={`${styles.pageBtn} ${currentPage === i ? styles.active : ''}`}
+        >
           {i}
         </button>
       )
     }
 
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) pages.push(<span key="end-dots" className="pagination-dots">...</span>)
-      pages.push(<button key={totalPages} onClick={() => setCurrentPage(totalPages)} className="pagination-btn">{totalPages}</button>)
+      if (endPage < totalPages - 1) pages.push(<span key="end-dots" className={styles.pageDots}>...</span>)
+      pages.push(
+        <button key={totalPages} onClick={() => setCurrentPage(totalPages)} className={styles.pageBtn}>
+          {totalPages}
+        </button>
+      )
     }
 
     return (
-      <div className="list-pagination">
-        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="pagination-btn">
+      <div className={styles.pagination}>
+        <button 
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+          disabled={currentPage === 1} 
+          className={styles.pageBtn}
+        >
           <i className="fas fa-chevron-left"></i>
         </button>
         {pages}
-        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="pagination-btn">
+        <button 
+          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+          disabled={currentPage === totalPages} 
+          className={styles.pageBtn}
+        >
           <i className="fas fa-chevron-right"></i>
         </button>
       </div>
@@ -265,22 +248,28 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
   }
 
   return (
-    <div className="list-page">
+    <>
       <Header />
-      
-      <main className="list-page-main">
+      <div className={styles.page}>
         {/* サイドバー */}
-        <aside className="list-sidebar">
-          <nav className="mb-16">
-            <Link href="/pricing" className={`sidebar-nav-item ${!category ? 'active' : ''}`}>
+        <aside className={styles.sidebar}>
+          <nav className={styles.sidebarNav}>
+            <Link 
+              href="/pricing" 
+              className={`${styles.navItem} ${!category ? styles.active : ''}`}
+            >
               すべて
             </Link>
           </nav>
-          <div className="sidebar-separator"></div>
-          <div>
-            <div className="sidebar-section-title">カテゴリ</div>
+          <div className={styles.separator}></div>
+          <div className={styles.sidebarSection}>
+            <div className={styles.sectionTitle}>カテゴリ</div>
             {CATEGORIES.map((cat) => (
-              <Link key={cat.value} href={cat.path} className={`sidebar-nav-item ${category === cat.value ? 'active' : ''}`}>
+              <Link 
+                key={cat.value} 
+                href={cat.path} 
+                className={`${styles.navItem} ${category === cat.value ? styles.active : ''}`}
+              >
                 {cat.label}
               </Link>
             ))}
@@ -288,55 +277,164 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
         </aside>
 
         {/* メインコンテンツ */}
-        <div className="list-content">
-          <div className="list-content-inner">
+        <main className={styles.main}>
+          <div className={styles.mainInner}>
+            {/* ページヘッダー */}
             {pageTitle && (
-              <div className="list-page-header">
-                <h1>{pageTitle}</h1>
-                {pageDescription && <p>{pageDescription}</p>}
+              <div className={styles.pageHeader}>
+                <h1 className={styles.pageTitle}>{pageTitle}</h1>
+                {pageDescription && <p className={styles.pageDescription}>{pageDescription}</p>}
               </div>
             )}
 
-            <div className="list-filter-bar">
-              <select value={priceRange} onChange={(e) => setPriceRange(e.target.value)} className="filter-select">
-                {PRICE_RANGES.map(range => <option key={range.value} value={range.value}>{range.label}</option>)}
-              </select>
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="filter-select">
-                {SORT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <label className="filter-checkbox">
-                <input type="checkbox" checked={acceptingOnly} onChange={(e) => setAcceptingOnly(e.target.checked)} />
-                受付中のみ
-              </label>
-              <span className="results-count">{filteredPlans.length}件のサービス</span>
+            {/* モバイル用カテゴリタブ */}
+            <div className={styles.mobileTabs}>
+              <Link 
+                href="/pricing" 
+                className={`${styles.mobileTab} ${!category ? styles.active : ''}`}
+              >
+                すべて
+              </Link>
+              {CATEGORIES.map((cat) => (
+                <Link 
+                  key={cat.value} 
+                  href={cat.path} 
+                  className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}
+                >
+                  {cat.label}
+                </Link>
+              ))}
             </div>
 
-            {loading ? (
-              <div className="list-empty">
+            {/* フィルターバー */}
+            <div className={styles.filterBar}>
+              <select 
+                value={priceRange} 
+                onChange={(e) => setPriceRange(e.target.value)} 
+                className={`${styles.filterSelect} ${priceRange ? styles.active : ''}`}
+              >
+                {PRICE_RANGES.map(range => (
+                  <option key={range.value} value={range.value}>{range.label}</option>
+                ))}
+              </select>
+
+              <select 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value)} 
+                className={styles.filterSelect}
+              >
+                {SORT_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+
+              <label className={styles.filterCheckbox}>
+                <input 
+                  type="checkbox" 
+                  checked={acceptingOnly} 
+                  onChange={(e) => setAcceptingOnly(e.target.checked)} 
+                />
+                <span className={styles.checkboxMark}></span>
+                受付中のみ
+              </label>
+
+              <span className={styles.resultCount}>
+                <span className={styles.resultNumber}>{filteredPlans.length}</span>件
+              </span>
+            </div>
+
+            {/* ローディング */}
+            {loading && (
+              <div className={styles.loadingState}>
                 <i className="fas fa-spinner fa-spin"></i>
                 <p>読み込み中...</p>
               </div>
-            ) : filteredPlans.length === 0 ? (
-              <div className="list-empty">
+            )}
+
+            {/* 空状態 */}
+            {!loading && filteredPlans.length === 0 && (
+              <div className={styles.emptyState}>
                 <i className="fas fa-search"></i>
                 <p>条件に一致するサービスがありません</p>
-                <p className="sub">フィルターを変更してみてください</p>
+                <p className={styles.sub}>フィルターを変更してみてください</p>
               </div>
-            ) : (
+            )}
+
+            {/* カード一覧 */}
+            {!loading && filteredPlans.length > 0 && (
               <>
-                <div className="list-grid pricing">
+                <div className={styles.grid}>
                   {filteredPlans.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((plan) => (
-                    <PricingCard key={plan.id} plan={plan} />
+                    <Link 
+                      key={plan.id} 
+                      href={`/pricing/${plan.id}`} 
+                      className={styles.card}
+                    >
+                      {/* 画像 */}
+                      <div className={styles.cardImage}>
+                        {plan.thumbnail_url ? (
+                          <img src={plan.thumbnail_url} alt={plan.plan_name} loading="lazy" />
+                        ) : (
+                          <div className={styles.placeholder}>
+                            <i className="far fa-image"></i>
+                          </div>
+                        )}
+                        <span className={styles.cardBadge}>{getCategoryLabel(plan.category)}</span>
+                      </div>
+
+                      {/* カードボディ */}
+                      <div className={styles.cardBody}>
+                        <h3 className={styles.cardTitle}>{plan.plan_name}</h3>
+                        
+                        <div className={styles.cardPrice}>
+                          ¥{plan.minimum_price.toLocaleString()}<span>〜</span>
+                        </div>
+
+                        <div className={styles.cardCreator}>
+                          <div className={styles.creatorAvatar}>
+                            {plan.profiles.avatar_url ? (
+                              <Image 
+                                src={plan.profiles.avatar_url} 
+                                alt="" 
+                                width={28} 
+                                height={28} 
+                              />
+                            ) : (
+                              <i className="fas fa-user"></i>
+                            )}
+                          </div>
+                          <span className={styles.creatorName}>
+                            {plan.profiles.display_name || '名前未設定'}
+                          </span>
+                        </div>
+
+                        <div className={styles.cardFooter}>
+                          {plan.reviewCount > 0 ? (
+                            <span className={styles.cardRating}>
+                              <i className="fas fa-star"></i>
+                              {plan.averageRating.toFixed(1)}
+                              <span className={styles.count}>({plan.reviewCount})</span>
+                            </span>
+                          ) : (
+                            <span></span>
+                          )}
+                          
+                          <span className={`${styles.statusBadge} ${plan.profiles.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
+                            <i className="fas fa-circle"></i>
+                            {plan.profiles.is_accepting_orders ? '受付中' : '受付停止'}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
                 <Pagination />
               </>
             )}
           </div>
-        </div>
-      </main>
-
+        </main>
+      </div>
       <Footer />
-    </div>
+    </>
   )
 }

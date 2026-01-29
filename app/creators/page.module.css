@@ -1,6 +1,6 @@
 /**
- * Creators Page Styles
- * デザインシステム準拠
+ * クリエイター一覧ページ - CSS Module
+ * デザインシステム準拠（ポートフォリオリスト参考）
  */
 
 /* ============================================
@@ -8,19 +8,91 @@
    ============================================ */
 
 .page {
+  display: flex;
+  min-height: calc(100vh - 64px);
   background: var(--bg-base);
-  min-height: 100vh;
-  padding: var(--space-6);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 /* ============================================
-   ページヘッダー
+   サイドバー
    ============================================ */
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-subtle);
+  padding: var(--space-5);
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.sidebarNav {
+  margin-bottom: var(--space-4);
+}
+
+.separator {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-4) 0;
+}
+
+.sidebarSection {
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-3);
+  padding: 0 var(--space-3);
+}
+
+.navItem {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.navItem:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.navItem.active {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+/* ============================================
+   メインコンテンツ
+   ============================================ */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+.mainInner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
 .pageHeader {
   margin-bottom: var(--space-6);
@@ -28,54 +100,72 @@
 
 .pageTitle {
   font-family: var(--font-display);
-  font-size: var(--text-3xl);
+  font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: var(--space-2);
 }
 
 .pageDescription {
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 /* ============================================
-   フィルターカード
+   フィルターバー
    ============================================ */
 
-.filterCard {
-  padding: var(--space-5);
-  margin-bottom: var(--space-6);
+.filterBar {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-  cursor: default;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
-.filterCard:hover {
+/* 検索バー */
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
   background: var(--bg-elevated);
-}
-
-.searchSection {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   flex: 1;
+  max-width: 400px;
+  transition: all var(--transition-fast);
 }
 
-.searchSection .search-bar {
-  max-width: 100%;
+.searchWrapper:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
 }
 
-.filterSection {
+.searchIcon {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
   flex-shrink: 0;
 }
 
-/* ============================================
-   検索結果
-   ============================================ */
+.searchInput {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
 
 .resultCount {
   font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-4);
+  color: var(--text-tertiary);
+  margin-left: auto;
 }
 
 .resultNumber {
@@ -103,13 +193,35 @@
 }
 
 /* ============================================
+   空状態
+   ============================================ */
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-tertiary);
+}
+
+.emptyState i {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.emptyState p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ============================================
    クリエイターグリッド
    ============================================ */
 
 .creatorsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
 }
 
 /* ============================================
@@ -117,112 +229,242 @@
    ============================================ */
 
 .creatorCard {
+  position: relative;
   display: flex;
   flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
   text-decoration: none;
-  transition: all var(--transition-base);
-}
-
-.cardHeader {
-  padding: var(--space-6) var(--space-5) var(--space-4);
+  color: inherit;
   text-align: center;
-  border-bottom: 1px solid var(--border-subtle);
 }
 
+.creatorCard:hover {
+  background: var(--bg-hover);
+}
+
+/* 左上バッジ（一般/ビジネス） */
+.typeBadge {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* アバター */
 .avatar {
-  margin: 0 auto var(--space-4);
-}
-
-.avatar.hasImage {
-  background: transparent;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-8) auto var(--space-3);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .avatar img {
-  border-radius: var(--radius-full);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatarInitial {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 600;
   color: white;
 }
 
+/* クリエイター名 */
 .creatorName {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: var(--space-1);
+  margin: 0;
+  line-height: 1.4;
 }
 
+/* ユーザーネーム */
 .creatorUsername {
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   color: var(--text-tertiary);
+  margin: var(--space-1) 0 0;
+}
+
+/* 名前エリア */
+.nameArea {
+  margin-bottom: var(--space-3);
+  min-height: 36px;
+}
+
+/* 受付状態バッジ */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 500;
   margin-bottom: var(--space-3);
 }
 
-.badgeGroup {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+.statusOpen {
+  background: var(--status-success-bg);
+  color: var(--status-success);
 }
 
-.cardBody {
-  padding: var(--space-4) var(--space-5) var(--space-5);
-  flex: 1;
+.statusClosed {
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
 }
 
+/* 自己紹介 */
 .creatorBio {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-align: left;
+  flex: 1;
 }
 
 /* ============================================
    レスポンシブ
    ============================================ */
 
-@media (min-width: 768px) {
-  .filterCard {
-    flex-direction: row;
-    align-items: flex-end;
+@media (max-width: 1023px) {
+  .sidebar {
+    display: none;
   }
 
-  .searchSection {
-    max-width: 400px;
+  /* モバイル用タブ表示 */
+  .mobileTabs {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobileTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileTab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .mobileTab:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .mobileTab.active {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: white;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobileTabs {
+    display: none;
   }
 }
 
 @media (max-width: 767px) {
-  .page {
+  .main {
     padding: var(--space-4);
   }
 
   .pageTitle {
-    font-size: var(--text-2xl);
+    font-size: var(--text-xl);
   }
 
   .creatorsGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .filterBar {
+    flex-wrap: wrap;
+  }
+
+  .searchWrapper {
+    max-width: none;
+    width: 100%;
+  }
+
+  .resultCount {
+    width: 100%;
+    margin-left: 0;
+    margin-top: var(--space-2);
   }
 }
 
 @media (max-width: 479px) {
-  .filterCard {
-    padding: var(--space-4);
+  .creatorCard {
+    padding: var(--space-3);
   }
 
-  .cardHeader {
-    padding: var(--space-5) var(--space-4) var(--space-3);
+  .avatar {
+    width: 56px;
+    height: 56px;
+    margin-top: var(--space-6);
   }
 
-  .cardBody {
-    padding: var(--space-3) var(--space-4) var(--space-4);
+  .avatarInitial {
+    font-size: var(--text-lg);
   }
+}
+
+/* ============================================
+   ダークモード調整
+   ============================================ */
+
+[data-theme="dark"] .typeBadge {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .statusClosed {
+  background: rgba(255, 255, 255, 0.08);
 }
