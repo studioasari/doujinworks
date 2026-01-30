@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -34,10 +34,10 @@ const CATEGORIES = [
   { value: 'video', label: '動画', path: '/portfolio/video' }
 ]
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: '新着順' },
-  { value: 'popular', label: '人気順' },
-  { value: 'comments', label: 'コメント順' }
+const SORT_TABS = [
+  { value: 'newest', label: '新着' },
+  { value: 'trending', label: '急上昇' },
+  { value: 'popular', label: '人気' },
 ]
 
 type PortfolioListProps = {
@@ -48,35 +48,18 @@ type PortfolioListProps = {
 
 export default function PortfolioList({ category, pageTitle, pageDescription }: PortfolioListProps) {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
-  const [filteredItems, setFilteredItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState('newest')
   const [currentPage, setCurrentPage] = useState(1)
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
-  const itemsPerPage = 24
-
-  // ドロップダウン外クリックで閉じる
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement
-      if (isSortDropdownOpen && !target.closest('.sort-dropdown-container')) {
-        setIsSortDropdownOpen(false)
-      }
-    }
-    if (isSortDropdownOpen) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [isSortDropdownOpen])
+  const itemsPerPage = 30
 
   useEffect(() => {
     fetchPortfolioItems()
   }, [category])
 
   useEffect(() => {
-    applyFilters()
     setCurrentPage(1)
-  }, [portfolioItems, sortOrder])
+  }, [sortOrder])
 
   async function fetchPortfolioItems() {
     setLoading(true)
@@ -92,11 +75,10 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
         query = query.eq('category', category)
       }
 
-      const { data: items, error } = await query.limit(100)
+      const { data: items, error } = await query.limit(200)
 
       if (error || !items?.length) {
         setPortfolioItems([])
-        setFilteredItems([])
         setLoading(false)
         return
       }
@@ -104,7 +86,6 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
       const validItems = items.filter(item => item.creator_id !== null)
       if (!validItems.length) {
         setPortfolioItems([])
-        setFilteredItems([])
         setLoading(false)
         return
       }
@@ -149,78 +130,67 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     }
   }
 
-  function applyFilters() {
-    let result = [...portfolioItems]
+  // 今週の人気作品（いいね数上位4件）
+  const featuredItems = useMemo(() => {
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    
+    return [...portfolioItems]
+      .filter(item => new Date(item.created_at) >= oneWeekAgo || item.likeCount > 0)
+      .sort((a, b) => b.likeCount - a.likeCount)
+      .slice(0, 4)
+  }, [portfolioItems])
 
+  // ソート済みアイテム
+  const sortedItems = useMemo(() => {
+    let result = [...portfolioItems]
+    
     switch (sortOrder) {
       case 'newest':
         result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         break
+      case 'trending':
+        // 直近の投稿で いいね/コメント が多いもの
+        const now = new Date().getTime()
+        result.sort((a, b) => {
+          const ageA = (now - new Date(a.created_at).getTime()) / (1000 * 60 * 60 * 24) + 1
+          const ageB = (now - new Date(b.created_at).getTime()) / (1000 * 60 * 60 * 24) + 1
+          const scoreA = (a.likeCount + a.commentCount * 2) / Math.sqrt(ageA)
+          const scoreB = (b.likeCount + b.commentCount * 2) / Math.sqrt(ageB)
+          return scoreB - scoreA
+        })
+        break
       case 'popular':
         result.sort((a, b) => b.likeCount - a.likeCount)
         break
-      case 'comments':
-        result.sort((a, b) => b.commentCount - a.commentCount)
-        break
     }
+    
+    return result
+  }, [portfolioItems, sortOrder])
 
-    setFilteredItems(result)
-  }
+  // ページ分割
+  const paginatedItems = useMemo(() => {
+    return sortedItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  }, [sortedItems, currentPage])
 
   function getCategoryLabel(cat: string) {
     return CATEGORIES.find(c => c.value === cat)?.label || cat
   }
 
-  function PortfolioCard({ item }: { item: PortfolioItem }) {
-    return (
-      <Link href={`/portfolio/${item.id}`} className={`card ${styles.workCard}`}>
-        <div className={`card-image ${styles.workCardImage}`}>
-          {item.thumbnail_url || item.image_url ? (
-            <Image 
-              src={item.thumbnail_url || item.image_url} 
-              alt={item.title} 
-              fill
-              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              loading="lazy"
-            />
-          ) : (
-            <i className="fa-regular fa-image"></i>
-          )}
-          <span className="overlay-badge overlay-badge-top-left">
-            {getCategoryLabel(item.category)}
-          </span>
-        </div>
-        <div className={`card-body ${styles.workCardBody}`}>
-          <h3 className="card-title">{item.title}</h3>
-          <div className={styles.cardMeta}>
-            <div className={styles.cardCreator}>
-              <div className={`avatar avatar-xs ${styles.creatorAvatar} ${item.profiles?.avatar_url ? styles.hasImage : ''}`}>
-                {item.profiles?.avatar_url ? (
-                  <Image src={item.profiles.avatar_url} alt="" width={20} height={20} />
-                ) : (
-                  <i className="fas fa-user"></i>
-                )}
-              </div>
-              <span className={styles.creatorName}>{item.profiles?.display_name || '名前未設定'}</span>
-            </div>
-            <div className={styles.cardStats}>
-              <span className={styles.statItem}>
-                <i className="fas fa-heart icon-like"></i>
-                {item.likeCount}
-              </span>
-              <span className={styles.statItem}>
-                <i className="fas fa-comment"></i>
-                {item.commentCount}
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    )
+  // 新着判定（3日以内）
+  function isNew(createdAt: string) {
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    return new Date(createdAt) >= threeDaysAgo
+  }
+
+  // 人気判定（いいね10以上）
+  function isHot(likeCount: number) {
+    return likeCount >= 10
   }
 
   function Pagination() {
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
+    const totalPages = Math.ceil(sortedItems.length / itemsPerPage)
     if (totalPages <= 1) return null
 
     const pages = []
@@ -311,6 +281,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
         {/* メインコンテンツ */}
         <main className={styles.main}>
           <div className={styles.mainInner}>
+            {/* ページヘッダー */}
             {pageTitle && (
               <div className={styles.pageHeader}>
                 <h1 className={styles.pageTitle}>{pageTitle}</h1>
@@ -318,47 +289,189 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
               </div>
             )}
 
-            <div className={styles.filterBar}>
-              <div className={`dropdown sort-dropdown-container ${isSortDropdownOpen ? 'active' : ''}`}>
-                <button 
-                  className="dropdown-trigger"
-                  onClick={(e) => { e.stopPropagation(); setIsSortDropdownOpen(!isSortDropdownOpen) }}
+            {/* モバイル用カテゴリタブ */}
+            <div className={styles.mobileTabs}>
+              <Link 
+                href="/portfolio" 
+                className={`${styles.mobileTab} ${!category ? styles.active : ''}`}
+              >
+                すべて
+              </Link>
+              {CATEGORIES.map((cat) => (
+                <Link 
+                  key={cat.value} 
+                  href={cat.path} 
+                  className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}
                 >
-                  {SORT_OPTIONS.find(o => o.value === sortOrder)?.label}
-                  <i className="fa-solid fa-chevron-down"></i>
-                </button>
-                <div className="dropdown-menu">
-                  {SORT_OPTIONS.map(option => (
-                    <div 
-                      key={option.value} 
-                      className="dropdown-item"
-                      onClick={() => { setSortOrder(option.value); setIsSortDropdownOpen(false) }}
-                    >
-                      {option.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <span className={styles.resultCount}>
-                <span className={styles.resultNumber}>{filteredItems.length}</span>件の作品
-              </span>
+                  {cat.label}
+                </Link>
+              ))}
             </div>
 
-            {loading ? (
+            {/* ローディング */}
+            {loading && (
               <div className={styles.loadingState}>
                 <i className="fas fa-spinner fa-spin"></i>
                 <p>読み込み中...</p>
               </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="empty-state">
+            )}
+
+            {/* 空状態 */}
+            {!loading && portfolioItems.length === 0 && (
+              <div className={styles.emptyState}>
                 <i className="fa-regular fa-image"></i>
                 <p>作品がありません</p>
               </div>
-            ) : (
+            )}
+
+            {/* コンテンツ */}
+            {!loading && portfolioItems.length > 0 && (
               <>
+                {/* 🔥 今週の人気作品 */}
+                {featuredItems.length > 0 && !category && (
+                  <section className={styles.featuredSection}>
+                    <div className={styles.featuredHeader}>
+                      <h2 className={styles.featuredTitle}>
+                        <i className="fas fa-fire"></i>
+                        今週の人気作品
+                      </h2>
+                    </div>
+                    <div className={styles.featuredGrid}>
+                      {featuredItems.map((item, index) => (
+                        <Link 
+                          key={item.id} 
+                          href={`/portfolio/${item.id}`} 
+                          className={styles.featuredCard}
+                        >
+                          <span className={`${styles.featuredRank} ${index === 0 ? styles.rank1 : index === 1 ? styles.rank2 : index === 2 ? styles.rank3 : ''}`}>
+                            {index + 1}
+                          </span>
+                          <Image 
+                            src={item.thumbnail_url || item.image_url} 
+                            alt={item.title}
+                            fill
+                            sizes="(max-width: 767px) 50vw, 25vw"
+                            style={{ objectFit: 'cover' }}
+                          />
+                          <div className={styles.featuredCardContent}>
+                            <h3 className={styles.featuredCardTitle}>{item.title}</h3>
+                            <div className={styles.featuredCardMeta}>
+                              <div className={styles.featuredCardCreator}>
+                                <div className={styles.featuredCardAvatar}>
+                                  {item.profiles?.avatar_url && (
+                                    <Image 
+                                      src={item.profiles.avatar_url} 
+                                      alt="" 
+                                      width={24} 
+                                      height={24} 
+                                    />
+                                  )}
+                                </div>
+                                <span>{item.profiles?.display_name || '名前未設定'}</span>
+                              </div>
+                              <div className={styles.featuredCardStats}>
+                                <span><i className="fas fa-heart"></i> {item.likeCount}</span>
+                                <span><i className="fas fa-comment"></i> {item.commentCount}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* ソートタブ */}
+                <div className={styles.sortTabs}>
+                  {SORT_TABS.map(tab => (
+                    <button
+                      key={tab.value}
+                      onClick={() => setSortOrder(tab.value)}
+                      className={`${styles.sortTab} ${sortOrder === tab.value ? styles.active : ''}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                  <span className={styles.sortTabCount}>
+                    <span>{sortedItems.length}</span>件
+                  </span>
+                </div>
+
+                {/* マソンリーグリッド */}
                 <div className={styles.worksGrid}>
-                  {filteredItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
-                    <PortfolioCard key={item.id} item={item} />
+                  {paginatedItems.map((item) => (
+                    <Link 
+                      key={item.id} 
+                      href={`/portfolio/${item.id}`} 
+                      className={styles.workCard}
+                    >
+                      {/* 画像 */}
+                      <div className={styles.workCardImage}>
+                        {item.thumbnail_url || item.image_url ? (
+                          <img 
+                            src={item.thumbnail_url || item.image_url} 
+                            alt={item.title}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className={styles.placeholder}>
+                            <i className="fa-regular fa-image"></i>
+                          </div>
+                        )}
+                        <span className={styles.cardBadge}>{getCategoryLabel(item.category)}</span>
+                        
+                        {/* NEW / HOT ラベル */}
+                        {isNew(item.created_at) && !isHot(item.likeCount) && (
+                          <span className={`${styles.cardLabel} ${styles.new}`}>NEW</span>
+                        )}
+                        {isHot(item.likeCount) && (
+                          <span className={`${styles.cardLabel} ${styles.hot}`}>🔥 HOT</span>
+                        )}
+
+                        {/* ホバー時オーバーレイ */}
+                        <div className={styles.cardOverlay}>
+                          <span><i className="fas fa-heart"></i> {item.likeCount}</span>
+                          <span><i className="fas fa-comment"></i> {item.commentCount}</span>
+                        </div>
+                      </div>
+
+                      {/* カードボディ */}
+                      <div className={styles.workCardBody}>
+                        <h3 className={styles.cardTitle}>{item.title}</h3>
+                        
+                        <div className={styles.cardMeta}>
+                          <div className={styles.cardCreator}>
+                            <div className={styles.creatorAvatar}>
+                              {item.profiles?.avatar_url ? (
+                                <Image 
+                                  src={item.profiles.avatar_url} 
+                                  alt="" 
+                                  width={20} 
+                                  height={20} 
+                                />
+                              ) : (
+                                <i className="fas fa-user"></i>
+                              )}
+                            </div>
+                            <span className={styles.creatorName}>
+                              {item.profiles?.display_name || '名前未設定'}
+                            </span>
+                          </div>
+                          
+                          {/* モバイル用stats */}
+                          <div className={styles.cardStats}>
+                            <span className={styles.statItem}>
+                              <i className={`fas fa-heart ${styles.iconLike}`}></i>
+                              {item.likeCount}
+                            </span>
+                            <span className={styles.statItem}>
+                              <i className="fas fa-comment"></i>
+                              {item.commentCount}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
                   ))}
                 </div>
                 <Pagination />

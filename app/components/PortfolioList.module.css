@@ -85,8 +85,7 @@
 }
 
 .mainInner {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .pageHeader {
@@ -98,34 +97,522 @@
   font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
+  margin: 0 0 var(--space-2);
 }
 
 .pageDescription {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  margin: 0;
 }
 
 /* ============================================
-   フィルターバー
+   モバイル用カテゴリタブ
    ============================================ */
 
-.filterBar {
+.mobileTabs {
+  display: none;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobileTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mobileTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.mobileTab:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.mobileTab.active {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: white;
+}
+
+/* ============================================
+   🔥 Featured Section（今週の人気）
+   ============================================ */
+
+.featuredSection {
+  margin-bottom: var(--space-8);
+  max-width: 900px;
+}
+
+.featuredHeader {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
 }
 
-.resultCount {
+.featuredTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.featuredTitle i {
+  color: #ff6b35;
+}
+
+.featuredMore {
+  font-size: var(--text-sm);
+  color: var(--accent-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.featuredMore:hover {
+  text-decoration: underline;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+/* Featured カード（大きめ） */
+.featuredCard {
+  position: relative;
+  display: block;
+  aspect-ratio: 1.91 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.featuredCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+  z-index: 1;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+}
+
+.featuredCard:hover::before {
+  opacity: 1;
+}
+
+.featuredCard img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-normal);
+}
+
+.featuredCard:hover img {
+  transform: scale(1.05);
+}
+
+.featuredCardContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-4);
+  z-index: 2;
+  color: white;
+}
+
+.featuredCardTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.featuredCardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  opacity: 0.9;
+}
+
+.featuredCardCreator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.featuredCardAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: rgba(255,255,255,0.2);
+}
+
+.featuredCardAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.featuredCardStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.featuredCardStats span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.featuredRank {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-gradient);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: white;
+  z-index: 2;
+}
+
+.featuredRank.rank1 {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+}
+
+.featuredRank.rank2 {
+  background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+}
+
+.featuredRank.rank3 {
+  background: linear-gradient(135deg, #cd7f32, #b87333);
+}
+
+/* ============================================
+   ソートタブ（新着/急上昇/人気）
+   ============================================ */
+
+.sortTabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-1);
+}
+
+.sortTab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100px;
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.sortTab i {
+  font-size: var(--text-xs);
+}
+
+.sortTab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.sortTab.active {
+  color: var(--accent-primary);
+}
+
+.sortTab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-primary);
+  border-radius: 2px 2px 0 0;
+}
+
+.sortTabCount {
+  margin-left: auto;
   font-size: var(--text-sm);
   color: var(--text-tertiary);
-  margin-left: auto;
 }
 
-.resultNumber {
+.sortTabCount span {
   font-weight: 600;
   color: var(--accent-primary);
+}
+
+/* ============================================
+   作品グリッド
+   ============================================ */
+
+.worksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ============================================
+   作品カード
+   ============================================ */
+
+.workCard {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
+}
+
+.workCard:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.workCard:hover .workCardImage img {
+  transform: scale(1.03);
+}
+
+/* カード画像 */
+.workCardImage {
+  position: relative;
+  aspect-ratio: 1.91 / 1;
+  overflow: hidden;
+  background: var(--bg-sunken);
+}
+
+.workCardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-normal);
+}
+
+.workCardImage .placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-size: 2rem;
+}
+
+/* カテゴリバッジ */
+.cardBadge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ホバー時オーバーレイstats */
+.cardOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.workCard:hover .cardOverlay {
+  opacity: 1;
+}
+
+.cardOverlay span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: white;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.cardOverlay i {
+  font-size: var(--text-base);
+}
+
+/* カードボディ */
+.workCardBody {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+}
+
+/* タイトル */
+.cardTitle {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* カードメタ */
+.cardMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* クリエイター */
+.cardCreator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.creatorAvatar {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.creatorAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.creatorAvatar i {
+  color: white;
+  font-size: 8px;
+}
+
+.creatorName {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* カードstats（モバイル用） */
+.cardStats {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.statItem i {
+  font-size: 10px;
+}
+
+.statItem i.iconLike {
+  color: #ff6b6b;
+}
+
+/* NEW / HOTバッジ */
+.cardLabel {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cardLabel.new {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.cardLabel.hot {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: white;
 }
 
 /* ============================================
@@ -148,94 +635,25 @@
 }
 
 /* ============================================
-   作品グリッド
+   空状態
    ============================================ */
 
-.worksGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-5);
-}
-
-/* ============================================
-   作品カード
-   ============================================ */
-
-.workCard {
-  text-decoration: none;
-}
-
-.workCardImage {
-  aspect-ratio: 1;
-}
-
-.workCardImage img {
-  object-fit: cover;
-}
-
-.workCardBody {
-  padding: var(--space-3) var(--space-4) var(--space-4);
-}
-
-.workCardBody :global(.card-title) {
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.cardMeta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.cardCreator {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.creatorAvatar {
-  width: 20px;
-  height: 20px;
-  font-size: 10px;
-}
-
-.creatorAvatar.hasImage {
-  background: transparent;
-}
-
-.creatorAvatar img {
-  border-radius: var(--radius-full);
-}
-
-.creatorName {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cardStats {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.statItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
   color: var(--text-tertiary);
 }
 
-.statItem i {
-  font-size: 11px;
+.emptyState i {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.emptyState p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* ============================================
@@ -296,6 +714,26 @@
   .sidebar {
     display: none;
   }
+
+  .mobileTabs {
+    display: flex;
+  }
+
+  .featuredSection {
+    max-width: none;
+  }
+
+  .featuredGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .featuredCard:nth-child(n+3) {
+    display: none;
+  }
+
+  .worksGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 
 @media (max-width: 767px) {
@@ -307,24 +745,85 @@
     font-size: var(--text-xl);
   }
 
+  .featuredSection {
+    margin-bottom: var(--space-6);
+  }
+
+  .featuredGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .featuredCard {
+    aspect-ratio: 1.91 / 1;
+  }
+
+  .featuredCard:nth-child(n+3) {
+    display: none;
+  }
+
+  .featuredCardContent {
+    padding: var(--space-3);
+  }
+
+  .featuredCardTitle {
+    font-size: var(--text-base);
+  }
+
   .worksGrid {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-3);
   }
 
-  .filterBar {
-    flex-wrap: wrap;
+  /* モバイルではホバーオーバーレイなし、statsを常時表示 */
+  .cardOverlay {
+    display: none;
   }
 
-  .resultCount {
-    width: 100%;
-    margin-left: 0;
-    margin-top: var(--space-2);
+  .cardStats {
+    display: flex;
+  }
+
+  .cardMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .sortTabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sortTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sortTab {
+    flex-shrink: 0;
+    width: 88px;
   }
 }
 
 @media (max-width: 479px) {
-  .workCardBody {
-    padding: var(--space-2) var(--space-3) var(--space-3);
+  .featuredGrid {
+    grid-template-columns: 1fr;
   }
+
+  .featuredCard:nth-child(n+3) {
+    display: none;
+  }
+
+  .workCardBody {
+    padding: var(--space-2);
+  }
+}
+
+/* ============================================
+   ダークモード調整
+   ============================================ */
+
+[data-theme="dark"] .workCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }

@@ -396,8 +396,8 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                               <Image 
                                 src={plan.profiles.avatar_url} 
                                 alt="" 
-                                width={28} 
-                                height={28} 
+                                width={24} 
+                                height={24} 
                               />
                             ) : (
                               <i className="fas fa-user"></i>

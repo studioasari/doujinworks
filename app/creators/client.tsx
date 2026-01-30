@@ -210,13 +210,15 @@ export default function CreatorsPage() {
                       )}
                     </div>
 
-                    {/* 受付状態バッジ（ビジネスのみ） */}
-                    {creator.account_type === 'business' && (
-                      <span className={`${styles.statusBadge} ${creator.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
-                        <i className="fas fa-circle" style={{ fontSize: '6px' }}></i>
-                        {creator.is_accepting_orders ? '受付中' : '受付停止'}
-                      </span>
-                    )}
+                    {/* 受付状態バッジエリア（常に高さ確保） */}
+                    <div className={styles.statusArea}>
+                      {creator.account_type === 'business' && (
+                        <span className={`${styles.statusBadge} ${creator.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
+                          <i className="fas fa-circle" style={{ fontSize: '6px' }}></i>
+                          {creator.is_accepting_orders ? '受付中' : '受付停止'}
+                        </span>
+                      )}
+                    </div>
 
                     {/* 自己紹介 */}
                     <p className={styles.creatorBio}>
