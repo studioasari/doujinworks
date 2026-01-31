@@ -48,7 +48,7 @@
 }
 
 .logo {
-  height: 25px;
+  height: 20px;
   width: auto;
 }
 
@@ -191,7 +191,7 @@
 
 .overlay {
   position: fixed;
-  top: 0;
+  top: 49px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -637,7 +637,7 @@
 
 .hamburgerOverlay {
   position: fixed;
-  top: 0;
+  top: 49px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -655,7 +655,7 @@
 
 .hamburgerMenu {
   position: fixed;
-  top: 0;
+  top: 49px;
   right: 0;
   bottom: 0;
   width: 300px;

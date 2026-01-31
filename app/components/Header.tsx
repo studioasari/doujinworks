@@ -523,11 +523,50 @@ export default function Header() {
     }
   }
 
-  const closeAllMenus = () => {
+  const toggleMessageMenu = () => {
+    const willOpen = !isMessageMenuOpen
+    setIsMenuOpen(false)
+    setIsNotificationMenuOpen(false)
+    setIsUploadMenuOpen(false)
+    setIsHamburgerOpen(false)
+    setIsMessageMenuOpen(willOpen)
+  }
+
+  const toggleNotificationMenu = () => {
+    const willOpen = !isNotificationMenuOpen
+    setIsMenuOpen(false)
+    setIsMessageMenuOpen(false)
+    setIsUploadMenuOpen(false)
+    setIsHamburgerOpen(false)
+    setIsNotificationMenuOpen(willOpen)
+    if (willOpen) setNotificationTab('notifications')
+  }
+
+  const toggleProfileMenu = () => {
+    const willOpen = !isMenuOpen
+    setIsMessageMenuOpen(false)
+    setIsNotificationMenuOpen(false)
+    setIsUploadMenuOpen(false)
+    setIsHamburgerOpen(false)
+    setIsMenuOpen(willOpen)
+  }
+
+  const toggleUploadMenu = () => {
+    const willOpen = !isUploadMenuOpen
+    setIsMenuOpen(false)
+    setIsMessageMenuOpen(false)
+    setIsNotificationMenuOpen(false)
+    setIsHamburgerOpen(false)
+    setIsUploadMenuOpen(willOpen)
+  }
+
+  const toggleHamburgerMenu = () => {
+    const willOpen = !isHamburgerOpen
     setIsMenuOpen(false)
     setIsMessageMenuOpen(false)
     setIsNotificationMenuOpen(false)
     setIsUploadMenuOpen(false)
+    setIsHamburgerOpen(willOpen)
   }
 
   const handleLogout = useCallback(async () => {
@@ -633,7 +672,7 @@ export default function Header() {
 
               {/* メッセージ */}
               <div className={styles.menuContainer}>
-                <button className={styles.iconBtn} onClick={() => { closeAllMenus(); setIsMessageMenuOpen(!isMessageMenuOpen) }} aria-label="メッセージ">
+                <button className={styles.iconBtn} onClick={toggleMessageMenu} aria-label="メッセージ">
                   <i className="far fa-envelope"></i>
                   {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
                 </button>
@@ -670,7 +709,7 @@ export default function Header() {
 
               {/* 通知 */}
               <div className={styles.menuContainer}>
-                <button className={styles.iconBtn} onClick={() => { closeAllMenus(); setIsNotificationMenuOpen(!isNotificationMenuOpen); setNotificationTab('notifications') }} aria-label="通知">
+                <button className={styles.iconBtn} onClick={toggleNotificationMenu} aria-label="通知">
                   <i className="far fa-bell"></i>
                   {notificationUnreadCount > 0 && <span className={styles.badge}>{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</span>}
                 </button>
@@ -710,7 +749,7 @@ export default function Header() {
               {/* PC版：プロフィールメニュー */}
               {!isMobile && (
                 <div className={styles.profileMenuContainer}>
-                  <button className={styles.avatarBtn} onClick={() => { closeAllMenus(); setIsMenuOpen(!isMenuOpen) }}>
+                  <button className={styles.avatarBtn} onClick={toggleProfileMenu}>
                     <div className="avatar avatar-sm">
                       {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={32} height={32} sizes="32px" /> : <i className="fas fa-user"></i>}
                     </div>
@@ -763,7 +802,7 @@ export default function Header() {
                 <div className={styles.uploadMenuContainer}>
                   <div className={styles.uploadBtnGroup}>
                     <Link href="/portfolio/upload" className="btn btn-primary btn-sm"><i className="fas fa-pen"></i><span>投稿</span></Link>
-                    <button className={`btn btn-primary btn-sm ${styles.uploadDropdownBtn}`} onClick={() => { closeAllMenus(); setIsUploadMenuOpen(!isUploadMenuOpen) }}><i className="fas fa-chevron-down"></i></button>
+                    <button className={`btn btn-primary btn-sm ${styles.uploadDropdownBtn}`} onClick={toggleUploadMenu}><i className="fas fa-chevron-down"></i></button>
                   </div>
                   {isUploadMenuOpen && (
                     <div className={`${styles.dropdown} ${styles.dropdownRight}`}>
@@ -776,7 +815,7 @@ export default function Header() {
 
               {/* スマホ版：ハンバーガーボタン */}
               {isMobile && (
-                <button className={`${styles.hamburgerBtn} ${isHamburgerOpen ? styles.active : ''}`} onClick={() => setIsHamburgerOpen(!isHamburgerOpen)} aria-label="メニュー">
+                <button className={`${styles.hamburgerBtn} ${isHamburgerOpen ? styles.active : ''}`} onClick={toggleHamburgerMenu} aria-label="メニュー">
                   <span></span><span></span><span></span>
                 </button>
               )}
