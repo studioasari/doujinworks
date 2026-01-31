@@ -12,7 +12,7 @@
   position: sticky;
   top: 0;
   z-index: 200;
-  height: 53px;
+  height: 60px;
 }
 
 .inner {
@@ -37,6 +37,12 @@
   }
 }
 
+/* PC検索バー */
+.inner :global(.search-bar) {
+  flex: 1;
+  max-width: 500px;
+}
+
 /* ============================================
    ロゴ
    ============================================ */
@@ -48,7 +54,7 @@
 }
 
 .logo {
-  height: 20px;
+  height: 25px;
   width: auto;
 }
 
@@ -249,6 +255,7 @@
   min-width: 280px;
   max-height: 80vh;
   overflow-y: auto;
+  padding-bottom: var(--space-1);
 }
 
 /* ============================================
@@ -398,6 +405,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .acceptingLabel {

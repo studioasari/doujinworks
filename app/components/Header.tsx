@@ -779,7 +779,6 @@ export default function Header() {
                           <button onClick={(e) => { e.preventDefault(); toggleAcceptingOrders() }} disabled={isToggleLoading} className={`toggle ${isAcceptingOrders ? 'active' : ''}`} />
                         </div>
                       )}
-                      <div className={styles.dropdownDivider}></div>
                       <Link href="/dashboard" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-th-large"></i>ダッシュボード</Link>
                       <Link href="/messages" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-envelope"></i>メッセージ</Link>
                       <Link href="/saved" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-bookmark"></i>保存済み</Link>
