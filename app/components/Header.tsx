@@ -64,6 +64,12 @@ const HamburgerMenu = memo(function HamburgerMenu({
       />
       <div className={`${styles.hamburgerMenu} ${isOpen ? styles.active : ''}`}>
         <div className={styles.hamburgerContent}>
+          {/* ヘッダー行（✕ボタン） */}
+          <div className={styles.hamburgerHeader}>
+            <button className={styles.hamburgerCloseBtn} onClick={onClose} aria-label="メニューを閉じる">
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
           {/* 検索 */}
           <div className={styles.hamburgerSearch}>
             <div className="search-bar">
