@@ -48,7 +48,7 @@
 }
 
 .logo {
-  height: 20px;
+  height: 25px;
   width: auto;
 }
 
@@ -195,12 +195,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: transparent;
   z-index: 299;
-}
-
-[data-theme="dark"] .overlay {
-  background: rgba(0, 0, 0, 0.7);
 }
 
 /* ============================================
@@ -691,12 +687,11 @@
 
 .hamburgerSearch {
   padding: var(--space-4);
-  background: var(--bg-base);
+  border-bottom: 1px solid var(--border-default);
 }
 
 .hamburgerSearch :global(.search-bar) {
   max-width: 100%;
-  background: var(--bg-elevated);
 }
 
 /* ============================================
@@ -709,7 +704,6 @@
   gap: var(--space-3);
   padding: var(--space-4);
   text-decoration: none;
-  background: var(--bg-sunken);
   border-bottom: 1px solid var(--border-default);
 }
 
