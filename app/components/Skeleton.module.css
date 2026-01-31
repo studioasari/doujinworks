@@ -1,0 +1,198 @@
+/**
+ * Skeleton Loading Styles
+ * デザインシステム準拠
+ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-sunken) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.text {
+  height: 1em;
+  margin-bottom: var(--space-2);
+}
+
+.avatar {
+  border-radius: var(--radius-full);
+}
+
+.image {
+  aspect-ratio: 3 / 4;
+}
+
+/* 作品カード */
+.workCard {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* クリエイターカード */
+.creatorCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.creatorAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  margin: 0 auto var(--space-3);
+}
+
+.creatorName {
+  height: 1rem;
+  width: 60%;
+  margin: 0 auto var(--space-2);
+}
+
+.creatorUsername {
+  height: 0.75rem;
+  width: 40%;
+  margin: 0 auto var(--space-3);
+}
+
+.creatorStatus {
+  height: 24px;
+  margin-bottom: var(--space-3);
+}
+
+.creatorBio {
+  height: 2.625rem;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-3);
+}
+
+/* 依頼カード */
+.requestCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.requestBadge {
+  height: 1.25rem;
+  width: 60px;
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-2);
+}
+
+.requestTitle {
+  height: 1rem;
+  width: 90%;
+  margin-bottom: var(--space-2);
+}
+
+.requestDesc {
+  height: 0.75rem;
+  margin-bottom: var(--space-1);
+}
+
+.requestFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-3);
+}
+
+.requestAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+}
+
+.requestPrice {
+  height: 1rem;
+  width: 80px;
+}
+
+/* 価格カード */
+.pricingCard {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.pricingImage {
+  aspect-ratio: 4 / 3;
+}
+
+.pricingBody {
+  padding: var(--space-3);
+}
+
+.pricingTitle {
+  height: 0.875rem;
+  width: 80%;
+  margin-bottom: var(--space-1);
+}
+
+.pricingPrice {
+  height: 1rem;
+  width: 60px;
+  margin-bottom: var(--space-2);
+}
+
+.pricingCreator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pricingAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+}
+
+.pricingName {
+  height: 0.75rem;
+  width: 50px;
+}
+
+/* グリッド */
+.grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.gridWorks {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.gridFeatured {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.gridCreators {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.gridRequests {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.gridPricing {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}

@@ -1,11 +1,10 @@
-import { Metadata } from 'next'
-import RequestsClient from './client'
+import RequestList from '@/app/components/RequestList'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: '依頼一覧 | 同人ワークス',
-  description: '公開されている依頼を探して応募しましょう。イラスト、マンガ、小説、音楽など様々なジャンルの依頼があります。',
+  description: '依頼を探す',
 }
 
-export default function RequestsPage() {
-  return <RequestsClient />
+export default function Page() {
+  return <RequestList />
 }

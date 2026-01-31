@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
-import styles from './page.module.css'
+import { RequestGridSkeleton } from '@/app/components/Skeleton'
+import styles from './RequestList.module.css'
 
 type WorkRequest = {
   id: string
@@ -74,7 +76,7 @@ const JOB_FEATURES = [
   { value: 'flexible_time', label: 'スキマ時間歓迎' },
 ]
 
-export default function RequestsClient() {
+export default function RequestList() {
   const [requests, setRequests] = useState<WorkRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<WorkRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -348,13 +350,8 @@ export default function RequestsClient() {
               </select>
             </div>
 
-            {/* ローディング */}
-            {loading && (
-              <div className={styles.loadingState}>
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>読み込み中...</p>
-              </div>
-            )}
+            {/* スケルトン */}
+            {loading && <RequestGridSkeleton count={6} />}
 
             {/* 空の状態 */}
             {!loading && filteredRequests.length === 0 && (
@@ -447,9 +444,12 @@ export default function RequestsClient() {
                         <div className={styles.requesterInfo}>
                           <div className={styles.requesterAvatar}>
                             {request.profiles?.avatar_url ? (
-                              <img 
+                              <Image 
                                 src={request.profiles.avatar_url} 
                                 alt={request.profiles.display_name || ''} 
+                                width={24}
+                                height={24}
+                                sizes="24px"
                               />
                             ) : (
                               <i className="fas fa-user"></i>

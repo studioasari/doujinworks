@@ -20,6 +20,19 @@ export const metadata: Metadata = {
   description: "クリエイターと依頼者を繋ぐマッチングプラットフォーム",
 };
 
+// テーマちらつき防止スクリプト
+const themeScript = `
+(function() {
+  try {
+    var theme = localStorage.getItem('theme');
+    if (!theme) {
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.body.dataset.theme = theme;
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,7 +50,8 @@ export default function RootLayout({
           referrerPolicy="no-referrer"
         />
       </head>
-      <body className={`${zenMaruGothic.variable} antialiased`}>
+      <body className={`${zenMaruGothic.variable} antialiased`} suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
       </body>
     </html>

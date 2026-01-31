@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import styles from './page.module.css'
@@ -31,6 +32,7 @@ type WorkRequest = {
   number_of_positions: number | null
   application_deadline: string | null
   price_negotiable: boolean | null
+  contracted_count: number | null
   profiles: {
     id: string
     username: string | null
@@ -45,7 +47,7 @@ const CATEGORY_LABELS: { [key: string]: string } = {
 }
 
 const STATUS_LABELS: { [key: string]: string } = {
-  open: '募集中', closed: '募集終了', contracted: '仮払い待ち', paid: '作業中',
+  open: '募集中', contracted: '募集終了', paid: '作業中',
   delivered: '納品済み', completed: '完了', cancelled: 'キャンセル'
 }
 
@@ -53,6 +55,16 @@ const JOB_FEATURE_LABELS: { [key: string]: string } = {
   no_skill: 'スキル不要', skill_welcome: '専門スキル歓迎', one_time: '単発',
   continuous: '継続あり', flexible_time: 'スキマ時間歓迎'
 }
+
+const REPORT_REASONS = [
+  { value: 'spam', label: 'スパム・宣伝目的' },
+  { value: 'fraud', label: '詐欺・不正行為の疑い' },
+  { value: 'inappropriate', label: '不適切なコンテンツ' },
+  { value: 'illegal', label: '違法な依頼内容' },
+  { value: 'harassment', label: '嫌がらせ・誹謗中傷' },
+  { value: 'copyright', label: '著作権侵害の疑い' },
+  { value: 'other', label: 'その他の規約違反' }
+]
 
 function formatDate(dateString: string) {
   const date = new Date(dateString)
@@ -73,6 +85,23 @@ export default function RequestDetailPage() {
   const [messageText, setMessageText] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const [myContractId, setMyContractId] = useState<string | null>(null)
+  
+  // クライアント情報
+  const [clientStats, setClientStats] = useState<{
+    orderCount: number
+    averageRating: number
+    reviewCount: number
+  }>({ orderCount: 0, averageRating: 0, reviewCount: 0 })
+  
+  // シェア
+  const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
+  
+  // 通報
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportContent, setReportContent] = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
 
   const params = useParams()
   const router = useRouter()
@@ -90,6 +119,34 @@ export default function RequestDetailPage() {
   useEffect(() => {
     if (requestId && currentProfileId && request) { checkMyContract() }
   }, [requestId, currentProfileId, request])
+
+  useEffect(() => {
+    if (request?.requester_id) { fetchClientStats(request.requester_id) }
+  }, [request?.requester_id])
+
+  // モーダル表示中は背景スクロール禁止
+  useEffect(() => {
+    if (showApplicationForm || showReportModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showApplicationForm, showReportModal])
+
+  // シェアドロップダウン外側クリックで閉じる
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement
+      if (isShareDropdownOpen && !target.closest('.share-dropdown-container')) {
+        setIsShareDropdownOpen(false)
+      }
+    }
+    if (isShareDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [isShareDropdownOpen])
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -114,6 +171,7 @@ export default function RequestDetailPage() {
   }
 
   async function checkApplication() {
+    // 応募者数
     const { data, error } = await supabase
       .from('work_request_applications')
       .select('id, applicant_id, status')
@@ -144,14 +202,108 @@ export default function RequestDetailPage() {
       query = query.eq('contractor_id', currentProfileId)
     }
     
-    const { data, error } = await query.single()
+    const { data, error } = await query.maybeSingle()
 
     if (!error && data) setMyContractId(data.id)
+  }
+
+  async function fetchClientStats(requesterId: string) {
+    const { count: orderCount } = await supabase
+      .from('work_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('requester_id', requesterId)
+      .eq('status', 'completed')
+
+    const { data: reviews } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('reviewee_id', requesterId)
+
+    let averageRating = 0
+    let reviewCount = 0
+
+    if (reviews && reviews.length > 0) {
+      reviewCount = reviews.length
+      averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+    }
+
+    setClientStats({
+      orderCount: orderCount || 0,
+      averageRating,
+      reviewCount
+    })
+  }
+
+  async function handleSubmitReport(e: React.FormEvent) {
+    e.preventDefault()
+    if (!reportReason) {
+      alert('報告理由を選択してください')
+      return
+    }
+
+    setSubmittingReport(true)
+    try {
+      const { error } = await supabase.from('reports').insert({
+        reporter_id: currentProfileId || null,
+        report_type: 'work_request',
+        target_request_id: requestId,
+        reason: reportReason,
+        description: reportContent.trim() || null,
+        status: 'pending'
+      })
+
+      if (error) throw error
+
+      alert('通報を送信しました。ご協力ありがとうございます。')
+      setShowReportModal(false)
+      setReportReason('')
+      setReportContent('')
+    } catch (error) {
+      console.error('通報エラー:', error)
+      alert('通報の送信に失敗しました')
+    }
+    setSubmittingReport(false)
+  }
+
+  function handleShare(platform: 'twitter' | 'facebook' | 'line' | 'copy') {
+    const url = window.location.href
+    const text = request?.title || '依頼詳細'
+
+    switch (platform) {
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank')
+        break
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank')
+        break
+      case 'line':
+        window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text + ' ' + url)}`, '_blank')
+        break
+      case 'copy':
+        navigator.clipboard.writeText(url).then(() => {
+          setCopySuccess(true)
+          setTimeout(() => setCopySuccess(false), 2000)
+        }).catch(() => {
+          const textArea = document.createElement('textarea')
+          textArea.value = url
+          textArea.style.position = 'fixed'
+          textArea.style.left = '-999999px'
+          document.body.appendChild(textArea)
+          textArea.select()
+          document.execCommand('copy')
+          document.body.removeChild(textArea)
+          setCopySuccess(true)
+          setTimeout(() => setCopySuccess(false), 2000)
+        })
+        return
+    }
+    setIsShareDropdownOpen(false)
   }
 
   async function handleSubmitApplication(e: React.FormEvent) {
     e.preventDefault()
     if (!applicationMessage.trim()) { alert('応募メッセージを入力してください'); return }
+    if (proposedPrice && parseInt(proposedPrice) < 500) { alert('希望金額は500円以上で入力してください'); return }
 
     setProcessing(true)
     const { error } = await supabase
@@ -251,9 +403,20 @@ export default function RequestDetailPage() {
         <Header />
         <div className={styles.page}>
           <div className={styles.container}>
-            <div className={styles.loading}>
-              <i className="fas fa-spinner fa-spin"></i>
-              <span>読み込み中...</span>
+            <div className={styles.layout}>
+              <div className={styles.main}>
+                <div className={styles.skeleton} style={{ height: '2rem', width: '80px', marginBottom: 'var(--space-2)' }}></div>
+                <div className={styles.skeleton} style={{ height: '2.5rem', width: '80%', marginBottom: 'var(--space-6)' }}></div>
+                <div className={styles.skeleton} style={{ height: '1.5rem', width: '120px', marginBottom: 'var(--space-3)' }}></div>
+                <div className={styles.skeleton} style={{ height: '200px', marginBottom: 'var(--space-6)' }}></div>
+                <div className={styles.skeleton} style={{ height: '1.5rem', width: '120px', marginBottom: 'var(--space-3)' }}></div>
+                <div className={styles.skeleton} style={{ height: '150px', marginBottom: 'var(--space-6)' }}></div>
+              </div>
+              <div className={styles.sidebar}>
+                <div className={styles.skeleton} style={{ height: '180px', marginBottom: 'var(--space-4)' }}></div>
+                <div className={styles.skeleton} style={{ height: '200px', marginBottom: 'var(--space-4)' }}></div>
+                <div className={styles.skeleton} style={{ height: '180px' }}></div>
+              </div>
             </div>
           </div>
         </div>
@@ -292,15 +455,15 @@ export default function RequestDetailPage() {
             <div className={styles.main}>
               {/* ヘッダー */}
               <div className={styles.header}>
-                <div>
+                <div className={styles.headerBadges}>
                   <span className="badge badge-accent">
                     {CATEGORY_LABELS[request.category] || request.category}
                   </span>
-                  <h1 className={styles.title}>{request.title}</h1>
+                  <span className={`badge ${styles.statusBadge} ${styles[request.status]}`}>
+                    {STATUS_LABELS[request.status] || request.status}
+                  </span>
                 </div>
-                <span className={`${styles.statusBadge} ${styles[request.status]}`}>
-                  {STATUS_LABELS[request.status] || request.status}
-                </span>
+                <h1 className={styles.title}>{request.title}</h1>
               </div>
 
               {/* 仕事の概要 */}
@@ -355,13 +518,13 @@ export default function RequestDetailPage() {
                     <div className={styles.infoRow}>
                       <span className={styles.infoLabel}>応募期限</span>
                       <span className={styles.infoValue}>
-                        {formatDate(request.application_deadline)}
                         {(() => {
                           const daysUntil = Math.ceil((new Date(request.application_deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                           if (daysUntil > 0) return <span className={styles.deadlineBadge}>あと{daysUntil}日</span>
                           if (daysUntil === 0) return <span className={`${styles.deadlineBadge} ${styles.urgent}`}>本日締切</span>
                           return null
                         })()}
+                        {formatDate(request.application_deadline)}
                       </span>
                     </div>
                   )}
@@ -376,6 +539,12 @@ export default function RequestDetailPage() {
                     <div className={styles.statLabel}>応募した人</div>
                     <div className={styles.statValue}>
                       {applicationCount}<span className={styles.statUnit}>人</span>
+                    </div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statLabel}>契約した人</div>
+                    <div className={styles.statValue}>
+                      {(request.contracted_count || 0)}<span className={styles.statUnit}>人</span>
                     </div>
                   </div>
                   <div className={styles.statCard}>
@@ -449,33 +618,6 @@ export default function RequestDetailPage() {
                   </div>
                 </div>
               )}
-
-              {/* 依頼者情報（メイン下部） */}
-              {request.profiles?.username ? (
-                <Link href={`/creators/${request.profiles.username}`} className={styles.creatorCard}>
-                  <div className={styles.creatorAvatar}>
-                    {request.profiles?.avatar_url ? (
-                      <img src={request.profiles.avatar_url} alt={request.profiles.display_name || ''} />
-                    ) : (
-                      <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
-                    )}
-                  </div>
-                  <div className={styles.creatorInfo}>
-                    <div className={styles.creatorName}>{request.profiles?.display_name || '名前未設定'}</div>
-                    <div className={styles.creatorMeta}>依頼者のプロフィールを見る</div>
-                  </div>
-                  <i className="fas fa-chevron-right" style={{ color: 'var(--text-tertiary)' }}></i>
-                </Link>
-              ) : (
-                <div className={styles.creatorCard}>
-                  <div className={styles.creatorAvatar}>
-                    <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
-                  </div>
-                  <div className={styles.creatorInfo}>
-                    <div className={styles.creatorName}>{request.profiles?.display_name || '名前未設定'}</div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* サイドバー */}
@@ -515,7 +657,11 @@ export default function RequestDetailPage() {
                 {/* 応募ボタン */}
                 {request.status === 'open' && !isRequester && (
                   <>
-                    {isLoggedIn ? (
+                    {(request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
+                      <div className={styles.closedBadge}>
+                        <i className="fas fa-ban"></i>募集定員に達しました
+                      </div>
+                    ) : isLoggedIn ? (
                       hasApplied ? (
                         <div className={styles.appliedBadge}>
                           <i className="fas fa-check-circle"></i>応募済みです
@@ -575,6 +721,91 @@ export default function RequestDetailPage() {
                   </form>
                 </div>
               )}
+
+              {/* クライアント情報カード */}
+              <div className={styles.clientCard}>
+                <h3 className={styles.clientCardTitle}>依頼者</h3>
+                <div className={styles.clientInfo}>
+                  <div className={styles.clientAvatar}>
+                    {request.profiles?.avatar_url ? (
+                      <Image 
+                        src={request.profiles.avatar_url} 
+                        alt={request.profiles.display_name || ''} 
+                        width={56} 
+                        height={56}
+                        sizes="56px"
+                      />
+                    ) : (
+                      <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
+                    )}
+                  </div>
+                  <div className={styles.clientDetails}>
+                    <div className={styles.clientName}>
+                      {request.profiles?.display_name || '名前未設定'}
+                    </div>
+                    {clientStats.reviewCount > 0 && (
+                      <div className={styles.clientRating}>
+                        <i className="fas fa-star"></i>
+                        <span>{clientStats.averageRating.toFixed(1)}</span>
+                        <span className={styles.reviewCount}>({clientStats.reviewCount}件)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.clientStats}>
+                  <div className={styles.clientStatItem}>
+                    <span className={styles.clientStatValue}>{clientStats.orderCount}</span>
+                    <span className={styles.clientStatLabel}>発注件数</span>
+                  </div>
+                  <div className={styles.clientStatItem}>
+                    <span className={styles.clientStatValue}>{clientStats.reviewCount}</span>
+                    <span className={styles.clientStatLabel}>評価件数</span>
+                  </div>
+                </div>
+                {request.profiles?.username && (
+                  <Link href={`/creators/${request.profiles.username}`} className={styles.clientProfileLink}>
+                    プロフィールを見る
+                    <i className="fas fa-chevron-right"></i>
+                  </Link>
+                )}
+              </div>
+
+              {/* シェア & 通報 */}
+              <div className={styles.sidebarFooter}>
+                <div className={`${styles.shareContainer} share-dropdown-container`}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsShareDropdownOpen(!isShareDropdownOpen) }}
+                    className={styles.shareBtn}
+                  >
+                    <i className="fas fa-share-alt"></i>
+                    シェア
+                  </button>
+                  {isShareDropdownOpen && (
+                    <div className={styles.shareDropdown}>
+                      <button onClick={() => handleShare('twitter')} className={styles.shareItem}>
+                        <i className="fab fa-x-twitter"></i>
+                        X
+                      </button>
+                      <button onClick={() => handleShare('facebook')} className={styles.shareItem}>
+                        <i className="fab fa-facebook" style={{ color: '#1877F2' }}></i>
+                        Facebook
+                      </button>
+                      <button onClick={() => handleShare('line')} className={styles.shareItem}>
+                        <i className="fab fa-line" style={{ color: '#00B900' }}></i>
+                        LINE
+                      </button>
+                      <button onClick={() => handleShare('copy')} className={styles.shareItem}>
+                        <i className="fas fa-link"></i>
+                        {copySuccess ? 'コピーしました！' : 'URLをコピー'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setShowReportModal(true)} className={styles.reportLink}>
+                  <i className="fas fa-flag"></i>
+                  この募集を通報する
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -583,39 +814,47 @@ export default function RequestDetailPage() {
         {showApplicationForm && (
           <div className={styles.modalOverlay} onClick={() => setShowApplicationForm(false)}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-              <h2 className={styles.modalTitle}>この依頼に応募する</h2>
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>この依頼に応募する</h3>
+                <button className={styles.modalClose} onClick={() => setShowApplicationForm(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
               <form onSubmit={handleSubmitApplication}>
-                <div className={styles.modalGroup}>
-                  <label className={styles.modalLabel} htmlFor="application-message">
-                    応募メッセージ <span className={styles.required}>*</span>
-                  </label>
-                  <textarea
-                    id="application-message"
-                    name="application-message"
-                    value={applicationMessage}
-                    onChange={(e) => setApplicationMessage(e.target.value)}
-                    placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください"
-                    required
-                    className={styles.modalTextarea}
-                  />
-                </div>
-                <div className={styles.modalGroup}>
-                  <label className={styles.modalLabel} htmlFor="proposed-price">希望金額</label>
-                  <div className={styles.modalPriceRow}>
-                    <input
-                      id="proposed-price"
-                      name="proposed-price"
-                      type="number"
-                      value={proposedPrice}
-                      onChange={(e) => setProposedPrice(e.target.value)}
-                      placeholder="希望する金額"
-                      min="0"
-                      className={styles.modalInput}
+                <div className={styles.modalBody}>
+                  <div className={styles.modalGroup}>
+                    <label className={styles.modalLabel} htmlFor="application-message">
+                      応募メッセージ <span className={styles.required}>*</span>
+                    </label>
+                    <textarea
+                      id="application-message"
+                      name="application-message"
+                      value={applicationMessage}
+                      onChange={(e) => setApplicationMessage(e.target.value)}
+                      placeholder="自己紹介や実績、この依頼への意気込みなどを記入してください"
+                      required
+                      className={styles.modalTextarea}
                     />
-                    <span className={styles.modalUnit}>円</span>
+                  </div>
+                  <div className={styles.modalGroup}>
+                    <label className={styles.modalLabel} htmlFor="proposed-price">希望金額（税込）</label>
+                    <div className={styles.modalPriceRow}>
+                      <input
+                        id="proposed-price"
+                        name="proposed-price"
+                        type="number"
+                        value={proposedPrice}
+                        onChange={(e) => setProposedPrice(e.target.value)}
+                        placeholder="500"
+                        min="500"
+                        className={styles.modalInput}
+                      />
+                      <span className={styles.modalUnit}>円</span>
+                    </div>
+                    <p className={styles.modalHint}>※最低500円から・手数料12%が差し引かれます</p>
                   </div>
                 </div>
-                <div className={styles.modalButtons}>
+                <div className={styles.modalFooter}>
                   <button type="button" onClick={() => setShowApplicationForm(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>
                     キャンセル
                   </button>
@@ -627,6 +866,132 @@ export default function RequestDetailPage() {
             </div>
           </div>
         )}
+
+        {/* 通報モーダル */}
+        {showReportModal && (
+          <div className={styles.modalOverlay} onClick={() => setShowReportModal(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>運営に規約違反を通報する</h3>
+                <button className={styles.modalClose} onClick={() => setShowReportModal(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <form onSubmit={handleSubmitReport}>
+                <div className={styles.modalBody}>
+                  <div className={styles.modalGroup}>
+                    <label className={styles.modalLabel} htmlFor="report-reason">
+                      報告理由 <span className={styles.required}>*</span>
+                    </label>
+                    <select
+                      id="report-reason"
+                      name="report-reason"
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      required
+                      className={styles.modalSelect}
+                    >
+                      <option value="">選択してください</option>
+                      {REPORT_REASONS.map(reason => (
+                        <option key={reason.value} value={reason.value}>{reason.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.modalGroup}>
+                    <label className={styles.modalLabel} htmlFor="report-content">
+                      詳細（任意）
+                    </label>
+                    <textarea
+                      id="report-content"
+                      name="report-content"
+                      value={reportContent}
+                      onChange={(e) => setReportContent(e.target.value)}
+                      placeholder="具体的な状況や問題点があればご記入ください"
+                      rows={4}
+                      className={styles.modalTextarea}
+                    />
+                  </div>
+                </div>
+                <div className={styles.modalFooter}>
+                  <button type="button" onClick={() => setShowReportModal(false)} disabled={submittingReport} className={`${styles.btn} ${styles.secondary}`}>
+                    キャンセル
+                  </button>
+                  <button type="submit" disabled={submittingReport || !reportReason} className={`${styles.btn} ${styles.primary}`}>
+                    {submittingReport ? '送信中...' : '通報する'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* スマホ用固定フッター */}
+        <div className={styles.mobileFooter}>
+          <div className={styles.mobileFooterPrice}>
+            <span className={styles.mobileFooterPriceLabel}>
+              {request.payment_type === 'hourly' ? '時給' : '予算'}
+            </span>
+            <span className={styles.mobileFooterPriceValue}>
+              {request.payment_type === 'hourly' ? (
+                request.hourly_rate_min && request.hourly_rate_max
+                  ? `¥${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}`
+                  : request.hourly_rate_min
+                  ? `¥${request.hourly_rate_min.toLocaleString()}〜`
+                  : request.hourly_rate_max
+                  ? `〜¥${request.hourly_rate_max.toLocaleString()}`
+                  : '応相談'
+              ) : request.price_negotiable ? (
+                '相談して決める'
+              ) : (request.budget_min || request.budget_max) ? (
+                `¥${request.budget_min?.toLocaleString() || '0'}〜${request.budget_max ? `¥${request.budget_max.toLocaleString()}` : ''}`
+              ) : (
+                '金額未設定'
+              )}
+            </span>
+          </div>
+          <div className={styles.mobileFooterAction}>
+            {request.status === 'open' && !isRequester && (
+              (request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
+                <span className={styles.mobileClosedBadge}>募集定員に達しました</span>
+              ) : isLoggedIn ? (
+                hasApplied ? (
+                  <span className={styles.mobileAppliedBadge}>
+                    <i className="fas fa-check-circle"></i>応募済み
+                  </span>
+                ) : (
+                  <button onClick={() => setShowApplicationForm(true)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                    応募画面へ
+                  </button>
+                )
+              ) : (
+                <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                  ログインして応募
+                </Link>
+              )
+            )}
+            {isRequester && (
+              request.status === 'open' ? (
+                <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                  応募を管理
+                </Link>
+              ) : myContractId ? (
+                <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                  契約進捗を確認
+                </Link>
+              ) : (
+                <span className={styles.mobileClosedBadge}>募集終了</span>
+              )
+            )}
+            {!isRequester && myContractId && (
+              <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                契約進捗を確認
+              </Link>
+            )}
+            {!isRequester && !myContractId && request.status !== 'open' && (
+              <span className={styles.mobileClosedBadge}>募集終了</span>
+            )}
+          </div>
+        </div>
       </div>
       <Footer />
     </>

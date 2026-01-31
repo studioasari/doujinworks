@@ -1,6 +1,5 @@
 /**
  * Header.module.css
- * デザインシステムに準拠したヘッダー固有スタイル
  */
 
 /* ============================================
@@ -13,6 +12,7 @@
   position: sticky;
   top: 0;
   z-index: 200;
+  height: 53px;
 }
 
 .inner {
@@ -20,14 +20,19 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-6);
+  padding: 0 var(--space-6);
   max-width: 1400px;
   margin: 0 auto;
+  height: 100%;
 }
 
 @media (max-width: 768px) {
+  .header {
+    height: 49px;
+  }
+
   .inner {
-    padding: var(--space-3) var(--space-4);
+    padding: 0 var(--space-4);
     gap: var(--space-3);
   }
 }
@@ -47,22 +52,6 @@
   width: auto;
 }
 
-@media (max-width: 768px) {
-  .logo {
-    height: 20px;
-  }
-}
-
-/* ============================================
-   検索バー
-   ============================================ */
-
-.inner :global(.search-bar) {
-  flex: 1;
-  max-width: 400px;
-  min-width: 200px;
-}
-
 /* ============================================
    ナビゲーション
    ============================================ */
@@ -73,14 +62,23 @@
   gap: 16px;
 }
 
+.navPlaceholder {
+  width: 200px;
+  height: 32px;
+}
+
 @media (max-width: 768px) {
   .nav {
     gap: 12px;
   }
+  
+  .navPlaceholder {
+    width: 100px;
+  }
 }
 
 /* ============================================
-   認証ボタン（未ログイン時）
+   認証ボタン
    ============================================ */
 
 .authButtons {
@@ -90,7 +88,7 @@
 }
 
 /* ============================================
-   アイコンボタン（メール・通知）
+   アイコンボタン
    ============================================ */
 
 .iconBtn {
@@ -108,6 +106,7 @@
   font-size: 22px;
   cursor: pointer;
   transition: all var(--transition-fast);
+  text-decoration: none;
 }
 
 .iconBtn:hover {
@@ -174,24 +173,6 @@
   opacity: 0.8;
 }
 
-.avatarBtn .avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.avatarBtn .avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatarBtn .avatar i {
-  color: white;
-  font-size: var(--text-sm);
-}
-
 /* ============================================
    メニューコンテナ
    ============================================ */
@@ -202,6 +183,24 @@
   position: relative;
   margin: 0;
   padding: 0;
+}
+
+/* ============================================
+   オーバーレイ（スマホ全画面メニュー用）
+   ============================================ */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 299;
+}
+
+[data-theme="dark"] .overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 /* ============================================
@@ -226,30 +225,34 @@
   left: auto;
 }
 
-/* モバイル用ドロップダウン */
+/* スマホ用全画面ドロップダウン */
 .dropdownMobile {
   position: fixed;
-  top: 56px;
+  top: 49px;
   bottom: 0;
   left: 0;
   right: 0;
   min-width: 100%;
+  border: none;
+  border-top: 1px solid var(--border-default);
   border-radius: 0;
   max-height: none;
   display: flex;
   flex-direction: column;
   z-index: 300;
+  box-shadow: none;
 }
 
-/* オーバーレイ */
-.overlay {
-  position: fixed;
-  top: 56px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 299;
+.dropdownMobile .dropdownContent {
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.profileDropdown {
+  min-width: 280px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 /* ============================================
@@ -270,12 +273,6 @@
 
 .dropdownContent {
   max-height: 320px;
-  overflow-y: auto;
-}
-
-.dropdownMobile .dropdownContent {
-  max-height: none;
-  flex: 1;
   overflow-y: auto;
 }
 
@@ -310,6 +307,7 @@
   text-align: left;
   cursor: pointer;
   transition: all var(--transition-fast);
+  text-decoration: none;
 }
 
 .dropdownItem:hover {
@@ -333,6 +331,104 @@
 }
 
 /* ============================================
+   プロフィールヘッダー
+   ============================================ */
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.profileHeader:hover {
+  background: var(--bg-hover);
+}
+
+.profileHeaderAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+}
+
+.profileHeaderAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.profileHeaderName {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profileHeaderUsername {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.profileHeaderArrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ============================================
+   依頼受付トグル（PC）
+   ============================================ */
+
+.acceptingToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+}
+
+.acceptingLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.acceptingLabel i {
+  font-size: var(--text-sm);
+}
+
+.acceptingStatus {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-left: auto;
+  margin-right: var(--space-2);
+}
+
+.acceptingStatus.active {
+  color: var(--status-success);
+}
+
+/* ============================================
    メッセージアイテム
    ============================================ */
 
@@ -342,6 +438,7 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   transition: all var(--transition-fast);
+  text-decoration: none;
 }
 
 .messageItem:hover {
@@ -500,13 +597,334 @@
 }
 
 /* ============================================
-   ダークモード調整
+   ハンバーガーボタン
+   ============================================ */
+
+.hamburgerBtn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.hamburgerBtn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 1px;
+  transition: all var(--transition-fast);
+}
+
+.hamburgerBtn.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburgerBtn.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburgerBtn.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* ============================================
+   ハンバーガーメニュー
+   ============================================ */
+
+.hamburgerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 998;
+}
+
+.hamburgerOverlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hamburgerMenu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  max-width: 85vw;
+  background: var(--bg-elevated);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+
+.hamburgerMenu.active {
+  transform: translateX(0);
+}
+
+.hamburgerContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: var(--space-6);
+}
+
+/* ============================================
+   ハンバーガー：検索
+   ============================================ */
+
+.hamburgerSearch {
+  padding: var(--space-4);
+  background: var(--bg-base);
+}
+
+.hamburgerSearch :global(.search-bar) {
+  max-width: 100%;
+  background: var(--bg-elevated);
+}
+
+/* ============================================
+   ハンバーガー：プロフィール
+   ============================================ */
+
+.hamburgerProfile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  text-decoration: none;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.hamburgerProfile:active {
+  opacity: 0.8;
+}
+
+.hamburgerProfileAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--accent-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: white;
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+}
+
+.hamburgerProfileAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hamburgerProfileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.hamburgerProfileName {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hamburgerProfileUsername {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.hamburgerArrow {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   ハンバーガー：ステータスカード
+   ============================================ */
+
+.hamburgerStatusCard {
+  margin: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* ============================================
+   ハンバーガー：区切り線
+   ============================================ */
+
+.hamburgerDivider {
+  height: 1px;
+  background: var(--border-default);
+  margin: var(--space-2) var(--space-4);
+}
+
+/* ============================================
+   ハンバーガー：セクションタイトル
+   ============================================ */
+
+.hamburgerSectionTitle {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ============================================
+   ハンバーガー：アイテム
+   ============================================ */
+
+.hamburgerItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background var(--transition-fast);
+}
+
+.hamburgerItem:active {
+  background: var(--bg-hover);
+}
+
+.hamburgerItem i {
+  width: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.hamburgerItemText {
+  flex: 1;
+}
+
+/* ============================================
+   ハンバーガー：バッジ
+   ============================================ */
+
+.hamburgerBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+/* ============================================
+   ハンバーガー：トグル行
+   ============================================ */
+
+.hamburgerToggleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.hamburgerToggleRow i {
+  width: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.hamburgerToggleLabel {
+  flex: 1;
+}
+
+.hamburgerStatusText {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-right: var(--space-2);
+  flex-shrink: 0;
+}
+
+.hamburgerStatusText.active {
+  color: var(--status-success);
+}
+
+/* ============================================
+   ハンバーガー：ログアウト
+   ============================================ */
+
+.hamburgerLogout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: calc(100% - var(--space-8));
+  margin: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--status-error);
+  background: var(--status-error-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.hamburgerLogout:active {
+  opacity: 0.8;
+}
+
+.hamburgerLogout i {
+  width: 20px;
+  text-align: center;
+}
+
+/* ============================================
+   ダークモード
    ============================================ */
 
 [data-theme="dark"] .dropdown {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="dark"] .overlay {
+[data-theme="dark"] .hamburgerOverlay {
   background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .hamburgerMenu {
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
 }

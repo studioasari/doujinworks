@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import DashboardSidebar from '../components/DashboardSidebar'
@@ -24,6 +25,26 @@ type ChatRoom = {
   } | null
   unread_count: number
   pinned: boolean
+}
+
+// メッセージリストスケルトン
+function MessageListSkeleton() {
+  return (
+    <div className={styles.messageList}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className={styles.skeletonItem}>
+          <div className={`${styles.skeleton} ${styles.skeletonAvatar}`}></div>
+          <div className={styles.skeletonContent}>
+            <div className={styles.skeletonHeader}>
+              <div className={`${styles.skeleton} ${styles.skeletonName}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonTime}`}></div>
+            </div>
+            <div className={`${styles.skeleton} ${styles.skeletonMessage}`}></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function MessagesPage() {
@@ -189,12 +210,7 @@ export default function MessagesPage() {
             <h1 className={styles.title}>メッセージ</h1>
           </div>
 
-          {loading && (
-            <div className={styles.loading}>
-              <i className="fas fa-spinner fa-spin"></i>
-              <span>読み込み中...</span>
-            </div>
-          )}
+          {loading && <MessageListSkeleton />}
 
           {!loading && chatRooms.length === 0 && (
             <div className={styles.emptyState}>
@@ -221,9 +237,12 @@ export default function MessagesPage() {
                   <div className={styles.avatarWrapper}>
                     <div className={styles.avatar}>
                       {room.other_user.avatar_url ? (
-                        <img
+                        <Image
                           src={room.other_user.avatar_url}
                           alt={room.other_user.display_name || ''}
+                          width={48}
+                          height={48}
+                          sizes="48px"
                         />
                       ) : (
                         room.other_user.display_name?.charAt(0) || '?'

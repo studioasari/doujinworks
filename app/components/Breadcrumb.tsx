@@ -28,6 +28,7 @@ export default function Breadcrumb() {
     creatorName?: string
     pricingPlan?: { name: string; category: string }
     portfolioItem?: { name: string; category: string }
+    requestTitle?: string
   }>({})
 
   const excludePaths = ['/', '/login', '/signup', '/auth']
@@ -41,6 +42,8 @@ export default function Breadcrumb() {
       fetchPricingPlan(paths[1])
     } else if (paths[0] === 'portfolio' && paths[1] && isUUID(paths[1])) {
       fetchPortfolioItem(paths[1])
+    } else if (paths[0] === 'requests' && paths[1] && isUUID(paths[1])) {
+      fetchRequestTitle(paths[1])
     } else {
       setDynamicData({})
     }
@@ -89,6 +92,18 @@ export default function Breadcrumb() {
       })
     }
   }
+
+  async function fetchRequestTitle(id: string) {
+    const { data } = await supabase
+      .from('work_requests')
+      .select('title')
+      .eq('id', id)
+      .single()
+    
+    if (data?.title) {
+      setDynamicData({ requestTitle: data.title })
+    }
+  }
   
   useEffect(() => {
     generateBreadcrumbs()
@@ -121,6 +136,70 @@ export default function Breadcrumb() {
         items.push({ label: dynamicData.portfolioItem.name, href: pathname })
       } else {
         items.push({ label: '詳細', href: pathname })
+      }
+      setBreadcrumbs(items)
+      return
+    }
+
+    // メッセージ詳細ページ
+    if (paths[0] === 'messages' && paths.length === 2) {
+      items.push({ label: 'メッセージ', href: '/messages' })
+      items.push({ label: 'トーク', href: pathname })
+      setBreadcrumbs(items)
+      return
+    }
+
+    // 依頼関連ページ
+    if (paths[0] === 'requests' && paths[1] && isUUID(paths[1])) {
+      const requestId = paths[1]
+      const requestTitle = dynamicData.requestTitle || '依頼詳細'
+      
+      items.push({ label: '依頼一覧', href: '/requests' })
+      
+      // /requests/[id] - 依頼詳細
+      if (paths.length === 2) {
+        items.push({ label: requestTitle, href: pathname })
+        setBreadcrumbs(items)
+        return
+      }
+      
+      // /requests/[id]/manage - 応募管理
+      if (paths[2] === 'manage') {
+        items.push({ label: requestTitle, href: `/requests/${requestId}` })
+        items.push({ label: '応募管理', href: pathname })
+        setBreadcrumbs(items)
+        return
+      }
+      
+      // /requests/[id]/contracts/[contractId] - 契約詳細
+      if (paths[2] === 'contracts' && paths[3] && isUUID(paths[3])) {
+        const contractId = paths[3]
+        
+        items.push({ label: requestTitle, href: `/requests/${requestId}` })
+        
+        // /requests/[id]/contracts/[contractId] - 契約詳細
+        if (paths.length === 4) {
+          items.push({ label: '契約詳細', href: pathname })
+          setBreadcrumbs(items)
+          return
+        }
+        
+        // /requests/[id]/contracts/[contractId]/review - レビュー
+        if (paths[4] === 'review') {
+          items.push({ label: '契約詳細', href: `/requests/${requestId}/contracts/${contractId}` })
+          items.push({ label: 'レビュー', href: pathname })
+          setBreadcrumbs(items)
+          return
+        }
+      }
+      
+      // その他の/requests/[id]/... パス
+      items.push({ label: requestTitle, href: `/requests/${requestId}` })
+      for (let i = 2; i < paths.length; i++) {
+        if (!isUUID(paths[i])) {
+          const label = getPathLabel(paths[i], i === paths.length - 1, paths, i)
+          items.push({ label, href: `/${paths.slice(0, i + 1).join('/')}` })
+        }
       }
       setBreadcrumbs(items)
       return
@@ -182,7 +261,7 @@ export default function Breadcrumb() {
       'billing': '請求',
       'privacy': 'プライバシー',
       'security': 'セキュリティ',
-      'manage': '管理',
+      'manage': '応募管理',
       'upload': 'アップロード',
       'drafts': '下書き',
       'wallet': 'ウォレット',
@@ -191,6 +270,8 @@ export default function Breadcrumb() {
       'bank-account': '振込先設定',
       'admin': '管理者',
       'users': 'ユーザー管理',
+      'contracts': '契約',
+      'review': 'レビュー',
       ...CATEGORY_LABELS,
     }
 

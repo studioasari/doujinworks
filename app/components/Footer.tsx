@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import Breadcrumb from './Breadcrumb'
 import styles from './Footer.module.css'
 
@@ -13,7 +14,7 @@ export default function Footer() {
           <div className={styles.mainInner}>
             {/* 左：CTA */}
             <div className={styles.ctaArea}>
-              <img src="/logotype.png" alt="同人ワークス" className={styles.logo} />
+              <Image src="/logotype.png" alt="同人ワークス" width={160} height={32} sizes="160px" className={styles.logo} />
               
               <p className={styles.description}>
                 同人界隈特化の<br />

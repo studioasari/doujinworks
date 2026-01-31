@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { createNotification } from '@/utils/notifications'
@@ -1592,9 +1593,25 @@ export default function ContractDetailPage() {
       <>
         <Header />
         <div className={styles.page}>
-          <div className={styles.loading}>
-            <LoadingDots />
-            <span>読み込み中...</span>
+          <div className={styles.container}>
+            {/* スケルトン：ヘッダー */}
+            <div className={styles.skeletonHeader}>
+              <div className={`${styles.skeleton} ${styles.skeletonTitle}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonBadge}`}></div>
+            </div>
+            {/* スケルトン：進捗 */}
+            <div className={styles.skeletonProgress}>
+              <div className={`${styles.skeleton} ${styles.skeletonStep}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonStep}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonStep}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonStep}`}></div>
+            </div>
+            {/* スケルトン：カード */}
+            <div className={styles.skeletonCard}>
+              <div className={`${styles.skeleton} ${styles.skeletonLine}`}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonLine}`} style={{ width: '80%' }}></div>
+              <div className={`${styles.skeleton} ${styles.skeletonLine}`} style={{ width: '60%' }}></div>
+            </div>
           </div>
         </div>
         <Footer />
@@ -1813,7 +1830,7 @@ export default function ContractDetailPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>依頼内容</h2>
           <Link href={`/requests/${requestId}`} className={styles.detailLink}>
-            依頼詳細を見る
+            応募ページ
             <i className="fas fa-chevron-right"></i>
           </Link>
         </div>
@@ -1944,7 +1961,7 @@ export default function ContractDetailPage() {
       <div className={styles.chatHeader} onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
         <div className={styles.chatHeaderAvatar}>
           {otherUser?.avatar_url ? (
-            <img src={otherUser.avatar_url} alt="" loading="lazy" />
+            <Image src={otherUser.avatar_url} alt="" width={36} height={36} sizes="36px" />
           ) : (
             <span>{otherUser?.display_name?.charAt(0) || '?'}</span>
           )}
@@ -2005,7 +2022,7 @@ export default function ContractDetailPage() {
                     {!isCurrentUser && (
                       <div className={styles.chatMessageAvatar} onClick={navigateToProfile} style={{ cursor: otherUser?.username ? 'pointer' : 'default' }}>
                         {otherUser?.avatar_url ? (
-                          <img src={otherUser.avatar_url} alt="" loading="lazy" />
+                          <Image src={otherUser.avatar_url} alt="" width={36} height={36} sizes="36px" />
                         ) : (
                           <span>{otherUser?.display_name?.charAt(0) || '?'}</span>
                         )}

@@ -5,9 +5,10 @@ import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import styles from './page.module.css'
+import Header from '@/app/components/Header'
+import Footer from '@/app/components/Footer'
+import { CreatorGridSkeleton } from '@/app/components/Skeleton'
+import styles from './CreatorList.module.css'
 
 type Creator = {
   id: string
@@ -27,7 +28,7 @@ const ACCOUNT_TYPES = [
   { value: 'business', label: 'ビジネス利用' },
 ]
 
-export default function CreatorsPage() {
+export default function CreatorList() {
   const [creators, setCreators] = useState<Creator[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -154,13 +155,8 @@ export default function CreatorsPage() {
               </span>
             </div>
 
-            {/* ローディング */}
-            {loading && (
-              <div className={styles.loadingState}>
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>読み込み中...</p>
-              </div>
-            )}
+            {/* スケルトン */}
+            {loading && <CreatorGridSkeleton count={8} />}
 
             {/* 空状態 */}
             {!loading && filteredCreators.length === 0 && (
@@ -192,6 +188,7 @@ export default function CreatorsPage() {
                           alt={creator.display_name || ''}
                           width={64}
                           height={64}
+                          sizes="64px"
                         />
                       ) : (
                         <span className={styles.avatarInitial}>

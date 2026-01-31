@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import { PricingGridSkeleton } from '@/app/components/Skeleton'
 import styles from './PricingList.module.css'
 
 type PricingPlan = {
@@ -343,13 +344,8 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
               </span>
             </div>
 
-            {/* ローディング */}
-            {loading && (
-              <div className={styles.loadingState}>
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>読み込み中...</p>
-              </div>
-            )}
+            {/* スケルトン */}
+            {loading && <PricingGridSkeleton count={8} />}
 
             {/* 空状態 */}
             {!loading && filteredPlans.length === 0 && (
@@ -373,7 +369,13 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                       {/* 画像 */}
                       <div className={styles.cardImage}>
                         {plan.thumbnail_url ? (
-                          <img src={plan.thumbnail_url} alt={plan.plan_name} loading="lazy" />
+                          <Image 
+                            src={plan.thumbnail_url} 
+                            alt={plan.plan_name}
+                            fill
+                            sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 200px"
+                            style={{ objectFit: 'cover' }}
+                          />
                         ) : (
                           <div className={styles.placeholder}>
                             <i className="far fa-image"></i>
@@ -397,7 +399,8 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                                 src={plan.profiles.avatar_url} 
                                 alt="" 
                                 width={24} 
-                                height={24} 
+                                height={24}
+                                sizes="24px"
                               />
                             ) : (
                               <i className="fas fa-user"></i>

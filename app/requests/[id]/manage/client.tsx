@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { createNotification } from '@/utils/notifications'
@@ -210,9 +211,10 @@ export default function RequestManagePage() {
 
       if (newContractsCount >= maxPositions) {
         await supabase.from('work_request_applications').update({ status: 'rejected' }).eq('work_request_id', requestId).eq('status', 'pending')
-        await supabase.from('work_requests').update({ status: 'closed' }).eq('id', requestId)
+        await supabase.from('work_requests').update({ status: 'contracted', contracted_count: newContractsCount }).eq('id', requestId)
         alert(`契約を確定しました！募集人数（${maxPositions}人）に達したため、募集を終了しました。`)
       } else {
+        await supabase.from('work_requests').update({ contracted_count: newContractsCount }).eq('id', requestId)
         alert(`契約を確定しました！（${newContractsCount}/${maxPositions}人採用済み）`)
       }
 
@@ -240,7 +242,7 @@ export default function RequestManagePage() {
     if (!confirm('募集を終了しますか？\n※未対応の応募は全て却下されます。')) return
     setProcessing(true)
     await supabase.from('work_request_applications').update({ status: 'rejected' }).eq('work_request_id', requestId).eq('status', 'pending')
-    const { error } = await supabase.from('work_requests').update({ status: 'closed' }).eq('id', requestId)
+    const { error } = await supabase.from('work_requests').update({ status: 'contracted' }).eq('id', requestId)
     if (error) alert('募集終了に失敗しました')
     else { alert('募集を終了しました'); fetchRequest(); fetchApplications() }
     setProcessing(false)
@@ -257,7 +259,7 @@ export default function RequestManagePage() {
   }
 
   function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = { open: '募集中', closed: '募集終了', cancelled: 'キャンセル' }
+    const statuses: { [key: string]: string } = { open: '募集中', contracted: '募集終了', cancelled: 'キャンセル' }
     return statuses[status] || status
   }
 
@@ -276,9 +278,15 @@ export default function RequestManagePage() {
         <Header />
         <div className={styles.page}>
           <div className={styles.container}>
-            <div className={styles.loading}>
-              <i className="fas fa-spinner fa-spin"></i>
-              <span>読み込み中...</span>
+            <div className={styles.header}>
+              <div className={styles.skeleton} style={{ height: '2rem', width: '60%', marginBottom: 'var(--space-4)' }}></div>
+              <div className={styles.skeleton} style={{ height: '1.5rem', width: '100px' }}></div>
+            </div>
+            <div className={styles.section}>
+              <div className={styles.skeleton} style={{ height: '1.5rem', width: '150px', marginBottom: 'var(--space-4)' }}></div>
+              <div className={styles.skeleton} style={{ height: '60px', marginBottom: 'var(--space-2)' }}></div>
+              <div className={styles.skeleton} style={{ height: '60px', marginBottom: 'var(--space-2)' }}></div>
+              <div className={styles.skeleton} style={{ height: '60px' }}></div>
             </div>
           </div>
         </div>
@@ -342,7 +350,7 @@ export default function RequestManagePage() {
                           <Link href={`/creators/${contract.profiles.username}`} className={styles.cardAvatarLink}>
                             <div className={styles.cardAvatar}>
                               {contract.profiles?.avatar_url ? (
-                                <img src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} />
+                                <Image src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                               ) : (
                                 <span>{contract.profiles?.display_name?.charAt(0) || '?'}</span>
                               )}
@@ -351,7 +359,7 @@ export default function RequestManagePage() {
                         ) : (
                           <div className={styles.cardAvatar}>
                             {contract.profiles?.avatar_url ? (
-                              <img src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} />
+                              <Image src={contract.profiles.avatar_url} alt={contract.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                             ) : (
                               <span>{contract.profiles?.display_name?.charAt(0) || '?'}</span>
                             )}
@@ -413,7 +421,7 @@ export default function RequestManagePage() {
                               >
                                 <div className={styles.applicationAvatar}>
                                   {app.profiles?.avatar_url ? (
-                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                    <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                   ) : (
                                     <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                   )}
@@ -422,7 +430,7 @@ export default function RequestManagePage() {
                             ) : (
                               <div className={styles.applicationAvatar}>
                                 {app.profiles?.avatar_url ? (
-                                  <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                  <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                 ) : (
                                   <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                 )}
@@ -463,7 +471,7 @@ export default function RequestManagePage() {
                                 >
                                   <div className={styles.applicationAvatar}>
                                     {app.profiles?.avatar_url ? (
-                                      <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                      <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                     ) : (
                                       <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                     )}
@@ -472,7 +480,7 @@ export default function RequestManagePage() {
                               ) : (
                                 <div className={styles.applicationAvatar}>
                                   {app.profiles?.avatar_url ? (
-                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                    <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                   ) : (
                                     <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                   )}
@@ -485,15 +493,6 @@ export default function RequestManagePage() {
                                 </span>
                               </div>
                             </div>
-                            {contract && (
-                              <Link 
-                                href={`/requests/${requestId}/contracts/${contract.id}`} 
-                                className={styles.linkBtn}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                契約詳細 <i className="fas fa-chevron-right"></i>
-                              </Link>
-                            )}
                           </div>
                         )
                       })}
@@ -520,7 +519,7 @@ export default function RequestManagePage() {
                               >
                                 <div className={styles.applicationAvatar}>
                                   {app.profiles?.avatar_url ? (
-                                    <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                    <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                   ) : (
                                     <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                   )}
@@ -529,7 +528,7 @@ export default function RequestManagePage() {
                             ) : (
                               <div className={styles.applicationAvatar}>
                                 {app.profiles?.avatar_url ? (
-                                  <img src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} />
+                                  <Image src={app.profiles.avatar_url} alt={app.profiles.display_name || ''} width={36} height={36} sizes="36px" />
                                 ) : (
                                   <span>{app.profiles?.display_name?.charAt(0) || '?'}</span>
                                 )}
@@ -593,28 +592,35 @@ export default function RequestManagePage() {
       {showContractModal && (
         <div className={styles.modalOverlay} onClick={() => setShowContractModal(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>契約を確定</h2>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>契約を確定</h3>
+              <button className={styles.modalClose} onClick={() => setShowContractModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
 
-            <div className={styles.modalGroup}>
-              <label className={styles.modalLabel}>確定金額 <span className={styles.required}>*</span></label>
-              <div className={styles.modalPriceRow}>
-                <input type="number" value={contractPrice} onChange={(e) => setContractPrice(e.target.value)} placeholder="金額を入力" min="500" required className={styles.modalInput} />
-                <span className={styles.modalUnit}>円</span>
+            <div className={styles.modalBody}>
+              <div className={styles.modalGroup}>
+                <label className={styles.modalLabel}>確定金額 <span className={styles.required}>*</span></label>
+                <div className={styles.modalPriceRow}>
+                  <input type="number" value={contractPrice} onChange={(e) => setContractPrice(e.target.value)} placeholder="金額を入力" min="500" required className={styles.modalInput} />
+                  <span className={styles.modalUnit}>円</span>
+                </div>
+                <div className={styles.modalHint}>※最低金額は500円です</div>
               </div>
-              <div className={styles.modalHint}>※最低金額は500円です</div>
+
+              <div className={styles.modalGroup}>
+                <label className={styles.modalLabel}>納期 <span className={styles.required}>*</span></label>
+                <input type="date" value={contractDeadline} onChange={(e) => setContractDeadline(e.target.value)} min={new Date().toISOString().split('T')[0]} required className={`${styles.modalInput} ${styles.full}`} />
+              </div>
+
+              <div className={styles.modalInfo}>
+                <i className="fas fa-info-circle"></i>
+                <span>契約確定後、仮払いを行うとクリエイターが作業を開始できます。{remainingPositions > 1 && `残り ${remainingPositions - 1} 人まで追加で採用できます。`}</span>
+              </div>
             </div>
 
-            <div className={styles.modalGroup}>
-              <label className={styles.modalLabel}>納期 <span className={styles.required}>*</span></label>
-              <input type="date" value={contractDeadline} onChange={(e) => setContractDeadline(e.target.value)} min={new Date().toISOString().split('T')[0]} required className={`${styles.modalInput} ${styles.full}`} />
-            </div>
-
-            <div className={styles.modalInfo}>
-              <i className="fas fa-info-circle"></i>
-              <span>契約確定後、仮払いを行うとクリエイターが作業を開始できます。{remainingPositions > 1 && `残り ${remainingPositions - 1} 人まで追加で採用できます。`}</span>
-            </div>
-
-            <div className={styles.modalButtons}>
+            <div className={styles.modalFooter}>
               <button onClick={() => setShowContractModal(false)} className={`${styles.btn} ${styles.secondary}`}>キャンセル</button>
               <button onClick={handleConfirmContract} disabled={processing} className={`${styles.btn} ${styles.primary}`}>
                 {processing ? '処理中...' : '採用して契約確定'}
@@ -629,7 +635,7 @@ export default function RequestManagePage() {
         <div className={styles.modalOverlay} onClick={() => setSelectedApplication(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             {/* ヘッダー */}
-            <div className={styles.appModalHeader}>
+            <div className={styles.modalHeader}>
               <div className={styles.appModalUser}>
                 {selectedApplication.profiles?.username ? (
                   <Link 
@@ -639,7 +645,7 @@ export default function RequestManagePage() {
                   >
                     <div className={styles.appModalAvatar}>
                       {selectedApplication.profiles?.avatar_url ? (
-                        <img src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} />
+                        <Image src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} width={48} height={48} sizes="48px" />
                       ) : (
                         <span>{selectedApplication.profiles?.display_name?.charAt(0) || '?'}</span>
                       )}
@@ -648,7 +654,7 @@ export default function RequestManagePage() {
                 ) : (
                   <div className={styles.appModalAvatar}>
                     {selectedApplication.profiles?.avatar_url ? (
-                      <img src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} />
+                      <Image src={selectedApplication.profiles.avatar_url} alt={selectedApplication.profiles.display_name || ''} width={48} height={48} sizes="48px" />
                     ) : (
                       <span>{selectedApplication.profiles?.display_name?.charAt(0) || '?'}</span>
                     )}
@@ -657,35 +663,38 @@ export default function RequestManagePage() {
                 <div className={styles.appModalName}>{selectedApplication.profiles?.display_name || '名前未設定'}</div>
               </div>
               <button onClick={() => setSelectedApplication(null)} className={styles.modalClose}>
-                <i className="fas fa-times"></i>
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
-            {/* 応募情報 */}
-            <div className={styles.appModalInfo}>
-              <div className={styles.appModalInfoRow}>
-                <span className={styles.appModalInfoLabel}>希望金額</span>
-                <span className={styles.appModalInfoValue}>
-                  {selectedApplication.proposed_price 
-                    ? `¥${selectedApplication.proposed_price.toLocaleString()}` 
-                    : '未指定'}
-                </span>
+            {/* ボディ */}
+            <div className={styles.modalBody}>
+              {/* 応募情報 */}
+              <div className={styles.appModalInfo}>
+                <div className={styles.appModalInfoRow}>
+                  <span className={styles.appModalInfoLabel}>希望金額</span>
+                  <span className={styles.appModalInfoValue}>
+                    {selectedApplication.proposed_price 
+                      ? `¥${selectedApplication.proposed_price.toLocaleString()}` 
+                      : '未指定'}
+                  </span>
+                </div>
+                <div className={styles.appModalInfoRow}>
+                  <span className={styles.appModalInfoLabel}>応募日</span>
+                  <span className={styles.appModalInfoValue}>{formatDate(selectedApplication.created_at)}</span>
+                </div>
               </div>
-              <div className={styles.appModalInfoRow}>
-                <span className={styles.appModalInfoLabel}>応募日</span>
-                <span className={styles.appModalInfoValue}>{formatDate(selectedApplication.created_at)}</span>
+
+              {/* メッセージ */}
+              <div className={styles.appModalMessage}>
+                <div className={styles.appModalMessageLabel}>応募メッセージ</div>
+                <p className={styles.appModalMessageText}>{selectedApplication.message}</p>
               </div>
             </div>
 
-            {/* メッセージ */}
-            <div className={styles.appModalMessage}>
-              <div className={styles.appModalMessageLabel}>応募メッセージ</div>
-              <p className={styles.appModalMessageText}>{selectedApplication.message}</p>
-            </div>
-
-            {/* アクション */}
+            {/* フッター */}
             {selectedApplication.status === 'pending' && request.status === 'open' && (
-              <div className={styles.appModalActions}>
+              <div className={styles.modalFooter}>
                 <button 
                   onClick={() => { handleRejectApplication(selectedApplication.id); setSelectedApplication(null); }} 
                   disabled={processing} 
@@ -711,15 +720,19 @@ export default function RequestManagePage() {
             )}
 
             {selectedApplication.status === 'accepted' && (
-              <div className={styles.appModalStatus}>
-                <i className="fas fa-check-circle"></i>
-                採用済み
+              <div className={styles.modalFooter}>
+                <div className={styles.appModalStatus}>
+                  <i className="fas fa-check-circle"></i>
+                  採用済み
+                </div>
               </div>
             )}
 
             {selectedApplication.status === 'rejected' && (
-              <div className={styles.appModalStatusRejected}>
-                却下済み
+              <div className={styles.modalFooter}>
+                <div className={styles.appModalStatusRejected}>
+                  却下済み
+                </div>
               </div>
             )}
           </div>

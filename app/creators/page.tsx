@@ -1,4 +1,4 @@
-import CreatorsPage from './client'
+import CreatorList from '@/app/components/CreatorList'
 
 export const metadata = {
   title: 'クリエイター一覧 | 同人ワークス',
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function Page() {
-  return <CreatorsPage />
+  return <CreatorList />
 }

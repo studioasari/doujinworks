@@ -604,7 +604,13 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
 
                 <div className={`avatar avatar-xl ${styles.creatorAvatar}`}>
                   {creator.avatar_url ? (
-                    <Image src={creator.avatar_url} alt={creator.display_name} width={120} height={120} />
+                    <Image 
+                      src={creator.avatar_url} 
+                      alt={creator.display_name} 
+                      width={120} 
+                      height={120}
+                      sizes="120px"
+                    />
                   ) : (
                     <i className="fas fa-user"></i>
                   )}
@@ -703,7 +709,13 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   <Link href={`/creators/${creator.username}`} className={styles.mobileCreatorLink}>
                     <div className={`avatar avatar-md ${styles.mobileAvatar}`}>
                       {creator.avatar_url ? (
-                        <Image src={creator.avatar_url} alt={creator.display_name} width={48} height={48} />
+                        <Image 
+                          src={creator.avatar_url} 
+                          alt={creator.display_name} 
+                          width={48} 
+                          height={48}
+                          sizes="48px"
+                        />
                       ) : (
                         <i className="fas fa-user"></i>
                       )}
@@ -750,7 +762,8 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                           src={image} 
                           alt={`${work.title} - ${index + 1}`} 
                           width={1000} 
-                          height={1414} 
+                          height={1414}
+                          sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 700px"
                           loading={index === 0 ? 'eager' : 'lazy'} 
                         />
                       </div>
@@ -766,7 +779,8 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                         src={displayImages[currentImageIndex]} 
                         alt={work.title} 
                         width={800} 
-                        height={600} 
+                        height={600}
+                        sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 600px"
                         priority 
                       />
                       <div className={styles.zoomHint}>
@@ -805,7 +819,13 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                             onClick={() => setCurrentImageIndex(index)}
                             className={`${styles.thumbnail} ${currentImageIndex === index ? styles.active : ''}`}
                           >
-                            <Image src={image} alt={`${work.title} - ${index + 1}`} width={100} height={100} />
+                            <Image 
+                              src={image} 
+                              alt={`${work.title} - ${index + 1}`} 
+                              width={100} 
+                              height={100}
+                              sizes="100px"
+                            />
                           </button>
                         ))}
                       </div>
@@ -830,7 +850,13 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   <div className={styles.audioContainer}>
                     {displayImages.length > 0 && (
                       <div className={styles.audioCover}>
-                        <Image src={displayImages[0]} alt={work.title} width={400} height={400} />
+                        <Image 
+                          src={displayImages[0]} 
+                          alt={work.title} 
+                          width={400} 
+                          height={400}
+                          sizes="(max-width: 767px) 80vw, 400px"
+                        />
                       </div>
                     )}
                     <div className={styles.audioPlayer}>
@@ -1040,7 +1066,8 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
               src={displayImages[currentImageIndex]} 
               alt={work.title} 
               width={1920} 
-              height={1080} 
+              height={1080}
+              sizes="100vw"
             />
           </div>
           {displayImages.length > 1 && (
@@ -1082,7 +1109,12 @@ function WorkCard({ work }: { work: PortfolioItemWithStats }) {
     <Link href={`/portfolio/${work.id}`} className="card">
       <div className="card-image">
         {images[0] ? (
-          <Image src={images[0]} alt={work.title} fill />
+          <Image 
+            src={images[0]} 
+            alt={work.title} 
+            fill
+            sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 200px"
+          />
         ) : (
           <i className="fa-regular fa-image"></i>
         )}
@@ -1146,7 +1178,13 @@ function CommentItem({
       <div className={styles.commentMain}>
         <div className={`avatar avatar-sm ${styles.commentAvatar}`}>
           {comment.user.avatar_url ? (
-            <Image src={comment.user.avatar_url} alt="" width={36} height={36} />
+            <Image 
+              src={comment.user.avatar_url} 
+              alt="" 
+              width={36} 
+              height={36}
+              sizes="36px"
+            />
           ) : (
             <i className="fas fa-user"></i>
           )}

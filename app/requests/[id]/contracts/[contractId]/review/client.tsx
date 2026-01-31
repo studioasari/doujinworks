@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../../../../../utils/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '../../../../../components/Header'
 import Footer from '../../../../../components/Footer'
 import { createNotification } from '../../../../../../utils/notifications'
@@ -21,22 +22,6 @@ type ExistingReview = {
   rating: number
   comment: string | null
   created_at: string
-}
-
-// ローディングドット
-function LoadingDots() {
-  return (
-    <div className={styles.loadingDots}>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  )
 }
 
 export default function ReviewClient() {
@@ -247,9 +232,26 @@ export default function ReviewClient() {
         <Header />
         <div className={styles.page}>
           <div className={styles.container}>
-            <div className={styles.loading}>
-              <LoadingDots />
-              <span>読み込み中...</span>
+            <div className={styles.card}>
+              {/* スケルトン：レビュー対象 */}
+              <div className={styles.target}>
+                <div className={`${styles.skeleton} ${styles.skeletonAvatar}`}></div>
+                <div className={styles.targetInfo}>
+                  <div className={`${styles.skeleton} ${styles.skeletonName}`}></div>
+                  <div className={`${styles.skeleton} ${styles.skeletonRole}`}></div>
+                </div>
+              </div>
+              {/* スケルトン：フォーム */}
+              <div className={styles.skeletonForm}>
+                <div className={`${styles.skeleton} ${styles.skeletonLabel}`}></div>
+                <div className={`${styles.skeleton} ${styles.skeletonStars}`}></div>
+                <div className={`${styles.skeleton} ${styles.skeletonLabel}`}></div>
+                <div className={`${styles.skeleton} ${styles.skeletonTextarea}`}></div>
+                <div className={styles.skeletonActions}>
+                  <div className={`${styles.skeleton} ${styles.skeletonButton}`}></div>
+                  <div className={`${styles.skeleton} ${styles.skeletonButton}`}></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -288,7 +290,7 @@ export default function ReviewClient() {
             <div className={styles.target}>
               <div className={styles.targetAvatar}>
                 {reviewTarget?.avatar_url ? (
-                  <img src={reviewTarget.avatar_url} alt="" />
+                  <Image src={reviewTarget.avatar_url} alt="" width={64} height={64} sizes="64px" />
                 ) : (
                   <i className="fas fa-user"></i>
                 )}

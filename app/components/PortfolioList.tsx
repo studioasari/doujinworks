@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import { WorkGridSkeleton, FeaturedGridSkeleton } from '@/app/components/Skeleton'
 import styles from './PortfolioList.module.css'
 
 type PortfolioItem = {
@@ -130,15 +131,11 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     }
   }
 
-  // 今週の人気作品（いいね数上位4件）
+  // おすすめ作品（いいね数上位8件）
   const featuredItems = useMemo(() => {
-    const oneWeekAgo = new Date()
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-    
     return [...portfolioItems]
-      .filter(item => new Date(item.created_at) >= oneWeekAgo || item.likeCount > 0)
       .sort((a, b) => b.likeCount - a.likeCount)
-      .slice(0, 4)
+      .slice(0, 8)
   }, [portfolioItems])
 
   // ソート済みアイテム
@@ -249,6 +246,65 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     )
   }
 
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className={styles.page}>
+          <aside className={styles.sidebar}>
+            <nav className={styles.sidebarNav}>
+              <Link href="/portfolio" className={`${styles.navItem} ${!category ? styles.active : ''}`}>
+                すべて
+              </Link>
+            </nav>
+            <div className={styles.separator}></div>
+            <div className={styles.sidebarSection}>
+              <div className={styles.sectionTitle}>カテゴリ</div>
+              {CATEGORIES.map((cat) => (
+                <Link key={cat.value} href={cat.path} className={`${styles.navItem} ${category === cat.value ? styles.active : ''}`}>
+                  {cat.label}
+                </Link>
+              ))}
+            </div>
+          </aside>
+          <main className={styles.main}>
+            <div className={styles.mainInner}>
+              <div className={styles.pageHeader}>
+                <h1 className={styles.pageTitle}>{pageTitle || '作品一覧'}</h1>
+                {pageDescription && <p className={styles.pageDescription}>{pageDescription}</p>}
+              </div>
+              <div className={styles.mobileTabs}>
+                <Link href="/portfolio" className={`${styles.mobileTab} ${!category ? styles.active : ''}`}>
+                  すべて
+                </Link>
+                {CATEGORIES.map((cat) => (
+                  <Link key={cat.value} href={cat.path} className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}>
+                    {cat.label}
+                  </Link>
+                ))}
+              </div>
+              {!category && (
+                <section className={styles.featuredSection}>
+                  <div className={styles.featuredHeader}>
+                    <h2 className={styles.featuredTitle}>おすすめ作品</h2>
+                  </div>
+                  <FeaturedGridSkeleton count={8} />
+                </section>
+              )}
+              <div className={styles.sortTabs}>
+                <button className={`${styles.sortTab} ${styles.active}`}>新着</button>
+                <button className={styles.sortTab}>急上昇</button>
+                <button className={styles.sortTab}>人気</button>
+              </div>
+              <WorkGridSkeleton count={12} />
+            </div>
+          </main>
+        </div>
+        <Footer />
+      </>
+    )
+  }
+
   return (
     <>
       <Header />
@@ -282,12 +338,13 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
         <main className={styles.main}>
           <div className={styles.mainInner}>
             {/* ページヘッダー */}
-            {pageTitle && (
-              <div className={styles.pageHeader}>
-                <h1 className={styles.pageTitle}>{pageTitle}</h1>
-                {pageDescription && <p className={styles.pageDescription}>{pageDescription}</p>}
-              </div>
-            )}
+            <div className={styles.pageHeader}>
+              <h1 className={styles.pageTitle}>
+                {pageTitle || '作品一覧'}
+                <span className={styles.pageCount}>{sortedItems.length}件</span>
+              </h1>
+              {pageDescription && <p className={styles.pageDescription}>{pageDescription}</p>}
+            </div>
 
             {/* モバイル用カテゴリタブ */}
             <div className={styles.mobileTabs}>
@@ -308,16 +365,8 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
               ))}
             </div>
 
-            {/* ローディング */}
-            {loading && (
-              <div className={styles.loadingState}>
-                <i className="fas fa-spinner fa-spin"></i>
-                <p>読み込み中...</p>
-              </div>
-            )}
-
             {/* 空状態 */}
-            {!loading && portfolioItems.length === 0 && (
+            {portfolioItems.length === 0 && (
               <div className={styles.emptyState}>
                 <i className="fa-regular fa-image"></i>
                 <p>作品がありません</p>
@@ -325,32 +374,26 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
             )}
 
             {/* コンテンツ */}
-            {!loading && portfolioItems.length > 0 && (
+            {portfolioItems.length > 0 && (
               <>
-                {/* 🔥 今週の人気作品 */}
+                {/* おすすめ作品 */}
                 {featuredItems.length > 0 && !category && (
                   <section className={styles.featuredSection}>
                     <div className={styles.featuredHeader}>
-                      <h2 className={styles.featuredTitle}>
-                        <i className="fas fa-fire"></i>
-                        今週の人気作品
-                      </h2>
+                      <h2 className={styles.featuredTitle}>おすすめ作品</h2>
                     </div>
                     <div className={styles.featuredGrid}>
-                      {featuredItems.map((item, index) => (
+                      {featuredItems.map((item) => (
                         <Link 
                           key={item.id} 
                           href={`/portfolio/${item.id}`} 
                           className={styles.featuredCard}
                         >
-                          <span className={`${styles.featuredRank} ${index === 0 ? styles.rank1 : index === 1 ? styles.rank2 : index === 2 ? styles.rank3 : ''}`}>
-                            {index + 1}
-                          </span>
                           <Image 
                             src={item.thumbnail_url || item.image_url} 
                             alt={item.title}
                             fill
-                            sizes="(max-width: 767px) 50vw, 25vw"
+                            sizes="(max-width: 767px) 25vw, 15vw"
                             style={{ objectFit: 'cover' }}
                           />
                           <div className={styles.featuredCardContent}>
@@ -362,8 +405,9 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                                     <Image 
                                       src={item.profiles.avatar_url} 
                                       alt="" 
-                                      width={24} 
-                                      height={24} 
+                                      width={16} 
+                                      height={16}
+                                      sizes="16px"
                                     />
                                   )}
                                 </div>
@@ -371,7 +415,6 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                               </div>
                               <div className={styles.featuredCardStats}>
                                 <span><i className="fas fa-heart"></i> {item.likeCount}</span>
-                                <span><i className="fas fa-comment"></i> {item.commentCount}</span>
                               </div>
                             </div>
                           </div>
@@ -392,12 +435,9 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                       {tab.label}
                     </button>
                   ))}
-                  <span className={styles.sortTabCount}>
-                    <span>{sortedItems.length}</span>件
-                  </span>
                 </div>
 
-                {/* マソンリーグリッド */}
+                {/* サムネイルグリッド */}
                 <div className={styles.worksGrid}>
                   {paginatedItems.map((item) => (
                     <Link 
@@ -408,37 +448,34 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                       {/* 画像 */}
                       <div className={styles.workCardImage}>
                         {item.thumbnail_url || item.image_url ? (
-                          <img 
+                          <Image 
                             src={item.thumbnail_url || item.image_url} 
                             alt={item.title}
-                            loading="lazy"
+                            fill
+                            sizes="(max-width: 479px) 50vw, (max-width: 767px) 33vw, (max-width: 1023px) 25vw, 180px"
+                            style={{ objectFit: 'cover' }}
                           />
                         ) : (
                           <div className={styles.placeholder}>
                             <i className="fa-regular fa-image"></i>
                           </div>
                         )}
-                        <span className={styles.cardBadge}>{getCategoryLabel(item.category)}</span>
-                        
-                        {/* NEW / HOT ラベル */}
-                        {isNew(item.created_at) && !isHot(item.likeCount) && (
-                          <span className={`${styles.cardLabel} ${styles.new}`}>NEW</span>
-                        )}
-                        {isHot(item.likeCount) && (
-                          <span className={`${styles.cardLabel} ${styles.hot}`}>🔥 HOT</span>
-                        )}
-
-                        {/* ホバー時オーバーレイ */}
-                        <div className={styles.cardOverlay}>
-                          <span><i className="fas fa-heart"></i> {item.likeCount}</span>
-                          <span><i className="fas fa-comment"></i> {item.commentCount}</span>
-                        </div>
                       </div>
 
-                      {/* カードボディ */}
-                      <div className={styles.workCardBody}>
+                      {/* バッジ */}
+                      <span className={styles.cardBadge}>{getCategoryLabel(item.category)}</span>
+                      
+                      {/* NEW / HOT ラベル */}
+                      {isNew(item.created_at) && !isHot(item.likeCount) && (
+                        <span className={`${styles.cardLabel} ${styles.new}`}>NEW</span>
+                      )}
+                      {isHot(item.likeCount) && (
+                        <span className={`${styles.cardLabel} ${styles.hot}`}>🔥</span>
+                      )}
+
+                      {/* ホバー時に表示される情報 */}
+                      <div className={styles.cardInfo}>
                         <h3 className={styles.cardTitle}>{item.title}</h3>
-                        
                         <div className={styles.cardMeta}>
                           <div className={styles.cardCreator}>
                             <div className={styles.creatorAvatar}>
@@ -446,8 +483,9 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                                 <Image 
                                   src={item.profiles.avatar_url} 
                                   alt="" 
-                                  width={20} 
-                                  height={20} 
+                                  width={18} 
+                                  height={18}
+                                  sizes="18px"
                                 />
                               ) : (
                                 <i className="fas fa-user"></i>
@@ -457,11 +495,9 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                               {item.profiles?.display_name || '名前未設定'}
                             </span>
                           </div>
-                          
-                          {/* モバイル用stats */}
                           <div className={styles.cardStats}>
                             <span className={styles.statItem}>
-                              <i className={`fas fa-heart ${styles.iconLike}`}></i>
+                              <i className="fas fa-heart"></i>
                               {item.likeCount}
                             </span>
                             <span className={styles.statItem}>

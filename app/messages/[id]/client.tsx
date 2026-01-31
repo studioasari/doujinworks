@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import styles from './page.module.css'
 
@@ -1093,7 +1094,7 @@ export default function ChatRoomPage() {
                   
                   <div className={styles.roomAvatar}>
                     {room.other_user.avatar_url ? (
-                      <img src={room.other_user.avatar_url} alt={room.other_user.display_name || ''} loading="lazy" />
+                      <Image src={room.other_user.avatar_url} alt={room.other_user.display_name || ''} width={44} height={44} sizes="44px" />
                     ) : (
                       room.other_user.display_name?.charAt(0) || '?'
                     )}
@@ -1138,7 +1139,7 @@ export default function ChatRoomPage() {
           {otherUser && (
             <div className={styles.mobileHeader}>
               <div className={styles.mobileAvatar} onClick={() => setShowProfileModal(true)}>
-                {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
+                {otherUser.avatar_url ? <Image src={otherUser.avatar_url} alt="" width={36} height={36} sizes="36px" /> : otherUser.display_name?.charAt(0) || '?'}
               </div>
               <span className={styles.mobileName} onClick={() => setShowProfileModal(true)}>{otherUser.display_name || '名前未設定'}</span>
             </div>
@@ -1206,7 +1207,7 @@ export default function ChatRoomPage() {
                         <div className={styles.messageBubbleArea}>
                           {!isCurrentUser && otherUser && (
                             <div className={styles.messageAvatar} onClick={() => setShowProfileModal(true)}>
-                              {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" loading="lazy" /> : otherUser.display_name?.charAt(0) || '?'}
+                              {otherUser.avatar_url ? <Image src={otherUser.avatar_url} alt="" width={32} height={32} sizes="32px" /> : otherUser.display_name?.charAt(0) || '?'}
                             </div>
                           )}
 
@@ -1381,7 +1382,7 @@ export default function ChatRoomPage() {
         <div className={styles.profileModal} onClick={() => setShowProfileModal(false)}>
           <div className={styles.profileCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.profileAvatar}>
-              {otherUser.avatar_url ? <img src={otherUser.avatar_url} alt="" /> : <i className="fas fa-user"></i>}
+              {otherUser.avatar_url ? <Image src={otherUser.avatar_url} alt="" width={80} height={80} sizes="80px" /> : <i className="fas fa-user"></i>}
             </div>
             <h2 className={styles.profileName}>{otherUser.display_name || '名前未設定'}</h2>
             {otherUser.username && <p className={styles.profileUsername}>@{otherUser.username}</p>}
