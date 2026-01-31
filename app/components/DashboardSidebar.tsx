@@ -31,6 +31,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, text: '', top: 0 })
+  const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
 
   // 初回マウント時にlocalStorageから状態を復元
@@ -41,6 +42,18 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       setIsCollapsed(saved === 'true')
     }
   }, [])
+
+  // ボトムシート開閉時のbodyスクロール制御
+  useEffect(() => {
+    if (isMoreSheetOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMoreSheetOpen])
 
   // ツールチップ表示
   const showTooltip = useCallback((text: string, element: HTMLElement) => {
@@ -135,7 +148,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  // メニュー項目
+  // PC サイドバー用メニュー項目
   const menuItems: MenuItem[] = [
     { href: '/dashboard', icon: 'fa-solid fa-house', label: 'ダッシュボード' },
     { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
@@ -156,7 +169,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
 
   const otherItems: MenuItem[] = [
     { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
-    ...(accountType === 'business' ? [{ href: '/dashboard/business', icon: 'fa-solid fa-briefcase', label: 'ビジネス情報' }] : []),
+    { href: '/dashboard/settings', icon: 'fa-solid fa-gear', label: 'アカウント設定' },
   ]
 
   const adminItems: MenuItem[] = isAdmin ? [
@@ -165,8 +178,30 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     { href: '/admin/users', icon: 'fa-solid fa-users-gear', label: 'ユーザー管理', isAdmin: true },
   ] : []
 
-  // モバイル用全メニュー
-  const allMobileItems = [...menuItems, ...requestItems, ...financeItems, ...otherItems, ...adminItems]
+  // モバイル固定フッター用（主要4項目）
+  const footerItems: MenuItem[] = [
+    { href: '/dashboard', icon: 'fa-solid fa-house', label: 'ホーム' },
+    { href: '/dashboard/portfolio', icon: 'fa-solid fa-images', label: '作品' },
+    { href: '/requests/manage', icon: 'fa-solid fa-clipboard-list', label: '依頼' },
+    { href: '/dashboard/earnings', icon: 'fa-solid fa-chart-line', label: '収支' },
+  ]
+
+  // 「もっと」ボトムシート内の項目
+  const moreItems: MenuItem[] = [
+    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
+    { href: '/dashboard/pricing', icon: 'fa-solid fa-tags', label: '料金表管理' },
+    { href: '/requests/create', icon: 'fa-solid fa-circle-plus', label: '依頼を作成' },
+    { href: '/dashboard/payments', icon: 'fa-solid fa-credit-card', label: '支払い管理' },
+    { href: '/dashboard/bank-account', icon: 'fa-solid fa-building-columns', label: '振込先設定' },
+    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
+    { href: '/dashboard/settings', icon: 'fa-solid fa-gear', label: 'アカウント設定' },
+  ]
+
+  // 「もっと」内のアイテムがアクティブかどうか
+  const isMoreActive = () => {
+    return moreItems.some(item => isActive(item.href)) || 
+           (isAdmin && adminItems.some(item => isActive(item.href)))
+  }
 
   // サイドバーアイテムのレンダリング
   const renderSidebarItem = (item: MenuItem) => (
@@ -189,13 +224,42 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
 
   return (
     <>
-      {/* モバイル: 横スクロールナビ */}
-      <nav className={styles.mobileNav}>
-        {/* モバイル用受付状態トグル（ビジネスユーザーのみ） */}
+      {/* モバイル: 固定フッターナビ */}
+      <nav className={styles.mobileFooter}>
+        {footerItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`${styles.footerItem} ${isActive(item.href) ? styles.active : ''}`}
+          >
+            <i className={item.icon}></i>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+        <button
+          className={`${styles.footerItem} ${isMoreActive() ? styles.active : ''}`}
+          onClick={() => setIsMoreSheetOpen(true)}
+        >
+          <i className="fa-solid fa-ellipsis"></i>
+          <span>もっと</span>
+        </button>
+      </nav>
+
+      {/* モバイル: ボトムシート */}
+      <div 
+        className={`${styles.sheetOverlay} ${isMoreSheetOpen ? styles.active : ''}`}
+        onClick={() => setIsMoreSheetOpen(false)}
+      />
+      <div className={`${styles.bottomSheet} ${isMoreSheetOpen ? styles.active : ''}`}>
+        <div className={styles.sheetHandle} onClick={() => setIsMoreSheetOpen(false)}>
+          <span></span>
+        </div>
+        
+        {/* 受付状態トグル（ビジネスユーザーのみ） */}
         {accountType === 'business' && (
-          <div className={styles.mobileStatusBar}>
-            <div className={`${styles.mobileStatusIndicator} ${isAcceptingOrders ? styles.accepting : ''}`}>
-              <span className={styles.mobileStatusDot}></span>
+          <div className={styles.sheetStatusBar}>
+            <div className={`${styles.sheetStatusIndicator} ${isAcceptingOrders ? styles.accepting : ''}`}>
+              <span className={styles.sheetStatusDot}></span>
               <span>{isAcceptingOrders ? '受付中' : '停止中'}</span>
             </div>
             <button
@@ -208,20 +272,40 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
             </button>
           </div>
         )}
-        
-        <div className={styles.mobileScroll}>
-          {allMobileItems.map((item) => (
+
+        <div className={styles.sheetContent}>
+          {moreItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`${styles.mobileItem} ${isActive(item.href) ? styles.active : ''} ${item.isAdmin ? styles.admin : ''}`}
+              className={`${styles.sheetItem} ${isActive(item.href) ? styles.active : ''}`}
+              onClick={() => setIsMoreSheetOpen(false)}
             >
               <i className={item.icon}></i>
               <span>{item.label}</span>
             </Link>
           ))}
+
+          {/* 管理者メニュー */}
+          {isAdmin && (
+            <>
+              <div className={styles.sheetDivider}></div>
+              <div className={styles.sheetLabel}>管理者</div>
+              {adminItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${styles.sheetItem} ${styles.admin} ${isActive(item.href) ? styles.active : ''}`}
+                  onClick={() => setIsMoreSheetOpen(false)}
+                >
+                  <i className={item.icon}></i>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </>
+          )}
         </div>
-      </nav>
+      </div>
 
       {/* PC: 左サイドバー */}
       <aside 

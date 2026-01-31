@@ -9,7 +9,7 @@
 
 .sidebar {
   width: 260px;
-  min-height: calc(100vh - 65px);
+  min-height: calc(100vh - 60px);
   background: var(--bg-elevated);
   border-right: 1px solid var(--border-default);
   padding: var(--space-4);
@@ -42,8 +42,8 @@
   top: 24px;
   right: 0;
   transform: translateX(100%);
-  width: 24px;
-  height: 48px;
+  width: 16px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,10 +65,6 @@
 
 .collapseBtn i {
   font-size: 12px;
-}
-
-.collapseBtn span {
-  display: none;
 }
 
 /* ============================================
@@ -373,6 +369,23 @@
   cursor: not-allowed;
 }
 
+/* 小さいトグルスイッチ */
+.toggleSwitchSm {
+  width: 36px;
+  height: 20px;
+}
+
+.toggleSwitchSm .toggleKnob {
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  left: 2px;
+}
+
+.toggleSwitchSm.on .toggleKnob {
+  left: 18px;
+}
+
 /* ============================================
    折りたたみ時のステータスアイコン
    ============================================ */
@@ -412,139 +425,225 @@
 }
 
 /* ============================================
-   モバイル: 横スクロールナビ
+   モバイル: 固定フッターナビ
    ============================================ */
 
-.mobileNav {
-  display: block;
+.mobileFooter {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-default);
-  position: sticky;
-  top: 65px;
-  z-index: 90;
-  width: 100%;
+  border-top: 1px solid var(--border-default);
+  padding: var(--space-2) var(--space-1);
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  z-index: 100;
 }
 
 @media (min-width: 1024px) {
-  .mobileNav {
+  .mobileFooter {
     display: none;
   }
 }
 
-.mobileScroll {
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.mobileScroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* モバイル用受付状態バー */
-.mobileStatusBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-4);
-  background: var(--bg-sunken);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.mobileStatusIndicator {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-tertiary);
-}
-
-.mobileStatusIndicator.accepting {
-  color: var(--status-success);
-}
-
-.mobileStatusDot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-full);
-  background: var(--text-tertiary);
-}
-
-.mobileStatusIndicator.accepting .mobileStatusDot {
-  background: var(--status-success);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* 小さいトグルスイッチ */
-.toggleSwitchSm {
-  width: 36px;
-  height: 20px;
-}
-
-.toggleSwitchSm .toggleKnob {
-  width: 14px;
-  height: 14px;
-  top: 2px;
-  left: 2px;
-}
-
-.toggleSwitchSm.on .toggleKnob {
-  left: 18px;
-}
-
-/* ============================================
-   モバイルナビアイテム
-   ============================================ */
-
-.mobileItem {
+/* フッターアイテム */
+.footerItem {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-1);
   border-radius: var(--radius-md);
   font-size: 10px;
   font-weight: 500;
   color: var(--text-secondary);
-  white-space: nowrap;
-  flex-shrink: 0;
   text-decoration: none;
   transition: all var(--transition-fast);
-  min-width: 64px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
-.mobileItem i {
+.footerItem i {
+  font-size: var(--text-lg);
+}
+
+.footerItem:active {
+  transform: scale(0.95);
+}
+
+.footerItem.active {
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   モバイル: ボトムシート
+   ============================================ */
+
+.sheetOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 200;
+}
+
+.sheetOverlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.bottomSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  max-height: 70vh;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottomSheet.active {
+  transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+  .sheetOverlay,
+  .bottomSheet {
+    display: none;
+  }
+}
+
+/* シートハンドル */
+.sheetHandle {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+  cursor: pointer;
+}
+
+.sheetHandle span {
+  width: 36px;
+  height: 4px;
+  background: var(--border-default);
+  border-radius: var(--radius-full);
+}
+
+/* シート受付状態バー */
+.sheetStatusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-subtle);
+  margin: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+}
+
+.sheetStatusIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.sheetStatusIndicator.accepting {
+  color: var(--status-success);
+}
+
+.sheetStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+}
+
+.sheetStatusIndicator.accepting .sheetStatusDot {
+  background: var(--status-success);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* シートコンテンツ */
+.sheetContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+/* シートアイテム */
+.sheetItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.sheetItem i {
+  width: 24px;
   font-size: var(--text-base);
-  margin-bottom: 2px;
+  text-align: center;
 }
 
-.mobileItem:hover {
+.sheetItem:active {
   background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
-.mobileItem.active {
+.sheetItem.active {
   background: var(--accent-primary-subtle);
   color: var(--accent-primary);
 }
 
-/* モバイル管理者アイテム */
-.mobileItem.admin {
+.sheetItem.admin {
   color: var(--text-tertiary);
 }
 
-.mobileItem.admin:hover {
+.sheetItem.admin:active {
+  background: var(--status-warning-bg);
+}
+
+.sheetItem.admin.active {
   background: var(--status-warning-bg);
   color: var(--status-warning);
 }
 
-.mobileItem.admin.active {
-  background: var(--status-warning-bg);
+/* シート区切り線 */
+.sheetDivider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-2) 0;
+}
+
+/* シートラベル */
+.sheetLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
   color: var(--status-warning);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-3);
 }
 
 /* ============================================
@@ -565,6 +664,10 @@
 
 :global([data-theme="dark"]) .statusIconOnly.accepting {
   background: rgba(34, 197, 94, 0.15);
+}
+
+:global([data-theme="dark"]) .bottomSheet {
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================
