@@ -92,6 +92,10 @@ export function PricingCardSkeleton() {
           <div className={`${styles.skeleton} ${styles.pricingAvatar}`}></div>
           <div className={`${styles.skeleton} ${styles.pricingName}`}></div>
         </div>
+        <div className={styles.pricingFooter}>
+          <div className={`${styles.skeleton} ${styles.pricingRating}`}></div>
+          <div className={`${styles.skeleton} ${styles.pricingStatus}`}></div>
+        </div>
       </div>
     </div>
   )

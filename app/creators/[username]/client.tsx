@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
+import { WorkGridSkeleton } from '../../components/Skeleton'
 import styles from './page.module.css'
 
 type Creator = {
@@ -116,6 +117,83 @@ const WorkCard = memo(({ work }: { work: PortfolioItem }) => {
 
 WorkCard.displayName = 'WorkCard'
 
+// プロフィールスケルトン
+function ProfileSkeleton() {
+  return (
+    <div className={styles.page}>
+      <div className={styles.headerBg}>
+        <div className="skeleton" style={{ width: '100%', height: '100%' }}></div>
+      </div>
+      <div className={styles.container}>
+        <div className={`card ${styles.profileCard}`}>
+          <div className={styles.profileLayout}>
+            <div className="skeleton skeleton-avatar" style={{ width: 100, height: 100 }}></div>
+            <div className={styles.profileInfo}>
+              <div className={styles.profileHeader}>
+                <div className={styles.profileNames}>
+                  <div className="skeleton skeleton-text" style={{ width: 60, height: 14, marginBottom: 8 }}></div>
+                  <div className="skeleton skeleton-text" style={{ width: 180, height: 28, marginBottom: 8 }}></div>
+                  <div className="skeleton skeleton-text" style={{ width: 100, height: 14 }}></div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 8 }}></div>
+                  <div className="skeleton" style={{ width: 80, height: 36, borderRadius: 8 }}></div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+                <div className="skeleton skeleton-text" style={{ width: 80, height: 16 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: 80, height: 16 }}></div>
+              </div>
+              <div className="skeleton skeleton-text" style={{ width: '100%', height: 60 }}></div>
+            </div>
+          </div>
+        </div>
+        <div className="tabs" style={{ marginBottom: 24 }}>
+          <div className="skeleton" style={{ flex: 1, height: 40 }}></div>
+          <div className="skeleton" style={{ flex: 1, height: 40 }}></div>
+          <div className="skeleton" style={{ flex: 1, height: 40 }}></div>
+        </div>
+        <WorkGridSkeleton count={8} />
+      </div>
+    </div>
+  )
+}
+
+// レビュースケルトン
+function ReviewsSkeleton() {
+  return (
+    <div className={styles.reviewsLayout}>
+      <div className={`card ${styles.reviewsStatsCard}`}>
+        <div className="skeleton skeleton-text" style={{ width: 60, height: 48, margin: '0 auto 8px' }}></div>
+        <div className="skeleton skeleton-text" style={{ width: 100, height: 20, margin: '0 auto 8px' }}></div>
+        <div className="skeleton skeleton-text" style={{ width: 80, height: 14, margin: '0 auto 20px' }}></div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div className="skeleton skeleton-text" style={{ width: 16, height: 14 }}></div>
+            <div className="skeleton" style={{ flex: 1, height: 8, borderRadius: 4 }}></div>
+            <div className="skeleton skeleton-text" style={{ width: 20, height: 14 }}></div>
+          </div>
+        ))}
+      </div>
+      <div className={styles.reviewsList}>
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className={`card ${styles.reviewCard}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div className="skeleton skeleton-avatar" style={{ width: 32, height: 32 }}></div>
+              <div>
+                <div className="skeleton skeleton-text" style={{ width: 100, height: 14, marginBottom: 4 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: 80, height: 12 }}></div>
+              </div>
+            </div>
+            <div className="skeleton skeleton-text" style={{ width: 100, height: 16, marginBottom: 8 }}></div>
+            <div className="skeleton skeleton-text" style={{ width: '100%', height: 40 }}></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function CreatorDetailClient({ params }: { params: Promise<{ username: string }> }) {
   const unwrappedParams = use(params)
   const username = unwrappedParams.username
@@ -172,11 +250,17 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
   }, [isShareDropdownOpen])
 
   async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    setCurrentUserId(user?.id || null)
-    if (user) {
-      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (error || !data?.user) {
+        setCurrentUserId(null)
+        return
+      }
+      setCurrentUserId(data.user.id)
+      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single()
       if (profile) setCurrentProfileId(profile.id)
+    } catch (error) {
+      console.error('認証エラー:', error)
     }
   }
 
@@ -404,10 +488,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
     return (
       <>
         <Header />
-        <div className={styles.loadingContainer}>
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>読み込み中...</p>
-        </div>
+        <ProfileSkeleton />
         <Footer />
       </>
     )
@@ -463,6 +544,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                     alt={creator.display_name || ''} 
                     width={120} 
                     height={120}
+                    sizes="120px"
                     priority 
                   />
                 ) : (
@@ -522,67 +604,71 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                     <strong>{followerCount.toLocaleString()}</strong>
                     <span>フォロワー</span>
                   </div>
+                  <div className={styles.statItem}>
+                    <strong>{portfolioItems.length}</strong>
+                    <span>作品</span>
+                  </div>
                 </div>
 
                 {/* SNSリンク */}
-                <div className={styles.socialLinks}>
-                  {creator.twitter_url && (
-                    <a href={creator.twitter_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon}>
-                      <i className="fab fa-x-twitter"></i>
-                    </a>
-                  )}
-                  {creator.pixiv_url && (
-                    <a href={creator.pixiv_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon}>
-                      <i className="fas fa-palette"></i>
-                    </a>
-                  )}
-                  {creator.instagram_url && (
-                    <a href={creator.instagram_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon}>
-                      <i className="fab fa-instagram"></i>
-                    </a>
-                  )}
-                  {creator.youtube_url && (
-                    <a href={creator.youtube_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon}>
-                      <i className="fab fa-youtube"></i>
-                    </a>
-                  )}
-                  {creator.website_url && (
-                    <a href={creator.website_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon}>
-                      <i className="fas fa-globe"></i>
-                    </a>
-                  )}
-                  
-                  {/* シェアボタン */}
-                  <div className={`${styles.shareContainer} share-dropdown-container`}>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setIsShareDropdownOpen(!isShareDropdownOpen) }} 
-                      className={styles.socialIcon}
-                      title="プロフィールを共有"
-                    >
-                      <i className="fas fa-arrow-up-from-bracket"></i>
-                    </button>
-                    {isShareDropdownOpen && (
-                      <div className={styles.shareDropdown}>
-                        <button onClick={() => handleShare('twitter')} className={styles.shareItem}>
-                          <i className="fab fa-x-twitter"></i>
-                          X
-                        </button>
-                        <button onClick={() => handleShare('facebook')} className={styles.shareItem}>
-                          <i className="fab fa-facebook" style={{ color: '#1877F2' }}></i>
-                          Facebook
-                        </button>
-                        <button onClick={() => handleShare('line')} className={styles.shareItem}>
-                          <i className="fab fa-line" style={{ color: '#00B900' }}></i>
-                          LINE
-                        </button>
-                        <button onClick={() => handleShare('copy')} className={styles.shareItem}>
-                          <i className="fas fa-link"></i>
-                          URLをコピー
-                        </button>
-                      </div>
+                {(creator.twitter_url || creator.pixiv_url || creator.instagram_url || creator.youtube_url || creator.website_url) && (
+                  <div className={styles.socialLinks}>
+                    {creator.twitter_url && (
+                      <a href={creator.twitter_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="X (Twitter)">
+                        <i className="fa-brands fa-x-twitter"></i>
+                      </a>
                     )}
+                    {creator.pixiv_url && (
+                      <a href={creator.pixiv_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="pixiv">
+                        <i className="fa-solid fa-p"></i>
+                      </a>
+                    )}
+                    {creator.instagram_url && (
+                      <a href={creator.instagram_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Instagram">
+                        <i className="fa-brands fa-instagram"></i>
+                      </a>
+                    )}
+                    {creator.youtube_url && (
+                      <a href={creator.youtube_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="YouTube">
+                        <i className="fa-brands fa-youtube"></i>
+                      </a>
+                    )}
+                    {creator.website_url && (
+                      <a href={creator.website_url} target="_blank" rel="noopener noreferrer" className={styles.socialIcon} title="Webサイト">
+                        <i className="fas fa-globe"></i>
+                      </a>
+                    )}
+                    <div className={`${styles.shareContainer} share-dropdown-container`}>
+                      <button 
+                        onClick={() => setIsShareDropdownOpen(!isShareDropdownOpen)} 
+                        className={styles.socialIcon} 
+                        title="シェア"
+                      >
+                        <i className="fas fa-share-nodes"></i>
+                      </button>
+                      {isShareDropdownOpen && (
+                        <div className={styles.shareDropdown}>
+                          <button onClick={() => handleShare('twitter')} className={styles.shareItem}>
+                            <i className="fa-brands fa-x-twitter"></i>
+                            <span>X (Twitter)</span>
+                          </button>
+                          <button onClick={() => handleShare('facebook')} className={styles.shareItem}>
+                            <i className="fa-brands fa-facebook"></i>
+                            <span>Facebook</span>
+                          </button>
+                          <button onClick={() => handleShare('line')} className={styles.shareItem}>
+                            <i className="fa-brands fa-line"></i>
+                            <span>LINE</span>
+                          </button>
+                          <button onClick={() => handleShare('copy')} className={styles.shareItem}>
+                            <i className="fas fa-link"></i>
+                            <span>URLをコピー</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 自己紹介 */}
                 {creator.bio && (
@@ -590,28 +676,17 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                 )}
 
                 {/* 依頼ボタン */}
-                {!isOwnProfile && (
-                  <button
-                    onClick={() => {
-                      if (!currentUserId) {
-                        if (confirm('依頼を送るにはログインが必要です。ログインページに移動しますか？')) {
-                          router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-                        }
-                        return
-                      }
-                      router.push(`/requests/create?to=${username}`)
-                    }}
-                    className={`btn btn-secondary ${styles.requestBtn}`}
-                  >
+                {!isOwnProfile && creator.account_type === 'business' && creator.can_receive_work && (
+                  <Link href={`/requests/create?to=${creator.username}`} className={`btn btn-primary ${styles.requestBtn}`}>
                     <i className="fas fa-paper-plane"></i>
-                    依頼を送る
-                  </button>
+                    依頼する
+                  </Link>
                 )}
               </div>
             </div>
           </div>
 
-          {/* メインタブ */}
+          {/* タブ */}
           <div className="tabs">
             <button 
               onClick={() => setMainTab('works')} 
@@ -658,10 +733,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
               )}
 
               {worksLoading ? (
-                <div className={styles.loadingState}>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>作品を読み込み中...</p>
-                </div>
+                <WorkGridSkeleton count={8} />
               ) : filteredWorks.length === 0 ? (
                 <div className="empty-state">
                   <i className="fa-regular fa-folder-open"></i>
@@ -679,10 +751,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
           {mainTab === 'pricing' && (
             <div className={styles.tabContent}>
               {pricingLoading ? (
-                <div className={styles.loadingState}>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>料金表を読み込み中...</p>
-                </div>
+                <WorkGridSkeleton count={4} />
               ) : pricingPlans.length === 0 ? (
                 <div className="empty-state">
                   <i className="fa-regular fa-file-lines"></i>
@@ -694,7 +763,14 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                     <Link key={plan.id} href={`/pricing/${plan.id}`} className={`card ${styles.pricingCard}`}>
                       <div className="card-image">
                         {plan.thumbnail_url ? (
-                          <Image src={plan.thumbnail_url} alt={plan.plan_name} fill />
+                          <Image 
+                            src={plan.thumbnail_url} 
+                            alt={plan.plan_name} 
+                            fill 
+                            sizes="(max-width: 768px) 100vw, 280px"
+                            loading="lazy"
+                            quality={75}
+                          />
                         ) : (
                           <i className="fa-regular fa-image"></i>
                         )}
@@ -715,10 +791,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
           {mainTab === 'reviews' && (
             <div className={styles.tabContent}>
               {reviewsLoading ? (
-                <div className={styles.loadingState}>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  <p>レビューを読み込み中...</p>
-                </div>
+                <ReviewsSkeleton />
               ) : reviews.length === 0 ? (
                 <div className="empty-state">
                   <i className="fa-regular fa-star"></i>
@@ -765,7 +838,13 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                             <Link href={`/creators/${review.reviewer.username}`} className={styles.reviewerLink}>
                               <div className={`avatar avatar-sm ${styles.reviewerAvatar} ${review.reviewer?.avatar_url ? styles.hasImage : ''}`}>
                                 {review.reviewer?.avatar_url ? (
-                                  <Image src={review.reviewer.avatar_url} alt="" width={32} height={32} />
+                                  <Image 
+                                    src={review.reviewer.avatar_url} 
+                                    alt="" 
+                                    width={32} 
+                                    height={32}
+                                    sizes="32px"
+                                  />
                                 ) : (
                                   <i className="fas fa-user"></i>
                                 )}

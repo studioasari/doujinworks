@@ -193,7 +193,7 @@ const HamburgerMenu = memo(function HamburgerMenu({
             <span className={styles.hamburgerItemText}>メッセージ</span>
             {unreadCount > 0 && <span className={styles.hamburgerBadge}>{unreadCount}</span>}
           </Link>
-          <Link href="/saved" className={styles.hamburgerItem} onClick={onClose}>
+          <Link href="/bookmarks" className={styles.hamburgerItem} onClick={onClose}>
             <i className="fas fa-bookmark"></i>
             <span className={styles.hamburgerItemText}>保存済み</span>
           </Link>
@@ -781,7 +781,7 @@ export default function Header() {
                       )}
                       <Link href="/dashboard" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-th-large"></i>ダッシュボード</Link>
                       <Link href="/messages" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-envelope"></i>メッセージ</Link>
-                      <Link href="/saved" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-bookmark"></i>保存済み</Link>
+                      <Link href="/bookmarks" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-bookmark"></i>保存済み</Link>
                       <div className={styles.dropdownDivider}></div>
                       <Link href="/dashboard/profile" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-user-edit"></i>プロフィール編集</Link>
                       <Link href="/dashboard/portfolio" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-images"></i>作品管理</Link>

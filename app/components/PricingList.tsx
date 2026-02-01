@@ -374,7 +374,6 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                             alt={plan.plan_name}
                             fill
                             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 200px"
-                            style={{ objectFit: 'cover' }}
                           />
                         ) : (
                           <div className={styles.placeholder}>

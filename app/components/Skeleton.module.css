@@ -134,10 +134,12 @@
 }
 
 .pricingImage {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1.91 / 1;
 }
 
 .pricingBody {
+  display: flex;
+  flex-direction: column;
   padding: var(--space-3);
 }
 
@@ -157,6 +159,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .pricingAvatar {
@@ -168,6 +171,24 @@
 .pricingName {
   height: 0.75rem;
   width: 50px;
+}
+
+.pricingFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.pricingRating {
+  height: 0.75rem;
+  width: 50px;
+}
+
+.pricingStatus {
+  height: 1.25rem;
+  width: 60px;
+  border-radius: var(--radius-full);
 }
 
 /* グリッド */
