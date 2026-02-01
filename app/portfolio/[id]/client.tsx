@@ -97,8 +97,13 @@ const CATEGORY_LABELS: { [key: string]: string } = {
 }
 
 async function getCurrentUserId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user?.id || null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data?.user) return null
+    return data.user.id
+  } catch {
+    return null
+  }
 }
 
 async function attachStatsToWorks(
@@ -135,6 +140,63 @@ async function attachStatsToWorks(
     isLiked: likedSet.has(w.id),
     isBookmarked: bookmarkedSet.has(w.id)
   }))
+}
+
+// スケルトンコンポーネント
+function PageSkeleton() {
+  return (
+    <>
+      <Header />
+      <div className={styles.skeletonPage}>
+        <div className={styles.skeletonContainer}>
+          <div className={styles.skeletonLayout}>
+            {/* サイドバースケルトン */}
+            <div className={styles.skeletonSidebar}>
+              <div className="skeleton skeleton-avatar" style={{ width: 100, height: 100, margin: '0 auto 16px' }}></div>
+              <div className="skeleton skeleton-text" style={{ width: '60%', height: 20, margin: '0 auto 8px' }}></div>
+              <div className="skeleton skeleton-text" style={{ width: '40%', height: 14, margin: '0 auto 20px' }}></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                <div className="skeleton" style={{ height: 36, borderRadius: 8 }}></div>
+                <div className="skeleton" style={{ height: 36, borderRadius: 8 }}></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-around', padding: '16px 0', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)', marginBottom: 20 }}>
+                <div className="skeleton skeleton-text" style={{ width: 40, height: 40 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: 40, height: 40 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: 40, height: 40 }}></div>
+              </div>
+              <div className="skeleton skeleton-text" style={{ width: '100%', height: 60, marginBottom: 20 }}></div>
+              <div className="skeleton" style={{ height: 40, borderRadius: 8 }}></div>
+            </div>
+
+            {/* メインスケルトン */}
+            <div className={styles.skeletonMain}>
+              {/* モバイル用クリエイタースケルトン */}
+              <div className={styles.skeletonMobileCreator}>
+                <div className="skeleton" style={{ height: 48, borderRadius: 12 }}></div>
+              </div>
+              {/* コンテンツスケルトン */}
+              <div className={styles.skeletonContent}>
+                <div className={`skeleton ${styles.skeletonImage}`}></div>
+              </div>
+              {/* アクションバースケルトン */}
+              <div className={styles.skeletonActions}>
+                <div className="skeleton" style={{ width: 60, height: 32, borderRadius: 8 }}></div>
+                <div className="skeleton" style={{ width: 60, height: 32, borderRadius: 8 }}></div>
+                <div className="skeleton" style={{ width: 40, height: 32, borderRadius: 8 }}></div>
+              </div>
+              {/* 作品情報スケルトン */}
+              <div className={styles.skeletonInfo}>
+                <div className="skeleton skeleton-text" style={{ width: '70%', height: 28, marginBottom: 12 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: '40%', height: 16, marginBottom: 16 }}></div>
+                <div className="skeleton skeleton-text" style={{ width: '100%', height: 80 }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </>
+  )
 }
 
 export default function PortfolioDetailClient({ params }: { params: Promise<{ id: string }> }) {
@@ -560,12 +622,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
 
   // ローディング状態
   if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <i className="fas fa-spinner fa-spin"></i>
-        <p>読み込み中...</p>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   // エラー状態
@@ -602,7 +659,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   </span>
                 )}
 
-                <div className={`avatar avatar-xl ${styles.creatorAvatar}`}>
+                <Link href={`/creators/${creator.username}`} className={`avatar avatar-xl ${styles.creatorAvatar}`}>
                   {creator.avatar_url ? (
                     <Image 
                       src={creator.avatar_url} 
@@ -610,38 +667,16 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                       width={120} 
                       height={120}
                       sizes="120px"
+                      
                     />
                   ) : (
                     <i className="fas fa-user"></i>
                   )}
-                </div>
+                </Link>
 
                 {creator.job_title && <p className={styles.jobTitle}>{creator.job_title}</p>}
                 <h2 className={styles.creatorName}>{creator.display_name}</h2>
                 <p className={styles.creatorUsername}>@{creator.username}</p>
-
-                {currentUserId !== creator.user_id && (
-                  <div className={styles.sidebarActions}>
-                    <button 
-                      onClick={() => router.push(`/messages/${creator.username}`)} 
-                      className="btn btn-secondary btn-sm"
-                    >
-                      <i className="fas fa-envelope"></i>
-                      メッセージ
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (creator.isFollowing) {
-                          if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
-                        } else handleFollow()
-                      }}
-                      className={`btn btn-sm ${creator.isFollowing ? 'btn-secondary' : 'btn-primary'}`}
-                    >
-                      <i className={creator.isFollowing ? 'fas fa-check' : 'fas fa-plus'}></i>
-                      {creator.isFollowing ? 'フォロー中' : 'フォロー'}
-                    </button>
-                  </div>
-                )}
 
                 <div className={styles.statsGrid}>
                   <div className={styles.statItem}>
@@ -695,56 +730,97 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   </div>
                 )}
 
-                <Link href={`/creators/${creator.username}`} className={`btn btn-secondary ${styles.profileBtn}`}>
-                  プロフィールを見る
-                </Link>
+                {currentUserId !== creator.user_id ? (
+                  <div className={styles.sidebarActions}>
+                    <button
+                      onClick={() => {
+                        if (!currentUserId) {
+                          if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
+                            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+                          }
+                          return
+                        }
+                        if (creator.isFollowing) {
+                          if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
+                        } else handleFollow()
+                      }}
+                      className={`btn ${styles.sidebarBtn} ${creator.isFollowing ? 'btn-secondary' : 'btn-primary'}`}
+                    >
+                      <i className={creator.isFollowing ? 'fas fa-check' : 'fas fa-plus'}></i>
+                      {creator.isFollowing ? 'フォロー中' : 'フォロー'}
+                    </button>
+                    <Link
+                      href={`/requests/create?to=${creator.username}`}
+                      className={`btn btn-accent ${styles.sidebarBtn}`}
+                    >
+                      <i className="fas fa-briefcase"></i>
+                      仕事を依頼
+                    </Link>
+                  </div>
+                ) : (
+                  <Link href={`/creators/${creator.username}/edit`} className={`btn btn-secondary ${styles.followBtn}`}>
+                    プロフィールを編集
+                  </Link>
+                )}
               </div>
             </aside>
 
             {/* メインコンテンツ */}
             <main className={styles.main}>
-              {/* モバイル用クリエイター情報 */}
+              {/* モバイル用クリエイター情報（コンパクト版） */}
               <div className={styles.mobileCreator}>
-                <div className={`card ${styles.mobileCreatorCard}`}>
+                <div className={styles.mobileCreatorBar}>
                   <Link href={`/creators/${creator.username}`} className={styles.mobileCreatorLink}>
-                    <div className={`avatar avatar-md ${styles.mobileAvatar}`}>
+                    <div className={`avatar avatar-xs ${styles.mobileAvatar}`}>
                       {creator.avatar_url ? (
                         <Image 
                           src={creator.avatar_url} 
                           alt={creator.display_name} 
-                          width={48} 
-                          height={48}
-                          sizes="48px"
+                          width={32} 
+                          height={32}
+                          sizes="32px"
                         />
                       ) : (
                         <i className="fas fa-user"></i>
                       )}
                     </div>
-                    <div className={styles.mobileCreatorInfo}>
-                      <span className={styles.mobileCreatorName}>{creator.display_name}</span>
-                      <span className={styles.mobileCreatorUsername}>@{creator.username}</span>
-                    </div>
+                    <span className={styles.mobileCreatorName}>{creator.display_name}</span>
                   </Link>
-                  {currentUserId !== creator.user_id && (
-                    <div className={styles.mobileActions}>
-                      <button 
-                        onClick={() => router.push(`/messages/${creator.username}`)} 
-                        className={`btn btn-secondary btn-sm ${styles.iconBtn}`}
+                  <div className={styles.mobileActions}>
+                    {currentUserId !== creator.user_id ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            if (!currentUserId) {
+                              if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
+                                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+                              }
+                              return
+                            }
+                            if (creator.isFollowing) {
+                              if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
+                            } else handleFollow()
+                          }}
+                          className={`btn btn-sm ${creator.isFollowing ? 'btn-secondary' : 'btn-primary'}`}
+                        >
+                          {creator.isFollowing ? 'フォロー中' : 'フォロー'}
+                        </button>
+                        <Link
+                          href={`/requests/create?to=${creator.username}`}
+                          className="btn btn-accent btn-sm"
+                        >
+                          依頼
+                        </Link>
+                      </>
+                    ) : (
+                      <Link 
+                        href={`/creators/${creator.username}/edit`} 
+                        className="btn btn-secondary btn-sm"
                       >
-                        <i className="fas fa-envelope"></i>
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (creator.isFollowing) {
-                            if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
-                          } else handleFollow()
-                        }}
-                        className={`btn btn-sm ${creator.isFollowing ? 'btn-secondary' : 'btn-primary'}`}
-                      >
-                        {creator.isFollowing ? 'フォロー中' : 'フォロー'}
-                      </button>
-                    </div>
-                  )}
+                        編集
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -764,6 +840,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                           width={1000} 
                           height={1414}
                           sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 700px"
+                          
                           loading={index === 0 ? 'eager' : 'lazy'} 
                         />
                       </div>
@@ -781,6 +858,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                         width={800} 
                         height={600}
                         sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 600px"
+                        
                         priority 
                       />
                       <div className={styles.zoomHint}>
@@ -825,6 +903,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                               width={100} 
                               height={100}
                               sizes="100px"
+                              
                             />
                           </button>
                         ))}
@@ -855,7 +934,8 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                           alt={work.title} 
                           width={400} 
                           height={400}
-                          sizes="(max-width: 767px) 80vw, 400px"
+                          sizes="(max-width: 767px) 200px, 300px"
+                          
                         />
                       </div>
                     )}
@@ -1068,6 +1148,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
               width={1920} 
               height={1080}
               sizes="100vw"
+              
             />
           </div>
           {displayImages.length > 1 && (
@@ -1114,6 +1195,7 @@ function WorkCard({ work }: { work: PortfolioItemWithStats }) {
             alt={work.title} 
             fill
             sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 200px"
+            
           />
         ) : (
           <i className="fa-regular fa-image"></i>
