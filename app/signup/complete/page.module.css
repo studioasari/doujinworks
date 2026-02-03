@@ -162,7 +162,120 @@
   flex: 1;
 }
 
-/* ユーザータイプ選択カード */
+/* ユーザータイプ選択（新デザイン） */
+.userTypeContainer {
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+}
+
+.userTypeTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.userTypeSubtitle {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.userTypeCarousel {
+  display: none;
+}
+
+.userTypeGridNew {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.userTypeCardNew {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.userTypeCardNew:hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.userTypeImage {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  margin-bottom: var(--space-4);
+}
+
+.userTypeCardTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.userTypeCardDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.userTypeHint {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.userTypeSelectBtn {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+/* Embla（スワイプ） */
+.emblaViewport {
+  overflow: hidden;
+}
+
+.emblaContainer {
+  display: flex;
+}
+
+.emblaSlide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 0 var(--space-4);
+}
+
+.emblaDots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.emblaDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.emblaDot.active {
+  background: var(--accent-primary);
+}
+
+/* ユーザータイプ選択カード（旧・互換用） */
 .userTypeGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -192,13 +305,6 @@
 
 .userTypeCardText {
   flex: 1;
-}
-
-.userTypeCardTitle {
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
 }
 
 .userTypeCardDescription {
@@ -368,8 +474,7 @@
 @media (max-width: 768px) {
   .page {
     padding: var(--space-4);
-    align-items: flex-start;
-    padding-top: var(--space-8);
+    align-items: center;
   }
 
   .title {
@@ -378,6 +483,14 @@
 
   .userTypeGrid {
     grid-template-columns: 1fr;
+  }
+
+  .userTypeCarousel {
+    display: block;
+  }
+
+  .userTypeGridNew {
+    display: none;
   }
 
   .desktopIndicator {

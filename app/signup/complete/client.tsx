@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation'
+import useEmblaCarousel from 'embla-carousel-react'
 import styles from './page.module.css'
 
 type Props = {
@@ -347,55 +348,115 @@ export function SignupCompleteClient({ user }: Props) {
     )
   }
 
-  // Step 1: 利用方法選択
+  // Step 1: 利用方法選択（新デザイン）
   if (step === 'userType') {
+    const userTypeOptions = [
+      {
+        type: 'casual' as UserType,
+        image: '/illustrations/usertype-casual.png',
+        title: '作品を楽しむ',
+        description: 'いいねしたり\nフォローしたり',
+      },
+      {
+        type: 'business' as UserType,
+        image: '/illustrations/usertype-business.png',
+        title: '仕事で使う',
+        description: '依頼したり\n受けたり',
+      },
+    ]
+
+    // Embla Carousel（スマホ用）
+    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false })
+    const [selectedIndex, setSelectedIndex] = useState(0)
+
+    useEffect(() => {
+      if (!emblaApi) return
+      const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap())
+      emblaApi.on('select', onSelect)
+      onSelect()
+      return () => { emblaApi.off('select', onSelect) }
+    }, [emblaApi])
+
+    const handleSelect = () => {
+      setUserType(userTypeOptions[selectedIndex].type)
+      changeStep('basicInfo')
+    }
+
     return (
       <div className={styles.page}>
-        <div className={`${styles.container} ${styles.containerWide}`}>
-          <h1 className={styles.title}>利用方法を選択</h1>
-          <p className={styles.subtitle}>同人ワークスをどのように利用しますか?</p>
+        <div className={styles.userTypeContainer}>
+          <h1 className={styles.userTypeTitle}>同人ワークスへようこそ！</h1>
+          <p className={styles.userTypeSubtitle}>どっちで使う？</p>
 
-          <div className={styles.userTypeGrid}>
-            <button
-              onClick={() => {
-                setUserType('casual')
-                changeStep('basicInfo')
-              }}
-              className={styles.userTypeCard}
-            >
-              <div className={styles.userTypeCardContent}>
-                <div className={styles.userTypeCardText}>
-                  <div className={styles.userTypeCardTitle}>一般利用</div>
-                  <div className={styles.userTypeCardDescription}>
-                    趣味で作品を投稿したり、他のクリエイターの作品を楽しむ
+          {/* スマホ: スワイプ */}
+          <div className={styles.userTypeCarousel}>
+            <div className={styles.emblaViewport} ref={emblaRef}>
+              <div className={styles.emblaContainer}>
+                {userTypeOptions.map((option, index) => (
+                  <div key={option.type} className={styles.emblaSlide}>
+                    <div className={styles.userTypeCardNew}>
+                      <img 
+                        src={option.image} 
+                        alt={option.title}
+                        className={styles.userTypeImage}
+                      />
+                      <div className={styles.userTypeCardTitle}>{option.title}</div>
+                      <div className={styles.userTypeCardDesc}>
+                        {option.description.split('\n').map((line, i) => (
+                          <span key={i}>{line}<br /></span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className={styles.userTypeCardImage}>
-                  {/* 挿絵をここに配置 */}
-                </div>
+                ))}
               </div>
-            </button>
+            </div>
+
+            <div className={styles.emblaDots}>
+              {userTypeOptions.map((_, index) => (
+                <button
+                  key={index}
+                  className={`${styles.emblaDot} ${index === selectedIndex ? styles.active : ''}`}
+                  onClick={() => emblaApi?.scrollTo(index)}
+                />
+              ))}
+            </div>
 
             <button
-              onClick={() => {
-                setUserType('business')
-                changeStep('basicInfo')
-              }}
-              className={styles.userTypeCard}
+              onClick={handleSelect}
+              className={`btn btn-primary ${styles.userTypeSelectBtn}`}
             >
-              <div className={styles.userTypeCardContent}>
-                <div className={styles.userTypeCardText}>
-                  <div className={styles.userTypeCardTitle}>ビジネス利用</div>
-                  <div className={styles.userTypeCardDescription}>
-                    仕事の受発注、報酬の受け取りなどビジネスとして利用する
-                  </div>
-                </div>
-                <div className={styles.userTypeCardImage}>
-                  {/* 挿絵をここに配置 */}
-                </div>
-              </div>
+              これにする
             </button>
           </div>
+
+          {/* PC: 横並び */}
+          <div className={styles.userTypeGridNew}>
+            {userTypeOptions.map((option) => (
+              <button
+                key={option.type}
+                onClick={() => {
+                  setUserType(option.type)
+                  changeStep('basicInfo')
+                }}
+                className={styles.userTypeCardNew}
+              >
+                <img 
+                  src={option.image} 
+                  alt={option.title}
+                  className={styles.userTypeImage}
+                />
+                <div className={styles.userTypeCardTitle}>{option.title}</div>
+                <div className={styles.userTypeCardDesc}>
+                  {option.description.split('\n').map((line, i) => (
+                    <span key={i}>{line}<br /></span>
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <p className={styles.userTypeHint}>あとから変更もできるよ</p>
         </div>
       </div>
     )
@@ -830,7 +891,7 @@ export function SignupCompleteClient({ user }: Props) {
                 <div className={styles.confirmItem}>
                   <span className={styles.confirmLabel}>利用方法</span>
                   <span className={styles.confirmValue}>
-                    {userType === 'casual' ? '一般利用' : 'ビジネス利用'}
+                    {userType === 'casual' ? '作品を楽しむ' : '仕事で使う'}
                   </span>
                 </div>
                 <div className={styles.confirmItem}>
