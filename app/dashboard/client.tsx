@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import TutorialModal from '@/app/components/TutorialModal'
 // Header/Footer/DashboardSidebar は layout.tsx で管理
 
 type TabType = 'activity' | 'business'
@@ -83,6 +84,7 @@ export default function DashboardClient() {
   const [profileId, setProfileId] = useState<string>('')
   const [accountType, setAccountType] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('activity')
+  const [showTutorial, setShowTutorial] = useState(false)
   
   // Activity Stats
   const [activityStats, setActivityStats] = useState<ActivityStats>({
@@ -137,7 +139,7 @@ export default function DashboardClient() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, account_type')
+      .select('id, account_type, tutorial_completed')
       .eq('user_id', user.id)
       .single()
 
@@ -145,10 +147,21 @@ export default function DashboardClient() {
       setCurrentUserId(user.id)
       setProfileId(profile.id)
       setAccountType(profile.account_type)
+      if (!profile.tutorial_completed) {
+        setShowTutorial(true)
+      }
       setLoading(false)
     } else {
       router.push('/profile')
     }
+  }
+
+  async function handleTutorialComplete() {
+    await supabase
+      .from('profiles')
+      .update({ tutorial_completed: true })
+      .eq('id', profileId)
+    setShowTutorial(false)
   }
 
   async function loadActivityData() {
@@ -1818,6 +1831,11 @@ export default function DashboardClient() {
           }
         }
       `}</style>
+
+      <TutorialModal 
+        isOpen={showTutorial} 
+        onComplete={handleTutorialComplete}
+      />
     </>
   )
 }

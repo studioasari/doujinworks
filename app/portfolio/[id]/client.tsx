@@ -751,7 +751,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                     </button>
                     <Link
                       href={`/requests/create?to=${creator.username}`}
-                      className={`btn btn-accent ${styles.sidebarBtn}`}
+                      className={`btn btn-secondary ${styles.sidebarBtn}`}
                     >
                       <i className="fas fa-briefcase"></i>
                       仕事を依頼
@@ -807,7 +807,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                         </button>
                         <Link
                           href={`/requests/create?to=${creator.username}`}
-                          className="btn btn-accent btn-sm"
+                          className="btn btn-secondary btn-sm"
                         >
                           依頼
                         </Link>

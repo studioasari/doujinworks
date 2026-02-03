@@ -76,8 +76,7 @@
 @media (max-width: 768px) {
   .page {
     padding: var(--space-4);
-    align-items: flex-start;
-    padding-top: var(--space-8);
+    align-items: center;
   }
   
   .card {
