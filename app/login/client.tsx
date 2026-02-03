@@ -133,7 +133,7 @@ function LoginForm() {
   return (
     <div className={styles.cardArea}>
       <div className={styles.card}>
-        <h2 className={styles.cardTitle}>aaログイン</h2>
+        <h2 className={styles.cardTitle}>ログイン</h2>
 
         <form onSubmit={handleLogin}>
           {/* メールアドレスまたはユーザーID */}
