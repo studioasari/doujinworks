@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -58,6 +58,18 @@ export function SignupCompleteClient({ user }: Props) {
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
+  // Embla Carousel（userType選択用）
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false })
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  useEffect(() => {
+    if (!emblaApi) return
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap())
+    emblaApi.on('select', onSelect)
+    onSelect()
+    return () => { emblaApi.off('select', onSelect) }
+  }, [emblaApi])
   
   // ステップを変更してURLも更新
   const changeStep = (newStep: Step) => {
@@ -355,27 +367,19 @@ export function SignupCompleteClient({ user }: Props) {
         type: 'casual' as UserType,
         image: '/illustrations/usertype-casual.png',
         title: '作品を楽しむ',
-        description: 'いいねしたり\nフォローしたり',
+        label: '一般ユーザー',
+        description: '作品を見てもらったり\n気になる人をフォローしたり',
+        hint: 'いつでもビジネスに変更できるよ',
       },
       {
         type: 'business' as UserType,
         image: '/illustrations/usertype-business.png',
         title: '仕事で使う',
-        description: '依頼したり\n受けたり',
+        label: 'ビジネスユーザー',
+        description: 'お仕事を受けたり\n依頼を出したり',
+        hint: '依頼の受発注ができるよ',
       },
     ]
-
-    // Embla Carousel（スマホ用）
-    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false })
-    const [selectedIndex, setSelectedIndex] = useState(0)
-
-    useEffect(() => {
-      if (!emblaApi) return
-      const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap())
-      emblaApi.on('select', onSelect)
-      onSelect()
-      return () => { emblaApi.off('select', onSelect) }
-    }, [emblaApi])
 
     const handleSelect = () => {
       setUserType(userTypeOptions[selectedIndex].type)
@@ -386,7 +390,7 @@ export function SignupCompleteClient({ user }: Props) {
       <div className={styles.page}>
         <div className={styles.userTypeContainer}>
           <h1 className={styles.userTypeTitle}>同人ワークスへようこそ！</h1>
-          <p className={styles.userTypeSubtitle}>どっちで使う？</p>
+          <p className={styles.userTypeSubtitle}>利用方法を選んでね</p>
 
           {/* スマホ: スワイプ */}
           <div className={styles.userTypeCarousel}>
@@ -395,6 +399,7 @@ export function SignupCompleteClient({ user }: Props) {
                 {userTypeOptions.map((option, index) => (
                   <div key={option.type} className={styles.emblaSlide}>
                     <div className={styles.userTypeCardNew}>
+                      <span className={styles.userTypeBadge}>{option.label}</span>
                       <img 
                         src={option.image} 
                         alt={option.title}
@@ -433,30 +438,37 @@ export function SignupCompleteClient({ user }: Props) {
           {/* PC: 横並び */}
           <div className={styles.userTypeGridNew}>
             {userTypeOptions.map((option) => (
-              <button
-                key={option.type}
-                onClick={() => {
-                  setUserType(option.type)
-                  changeStep('basicInfo')
-                }}
-                className={styles.userTypeCardNew}
-              >
-                <img 
-                  src={option.image} 
-                  alt={option.title}
-                  className={styles.userTypeImage}
-                />
-                <div className={styles.userTypeCardTitle}>{option.title}</div>
-                <div className={styles.userTypeCardDesc}>
-                  {option.description.split('\n').map((line, i) => (
-                    <span key={i}>{line}<br /></span>
-                  ))}
-                </div>
-              </button>
+              <div key={option.type} className={styles.userTypeCardWrapper}>
+                <button
+                  onClick={() => {
+                    setUserType(option.type)
+                    changeStep('basicInfo')
+                  }}
+                  className={styles.userTypeCardNew}
+                >
+                  <span className={styles.userTypeBadge}>{option.label}</span>
+                  <img 
+                    src={option.image} 
+                    alt={option.title}
+                    className={styles.userTypeImage}
+                  />
+                  <div className={styles.userTypeCardTitle}>{option.title}</div>
+                  <div className={styles.userTypeCardDesc}>
+                    {option.description.split('\n').map((line, i) => (
+                      <span key={i}>{line}<br /></span>
+                    ))}
+                  </div>
+                </button>
+                <p className={styles.userTypeCardHint}>{option.hint}</p>
+              </div>
             ))}
           </div>
 
-          <p className={styles.userTypeHint}>あとから変更もできるよ</p>
+          <p className={styles.userTypeHint}>
+            {selectedIndex === 0 
+              ? 'いつでもビジネスに変更できるよ' 
+              : '依頼の受発注ができるよ'}
+          </p>
         </div>
       </div>
     )
