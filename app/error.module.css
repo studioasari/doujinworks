@@ -1,4 +1,4 @@
-/* 404ページ */
+/* 500エラーページ */
 
 .page {
   min-height: 80vh;
@@ -31,7 +31,7 @@
 
 .errorText {
   font-family: var(--font-display);
-  font-size: 86px;
+  font-size: 72px;
   font-weight: 600;
   color: var(--border-subtle);
   letter-spacing: 0.15em;
@@ -67,8 +67,10 @@
   margin-bottom: var(--space-2);
 }
 
-.button {
-  display: inline-flex;
+.buttons {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
 }
 
 /* レスポンシブ */
@@ -82,7 +84,7 @@
   }
 
   .errorText {
-    font-size: 40px;
+    font-size: 32px;
   }
 
   .image {
