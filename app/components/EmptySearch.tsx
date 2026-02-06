@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import styles from './EmptySearch.module.css'
 
 type Props = {
@@ -8,9 +9,12 @@ type Props = {
 export default function EmptySearch({ query, message }: Props) {
   return (
     <div className={styles.container}>
-      <img
+      <Image
         src="/illustrations/empty-search.png"
         alt="見つからない"
+        width={180}
+        height={180}
+        sizes="180px"
         className={styles.image}
       />
       <h2 className={styles.title}>

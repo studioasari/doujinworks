@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import styles from './not-found.module.css'
@@ -13,9 +14,12 @@ export default function NotFound() {
           <div className={styles.errorText}>NOT FOUND</div>
         </div>
         <div className={styles.container}>
-          <img 
+          <Image 
             src="/illustrations/error-404.png" 
             alt="ページが見つからない" 
+            width={180}
+            height={180}
+            sizes="180px"
             className={styles.image}
           />
           <h1 className={styles.title}>ページが見つからないよ</h1>

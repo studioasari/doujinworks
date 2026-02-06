@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import styles from './error.module.css'
@@ -21,9 +22,12 @@ export default function Error({
           <div className={styles.errorText}>SERVER ERROR</div>
         </div>
         <div className={styles.container}>
-          <img 
+          <Image 
             src="/illustrations/error-500.png" 
             alt="サーバーエラー" 
+            width={180}
+            height={180}
+            sizes="180px"
             className={styles.image}
           />
           <h1 className={styles.title}>ちょっと調子が悪いみたい</h1>
