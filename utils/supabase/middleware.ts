@@ -91,6 +91,7 @@ export async function updateSession(request: NextRequest) {
     '/creators',
     '/requests',
     '/pricing',
+    '/search',
   ]
 
   // ========================================

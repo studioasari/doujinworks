@@ -5,42 +5,38 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12) var(--space-4);
   text-align: center;
 }
 
 .image {
-  width: 160px;
-  height: 160px;
+  width: 180px;
+  height: 180px;
   object-fit: contain;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .description {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  line-height: 1.8;
 }
 
 /* レスポンシブ */
 @media (max-width: 768px) {
-  .container {
-    padding: var(--space-8) var(--space-4);
-  }
-
   .image {
-    width: 130px;
-    height: 130px;
+    width: 150px;
+    height: 150px;
   }
 
   .title {
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
   }
 }

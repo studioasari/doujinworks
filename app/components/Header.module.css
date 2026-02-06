@@ -28,7 +28,7 @@
 
 @media (max-width: 768px) {
   .header {
-    height: 49px;
+    height: 56px;
   }
 
   .inner {
@@ -121,9 +121,9 @@
 
 @media (max-width: 768px) {
   .iconBtn {
-    width: 22px;
-    height: 22px;
-    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    font-size: 22px;
   }
 }
 
@@ -197,7 +197,7 @@
 
 .overlay {
   position: fixed;
-  top: 49px;
+  top: 56px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -230,7 +230,7 @@
 /* スマホ用全画面ドロップダウン */
 .dropdownMobile {
   position: fixed;
-  top: 49px;
+  top: 56px;
   bottom: 0;
   left: 0;
   right: 0;
@@ -685,7 +685,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  height: 49px;
+  height: 56px;
   padding: 0 var(--space-4);
 }
 

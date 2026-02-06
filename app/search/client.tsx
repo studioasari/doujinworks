@@ -8,7 +8,7 @@ import { supabase } from '@/utils/supabase'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import EmptySearch from '@/app/components/EmptySearch'
-import { WorkGridSkeleton, CreatorGridSkeleton, RequestGridSkeleton } from '@/app/components/Skeleton'
+import { WorkGridSkeleton, CreatorGridSkeleton, RequestGridSkeleton, PricingGridSkeleton } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 /* ============================================
@@ -70,7 +70,24 @@ type WorkRequest = {
   profiles: WorkRequestProfile
 }
 
-type TabType = 'works' | 'creators' | 'requests'
+type PricingPlan = {
+  id: string
+  plan_name: string
+  thumbnail_url: string | null
+  minimum_price: number
+  category: string
+  creator_id: string
+  created_at: string
+  profiles: {
+    user_id: string
+    username: string
+    display_name: string
+    avatar_url: string | null
+    is_accepting_orders: boolean
+  }
+  averageRating: number
+  reviewCount: number
+}
 
 /* ============================================
    定数
@@ -129,8 +146,8 @@ function SearchContent() {
   const [works, setWorks] = useState<PortfolioItem[]>([])
   const [creators, setCreators] = useState<Creator[]>([])
   const [requests, setRequests] = useState<WorkRequest[]>([])
+  const [services, setServices] = useState<PricingPlan[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<TabType>('works')
 
   useEffect(() => {
     if (query) {
@@ -146,6 +163,7 @@ function SearchContent() {
         searchWorks(),
         searchCreators(),
         searchRequests(),
+        searchServices(),
       ])
     } catch (error) {
       console.error('検索エラー:', error)
@@ -162,15 +180,9 @@ function SearchContent() {
       .eq('is_public', true)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(12)
 
-    if (error) {
-      console.error('作品検索エラー:', error)
-      setWorks([])
-      return
-    }
-
-    if (!worksData?.length) {
+    if (error || !worksData?.length) {
       setWorks([])
       return
     }
@@ -210,15 +222,9 @@ function SearchContent() {
       .from('profiles')
       .select('id, user_id, username, display_name, avatar_url, bio, account_type, is_accepting_orders')
       .or(`display_name.ilike.%${query}%,username.ilike.%${query}%,bio.ilike.%${query}%`)
-      .limit(20)
+      .limit(8)
 
-    if (error) {
-      console.error('クリエイター検索エラー:', error)
-      setCreators([])
-      return
-    }
-
-    if (!data?.length) {
+    if (error || !data?.length) {
       setCreators([])
       return
     }
@@ -247,10 +253,9 @@ function SearchContent() {
       .eq('status', 'open')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(6)
 
     if (error) {
-      console.error('依頼検索エラー:', error)
       setRequests([])
       return
     }
@@ -261,9 +266,92 @@ function SearchContent() {
     })))
   }
 
+  /* ---------- サービス検索 ---------- */
+  const searchServices = async () => {
+    const { data: plans, error } = await supabase
+      .from('pricing_plans')
+      .select('id, plan_name, thumbnail_url, minimum_price, category, creator_id, created_at')
+      .eq('is_public', true)
+      .ilike('plan_name', `%${query}%`)
+      .order('created_at', { ascending: false })
+      .limit(8)
+
+    if (error || !plans?.length) {
+      setServices([])
+      return
+    }
+
+    const validPlans = plans.filter(p => p.creator_id !== null)
+    if (!validPlans.length) {
+      setServices([])
+      return
+    }
+
+    const creatorIds = [...new Set(validPlans.map(p => p.creator_id))]
+    const { data: creatorsData } = await supabase
+      .from('profiles')
+      .select('id, user_id, username, display_name, avatar_url, is_accepting_orders')
+      .in('id', creatorIds)
+
+    const creatorMap = new Map()
+    creatorsData?.forEach(c => creatorMap.set(c.id, c))
+
+    const { data: reviews } = await supabase
+      .from('reviews')
+      .select('reviewee_id, rating')
+      .in('reviewee_id', creatorIds)
+
+    const reviewMap = new Map<string, { total: number; count: number }>()
+    reviews?.forEach(r => {
+      const existing = reviewMap.get(r.reviewee_id) || { total: 0, count: 0 }
+      reviewMap.set(r.reviewee_id, { total: existing.total + r.rating, count: existing.count + 1 })
+    })
+
+    setServices(validPlans.map(plan => {
+      const creator = creatorMap.get(plan.creator_id)
+      const reviewData = reviewMap.get(plan.creator_id)
+      return {
+        ...plan,
+        profiles: creator ? { ...creator, is_accepting_orders: creator.is_accepting_orders ?? false } : {
+          user_id: '', username: '', display_name: '不明', avatar_url: null, is_accepting_orders: false
+        },
+        averageRating: reviewData ? reviewData.total / reviewData.count : 0,
+        reviewCount: reviewData?.count || 0
+      }
+    }))
+  }
+
+  const totalResults = works.length + creators.length + requests.length + services.length
+  const hasNoResults = !loading && totalResults === 0
+
   /* ============================================
      レンダリング
      ============================================ */
+
+  // 結果なしの場合は別レイアウト
+  if (hasNoResults) {
+    return (
+      <>
+        <Header />
+
+        <Suspense fallback={null}>
+          <SearchParamsReader onQueryChange={setQuery} />
+        </Suspense>
+
+        <main className={styles.mainEmpty}>
+          <div className={styles.searchHeader}>
+            <h1 className={styles.searchTitle}>「{query}」の検索結果</h1>
+            <div className={styles.searchMeta}>0件の結果</div>
+          </div>
+          <div className={styles.emptyContent}>
+            <EmptySearch query={query} message="キーワードを変えて検索してみてね" />
+          </div>
+        </main>
+
+        <Footer />
+      </>
+    )
+  }
 
   return (
     <>
@@ -279,264 +367,263 @@ function SearchContent() {
           <h1 className={styles.searchTitle}>「{query}」の検索結果</h1>
           {!loading && (
             <div className={styles.searchMeta}>
-              作品 {works.length}件 · クリエイター {creators.length}件 · 依頼 {requests.length}件
+              {totalResults}件の結果
             </div>
           )}
         </div>
 
-        {/* タブ */}
-        <div className={styles.tabs}>
-          <button
-            onClick={() => setActiveTab('works')}
-            className={`${styles.tab} ${activeTab === 'works' ? styles.active : ''}`}
-          >
-            作品{!loading ? ` (${works.length})` : ''}
-          </button>
-          <button
-            onClick={() => setActiveTab('creators')}
-            className={`${styles.tab} ${activeTab === 'creators' ? styles.active : ''}`}
-          >
-            クリエイター{!loading ? ` (${creators.length})` : ''}
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`${styles.tab} ${activeTab === 'requests' ? styles.active : ''}`}
-          >
-            依頼{!loading ? ` (${requests.length})` : ''}
-          </button>
-        </div>
-
-        {/* ===== 作品タブ ===== */}
-        {activeTab === 'works' && (
+        {/* ローディング */}
+        {loading && (
           <>
-            {loading && <WorkGridSkeleton count={12} />}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>作品</h2>
+              <WorkGridSkeleton count={6} />
+            </section>
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>クリエイター</h2>
+              <CreatorGridSkeleton count={4} />
+            </section>
+          </>
+        )}
 
-            {!loading && works.length === 0 && (
-              <EmptySearch query={query} message="キーワードを変えて検索してみてね" />
-            )}
-
-            {!loading && works.length > 0 && (
-              <div className={styles.worksGrid}>
-                {works.map((item) => (
-                  <Link key={item.id} href={`/portfolio/${item.id}`} className={styles.workCard}>
-                    <div className={styles.workCardImage}>
-                      {item.thumbnail_url || item.image_url ? (
-                        <Image
-                          src={item.thumbnail_url || item.image_url}
-                          alt={item.title}
-                          fill
-                          sizes="(max-width: 479px) 50vw, (max-width: 767px) 33vw, (max-width: 1023px) 25vw, 180px"
-                          style={{ objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div className={styles.placeholder}>
-                          <i className="far fa-image"></i>
-                        </div>
-                      )}
-                    </div>
-                    {item.category && (
-                      <span className={styles.workCardBadge}>
-                        {CATEGORY_LABELS[item.category] || item.category}
-                      </span>
+        {/* ===== 作品セクション ===== */}
+        {!loading && works.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              作品
+              <span className={styles.sectionCount}>{works.length}</span>
+            </h2>
+            <div className={styles.worksGrid}>
+              {works.map((item) => (
+                <Link key={item.id} href={`/portfolio/${item.id}`} className={styles.workCard}>
+                  <div className={styles.workCardImage}>
+                    {item.thumbnail_url || item.image_url ? (
+                      <Image
+                        src={item.thumbnail_url || item.image_url}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 479px) 50vw, (max-width: 767px) 33vw, (max-width: 1023px) 25vw, 180px"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className={styles.placeholder}>
+                        <i className="far fa-image"></i>
+                      </div>
                     )}
-                    <div className={styles.cardInfo}>
-                      <div className={styles.cardTitle}>{item.title}</div>
-                      <div className={styles.cardMeta}>
-                        {item.profiles && (
-                          <div className={styles.cardCreator}>
-                            <div className={styles.creatorAvatar}>
-                              {item.profiles.avatar_url ? (
-                                <Image src={item.profiles.avatar_url} alt="" width={18} height={18} sizes="18px" style={{ objectFit: 'cover' }} />
-                              ) : (
-                                <i className="fas fa-user"></i>
-                              )}
-                            </div>
-                            <span className={styles.creatorName}>
-                              {item.profiles.display_name}
-                            </span>
-                          </div>
-                        )}
-                        <div className={styles.cardStats}>
-                          <span className={styles.statItem}>
-                            <i className="fas fa-heart"></i>
-                            {item.likeCount}
-                          </span>
-                          <span className={styles.statItem}>
-                            <i className="fas fa-comment"></i>
-                            {item.commentCount}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ===== クリエイタータブ ===== */}
-        {activeTab === 'creators' && (
-          <>
-            {loading && <CreatorGridSkeleton count={8} />}
-
-            {!loading && creators.length === 0 && (
-              <EmptySearch query={query} message="キーワードを変えて検索してみてね" />
-            )}
-
-            {!loading && creators.length > 0 && (
-              <div className={styles.creatorsGrid}>
-                {creators.map((creator) => (
-                  <Link key={creator.id} href={`/creators/${creator.username}`} className={styles.creatorCard}>
-                    <span className={styles.typeBadge}>
-                      {creator.account_type === 'business' ? 'ビジネス' : '一般'}
+                  </div>
+                  {item.category && (
+                    <span className={styles.workCardBadge}>
+                      {CATEGORY_LABELS[item.category] || item.category}
                     </span>
-                    <div className={styles.avatar}>
-                      {creator.avatar_url ? (
-                        <Image src={creator.avatar_url} alt={creator.display_name || ''} width={64} height={64} sizes="64px" />
-                      ) : (
-                        <span className={styles.avatarInitial}>
-                          {creator.display_name?.charAt(0) || '?'}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.nameArea}>
-                      <h2 className={styles.creatorCardName}>
-                        {creator.display_name || '名前未設定'}
-                      </h2>
-                      {creator.username && (
-                        <p className={styles.creatorCardUsername}>@{creator.username}</p>
-                      )}
-                    </div>
-                    <div className={styles.statusArea}>
-                      {creator.account_type === 'business' && (
-                        <span className={`${styles.statusBadge} ${creator.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
-                          <i className="fas fa-circle" style={{ fontSize: '6px' }}></i>
-                          {creator.is_accepting_orders ? '受付中' : '受付停止'}
-                        </span>
-                      )}
-                    </div>
-                    <p className={styles.creatorCardBio}>
-                      {creator.bio || '自己紹介が登録されていません'}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ===== 依頼タブ ===== */}
-        {activeTab === 'requests' && (
-          <>
-            {loading && <RequestGridSkeleton count={6} />}
-
-            {!loading && requests.length === 0 && (
-              <EmptySearch query={query} message="キーワードを変えて検索してみてね" />
-            )}
-
-            {!loading && requests.length > 0 && (
-              <div className={styles.requestsGrid}>
-                {requests.map((request) => {
-                  const daysUntilDeadline = request.application_deadline
-                    ? Math.ceil((new Date(request.application_deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                    : null
-
-                  return (
-                    <Link key={request.id} href={`/requests/${request.id}`} className={styles.requestCard}>
-                      {/* カテゴリバッジ */}
-                      <div className={styles.requestBadge}>
-                        <i className={`fas ${CATEGORY_ICONS[request.category] || 'fa-file'}`}></i>
-                        {CATEGORY_LABELS[request.category] || request.category}
-                      </div>
-
-                      {/* タイトル */}
-                      <h2 className={styles.requestTitle}>{request.title}</h2>
-
-                      {/* 説明 */}
-                      <p className={styles.requestDesc}>{request.description}</p>
-
-                      {/* stats行 */}
-                      <div className={styles.requestStatsRow}>
-                        <div className={styles.requestStatItem}>
-                          <i className="fas fa-user"></i>
-                          <span>0/{request.number_of_positions || 1}人</span>
-                        </div>
-                        <div className={styles.requestStatItem}>
-                          <i className="fas fa-clock"></i>
-                          {request.application_deadline && daysUntilDeadline !== null ? (
-                            daysUntilDeadline > 0 ? (
-                              <span>あと{daysUntilDeadline}日</span>
-                            ) : daysUntilDeadline === 0 ? (
-                              <span className={styles.requestStatUrgent}>本日締切</span>
-                            ) : (
-                              <span className={styles.requestStatExpired}>締切済み</span>
-                            )
-                          ) : (
-                            <span>期限なし</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* タグ */}
-                      <div className={styles.requestTags}>
-                        {request.required_skills?.slice(0, 3).map((skill, i) => (
-                          <span key={i} className={styles.skillTag}>{skill}</span>
-                        ))}
-                        {(request.required_skills?.length || 0) > 3 && (
-                          <span className={styles.moreTags}>+{request.required_skills!.length - 3}</span>
-                        )}
-                        {request.job_features?.slice(0, 2).map((feature, i) => (
-                          <span key={`f-${i}`} className={styles.featureTag}>
-                            <i className="fas fa-check"></i>
-                            {JOB_FEATURE_LABELS[feature] || feature}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* フッター */}
-                      <div className={styles.requestFooter}>
-                        <div className={styles.requesterInfo}>
-                          <div className={styles.requesterAvatar}>
-                            {request.profiles?.avatar_url ? (
-                              <Image src={request.profiles.avatar_url} alt="" width={24} height={24} sizes="24px" />
+                  )}
+                  <div className={styles.cardInfo}>
+                    <div className={styles.cardTitle}>{item.title}</div>
+                    <div className={styles.cardMeta}>
+                      {item.profiles && (
+                        <div className={styles.cardCreator}>
+                          <div className={styles.creatorAvatar}>
+                            {item.profiles.avatar_url ? (
+                              <Image src={item.profiles.avatar_url} alt="" width={18} height={18} sizes="18px" style={{ objectFit: 'cover' }} />
                             ) : (
                               <i className="fas fa-user"></i>
                             )}
                           </div>
-                          <span className={styles.requesterName}>
-                            {request.profiles?.display_name || '名前未設定'}
-                          </span>
+                          <span className={styles.creatorName}>{item.profiles.display_name}</span>
                         </div>
+                      )}
+                      <div className={styles.cardStats}>
+                        <span className={styles.statItem}><i className="fas fa-heart"></i>{item.likeCount}</span>
+                        <span className={styles.statItem}><i className="fas fa-comment"></i>{item.commentCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
-                        {request.payment_type === 'hourly' ? (
-                          <span className={styles.requestPrice}>
-                            {request.hourly_rate_min ? (
-                              <>{request.hourly_rate_min.toLocaleString()}<span>円/時〜</span></>
-                            ) : (
-                              <span className={styles.requestPriceNegotiable}>応相談</span>
-                            )}
-                          </span>
-                        ) : request.price_negotiable ? (
-                          <span className={styles.requestPriceNegotiable}>相談して決める</span>
-                        ) : request.budget_min || request.budget_max ? (
-                          <span className={styles.requestPrice}>
-                            {request.budget_max ? (
-                              <>¥{request.budget_max.toLocaleString()}</>
-                            ) : (
-                              <>{request.budget_min?.toLocaleString()}<span>円〜</span></>
-                            )}
-                          </span>
+        {/* ===== クリエイターセクション ===== */}
+        {!loading && creators.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              クリエイター
+              <span className={styles.sectionCount}>{creators.length}</span>
+            </h2>
+            <div className={styles.creatorsGrid}>
+              {creators.map((creator) => (
+                <Link key={creator.id} href={`/creators/${creator.username}`} className={styles.creatorCard}>
+                  <span className={styles.typeBadge}>
+                    {creator.account_type === 'business' ? 'ビジネス' : '一般'}
+                  </span>
+                  <div className={styles.avatar}>
+                    {creator.avatar_url ? (
+                      <Image src={creator.avatar_url} alt={creator.display_name || ''} width={64} height={64} sizes="64px" />
+                    ) : (
+                      <span className={styles.avatarInitial}>{creator.display_name?.charAt(0) || '?'}</span>
+                    )}
+                  </div>
+                  <div className={styles.nameArea}>
+                    <h3 className={styles.creatorCardName}>{creator.display_name || '名前未設定'}</h3>
+                    {creator.username && <p className={styles.creatorCardUsername}>@{creator.username}</p>}
+                  </div>
+                  <div className={styles.statusArea}>
+                    {creator.account_type === 'business' && (
+                      <span className={`${styles.statusBadge} ${creator.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
+                        <i className="fas fa-circle" style={{ fontSize: '6px' }}></i>
+                        {creator.is_accepting_orders ? '受付中' : '受付停止'}
+                      </span>
+                    )}
+                  </div>
+                  <p className={styles.creatorCardBio}>{creator.bio || '自己紹介が登録されていません'}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== 依頼セクション ===== */}
+        {!loading && requests.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              依頼
+              <span className={styles.sectionCount}>{requests.length}</span>
+            </h2>
+            <div className={styles.requestsGrid}>
+              {requests.map((request) => {
+                const daysUntilDeadline = request.application_deadline
+                  ? Math.ceil((new Date(request.application_deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                  : null
+
+                return (
+                  <Link key={request.id} href={`/requests/${request.id}`} className={styles.requestCard}>
+                    <div className={styles.requestBadge}>
+                      <i className={`fas ${CATEGORY_ICONS[request.category] || 'fa-file'}`}></i>
+                      {CATEGORY_LABELS[request.category] || request.category}
+                    </div>
+                    <h3 className={styles.requestTitle}>{request.title}</h3>
+                    <p className={styles.requestDesc}>{request.description}</p>
+                    <div className={styles.requestStatsRow}>
+                      <div className={styles.requestStatItem}>
+                        <i className="fas fa-user"></i>
+                        <span>0/{request.number_of_positions || 1}人</span>
+                      </div>
+                      <div className={styles.requestStatItem}>
+                        <i className="fas fa-clock"></i>
+                        {request.application_deadline && daysUntilDeadline !== null ? (
+                          daysUntilDeadline > 0 ? (
+                            <span>あと{daysUntilDeadline}日</span>
+                          ) : daysUntilDeadline === 0 ? (
+                            <span className={styles.requestStatUrgent}>本日締切</span>
+                          ) : (
+                            <span className={styles.requestStatExpired}>締切済み</span>
+                          )
                         ) : (
-                          <span className={styles.requestPriceNegotiable}>要相談</span>
+                          <span>期限なし</span>
                         )}
                       </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </>
+                    </div>
+                    <div className={styles.requestTags}>
+                      {request.required_skills?.slice(0, 3).map((skill, i) => (
+                        <span key={i} className={styles.skillTag}>{skill}</span>
+                      ))}
+                      {(request.required_skills?.length || 0) > 3 && (
+                        <span className={styles.moreTags}>+{request.required_skills!.length - 3}</span>
+                      )}
+                      {request.job_features?.slice(0, 2).map((feature, i) => (
+                        <span key={`f-${i}`} className={styles.featureTag}>
+                          <i className="fas fa-check"></i>
+                          {JOB_FEATURE_LABELS[feature] || feature}
+                        </span>
+                      ))}
+                    </div>
+                    <div className={styles.requestFooter}>
+                      <div className={styles.requesterInfo}>
+                        <div className={styles.requesterAvatar}>
+                          {request.profiles?.avatar_url ? (
+                            <Image src={request.profiles.avatar_url} alt="" width={24} height={24} sizes="24px" />
+                          ) : (
+                            <i className="fas fa-user"></i>
+                          )}
+                        </div>
+                        <span className={styles.requesterName}>{request.profiles?.display_name || '名前未設定'}</span>
+                      </div>
+                      {request.payment_type === 'hourly' ? (
+                        <span className={styles.requestPrice}>
+                          {request.hourly_rate_min ? (
+                            <>{request.hourly_rate_min.toLocaleString()}<span>円/時〜</span></>
+                          ) : (
+                            <span className={styles.requestPriceNegotiable}>応相談</span>
+                          )}
+                        </span>
+                      ) : request.price_negotiable ? (
+                        <span className={styles.requestPriceNegotiable}>相談して決める</span>
+                      ) : request.budget_min || request.budget_max ? (
+                        <span className={styles.requestPrice}>
+                          {request.budget_max ? <>¥{request.budget_max.toLocaleString()}</> : <>{request.budget_min?.toLocaleString()}<span>円〜</span></>}
+                        </span>
+                      ) : (
+                        <span className={styles.requestPriceNegotiable}>要相談</span>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ===== サービスセクション ===== */}
+        {!loading && services.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              サービス
+              <span className={styles.sectionCount}>{services.length}</span>
+            </h2>
+            <div className={styles.servicesGrid}>
+              {services.map((plan) => (
+                <Link key={plan.id} href={`/pricing/${plan.id}`} className={styles.serviceCard}>
+                  <div className={styles.serviceCardImage}>
+                    {plan.thumbnail_url ? (
+                      <Image src={plan.thumbnail_url} alt={plan.plan_name} fill sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 200px" />
+                    ) : (
+                      <div className={styles.placeholder}><i className="far fa-image"></i></div>
+                    )}
+                    <span className={styles.serviceCardBadge}>{CATEGORY_LABELS[plan.category] || plan.category}</span>
+                  </div>
+                  <div className={styles.serviceCardBody}>
+                    <h3 className={styles.serviceCardTitle}>{plan.plan_name}</h3>
+                    <div className={styles.serviceCardPrice}>¥{plan.minimum_price.toLocaleString()}<span>〜</span></div>
+                    <div className={styles.serviceCardCreator}>
+                      <div className={styles.serviceCreatorAvatar}>
+                        {plan.profiles.avatar_url ? (
+                          <Image src={plan.profiles.avatar_url} alt="" width={24} height={24} sizes="24px" />
+                        ) : (
+                          <i className="fas fa-user"></i>
+                        )}
+                      </div>
+                      <span className={styles.serviceCreatorName}>{plan.profiles.display_name || '名前未設定'}</span>
+                    </div>
+                    <div className={styles.serviceCardFooter}>
+                      {plan.reviewCount > 0 ? (
+                        <span className={styles.serviceCardRating}>
+                          <i className="fas fa-star"></i>
+                          {plan.averageRating.toFixed(1)}
+                          <span className={styles.ratingCount}>({plan.reviewCount})</span>
+                        </span>
+                      ) : (
+                        <span></span>
+                      )}
+                      <span className={`${styles.statusBadge} ${plan.profiles.is_accepting_orders ? styles.statusOpen : styles.statusClosed}`}>
+                        <i className="fas fa-circle" style={{ fontSize: '5px' }}></i>
+                        {plan.profiles.is_accepting_orders ? '受付中' : '受付停止'}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
         )}
       </main>
 
