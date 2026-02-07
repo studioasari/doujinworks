@@ -81,12 +81,6 @@
   text-align: center;
 }
 
-@media (max-width: 480px) {
-  .ctaButtons {
-    flex-direction: column;
-  }
-}
-
 @media (max-width: 1024px) {
   .ctaArea {
     max-width: 320px;

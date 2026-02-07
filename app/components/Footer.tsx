@@ -1,9 +1,28 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/utils/supabase'
 import Breadcrumb from './Breadcrumb'
 import styles from './Footer.module.css'
 
 export default function Footer() {
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    checkUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   return (
     <>
       <Breadcrumb />
@@ -26,14 +45,16 @@ export default function Footer() {
                 依頼したり。登録・利用は無料です。
               </p>
 
-              <div className={styles.ctaButtons}>
-                <Link href="/signup" className="btn btn-primary btn-sm">
-                  無料で始める
-                </Link>
-                <Link href="/login" className="btn btn-secondary btn-sm">
-                  ログイン
-                </Link>
-              </div>
+              {!user && (
+                <div className={styles.ctaButtons}>
+                  <Link href="/signup" className="btn btn-primary btn-sm">
+                    無料で始める
+                  </Link>
+                  <Link href="/login" className="btn btn-secondary btn-sm">
+                    ログイン
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* 右：リンク4列 */}
