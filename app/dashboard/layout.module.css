@@ -14,6 +14,7 @@
   min-width: 0;
   background: var(--bg-base);
   padding: var(--space-6);
+  padding-left: var(--space-8);
   overflow-x: hidden;
 }
 
