@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styles from './HeroSection.module.css'
 
@@ -19,7 +20,14 @@ export default function HeroSection() {
     <section className={styles.hero}>
       {/* Background */}
       <div className={styles.background}>
-        <div className={styles.backgroundImage} />
+        <Image
+          src="/hero-image.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          style={{ objectFit: 'cover' }}
+        />
         <div className={styles.backgroundOverlay} />
       </div>
 
