@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
+import GoogleAnalytics from "@/app/components/GoogleAnalytics";
 import "./globals.css";
 
 const zenMaruGothic = Zen_Maru_Gothic({
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className={`${zenMaruGothic.variable} antialiased`} suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <GoogleAnalytics />
         {children}
       </body>
     </html>
