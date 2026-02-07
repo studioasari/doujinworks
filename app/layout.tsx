@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
-import GoogleAnalytics from "@/app/components/GoogleAnalytics";
+import Script from "next/script";
 import "./globals.css";
+
+const GA_ID = "G-XT2NKCP2N5";
 
 const zenMaruGothic = Zen_Maru_Gothic({
   weight: ["300", "400", "500", "700", "900"],
@@ -42,6 +44,20 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/* Google Analytics - head内に配置（Search Console認証対応） */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="beforeInteractive"
+        />
+        <Script id="google-analytics" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
+
         {/* Font Awesome CDN */}
         <link 
           rel="stylesheet" 
@@ -53,7 +69,6 @@ export default function RootLayout({
       </head>
       <body className={`${zenMaruGothic.variable} antialiased`} suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <GoogleAnalytics />
         {children}
       </body>
     </html>
