@@ -76,26 +76,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // ========================================
-  // 1. 認証不要のパス（未ログインでもアクセス可）
-  // ========================================
-  const publicPaths = [
-    '/',
-    '/login',
-    '/signup',
-    '/reset-password',
-    '/auth',
-    '/about',
-    '/terms',
-    '/privacy',
-    '/portfolio',
-    '/creators',
-    '/requests',
-    '/pricing',
-    '/search',
-  ]
-
-  // ========================================
-  // 2. プロフィール未完成でもアクセス可のパス
+  // 1. プロフィール未完成でもアクセス可のパス
   //    （無限ループ防止用）
   // ========================================
   const allowWithoutProfile = [
@@ -111,21 +92,15 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // ========================================
-  // 3. 未ログインユーザーの処理
+  // 2. 未ログインユーザー → そのまま通す
+  //    （認証が必要なページではクライアント側でモーダル表示）
   // ========================================
   if (!user) {
-    // 公開パスならそのままアクセス許可
-    if (publicPaths.some(path => pathname === path || pathname.startsWith(path + '/'))) {
-      return response
-    }
-    // 非公開パスならログインページへリダイレクト
-    const redirectUrl = new URL('/login', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+    return response
   }
 
   // ========================================
-  // 4. ログイン済みユーザーの処理
+  // 3. ログイン済みユーザーの処理
   // ========================================
   
   // プロフィール未完成でもアクセス可のパスならスキップ

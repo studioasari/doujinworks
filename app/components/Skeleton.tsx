@@ -1,13 +1,28 @@
 import styles from './Skeleton.module.css'
 
-// 作品カード
+// ==============================
+// ローディングスピナー（ダッシュボード共通）
+// ==============================
+
+export function LoadingSpinner() {
+  return (
+    <div className={styles.loadingSpinner}>
+      <i className="fa-solid fa-spinner fa-spin"></i>
+      <span>読み込み中...</span>
+    </div>
+  )
+}
+
+// ==============================
+// 作品系
+// ==============================
+
 export function WorkCardSkeleton() {
   return (
     <div className={`${styles.skeleton} ${styles.workCard}`}></div>
   )
 }
 
-// 作品グリッド
 export function WorkGridSkeleton({ count = 12 }: { count?: number }) {
   return (
     <div className={`${styles.grid} ${styles.gridWorks}`}>
@@ -18,7 +33,6 @@ export function WorkGridSkeleton({ count = 12 }: { count?: number }) {
   )
 }
 
-// おすすめ作品グリッド
 export function FeaturedGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className={`${styles.grid} ${styles.gridFeatured}`}>
@@ -29,7 +43,10 @@ export function FeaturedGridSkeleton({ count = 8 }: { count?: number }) {
   )
 }
 
-// クリエイターカード
+// ==============================
+// クリエイター系
+// ==============================
+
 export function CreatorCardSkeleton() {
   return (
     <div className={styles.creatorCard}>
@@ -42,7 +59,6 @@ export function CreatorCardSkeleton() {
   )
 }
 
-// クリエイターグリッド
 export function CreatorGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className={`${styles.grid} ${styles.gridCreators}`}>
@@ -53,7 +69,10 @@ export function CreatorGridSkeleton({ count = 8 }: { count?: number }) {
   )
 }
 
-// 依頼カード
+// ==============================
+// 依頼系
+// ==============================
+
 export function RequestCardSkeleton() {
   return (
     <div className={styles.requestCard}>
@@ -69,7 +88,6 @@ export function RequestCardSkeleton() {
   )
 }
 
-// 依頼グリッド
 export function RequestGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className={`${styles.grid} ${styles.gridRequests}`}>
@@ -80,7 +98,10 @@ export function RequestGridSkeleton({ count = 6 }: { count?: number }) {
   )
 }
 
-// 価格カード
+// ==============================
+// 価格系（公開ページ用）
+// ==============================
+
 export function PricingCardSkeleton() {
   return (
     <div className={styles.pricingCard}>
@@ -101,7 +122,6 @@ export function PricingCardSkeleton() {
   )
 }
 
-// 価格グリッド
 export function PricingGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className={`${styles.grid} ${styles.gridPricing}`}>

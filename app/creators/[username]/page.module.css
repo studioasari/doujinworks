@@ -81,6 +81,7 @@
   padding: var(--space-6);
   margin-bottom: var(--space-6);
   cursor: default;
+  overflow: visible;
 }
 
 .profileCard:hover {
@@ -150,10 +151,12 @@
   flex-shrink: 0;
 }
 
-.iconBtn {
-  padding: var(--space-2) !important;
-  width: 36px;
-  height: 36px;
+.actionBtn {
+  min-width: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
 /* 統計 */
@@ -211,7 +214,7 @@
 
 .shareDropdown {
   position: absolute;
-  bottom: calc(100% + var(--space-2));
+  top: calc(100% + var(--space-2));
   right: 0;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
@@ -219,7 +222,8 @@
   box-shadow: var(--shadow-lg);
   z-index: 100;
   overflow: hidden;
-  min-width: 140px;
+  min-width: 180px;
+  white-space: nowrap;
 }
 
 .shareItem {
@@ -246,12 +250,6 @@
   color: var(--text-secondary);
   line-height: 1.7;
   white-space: pre-wrap;
-  margin-bottom: var(--space-4);
-}
-
-/* 依頼ボタン */
-.requestBtn {
-  width: 100%;
 }
 
 /* ============================================
@@ -569,6 +567,15 @@
 
   .displayName {
     font-size: var(--text-xl);
+  }
+
+  .actionButtons {
+    width: auto;
+  }
+
+  .actionBtn {
+    flex: none;
+    min-width: 100px;
   }
 
   .stats {

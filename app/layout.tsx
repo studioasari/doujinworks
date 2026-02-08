@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
 import Script from "next/script";
+import { AuthProvider } from '@/app/components/AuthContext'
+import ProtectedContent from '@/app/components/ProtectedContent'
+import AuthRequiredModal from '@/app/components/AuthRequiredModal'
 import "./globals.css";
 
 const GA_ID = "G-XT2NKCP2N5";
@@ -69,7 +72,12 @@ export default function RootLayout({
       </head>
       <body className={`${zenMaruGothic.variable} antialiased`} suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        {children}
+        <AuthProvider>
+          <ProtectedContent>
+            {children}
+          </ProtectedContent>
+          <AuthRequiredModal />
+        </AuthProvider>
       </body>
     </html>
   );

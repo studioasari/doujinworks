@@ -285,21 +285,6 @@
   background: var(--bg-hover);
 }
 
-/* スケルトン */
-.skeletonWelcome {
-  width: 280px;
-  height: 32px;
-  background: var(--bg-sunken);
-  border-radius: var(--radius-sm);
-  margin-bottom: 24px;
-}
-
-.skeletonCard {
-  height: 160px;
-  background: var(--bg-sunken);
-  border-radius: var(--radius-lg);
-}
-
 /* レスポンシブ */
 @media (max-width: 767px) {
   .emptyContainer {

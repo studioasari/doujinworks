@@ -218,7 +218,7 @@ export default function ChatRoomPage() {
   }, [selectedRoomId, switchRoom])
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -430,12 +430,9 @@ export default function ChatRoomPage() {
 
   // ========== API Functions ==========
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
     if (profile) setCurrentProfileId(profile.id)
   }

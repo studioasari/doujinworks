@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { WorkGridSkeleton } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type PortfolioItem = {
@@ -77,7 +77,6 @@ export default function PortfolioManageClient() {
     itemId: string
     itemTitle: string
   }>({ show: false, itemId: '', itemTitle: '' })
-  const router = useRouter()
 
   // フィルター適用後のアイテム
   const items = useMemo(() => {
@@ -91,7 +90,7 @@ export default function PortfolioManageClient() {
   const privateCount = useMemo(() => allItems.filter(item => !item.is_public).length, [allItems])
 
   useEffect(() => {
-    checkAuth()
+    loadAuth()
   }, [])
 
   useEffect(() => {
@@ -100,13 +99,9 @@ export default function PortfolioManageClient() {
     }
   }, [currentProfileId])
 
-  async function checkAuth() {
+  async function loadAuth() {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -117,8 +112,6 @@ export default function PortfolioManageClient() {
     if (profile) {
       setCurrentProfileId(user.id)
       setAccountType(profile.account_type)
-    } else {
-      router.push('/profile')
     }
   }
 
@@ -192,9 +185,22 @@ export default function PortfolioManageClient() {
 
   if (loading) {
     return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>作品管理</h1>
+          <Link href="/dashboard/portfolio/upload" className="btn btn-primary">
+            <i className="fa-solid fa-plus"></i>
+            作品をアップロード
+          </Link>
+        </div>
+        <div className={styles.filterArea}>
+          <div className="tabs">
+            <button type="button" className="tab active">すべて</button>
+            <button type="button" className="tab">公開中</button>
+            <button type="button" className="tab">非公開</button>
+          </div>
+        </div>
+        <WorkGridSkeleton count={8} />
       </div>
     )
   }

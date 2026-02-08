@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type PaidContract = {
@@ -51,11 +51,9 @@ export default function PaymentsClient() {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [editingReceipt, setEditingReceipt] = useState<ReceiptEditData | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
-  
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -64,12 +62,9 @@ export default function PaymentsClient() {
     }
   }, [currentProfileId])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/dashboard/payments')}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -395,12 +390,7 @@ export default function PaymentsClient() {
   const activeContracts = paidContracts.filter(c => ['paid', 'delivered'].includes(c.status)).length
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

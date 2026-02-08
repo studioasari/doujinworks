@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 import { PricingPlan } from '../../_components/types'
 import PricingForm from '../../_components/PricingForm'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 export default function PricingEditClient() {
@@ -13,21 +14,17 @@ export default function PricingEditClient() {
   const planId = params.id as string
 
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
   const [planData, setPlanData] = useState<PricingPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuthAndLoadData()
+    loadData()
   }, [planId])
 
-  async function checkAuthAndLoadData() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -35,12 +32,9 @@ export default function PricingEditClient() {
       .eq('user_id', user.id)
       .single()
 
-    if (!profile) {
-      router.push('/login')
-      return
-    }
+    if (!profile) return
 
-    setUserId(profile.id)
+    setProfileId(profile.id)
 
     // 料金プランデータを取得
     const { data: plan, error } = await supabase
@@ -64,12 +58,7 @@ export default function PricingEditClient() {
   }
 
   if (loading && !error) {
-    return (
-      <div className={styles.loading}>
-        <i className="fas fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   if (error) {
@@ -85,10 +74,10 @@ export default function PricingEditClient() {
 
   return (
     <div className={styles.container}>
-      {userId && planData && (
+      {profileId && planData && (
         <PricingForm
           initialData={planData}
-          userId={userId}
+          userId={profileId}
           onCancel={handleCancel}
         />
       )}

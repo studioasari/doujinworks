@@ -3,8 +3,8 @@
 import { use, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
+import { useAuth } from '@/app/components/AuthContext'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import styles from './page.module.css'
@@ -94,16 +94,6 @@ const CATEGORY_LABELS: { [key: string]: string } = {
   music: '音楽',
   voice: 'ボイス',
   video: '動画'
-}
-
-async function getCurrentUserId(): Promise<string | null> {
-  try {
-    const { data, error } = await supabase.auth.getUser()
-    if (error || !data?.user) return null
-    return data.user.id
-  } catch {
-    return null
-  }
 }
 
 async function attachStatsToWorks(
@@ -201,9 +191,8 @@ function PageSkeleton() {
 
 export default function PortfolioDetailClient({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params)
-  const router = useRouter()
+  const { userId: currentUserId, requireAuth } = useAuth()
   
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [work, setWork] = useState<PortfolioItemWithStats | null>(null)
   const [creator, setCreator] = useState<Creator | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -221,7 +210,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
 
   useEffect(() => {
     loadData()
-  }, [unwrappedParams.id])
+  }, [unwrappedParams.id, currentUserId])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -239,9 +228,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   async function loadData() {
     setLoading(true)
     try {
-      const userId = await getCurrentUserId()
-      setCurrentUserId(userId)
-      await loadWorkData(userId)
+      await loadWorkData(currentUserId)
       await incrementViewCount()
     } catch (error) {
       console.error('データ読み込みエラー:', error)
@@ -416,60 +403,45 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   }
 
   async function handleLike() {
-    if (!currentUserId) {
-      if (confirm('いいねするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
     if (!work) return
 
     try {
       if (work.isLiked) {
-        await supabase.from('portfolio_likes').delete().eq('portfolio_item_id', work.id).eq('user_id', currentUserId)
+        await supabase.from('portfolio_likes').delete().eq('portfolio_item_id', work.id).eq('user_id', currentUserId!)
         setWork({ ...work, isLiked: false, likeCount: work.likeCount - 1 })
       } else {
-        await supabase.from('portfolio_likes').insert({ portfolio_item_id: work.id, user_id: currentUserId })
+        await supabase.from('portfolio_likes').insert({ portfolio_item_id: work.id, user_id: currentUserId! })
         setWork({ ...work, isLiked: true, likeCount: work.likeCount + 1 })
       }
     } catch (error) { console.error('いいね処理エラー:', error) }
   }
 
   async function handleFollow() {
-    if (!currentUserId) {
-      if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
     if (!creator) return
 
     try {
       if (creator.isFollowing) {
-        await supabase.from('follows').delete().eq('follower_id', currentUserId).eq('following_id', creator.user_id)
+        await supabase.from('follows').delete().eq('follower_id', currentUserId!).eq('following_id', creator.user_id)
         setCreator({ ...creator, isFollowing: false, followerCount: creator.followerCount - 1 })
       } else {
-        await supabase.from('follows').insert({ follower_id: currentUserId, following_id: creator.user_id })
+        await supabase.from('follows').insert({ follower_id: currentUserId!, following_id: creator.user_id })
         setCreator({ ...creator, isFollowing: true, followerCount: creator.followerCount + 1 })
       }
     } catch (error) { console.error('フォロー処理エラー:', error) }
   }
 
   async function handleBookmark() {
-    if (!currentUserId) {
-      if (confirm('保存するにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
     if (!work) return
 
     try {
       if (work.isBookmarked) {
-        await supabase.from('bookmarks').delete().eq('portfolio_item_id', work.id).eq('user_id', currentUserId)
+        await supabase.from('bookmarks').delete().eq('portfolio_item_id', work.id).eq('user_id', currentUserId!)
         setWork({ ...work, isBookmarked: false })
       } else {
-        await supabase.from('bookmarks').insert({ portfolio_item_id: work.id, user_id: currentUserId })
+        await supabase.from('bookmarks').insert({ portfolio_item_id: work.id, user_id: currentUserId! })
         setWork({ ...work, isBookmarked: true })
       }
     } catch (error) { console.error('ブックマーク処理エラー:', error) }
@@ -519,18 +491,13 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   }
 
   async function handleCommentSubmit() {
-    if (!currentUserId) {
-      if (confirm('コメントするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
     if (!commentText.trim() || !work) return
 
     try {
       await supabase.from('comments').insert({
         portfolio_item_id: work.id,
-        user_id: currentUserId,
+        user_id: currentUserId!,
         content: commentText.trim(),
         parent_comment_id: replyingTo
       })
@@ -546,12 +513,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   }
 
   async function handleCommentLike(commentId: string) {
-    if (!currentUserId) {
-      if (confirm('いいねするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
 
     const findComment = (list: Comment[], id: string): Comment | null => {
       for (const c of list) {
@@ -569,9 +531,9 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
 
     try {
       if (comment.isLiked) {
-        await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', currentUserId)
+        await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', currentUserId!)
       } else {
-        await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: currentUserId })
+        await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: currentUserId! })
       }
       await loadComments(currentUserId)
     } catch (error) {
@@ -734,12 +696,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   <div className={styles.sidebarActions}>
                     <button
                       onClick={() => {
-                        if (!currentUserId) {
-                          if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
-                            router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-                          }
-                          return
-                        }
+                        if (!requireAuth()) return
                         if (creator.isFollowing) {
                           if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
                         } else handleFollow()
@@ -749,13 +706,16 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                       <i className={creator.isFollowing ? 'fas fa-check' : 'fas fa-plus'}></i>
                       {creator.isFollowing ? 'フォロー中' : 'フォロー'}
                     </button>
-                    <Link
-                      href={`/requests/create?to=${creator.username}`}
+                    <button
+                      onClick={() => {
+                        if (!requireAuth()) return
+                        window.location.href = `/requests/create?to=${creator.username}`
+                      }}
                       className={`btn btn-secondary ${styles.sidebarBtn}`}
                     >
                       <i className="fas fa-briefcase"></i>
                       仕事を依頼
-                    </Link>
+                    </button>
                   </div>
                 ) : (
                   <Link href={`/creators/${creator.username}/edit`} className={`btn btn-secondary ${styles.followBtn}`}>
@@ -791,12 +751,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                       <>
                         <button
                           onClick={() => {
-                            if (!currentUserId) {
-                              if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
-                                router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-                              }
-                              return
-                            }
+                            if (!requireAuth()) return
                             if (creator.isFollowing) {
                               if (confirm(`${creator.display_name}のフォローを解除しますか？`)) handleFollow()
                             } else handleFollow()
@@ -805,12 +760,15 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                         >
                           {creator.isFollowing ? 'フォロー中' : 'フォロー'}
                         </button>
-                        <Link
-                          href={`/requests/create?to=${creator.username}`}
+                        <button
+                          onClick={() => {
+                            if (!requireAuth()) return
+                            window.location.href = `/requests/create?to=${creator.username}`
+                          }}
                           className="btn btn-secondary btn-sm"
                         >
                           依頼
-                        </Link>
+                        </button>
                       </>
                     ) : (
                       <Link 
@@ -1060,6 +1018,7 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                           document.querySelector('#comment-form')?.scrollIntoView({ behavior: 'smooth' }) 
                         }}
                         currentUserId={currentUserId}
+                        requireAuth={requireAuth}
                         formatDate={formatDate}
                         depth={0}
                         openMenuId={openCommentMenuId}
@@ -1100,12 +1059,20 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   ) : (
                     <div className={styles.loginPrompt}>
                       <p>コメントするにはログインが必要です</p>
-                      <button 
-                        onClick={() => router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)} 
-                        className="btn btn-primary"
-                      >
-                        ログイン
-                      </button>
+                      <div className={styles.loginPromptActions}>
+                        <Link 
+                          href={`/login?redirect=${encodeURIComponent(`/portfolio/${unwrappedParams.id}`)}`}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          ログイン
+                        </Link>
+                        <Link 
+                          href="/signup"
+                          className="btn btn-primary btn-sm"
+                        >
+                          会員登録
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1223,7 +1190,8 @@ function CommentItem({
   onLike, 
   onDelete, 
   onReply, 
-  currentUserId, 
+  currentUserId,
+  requireAuth,
   formatDate, 
   depth = 0, 
   parentUsername = null, 
@@ -1235,6 +1203,7 @@ function CommentItem({
   onDelete: (id: string) => void
   onReply: (id: string, username: string) => void
   currentUserId: string | null
+  requireAuth: () => boolean
   formatDate: (d: string) => string
   depth?: number
   parentUsername?: string | null
@@ -1295,12 +1264,16 @@ function CommentItem({
               <i className={comment.isLiked ? 'fas fa-heart' : 'far fa-heart'}></i>
               {comment.likeCount}
             </button>
-            {currentUserId && (
-              <button onClick={() => onReply(comment.id, comment.user.username)} className={styles.commentActionBtn}>
-                <i className="fas fa-reply"></i>
-                返信
-              </button>
-            )}
+            <button 
+              onClick={() => {
+                if (!requireAuth()) return
+                onReply(comment.id, comment.user.username)
+              }} 
+              className={styles.commentActionBtn}
+            >
+              <i className="fas fa-reply"></i>
+              返信
+            </button>
           </div>
         </div>
         {currentUserId === comment.user_id && (
@@ -1331,7 +1304,8 @@ function CommentItem({
               onLike={onLike} 
               onDelete={onDelete} 
               onReply={onReply} 
-              currentUserId={currentUserId} 
+              currentUserId={currentUserId}
+              requireAuth={requireAuth}
               formatDate={formatDate} 
               depth={depth + 1} 
               parentUsername={comment.user.username} 

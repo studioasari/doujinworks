@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type BankAccount = {
@@ -123,7 +124,7 @@ export default function BankAccountClient() {
   const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -132,12 +133,9 @@ export default function BankAccountClient() {
     }
   }, [currentProfileId])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/dashboard/bank-account')}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -340,12 +338,7 @@ export default function BankAccountClient() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

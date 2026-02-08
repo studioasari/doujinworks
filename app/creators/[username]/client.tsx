@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
+import { useAuth } from '@/app/components/AuthContext'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { WorkGridSkeleton } from '../../components/Skeleton'
@@ -136,8 +137,8 @@ function ProfileSkeleton() {
                   <div className="skeleton skeleton-text" style={{ width: 100, height: 14 }}></div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <div className="skeleton" style={{ width: 36, height: 36, borderRadius: 8 }}></div>
-                  <div className="skeleton" style={{ width: 80, height: 36, borderRadius: 8 }}></div>
+                  <div className="skeleton" style={{ width: 100, height: 36, borderRadius: 8 }}></div>
+                  <div className="skeleton" style={{ width: 100, height: 36, borderRadius: 8 }}></div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
@@ -198,8 +199,8 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
   const unwrappedParams = use(params)
   const username = unwrappedParams.username
   const router = useRouter()
+  const { userId: currentUserId, requireAuth } = useAuth()
   
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [creator, setCreator] = useState<Creator | null>(null)
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
@@ -207,7 +208,6 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
   const [loading, setLoading] = useState(true)
   const [worksLoading, setWorksLoading] = useState(true)
   const [pricingLoading, setPricingLoading] = useState(true)
-  const [sendingMessage, setSendingMessage] = useState(false)
   const [mainTab, setMainTab] = useState<'works' | 'pricing' | 'reviews'>('works')
   const [worksCategoryTab, setWorksCategoryTab] = useState<string>('all')
   const [followerCount, setFollowerCount] = useState(0)
@@ -233,7 +233,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
     return currentProfileId && creator && currentProfileId === creator.id
   }, [currentProfileId, creator])
 
-  useEffect(() => { checkAuth() }, [])
+  useEffect(() => { loadProfile() }, [currentUserId])
   useEffect(() => { if (username) fetchCreator() }, [username])
 
   useEffect(() => {
@@ -249,18 +249,16 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
     }
   }, [isShareDropdownOpen])
 
-  async function checkAuth() {
+  async function loadProfile() {
+    if (!currentUserId) {
+      setCurrentProfileId('')
+      return
+    }
     try {
-      const { data, error } = await supabase.auth.getUser()
-      if (error || !data?.user) {
-        setCurrentUserId(null)
-        return
-      }
-      setCurrentUserId(data.user.id)
-      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', data.user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', currentUserId).single()
       if (profile) setCurrentProfileId(profile.id)
     } catch (error) {
-      console.error('認証エラー:', error)
+      console.error('プロフィール取得エラー:', error)
     }
   }
 
@@ -358,78 +356,24 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
   }
 
   const handleFollow = useCallback(async () => {
-    if (!currentUserId) {
-      if (confirm('フォローするにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
+    if (!requireAuth()) return
     if (!creator) return
 
     try {
       if (isFollowing) {
         if (!confirm('フォローを解除しますか？')) return
-        await supabase.from('follows').delete().eq('follower_id', currentUserId).eq('following_id', creator.user_id)
+        await supabase.from('follows').delete().eq('follower_id', currentUserId!).eq('following_id', creator.user_id)
         setIsFollowing(false)
         setFollowerCount(prev => prev - 1)
       } else {
-        await supabase.from('follows').insert({ follower_id: currentUserId, following_id: creator.user_id })
+        await supabase.from('follows').insert({ follower_id: currentUserId!, following_id: creator.user_id })
         setIsFollowing(true)
         setFollowerCount(prev => prev + 1)
       }
     } catch (error) {
       console.error('フォロー処理エラー:', error)
     }
-  }, [currentUserId, creator, isFollowing, router])
-
-  const handleSendMessage = useCallback(async () => {
-    if (!currentUserId) {
-      if (confirm('メッセージを送るにはログインが必要です。ログインページに移動しますか？')) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      }
-      return
-    }
-    if (!currentProfileId || !creator) return
-
-    setSendingMessage(true)
-    try {
-      const { data: myRooms } = await supabase.from('chat_room_participants').select('chat_room_id').eq('profile_id', currentProfileId)
-
-      if (myRooms && myRooms.length > 0) {
-        const roomIds = myRooms.map(r => r.chat_room_id)
-        const { data: sharedRooms, error: sharedError } = await supabase.from('chat_room_participants').select('chat_room_id').eq('profile_id', creator.id).in('chat_room_id', roomIds)
-        if (!sharedError && sharedRooms && sharedRooms.length > 0) {
-          router.push(`/messages/${sharedRooms[0].chat_room_id}`)
-          setSendingMessage(false)
-          return
-        }
-      }
-
-      const { data: newRoom, error: roomError } = await supabase.from('chat_rooms').insert({}).select().single()
-      if (roomError || !newRoom) {
-        console.error('チャットルーム作成エラー:', roomError)
-        alert('チャットルームの作成に失敗しました')
-        setSendingMessage(false)
-        return
-      }
-
-      const { error: participantsError } = await supabase.from('chat_room_participants').insert([
-        { chat_room_id: newRoom.id, profile_id: currentProfileId },
-        { chat_room_id: newRoom.id, profile_id: creator.id }
-      ])
-      if (participantsError) {
-        console.error('参加者追加エラー:', participantsError)
-        alert('参加者の追加に失敗しました')
-        setSendingMessage(false)
-        return
-      }
-      router.push(`/messages/${newRoom.id}`)
-    } catch (error) {
-      console.error('メッセージ送信エラー:', error)
-      alert('エラーが発生しました')
-    }
-    setSendingMessage(false)
-  }, [currentUserId, currentProfileId, creator, router])
+  }, [currentUserId, creator, isFollowing, requireAuth])
 
   const handleShare = useCallback((platform: 'twitter' | 'facebook' | 'line' | 'copy') => {
     const url = `${window.location.origin}/creators/${username}`
@@ -571,19 +515,22 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                     {!isOwnProfile ? (
                       <>
                         <button 
-                          onClick={handleSendMessage} 
-                          disabled={sendingMessage} 
-                          className={`btn btn-secondary btn-sm ${styles.iconBtn}`}
-                          title="メッセージを送る"
-                        >
-                          <i className="fas fa-envelope"></i>
-                        </button>
-                        <button 
                           onClick={handleFollow} 
-                          className={`btn btn-sm ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
+                          className={`btn btn-sm ${styles.actionBtn} ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
                         >
                           {isFollowing ? 'フォロー中' : 'フォロー'}
                         </button>
+                        {creator.account_type === 'business' && creator.can_receive_work && (
+                          <button
+                            onClick={() => {
+                              if (!requireAuth()) return
+                              window.location.href = `/requests/create?to=${creator.username}`
+                            }}
+                            className={`btn btn-secondary btn-sm ${styles.actionBtn}`}
+                          >
+                            仕事を依頼
+                          </button>
+                        )}
                       </>
                     ) : (
                       <Link href="/dashboard/profile" className="btn btn-secondary btn-sm">
@@ -673,14 +620,6 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
                 {/* 自己紹介 */}
                 {creator.bio && (
                   <p className={styles.bio}>{creator.bio}</p>
-                )}
-
-                {/* 依頼ボタン */}
-                {!isOwnProfile && creator.account_type === 'business' && creator.can_receive_work && (
-                  <Link href={`/requests/create?to=${creator.username}`} className={`btn btn-primary ${styles.requestBtn}`}>
-                    <i className="fas fa-paper-plane"></i>
-                    依頼する
-                  </Link>
                 )}
               </div>
             </div>

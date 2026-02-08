@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type Genre = {
@@ -19,31 +19,27 @@ export default function UploadSelectClient() {
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [accountType, setAccountType] = useState<'casual' | 'business' | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    loadAuth()
   }, [])
 
-  async function checkAuth() {
+  async function loadAuth() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-    } else {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, account_type')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (profile) {
-        setCurrentUserId(profile.id)
-        setAccountType(profile.account_type)
-        setLoading(false)
-      } else {
-        router.push('/profile')
-      }
+    if (!user) return
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, account_type')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (profile) {
+      setCurrentUserId(profile.id)
+      setAccountType(profile.account_type)
     }
+
+    setLoading(false)
   }
 
   const genres: Genre[] = [
@@ -98,12 +94,7 @@ export default function UploadSelectClient() {
   ]
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

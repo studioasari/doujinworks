@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type Payment = {
@@ -48,11 +48,9 @@ export default function EarningsClient() {
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'history'>('overview')
-  
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -62,12 +60,9 @@ export default function EarningsClient() {
     }
   }, [currentProfileId])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/dashboard/earnings')}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -229,12 +224,7 @@ export default function EarningsClient() {
   }, {})
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

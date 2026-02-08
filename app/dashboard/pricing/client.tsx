@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/utils/supabase'
 import { PricingPlan, CATEGORIES } from './_components/types'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 // 削除確認モーダル
@@ -50,7 +51,7 @@ function ConfirmModal({
 export default function PricingListClient() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([])
   const [error, setError] = useState<string | null>(null)
   const [confirmModal, setConfirmModal] = useState<{
@@ -60,16 +61,12 @@ export default function PricingListClient() {
   }>({ show: false, planId: '', planName: '' })
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -77,21 +74,18 @@ export default function PricingListClient() {
       .eq('user_id', user.id)
       .single()
 
-    if (!profile) {
-      router.push('/login')
-      return
-    }
+    if (!profile) return
 
-    setUserId(profile.id)
+    setProfileId(profile.id)
     await fetchPricingPlans(profile.id)
     setLoading(false)
   }
 
-  async function fetchPricingPlans(profileId: string) {
+  async function fetchPricingPlans(pid: string) {
     const { data, error } = await supabase
       .from('pricing_plans')
       .select('*')
-      .eq('creator_id', profileId)
+      .eq('creator_id', pid)
       .order('display_order', { ascending: true })
 
     if (error) {
@@ -123,8 +117,8 @@ export default function PricingListClient() {
 
       if (error) throw error
 
-      if (userId) {
-        await fetchPricingPlans(userId)
+      if (profileId) {
+        await fetchPricingPlans(profileId)
       }
     } catch (err) {
       console.error('削除エラー:', err)
@@ -133,12 +127,7 @@ export default function PricingListClient() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fas fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (

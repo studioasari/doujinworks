@@ -4,24 +4,21 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 import PricingForm from '../_components/PricingForm'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 export default function PricingNewClient() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push('/login')
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -29,12 +26,9 @@ export default function PricingNewClient() {
       .eq('user_id', user.id)
       .single()
 
-    if (!profile) {
-      router.push('/login')
-      return
-    }
+    if (!profile) return
 
-    setUserId(profile.id)
+    setProfileId(profile.id)
     setLoading(false)
   }
 
@@ -43,19 +37,14 @@ export default function PricingNewClient() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fas fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
     <div className={styles.container}>
-      {userId && (
+      {profileId && (
         <PricingForm
-          userId={userId}
+          userId={profileId}
           onCancel={handleCancel}
         />
       )}

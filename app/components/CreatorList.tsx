@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase' 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { CreatorGridSkeleton } from '@/app/components/Skeleton'
@@ -33,19 +32,10 @@ export default function CreatorList() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [accountTypeFilter, setAccountTypeFilter] = useState<AccountTypeFilter>('all')
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
     fetchCreators()
   }, [accountTypeFilter])
-
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-    }
-  }
 
   async function fetchCreators() {
     setLoading(true)

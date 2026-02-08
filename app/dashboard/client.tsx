@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type Profile = {
@@ -58,18 +58,14 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuthAndLoad()
+    loadDashboard()
   }, [])
 
-  async function checkAuthAndLoad() {
+  async function loadDashboard() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login?redirect=/dashboard')
-      return
-    }
+    if (!user) return
 
     const { data: profileData } = await supabase
       .from('profiles')
@@ -77,10 +73,7 @@ export default function DashboardClient() {
       .eq('user_id', user.id)
       .single()
 
-    if (!profileData) {
-      router.push('/signup/complete')
-      return
-    }
+    if (!profileData) return
 
     setProfile(profileData)
 
@@ -274,23 +267,13 @@ export default function DashboardClient() {
     return `/requests/${item.workRequestId}`
   }
 
-  // ローディング
   if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.skeletonWelcome}></div>
-        <div className={styles.workGrid}>
-          <div className={styles.skeletonCard}></div>
-          <div className={styles.skeletonCard}></div>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const displayName = profile?.display_name || 'ゲスト'
   const greeting = getGreeting()
 
-  // パターン3: 一般ユーザー
   if (profile?.account_type !== 'business') {
     return (
       <div className={styles.emptyContainer}>
@@ -312,7 +295,6 @@ export default function DashboardClient() {
     )
   }
 
-  // パターン2: ビジネス + お仕事なし
   if (workItems.length === 0) {
     return (
       <div className={styles.emptyContainer}>
@@ -331,7 +313,6 @@ export default function DashboardClient() {
     )
   }
 
-  // パターン1: ビジネス + お仕事あり
   return (
     <div className={styles.container}>
       <div className={styles.welcome}>

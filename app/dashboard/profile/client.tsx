@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { uploadAvatar, uploadHeader, deleteImage, validateImageFile } from '@/utils/imageUtils'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 export default function ProfileClient() {
@@ -63,16 +64,12 @@ export default function ProfileClient() {
 
   // ログイン確認
   useEffect(() => {
-    checkUser()
+    loadData()
   }, [])
 
-  const checkUser = async () => {
+  const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
 
     setUser(user)
 
@@ -464,12 +461,7 @@ export default function ProfileClient() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
