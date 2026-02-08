@@ -223,7 +223,14 @@ export default function ChatRoomPage() {
 
   useEffect(() => {
     if (currentProfileId) {
-      fetchChatRooms(currentProfileId)
+      // モバイルではサイドバー非表示のため、遅延読み込みしてメイン表示を優先
+      const isMobile = window.innerWidth <= 768
+      if (isMobile) {
+        const timer = setTimeout(() => fetchChatRooms(currentProfileId), 2000)
+        return () => clearTimeout(timer)
+      } else {
+        fetchChatRooms(currentProfileId)
+      }
     }
   }, [currentProfileId])
 
