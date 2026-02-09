@@ -134,6 +134,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
@@ -146,7 +147,12 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 80px;
   text-decoration: none;
+}
+
+.mobileTab i {
+  font-size: var(--text-xs);
 }
 
 .mobileTab:hover {
@@ -159,6 +165,55 @@
   background: var(--accent-gradient);
   border-color: transparent;
   color: white;
+}
+
+/* ============================================
+   フィルターバー（検索）
+   ============================================ */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  flex: 1;
+  transition: all var(--transition-fast);
+}
+
+.searchWrapper:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+}
+
+.searchIcon {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
 }
 
 /* ============================================
@@ -649,6 +704,14 @@
 
   .pageTitle {
     font-size: var(--text-xl);
+  }
+
+  .filterBar {
+    flex-direction: column;
+  }
+
+  .searchWrapper {
+    width: 100%;
   }
 
   .featuredSection {

@@ -216,9 +216,9 @@ function UploadIllustrationContent() {
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-    } else {
+    if (!user) return
+
+    {
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, account_type')
@@ -586,7 +586,6 @@ function UploadIllustrationContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setToast({ message: 'ログインが必要です', type: 'error' })
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
         return
       }
 

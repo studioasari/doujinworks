@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
+import { useAuth } from '@/app/components/AuthContext'
 import styles from './page.module.css'
 
 type WorkRequest = {
@@ -105,9 +106,10 @@ export default function RequestDetailPage() {
 
   const params = useParams()
   const router = useRouter()
+  const { requireAuth } = useAuth()
   const requestId = params.id as string
 
-  useEffect(() => { checkAuth() }, [])
+  useEffect(() => { loadUser() }, [])
 
   useEffect(() => {
     if (requestId) {
@@ -148,13 +150,12 @@ export default function RequestDetailPage() {
     }
   }, [isShareDropdownOpen])
 
-  async function checkAuth() {
+  async function loadUser() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setIsLoggedIn(true)
-      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
-      if (profile) setCurrentProfileId(profile.id)
-    }
+    if (!user) return
+    setIsLoggedIn(true)
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
+    if (profile) setCurrentProfileId(profile.id)
   }
 
   async function fetchRequest() {
@@ -334,8 +335,7 @@ export default function RequestDetailPage() {
     if (!request) { alert('依頼情報が見つかりません'); return }
     if (!messageText.trim()) { alert('メッセージを入力してください'); return }
     if (!isLoggedIn) {
-      alert('ログインが必要です')
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+      requireAuth()
       return
     }
 
@@ -672,9 +672,9 @@ export default function RequestDetailPage() {
                         </button>
                       )
                     ) : (
-                      <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                        ログインして応募する
-                      </Link>
+                      <button onClick={() => requireAuth()} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                        応募する
+                      </button>
                     )}
                   </>
                 )}
@@ -725,33 +725,54 @@ export default function RequestDetailPage() {
               {/* クライアント情報カード */}
               <div className={styles.clientCard}>
                 <h3 className={styles.clientCardTitle}>依頼者</h3>
-                <div className={styles.clientInfo}>
-                  <div className={styles.clientAvatar}>
-                    {request.profiles?.avatar_url ? (
-                      <Image 
-                        src={request.profiles.avatar_url} 
-                        alt={request.profiles.display_name || ''} 
-                        width={56} 
-                        height={56}
-                        sizes="56px"
-                      />
-                    ) : (
-                      <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
-                    )}
-                  </div>
-                  <div className={styles.clientDetails}>
-                    <div className={styles.clientName}>
-                      {request.profiles?.display_name || '名前未設定'}
+                {request.profiles?.username ? (
+                  <Link href={`/creators/${request.profiles.username}`} className={styles.clientInfo} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className={styles.clientAvatar}>
+                      {request.profiles?.avatar_url ? (
+                        <Image 
+                          src={request.profiles.avatar_url} 
+                          alt={request.profiles.display_name || ''} 
+                          width={56} 
+                          height={56}
+                          sizes="56px"
+                        />
+                      ) : (
+                        <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
+                      )}
                     </div>
-                    {clientStats.reviewCount > 0 && (
-                      <div className={styles.clientRating}>
-                        <i className="fas fa-star"></i>
-                        <span>{clientStats.averageRating.toFixed(1)}</span>
-                        <span className={styles.reviewCount}>({clientStats.reviewCount}件)</span>
+                    <div className={styles.clientDetails}>
+                      <div className={styles.clientName}>
+                        {request.profiles?.display_name || '名前未設定'}
                       </div>
-                    )}
+                      {clientStats.reviewCount > 0 && (
+                        <div className={styles.clientRating}>
+                          <i className="fas fa-star"></i>
+                          <span>{clientStats.averageRating.toFixed(1)}</span>
+                          <span className={styles.reviewCount}>({clientStats.reviewCount}件)</span>
+                        </div>
+                      )}
+                    </div>
+                    <i className="fas fa-chevron-right" style={{ color: 'var(--text-tertiary)', marginLeft: 'auto', flexShrink: 0 }}></i>
+                  </Link>
+                ) : (
+                  <div className={styles.clientInfo}>
+                    <div className={styles.clientAvatar}>
+                      <span>{request.profiles?.display_name?.charAt(0) || '?'}</span>
+                    </div>
+                    <div className={styles.clientDetails}>
+                      <div className={styles.clientName}>
+                        {request.profiles?.display_name || '名前未設定'}
+                      </div>
+                      {clientStats.reviewCount > 0 && (
+                        <div className={styles.clientRating}>
+                          <i className="fas fa-star"></i>
+                          <span>{clientStats.averageRating.toFixed(1)}</span>
+                          <span className={styles.reviewCount}>({clientStats.reviewCount}件)</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className={styles.clientStats}>
                   <div className={styles.clientStatItem}>
                     <span className={styles.clientStatValue}>{clientStats.orderCount}</span>
@@ -762,12 +783,6 @@ export default function RequestDetailPage() {
                     <span className={styles.clientStatLabel}>評価件数</span>
                   </div>
                 </div>
-                {request.profiles?.username && (
-                  <Link href={`/creators/${request.profiles.username}`} className={styles.clientProfileLink}>
-                    プロフィールを見る
-                    <i className="fas fa-chevron-right"></i>
-                  </Link>
-                )}
               </div>
 
               {/* シェア & 通報 */}
@@ -927,70 +942,83 @@ export default function RequestDetailPage() {
 
         {/* スマホ用固定フッター */}
         <div className={styles.mobileFooter}>
-          <div className={styles.mobileFooterPrice}>
-            <span className={styles.mobileFooterPriceLabel}>
-              {request.payment_type === 'hourly' ? '時給' : '予算'}
-            </span>
-            <span className={styles.mobileFooterPriceValue}>
-              {request.payment_type === 'hourly' ? (
-                request.hourly_rate_min && request.hourly_rate_max
-                  ? `¥${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}`
-                  : request.hourly_rate_min
-                  ? `¥${request.hourly_rate_min.toLocaleString()}〜`
-                  : request.hourly_rate_max
-                  ? `〜¥${request.hourly_rate_max.toLocaleString()}`
-                  : '応相談'
-              ) : request.price_negotiable ? (
-                '相談して決める'
-              ) : (request.budget_min || request.budget_max) ? (
-                `¥${request.budget_min?.toLocaleString() || '0'}〜${request.budget_max ? `¥${request.budget_max.toLocaleString()}` : ''}`
-              ) : (
-                '金額未設定'
-              )}
-            </span>
-          </div>
-          <div className={styles.mobileFooterAction}>
-            {request.status === 'open' && !isRequester && (
-              (request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
-                <span className={styles.mobileClosedBadge}>募集定員に達しました</span>
-              ) : isLoggedIn ? (
-                hasApplied ? (
-                  <span className={styles.mobileAppliedBadge}>
-                    <i className="fas fa-check-circle"></i>応募済み
-                  </span>
-                ) : (
-                  <button onClick={() => setShowApplicationForm(true)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                    応募画面へ
-                  </button>
-                )
-              ) : (
-                <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                  ログインして応募
-                </Link>
-              )
-            )}
-            {isRequester && (
-              request.status === 'open' ? (
-                <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                  応募を管理
-                </Link>
-              ) : myContractId ? (
-                <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                  契約進捗を確認
-                </Link>
-              ) : (
-                <span className={styles.mobileClosedBadge}>募集終了</span>
-              )
-            )}
-            {!isRequester && myContractId && (
-              <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                契約進捗を確認
-              </Link>
-            )}
-            {!isRequester && !myContractId && request.status !== 'open' && (
-              <span className={styles.mobileClosedBadge}>募集終了</span>
-            )}
-          </div>
+          {hasApplied ? (
+            <>
+              <div className={styles.mobileFooterAction}>
+                <div className={styles.mobileAppliedBadge}>
+                  <i className="fas fa-check-circle"></i>応募済み
+                </div>
+              </div>
+              {myContractId ? (
+                <div className={styles.mobileFooterAction}>
+                  <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                    契約進捗を確認
+                  </Link>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <div className={styles.mobileFooterPrice}>
+                <span className={styles.mobileFooterPriceLabel}>
+                  {request.payment_type === 'hourly' ? '時給' : '予算'}
+                </span>
+                <span className={styles.mobileFooterPriceValue}>
+                  {request.payment_type === 'hourly' ? (
+                    request.hourly_rate_min && request.hourly_rate_max
+                      ? `¥${request.hourly_rate_min.toLocaleString()}〜${request.hourly_rate_max.toLocaleString()}`
+                      : request.hourly_rate_min
+                      ? `¥${request.hourly_rate_min.toLocaleString()}〜`
+                      : request.hourly_rate_max
+                      ? `〜¥${request.hourly_rate_max.toLocaleString()}`
+                      : '応相談'
+                  ) : request.price_negotiable ? (
+                    '相談して決める'
+                  ) : (request.budget_min || request.budget_max) ? (
+                    `¥${request.budget_min?.toLocaleString() || '0'}〜${request.budget_max ? `¥${request.budget_max.toLocaleString()}` : ''}`
+                  ) : (
+                    '金額未設定'
+                  )}
+                </span>
+              </div>
+              <div className={styles.mobileFooterAction}>
+                {request.status === 'open' && !isRequester && (
+                  (request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
+                    <span className={styles.mobileClosedBadge}>募集定員に達しました</span>
+                  ) : isLoggedIn ? (
+                    <button onClick={() => setShowApplicationForm(true)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      応募画面へ
+                    </button>
+                  ) : (
+                    <button onClick={() => requireAuth()} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      応募する
+                    </button>
+                  )
+                )}
+                {isRequester && (
+                  request.status === 'open' ? (
+                    <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      応募を管理
+                    </Link>
+                  ) : myContractId ? (
+                    <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                      契約進捗を確認
+                    </Link>
+                  ) : (
+                    <span className={styles.mobileClosedBadge}>募集終了</span>
+                  )
+                )}
+                {!isRequester && myContractId && !hasApplied && (
+                  <Link href={`/requests/${requestId}/contracts/${myContractId}`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                    契約進捗を確認
+                  </Link>
+                )}
+                {!isRequester && !myContractId && request.status !== 'open' && (
+                  <span className={styles.mobileClosedBadge}>募集終了</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
       <Footer />

@@ -317,12 +317,24 @@ export default function Header() {
         .eq('id', profile.id)
       if (error) throw error
       setIsAcceptingOrders(newStatus)
+      // サイドバーに通知
+      window.dispatchEvent(new CustomEvent('accepting-orders-changed', { detail: newStatus }))
     } catch (error) {
       console.error('受付状態更新エラー:', error)
     } finally {
       setIsToggleLoading(false)
     }
   }, [profile?.id, isAcceptingOrders, isToggleLoading])
+
+  // サイドバーからの受付状態変更を受信
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const status = (e as CustomEvent).detail
+      setIsAcceptingOrders(status)
+    }
+    window.addEventListener('accepting-orders-changed', handler)
+    return () => window.removeEventListener('accepting-orders-changed', handler)
+  }, [])
 
   useEffect(() => {
     recount()

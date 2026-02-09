@@ -5,28 +5,71 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import AuthRequiredModal from '@/app/components/AuthRequiredModal'
 
-// 認証不要の公開パス
-const publicPaths = [
+// 認証不要の公開パス（完全一致）
+const publicExactPaths = [
   '/',
   '/login',
   '/signup',
   '/reset-password',
-  '/auth',
   '/about',
   '/terms',
   '/privacy',
+  '/search',
+]
+
+// 認証不要の公開パス（前方一致：配下も全て公開）
+const publicPrefixPaths = [
+  '/auth',
   '/portfolio',
   '/creators',
-  '/requests',
-  '/pricing',
-  '/search',
   '/tags',
 ]
 
+// 認証不要の公開パス（特殊ルール）
+// /requests → 公開（一覧）
+// /requests/create → 保護
+// /requests/manage → 保護
+// /requests/[id] → 公開（詳細）
+// /requests/[id]/manage → 保護
+// /requests/[id]/contracts → 保護
+// /pricing → 公開（一覧）
+// /pricing/[id] → 公開（詳細）
+// /pricing/new → 保護（dashboard配下なので既に保護）
+
 function isPublicPath(pathname: string): boolean {
-  return publicPaths.some(
-    path => pathname === path || pathname.startsWith(path + '/')
-  )
+  // 完全一致
+  if (publicExactPaths.includes(pathname)) return true
+
+  // 前方一致（配下全て公開）
+  if (publicPrefixPaths.some(path => pathname === path || pathname.startsWith(path + '/'))) {
+    return true
+  }
+
+  // /requests の特殊ルール
+  if (pathname === '/requests') return true
+  if (pathname.startsWith('/requests/')) {
+    const segments = pathname.split('/').filter(Boolean)
+    // /requests/create → 保護
+    if (segments[1] === 'create') return false
+    // /requests/manage → 保護
+    if (segments[1] === 'manage') return false
+    // /requests/[id] → 公開（2セグメントのみ）
+    if (segments.length === 2) return true
+    // /requests/[id]/manage, /requests/[id]/contracts 等 → 保護
+    return false
+  }
+
+  // /pricing の特殊ルール
+  if (pathname === '/pricing') return true
+  if (pathname.startsWith('/pricing/')) {
+    const segments = pathname.split('/').filter(Boolean)
+    // /pricing/[id] → 公開（2セグメントのみ）
+    if (segments.length === 2) return true
+    // それ以外 → 保護
+    return false
+  }
+
+  return false
 }
 
 /**
@@ -46,6 +89,11 @@ export default function ProtectedContent({ children }: { children: React.ReactNo
     if (!needsAuth) {
       setAuthState('authenticated')
       checkedPathRef.current = null
+      return
+    }
+
+    // 既に認証済みなら再チェック不要（ダッシュボード内の遷移等）
+    if (authState === 'authenticated') {
       return
     }
 

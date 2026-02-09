@@ -27,12 +27,12 @@ type PortfolioItem = {
 }
 
 const CATEGORIES = [
-  { value: 'illustration', label: 'イラスト', path: '/portfolio/illustration' },
-  { value: 'manga', label: 'マンガ', path: '/portfolio/manga' },
-  { value: 'novel', label: '小説', path: '/portfolio/novel' },
-  { value: 'music', label: '音楽', path: '/portfolio/music' },
-  { value: 'voice', label: 'ボイス', path: '/portfolio/voice' },
-  { value: 'video', label: '動画', path: '/portfolio/video' }
+  { value: 'illustration', label: 'イラスト', path: '/portfolio/illustration', icon: 'fa-image' },
+  { value: 'manga', label: 'マンガ', path: '/portfolio/manga', icon: 'fa-book' },
+  { value: 'novel', label: '小説', path: '/portfolio/novel', icon: 'fa-file-alt' },
+  { value: 'music', label: '音楽', path: '/portfolio/music', icon: 'fa-music' },
+  { value: 'voice', label: 'ボイス', path: '/portfolio/voice', icon: 'fa-microphone' },
+  { value: 'video', label: '動画', path: '/portfolio/video', icon: 'fa-video' }
 ]
 
 const SORT_TABS = [
@@ -51,6 +51,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sortOrder, setSortOrder] = useState('newest')
+  const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 30
 
@@ -60,7 +61,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [sortOrder])
+  }, [sortOrder, searchQuery])
 
   async function fetchPortfolioItems() {
     setLoading(true)
@@ -138,16 +139,25 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
       .slice(0, 8)
   }, [portfolioItems])
 
+  // 検索フィルター適用
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return portfolioItems
+    const query = searchQuery.toLowerCase()
+    return portfolioItems.filter(item =>
+      item.title.toLowerCase().includes(query) ||
+      item.profiles?.display_name?.toLowerCase().includes(query)
+    )
+  }, [portfolioItems, searchQuery])
+
   // ソート済みアイテム
   const sortedItems = useMemo(() => {
-    let result = [...portfolioItems]
+    let result = [...filteredItems]
     
     switch (sortOrder) {
       case 'newest':
         result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         break
       case 'trending':
-        // 直近の投稿で いいね/コメント が多いもの
         const now = new Date().getTime()
         result.sort((a, b) => {
           const ageA = (now - new Date(a.created_at).getTime()) / (1000 * 60 * 60 * 24) + 1
@@ -163,7 +173,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     }
     
     return result
-  }, [portfolioItems, sortOrder])
+  }, [filteredItems, sortOrder])
 
   // ページ分割
   const paginatedItems = useMemo(() => {
@@ -275,10 +285,12 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
               </div>
               <div className={styles.mobileTabs}>
                 <Link href="/portfolio" className={`${styles.mobileTab} ${!category ? styles.active : ''}`}>
+                  <i className="fas fa-th-large"></i>
                   すべて
                 </Link>
                 {CATEGORIES.map((cat) => (
                   <Link key={cat.value} href={cat.path} className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}>
+                    <i className={`fas ${cat.icon}`}></i>
                     {cat.label}
                   </Link>
                 ))}
@@ -352,6 +364,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                 href="/portfolio" 
                 className={`${styles.mobileTab} ${!category ? styles.active : ''}`}
               >
+                <i className="fas fa-th-large"></i>
                 すべて
               </Link>
               {CATEGORIES.map((cat) => (
@@ -360,9 +373,24 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                   href={cat.path} 
                   className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}
                 >
+                  <i className={`fas ${cat.icon}`}></i>
                   {cat.label}
                 </Link>
               ))}
+            </div>
+
+            {/* 検索バー */}
+            <div className={styles.filterBar}>
+              <div className={styles.searchWrapper}>
+                <i className={`fas fa-magnifying-glass ${styles.searchIcon}`}></i>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="タイトル、クリエイター名で検索"
+                  className={styles.searchInput}
+                />
+              </div>
             </div>
 
             {/* 空状態 */}
@@ -377,7 +405,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
             {portfolioItems.length > 0 && (
               <>
                 {/* おすすめ作品 */}
-                {featuredItems.length > 0 && !category && (
+                {featuredItems.length > 0 && !category && !searchQuery && (
                   <section className={styles.featuredSection}>
                     <div className={styles.featuredHeader}>
                       <h2 className={styles.featuredTitle}>おすすめ作品</h2>
@@ -437,80 +465,92 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
                   ))}
                 </div>
 
+                {/* 検索結果が空 */}
+                {sortedItems.length === 0 && searchQuery && (
+                  <div className={styles.emptyState}>
+                    <i className="fas fa-search"></i>
+                    <p>検索条件に一致する作品がありません</p>
+                  </div>
+                )}
+
                 {/* サムネイルグリッド */}
-                <div className={styles.worksGrid}>
-                  {paginatedItems.map((item) => (
-                    <Link 
-                      key={item.id} 
-                      href={`/portfolio/${item.id}`} 
-                      className={styles.workCard}
-                    >
-                      {/* 画像 */}
-                      <div className={styles.workCardImage}>
-                        {item.thumbnail_url || item.image_url ? (
-                          <Image 
-                            src={item.thumbnail_url || item.image_url} 
-                            alt={item.title}
-                            fill
-                            sizes="(max-width: 479px) 50vw, (max-width: 767px) 33vw, (max-width: 1023px) 25vw, 180px"
-                            style={{ objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div className={styles.placeholder}>
-                            <i className="fa-regular fa-image"></i>
+                {sortedItems.length > 0 && (
+                  <>
+                    <div className={styles.worksGrid}>
+                      {paginatedItems.map((item) => (
+                        <Link 
+                          key={item.id} 
+                          href={`/portfolio/${item.id}`} 
+                          className={styles.workCard}
+                        >
+                          {/* 画像 */}
+                          <div className={styles.workCardImage}>
+                            {item.thumbnail_url || item.image_url ? (
+                              <Image 
+                                src={item.thumbnail_url || item.image_url} 
+                                alt={item.title}
+                                fill
+                                sizes="(max-width: 479px) 50vw, (max-width: 767px) 33vw, (max-width: 1023px) 25vw, 180px"
+                                style={{ objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div className={styles.placeholder}>
+                                <i className="fa-regular fa-image"></i>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* バッジ */}
-                      <span className={styles.cardBadge}>{getCategoryLabel(item.category)}</span>
-                      
-                      {/* NEW / HOT ラベル */}
-                      {isNew(item.created_at) && !isHot(item.likeCount) && (
-                        <span className={`${styles.cardLabel} ${styles.new}`}>NEW</span>
-                      )}
-                      {isHot(item.likeCount) && (
-                        <span className={`${styles.cardLabel} ${styles.hot}`}>🔥</span>
-                      )}
+                          {/* バッジ */}
+                          <span className={styles.cardBadge}>{getCategoryLabel(item.category)}</span>
+                          
+                          {/* NEW / HOT ラベル */}
+                          {isNew(item.created_at) && !isHot(item.likeCount) && (
+                            <span className={`${styles.cardLabel} ${styles.new}`}>NEW</span>
+                          )}
+                          {isHot(item.likeCount) && (
+                            <span className={`${styles.cardLabel} ${styles.hot}`}>🔥</span>
+                          )}
 
-                      {/* ホバー時に表示される情報 */}
-                      <div className={styles.cardInfo}>
-                        <h3 className={styles.cardTitle}>{item.title}</h3>
-                        <div className={styles.cardMeta}>
-                          <div className={styles.cardCreator}>
-                            <div className={styles.creatorAvatar}>
-                              {item.profiles?.avatar_url ? (
-                                <Image 
-                                  src={item.profiles.avatar_url} 
-                                  alt="" 
-                                  width={18} 
-                                  height={18}
-                                  sizes="18px"
-                                />
-                              ) : (
-                                <i className="fas fa-user"></i>
-                              )}
+                          {/* ホバー時に表示される情報 */}
+                          <div className={styles.cardInfo}>
+                            <h3 className={styles.cardTitle}>{item.title}</h3>
+                            <div className={styles.cardMeta}>
+                              <div className={styles.cardCreator}>
+                                <div className={styles.creatorAvatar}>
+                                  {item.profiles?.avatar_url ? (
+                                    <Image 
+                                      src={item.profiles.avatar_url} 
+                                      alt="" 
+                                      width={18} 
+                                      height={18}
+                                      sizes="18px"
+                                    />
+                                  ) : (
+                                    <i className="fas fa-user"></i>
+                                  )}
+                                </div>
+                                <span className={styles.creatorName}>
+                                  {item.profiles?.display_name || '名前未設定'}
+                                </span>
+                              </div>
+                              <div className={styles.cardStats}>
+                                <span className={styles.statItem}>
+                                  <i className="fas fa-heart"></i>
+                                  {item.likeCount}
+                                </span>
+                                <span className={styles.statItem}>
+                                  <i className="fas fa-comment"></i>
+                                  {item.commentCount}
+                                </span>
+                              </div>
                             </div>
-                            <span className={styles.creatorName}>
-                              {item.profiles?.display_name || '名前未設定'}
-                            </span>
                           </div>
-                          <div className={styles.cardStats}>
-                            <span className={styles.statItem}>
-                              <i className="fas fa-heart"></i>
-                              {item.likeCount}
-                            </span>
-                            <span className={styles.statItem}>
-                              <i className="fas fa-comment"></i>
-                              {item.commentCount}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                <Pagination />
+                        </Link>
+                      ))}
+                    </div>
+                    <Pagination />
+                  </>
+                )}
               </>
             )}
           </div>

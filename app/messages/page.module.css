@@ -12,6 +12,7 @@
   flex: 1;
   min-width: 0;
   padding: var(--space-6);
+  padding-left: var(--space-8);
 }
 
 /* ============================================

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
+import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
 type WorkRequest = {
@@ -57,11 +57,9 @@ export default function DashboardPage() {
   // クリエイタービュー
   const [myApplications, setMyApplications] = useState<Application[]>([])
   const [applicationTab, setApplicationTab] = useState<'pending' | 'accepted' | 'completed'>('accepted')
-  
-  const router = useRouter()
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   useEffect(() => {
@@ -71,12 +69,9 @@ export default function DashboardPage() {
     }
   }, [currentProfileId])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent('/requests/manage')}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -289,14 +284,10 @@ export default function DashboardPage() {
       <Header />
       <div className={styles.pageWrapper}>
         <DashboardSidebar accountType={accountType} isAdmin={isAdmin} />
-
-        {loading ? (
-          <div className={styles.loading}>
-            <i className="fas fa-spinner fa-spin"></i>
-            <span>読み込み中...</span>
-          </div>
-        ) : (
-          <main className={styles.main}>
+        <main className={styles.main}>
+          {loading ? (
+            <LoadingSpinner />
+          ) : (
             <div className={styles.container}>
               <h1 className={styles.title}>依頼管理</h1>
 
@@ -526,8 +517,8 @@ export default function DashboardPage() {
                 </>
               )}
             </div>
-          </main>
-        )}
+          )}
+        </main>
       </div>
       <Footer />
     </>

@@ -155,9 +155,9 @@ export default function BankAccountClient() {
       .from('bank_accounts')
       .select('*')
       .eq('profile_id', currentProfileId)
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('口座情報取得エラー:', error)
       return
     }

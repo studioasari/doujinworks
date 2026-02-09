@@ -236,6 +236,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
@@ -248,7 +249,12 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 80px;
   text-decoration: none;
+}
+
+.mobileTab i {
+  font-size: var(--text-xs);
 }
 
 .mobileTab:hover {
@@ -582,12 +588,14 @@
   }
 
   .filterBar {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .filterSelect {
-    width: 100%;
+    width: calc(50% - var(--space-3) / 2);
+    flex-shrink: 0;
   }
 
   .filterCheckbox {
@@ -595,7 +603,7 @@
   }
 
   .resultCount {
-    margin-left: 0;
+    margin-left: auto;
     order: 4;
   }
 

@@ -77,7 +77,7 @@ export default function RequestManagePage() {
   const router = useRouter()
   const requestId = params.id as string
 
-  useEffect(() => { checkAuth() }, [])
+  useEffect(() => { loadData() }, [])
 
   // モーダル表示時に背景スクロール固定
   useEffect(() => {
@@ -97,12 +97,9 @@ export default function RequestManagePage() {
     }
   }, [requestId, currentProfileId])
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
     if (profile) setCurrentProfileId(profile.id)
   }

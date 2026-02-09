@@ -29,13 +29,13 @@ type PricingPlan = {
 }
 
 const CATEGORIES = [
-  { value: 'illustration', label: 'イラスト', path: '/pricing/illustration' },
-  { value: 'manga', label: 'マンガ', path: '/pricing/manga' },
-  { value: 'novel', label: '小説', path: '/pricing/novel' },
-  { value: 'music', label: '音楽', path: '/pricing/music' },
-  { value: 'voice', label: 'ボイス', path: '/pricing/voice' },
-  { value: 'video', label: '動画', path: '/pricing/video' },
-  { value: 'other', label: 'その他', path: '/pricing/other' }
+  { value: 'illustration', label: 'イラスト', path: '/pricing/illustration', icon: 'fa-image' },
+  { value: 'manga', label: 'マンガ', path: '/pricing/manga', icon: 'fa-book' },
+  { value: 'novel', label: '小説', path: '/pricing/novel', icon: 'fa-file-alt' },
+  { value: 'music', label: '音楽', path: '/pricing/music', icon: 'fa-music' },
+  { value: 'voice', label: 'ボイス', path: '/pricing/voice', icon: 'fa-microphone' },
+  { value: 'video', label: '動画', path: '/pricing/video', icon: 'fa-video' },
+  { value: 'other', label: 'その他', path: '/pricing/other', icon: 'fa-ellipsis-h' }
 ]
 
 const PRICE_RANGES = [
@@ -294,6 +294,7 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                 href="/pricing" 
                 className={`${styles.mobileTab} ${!category ? styles.active : ''}`}
               >
+                <i className="fas fa-th-large"></i>
                 すべて
               </Link>
               {CATEGORIES.map((cat) => (
@@ -302,6 +303,7 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
                   href={cat.path} 
                   className={`${styles.mobileTab} ${category === cat.value ? styles.active : ''}`}
                 >
+                  <i className={`fas ${cat.icon}`}></i>
                   {cat.label}
                 </Link>
               ))}

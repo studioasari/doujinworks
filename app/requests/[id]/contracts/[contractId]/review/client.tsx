@@ -46,7 +46,7 @@ export default function ReviewClient() {
   const contractId = params.contractId as string
 
   useEffect(() => {
-    checkAuthAndLoadData()
+    loadData()
   }, [])
 
   // モーダル表示時に背景スクロール固定
@@ -61,13 +61,9 @@ export default function ReviewClient() {
     }
   }, [showConfirmModal])
 
-  async function checkAuthAndLoadData() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')

@@ -26,6 +26,8 @@ type TooltipState = {
 
 export default function DashboardSidebar({ accountType = null, isAdmin = false }: DashboardSidebarProps) {
   const pathname = usePathname()
+  const [resolvedAccountType, setResolvedAccountType] = useState<string | null>(accountType)
+  const [resolvedIsAdmin, setResolvedIsAdmin] = useState(isAdmin)
   const [isAcceptingOrders, setIsAcceptingOrders] = useState(false)
   const [isToggleLoading, setIsToggleLoading] = useState(true)
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -33,6 +35,34 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, text: '', top: 0 })
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
+
+  // propsが更新されたら反映
+  useEffect(() => {
+    if (accountType !== null) setResolvedAccountType(accountType)
+  }, [accountType])
+
+  useEffect(() => {
+    if (isAdmin) setResolvedIsAdmin(isAdmin)
+  }, [isAdmin])
+
+  // propsが渡されなかった場合、自分で取得
+  useEffect(() => {
+    if (accountType !== null) return
+    async function fetchProfile() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('account_type, is_admin')
+        .eq('user_id', user.id)
+        .single()
+      if (profile) {
+        setResolvedAccountType(profile.account_type)
+        setResolvedIsAdmin(profile.is_admin ?? false)
+      }
+    }
+    fetchProfile()
+  }, [accountType])
 
   // 初回マウント時にlocalStorageから状態を復元
   useEffect(() => {
@@ -78,12 +108,12 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
   }, [])
 
   useEffect(() => {
-    if (accountType === 'business') {
+    if (resolvedAccountType === 'business') {
       fetchAcceptingStatus()
     } else {
       setIsToggleLoading(false)
     }
-  }, [accountType])
+  }, [resolvedAccountType])
 
   async function fetchAcceptingStatus() {
     try {
@@ -113,21 +143,31 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       if (!user) return
 
       const newStatus = !isAcceptingOrders
-
       const { error } = await supabase
         .from('profiles')
         .update({ is_accepting_orders: newStatus })
         .eq('user_id', user.id)
-
       if (error) throw error
 
       setIsAcceptingOrders(newStatus)
+      // ヘッダーに通知
+      window.dispatchEvent(new CustomEvent('accepting-orders-changed', { detail: newStatus }))
     } catch (error) {
       console.error('受付状態更新エラー:', error)
     } finally {
       setIsToggleLoading(false)
     }
   }
+
+  // 他方のトグルを受信
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const status = (e as CustomEvent).detail
+      setIsAcceptingOrders(status)
+    }
+    window.addEventListener('accepting-orders-changed', handler)
+    return () => window.removeEventListener('accepting-orders-changed', handler)
+  }, [])
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -172,7 +212,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     { href: '/dashboard/settings', icon: 'fa-solid fa-gear', label: 'アカウント設定' },
   ]
 
-  const adminItems: MenuItem[] = isAdmin ? [
+  const adminItems: MenuItem[] = resolvedIsAdmin ? [
     { href: '/admin', icon: 'fa-solid fa-gauge-high', label: '管理ダッシュボード', isAdmin: true },
     { href: '/admin/payments', icon: 'fa-solid fa-money-check-dollar', label: '振込管理', isAdmin: true },
     { href: '/admin/users', icon: 'fa-solid fa-users-gear', label: 'ユーザー管理', isAdmin: true },
@@ -200,7 +240,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
   // 「もっと」内のアイテムがアクティブかどうか
   const isMoreActive = () => {
     return moreItems.some(item => isActive(item.href)) || 
-           (isAdmin && adminItems.some(item => isActive(item.href)))
+           (resolvedIsAdmin && adminItems.some(item => isActive(item.href)))
   }
 
   // サイドバーアイテムのレンダリング
@@ -256,7 +296,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
         </div>
         
         {/* 受付状態トグル（ビジネスユーザーのみ） */}
-        {accountType === 'business' && (
+        {resolvedAccountType === 'business' && (
           <div className={styles.sheetStatusBar}>
             <div className={`${styles.sheetStatusIndicator} ${isAcceptingOrders ? styles.accepting : ''}`}>
               <span className={styles.sheetStatusDot}></span>
@@ -287,7 +327,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
           ))}
 
           {/* 管理者メニュー */}
-          {isAdmin && (
+          {resolvedIsAdmin && (
             <>
               <div className={styles.sheetDivider}></div>
               <div className={styles.sheetLabel}>管理者</div>
@@ -335,7 +375,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
 
         <nav className={styles.sidebarNav}>
           {/* 受付状態（ビジネスユーザーのみ） */}
-          {accountType === 'business' && (
+          {resolvedAccountType === 'business' && (
             <div className={`${styles.statusCard} ${isAcceptingOrders ? styles.accepting : styles.paused}`}>
               {isCollapsed ? (
                 // 折りたたみ時: アイコンのみ
@@ -407,7 +447,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
           </div>
 
           {/* 管理者メニュー */}
-          {isAdmin && (
+          {resolvedIsAdmin && (
             <>
               <div className={styles.divider}></div>
               <div className={styles.menuGroup}>

@@ -250,6 +250,7 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 80px;
 }
 
 .mobileTab i {
@@ -276,7 +277,8 @@
 }
 
 .mobileFilterSelect {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   padding-right: var(--space-6);
   background: var(--bg-elevated);
@@ -290,6 +292,9 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238c8c96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-2) center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobileFilterSelect.active {
@@ -587,9 +592,13 @@
   }
 
   .pageHeader {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: var(--space-3);
+  }
+
+  .pageHeaderLeft {
+    flex: 1;
   }
 
   .pageTitle {

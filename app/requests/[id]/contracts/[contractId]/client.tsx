@@ -195,7 +195,7 @@ export default function ContractDetailPage() {
   const contractId = params.contractId as string
 
   useEffect(() => {
-    checkAuth()
+    loadData()
   }, [])
 
   // activeTabRefを同期
@@ -340,13 +340,10 @@ export default function ContractDetailPage() {
     return container.scrollHeight - container.scrollTop - container.clientHeight < 100
   }
 
-  async function checkAuth() {
+  async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
     
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+    if (!user) return
 
     const { data: profile } = await supabase
       .from('profiles')

@@ -41,27 +41,6 @@
 }
 
 /* ============================================
-   スケルトンローディング
-   ============================================ */
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-sunken) 25%,
-    var(--bg-hover) 50%,
-    var(--bg-sunken) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeletonLoading 1.5s infinite;
-  border-radius: var(--radius-md);
-}
-
-@keyframes skeletonLoading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ============================================
    ヘッダー（左カラム内）
    ============================================ */
 
@@ -90,7 +69,6 @@
 }
 
 .statusBadge {
-  /* サイズはグローバルの.badgeクラスから継承 */
   background: var(--bg-sunken);
   color: var(--text-secondary);
 }
@@ -98,11 +76,6 @@
 .statusBadge.open {
   background: var(--status-success-bg);
   color: var(--status-success);
-}
-
-.statusBadge.contracted {
-  background: var(--bg-sunken);
-  color: var(--text-tertiary);
 }
 
 .statusBadge.contracted,
@@ -325,64 +298,6 @@
   color: var(--text-primary);
 }
 
-/* 依頼者情報（メイン下部） */
-.creatorCard {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  text-decoration: none;
-  margin-top: var(--space-5);
-  transition: background var(--transition-fast);
-}
-
-.creatorCard:hover {
-  background: var(--bg-hover);
-}
-
-.creatorAvatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-  background: var(--accent-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: white;
-  font-size: var(--text-lg);
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.creatorAvatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.creatorInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.creatorName {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.creatorMeta {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
 /* ============================================
    サイドバー
    ============================================ */
@@ -456,6 +371,17 @@
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+a.clientInfo {
+  cursor: pointer;
+}
+
+a.clientInfo:hover {
+  background: var(--bg-hover);
 }
 
 .clientAvatar {
@@ -515,10 +441,8 @@
 .clientStats {
   display: flex;
   gap: var(--space-4);
-  padding: var(--space-3) 0;
+  padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: var(--space-3);
 }
 
 .clientStatItem {
@@ -537,25 +461,6 @@
 .clientStatLabel {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
-}
-
-.clientProfileLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--accent-primary);
-  text-decoration: none;
-  transition: opacity var(--transition-fast);
-}
-
-.clientProfileLink:hover {
-  opacity: 0.8;
-}
-
-.clientProfileLink i {
-  font-size: var(--text-xs);
 }
 
 /* ============================================
@@ -964,15 +869,12 @@
   .actionCard {
     display: none;
   }
-
-  /* フッター分のpadding-bottomを追加 */
-  .page {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 .mobileFooterPrice {
-  flex: 1;
+  width: calc(50% - 6px);
+  flex-shrink: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -998,7 +900,9 @@
 }
 
 .mobileFooterAction {
-  flex: 1;
+  width: calc(50% - 6px);
+  flex-shrink: 0;
+  min-width: 0;
   display: flex;
 }
 
@@ -1006,6 +910,7 @@
 .mobileFooterAction .mobileAppliedBadge,
 .mobileFooterAction .mobileClosedBadge {
   flex: 1;
+  min-width: 0;
 }
 
 .mobileAppliedBadge {
@@ -1013,24 +918,32 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3);
   background: var(--status-success-bg);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--status-success);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  height: 100%;
 }
 
 .mobileClosedBadge {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3);
   background: var(--bg-sunken);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============================================
