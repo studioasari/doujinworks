@@ -897,6 +897,7 @@ a.clientInfo:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+  text-align: center;
 }
 
 .mobileFooterAction {

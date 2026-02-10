@@ -249,7 +249,7 @@ export default function Breadcrumb() {
       'pricing': '料金表一覧',
       'portfolio': '作品一覧',
       'requests': '依頼一覧',
-      'creators': 'クリエイター',
+      'creators': 'クリエイター一覧',
       'messages': 'メッセージ',
       'notifications': '通知',
       'settings': '設定',

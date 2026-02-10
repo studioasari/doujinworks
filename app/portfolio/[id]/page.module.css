@@ -150,6 +150,9 @@
 .sidebar {
   position: sticky;
   top: calc(60px + var(--space-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .sidebarCard {
@@ -292,6 +295,29 @@
 
 .followBtn {
   width: 100%;
+}
+
+/* 通報リンク（サイドバー下部） */
+.reportLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.reportLink:hover {
+  color: var(--status-error);
+}
+
+.reportLink i {
+  font-size: var(--text-xs);
 }
 
 /* ============================================
@@ -1165,6 +1191,134 @@
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
+}
+
+/* ============================================
+   通報モーダル
+   ============================================ */
+
+.reportOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  padding: var(--space-6);
+}
+
+.reportModal {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.reportModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.reportModalTitle {
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.reportModalClose {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.reportModalClose:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.reportModalBody {
+  padding: var(--space-5);
+}
+
+.reportModalFooter {
+  padding: var(--space-5);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  gap: var(--space-3);
+}
+
+.reportModalFooter :global(.btn) {
+  flex: 1;
+}
+
+.reportModalGroup {
+  margin-bottom: var(--space-4);
+}
+
+.reportModalGroup:last-child {
+  margin-bottom: 0;
+}
+
+.reportModalLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.required {
+  color: var(--status-error);
+}
+
+.reportModalTextarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 120px;
+  font-family: var(--font-body);
+}
+
+.reportModalTextarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.reportModalSelect {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.reportModalSelect:focus {
+  outline: none;
+  border-color: var(--accent-primary);
 }
 
 /* ============================================

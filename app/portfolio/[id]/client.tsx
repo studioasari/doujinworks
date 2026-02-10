@@ -96,6 +96,16 @@ const CATEGORY_LABELS: { [key: string]: string } = {
   video: '動画'
 }
 
+const REPORT_REASONS = [
+  { value: 'spam', label: 'スパム・宣伝目的' },
+  { value: 'fraud', label: '詐欺・不正行為の疑い' },
+  { value: 'inappropriate', label: '不適切なコンテンツ' },
+  { value: 'illegal', label: '違法な内容' },
+  { value: 'harassment', label: '嫌がらせ・誹謗中傷' },
+  { value: 'copyright', label: '著作権侵害の疑い' },
+  { value: 'other', label: 'その他の規約違反' }
+]
+
 async function attachStatsToWorks(
   works: PortfolioItem[],
   userId: string | null
@@ -208,6 +218,12 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   const [isShareDropdownOpen, setIsShareDropdownOpen] = useState(false)
   const [openCommentMenuId, setOpenCommentMenuId] = useState<string | null>(null)
 
+  // 通報
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportContent, setReportContent] = useState('')
+  const [submittingReport, setSubmittingReport] = useState(false)
+
   useEffect(() => {
     loadData()
   }, [unwrappedParams.id, currentUserId])
@@ -224,6 +240,16 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [isShareDropdownOpen])
+
+  // 通報モーダル表示中は背景スクロール禁止
+  useEffect(() => {
+    if (showReportModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showReportModal])
 
   async function loadData() {
     setLoading(true)
@@ -490,6 +516,37 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
     document.body.removeChild(ta)
   }
 
+  async function handleSubmitReport(e: React.FormEvent) {
+    e.preventDefault()
+    if (!reportReason) {
+      alert('報告理由を選択してください')
+      return
+    }
+
+    setSubmittingReport(true)
+    try {
+      const { error } = await supabase.from('reports').insert({
+        reporter_id: currentUserId || null,
+        report_type: 'portfolio_item',
+        target_request_id: unwrappedParams.id,
+        reason: reportReason,
+        description: reportContent.trim() || null,
+        status: 'pending'
+      })
+
+      if (error) throw error
+
+      alert('通報を送信しました。ご協力ありがとうございます。')
+      setShowReportModal(false)
+      setReportReason('')
+      setReportContent('')
+    } catch (error) {
+      console.error('通報エラー:', error)
+      alert('通報の送信に失敗しました')
+    }
+    setSubmittingReport(false)
+  }
+
   async function handleCommentSubmit() {
     if (!requireAuth()) return
     if (!commentText.trim() || !work) return
@@ -658,7 +715,12 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                 {creator.bio && (
                   <div className={styles.bioSection}>
                     <h3 className={styles.bioTitle}>自己紹介</h3>
-                    <p className={styles.bioText}>{creator.bio}</p>
+                    <p className={styles.bioText}>
+                      {creator.bio.length > 100
+                        ? creator.bio.slice(0, 100) + '…'
+                        : creator.bio
+                      }
+                    </p>
                   </div>
                 )}
 
@@ -723,6 +785,12 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
                   </Link>
                 )}
               </div>
+
+              {/* 通報ボタン */}
+              <button onClick={() => setShowReportModal(true)} className={styles.reportLink}>
+                <i className="fas fa-flag"></i>
+                この作品を通報する
+              </button>
             </aside>
 
             {/* メインコンテンツ */}
@@ -1141,6 +1209,64 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* 通報モーダル */}
+      {showReportModal && (
+        <div className={styles.reportOverlay} onClick={() => setShowReportModal(false)}>
+          <div className={styles.reportModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.reportModalHeader}>
+              <h3 className={styles.reportModalTitle}>運営に規約違反を通報する</h3>
+              <button className={styles.reportModalClose} onClick={() => setShowReportModal(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <form onSubmit={handleSubmitReport}>
+              <div className={styles.reportModalBody}>
+                <div className={styles.reportModalGroup}>
+                  <label className={styles.reportModalLabel} htmlFor="report-reason">
+                    報告理由 <span className={styles.required}>*</span>
+                  </label>
+                  <select
+                    id="report-reason"
+                    name="report-reason"
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    required
+                    className={styles.reportModalSelect}
+                  >
+                    <option value="">選択してください</option>
+                    {REPORT_REASONS.map(reason => (
+                      <option key={reason.value} value={reason.value}>{reason.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.reportModalGroup}>
+                  <label className={styles.reportModalLabel} htmlFor="report-content">
+                    詳細（任意）
+                  </label>
+                  <textarea
+                    id="report-content"
+                    name="report-content"
+                    value={reportContent}
+                    onChange={(e) => setReportContent(e.target.value)}
+                    placeholder="具体的な状況や問題点があればご記入ください"
+                    rows={4}
+                    className={styles.reportModalTextarea}
+                  />
+                </div>
+              </div>
+              <div className={styles.reportModalFooter}>
+                <button type="button" onClick={() => setShowReportModal(false)} disabled={submittingReport} className="btn btn-secondary">
+                  キャンセル
+                </button>
+                <button type="submit" disabled={submittingReport || !reportReason} className="btn btn-primary">
+                  {submittingReport ? '送信中...' : '通報する'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

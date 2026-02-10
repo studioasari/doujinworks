@@ -397,7 +397,7 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
-    flex-shrink: 0;
+    min-width: 120px;
   }
 
   .mobileTab:hover {

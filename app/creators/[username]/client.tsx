@@ -89,6 +89,27 @@ function getCategoryLabel(category: string | null): string {
   return CATEGORY_LABELS[category] || category
 }
 
+function BioText({ bio, maxLength }: { bio: string; maxLength: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const needsTruncate = bio.length > maxLength
+
+  return (
+    <div className={styles.bioWrapper}>
+      <p className={styles.bio}>
+        {needsTruncate && !expanded ? bio.slice(0, maxLength) + '…' : bio}
+      </p>
+      {needsTruncate && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className={styles.bioToggle}
+        >
+          {expanded ? '閉じる' : 'もっと見る'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 const WorkCard = memo(({ work }: { work: PortfolioItem }) => {
   return (
     <Link href={`/portfolio/${work.id}`} className="card">
@@ -619,7 +640,7 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
 
                 {/* 自己紹介 */}
                 {creator.bio && (
-                  <p className={styles.bio}>{creator.bio}</p>
+                  <BioText bio={creator.bio} maxLength={100} />
                 )}
               </div>
             </div>
