@@ -163,6 +163,31 @@
 }
 
 /* ============================================
+   空状態 - 上下中央配置
+   ============================================ */
+
+.emptyStateCentered {
+  min-height: calc(100vh - 280px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateCentered > i {
+  font-size: 3rem;
+}
+
+.emptyStateCentered :global(.btn) {
+  font-size: var(--text-base);
+}
+
+.emptyStateCentered :global(.btn) i {
+  font-size: var(--text-base);
+  margin-bottom: 0;
+}
+
+/* ============================================
    モーダル
    ============================================ */
 
@@ -231,17 +256,8 @@
 
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-4);
-  }
-
-  .headerActions {
-    flex-direction: column;
-  }
-
-  .headerActions :global(.btn) {
-    justify-content: center;
+    flex-direction: row;
+    align-items: center;
   }
 
   .planCard {
@@ -260,5 +276,9 @@
     justify-content: flex-end;
     padding-top: var(--space-3);
     border-top: 1px solid var(--border-subtle);
+  }
+
+  .emptyStateCentered {
+    min-height: calc(100vh - 320px);
   }
 }

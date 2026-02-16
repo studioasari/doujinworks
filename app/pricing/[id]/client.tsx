@@ -136,10 +136,16 @@ export default function PricingDetailClient() {
       .select('*')
       .eq('id', planId)
       .eq('is_public', true)
-      .single()
+      .maybeSingle()
 
-    if (planError || !planData) {
+    if (planError) {
       console.error('料金プラン取得エラー:', planError)
+      setPlan(null)
+      setLoading(false)
+      return
+    }
+
+    if (!planData) {
       setPlan(null)
       setLoading(false)
       return
@@ -151,10 +157,12 @@ export default function PricingDetailClient() {
       .from('profiles')
       .select('id, user_id, username, display_name, bio, avatar_url')
       .eq('id', planData.creator_id)
-      .single()
+      .maybeSingle()
 
-    if (creatorError || !creatorData) {
+    if (creatorError) {
       console.error('クリエイター取得エラー:', creatorError)
+      setCreator(null)
+    } else if (!creatorData) {
       setCreator(null)
     } else {
       setCreator(creatorData)

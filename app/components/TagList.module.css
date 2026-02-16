@@ -1,0 +1,282 @@
+/**
+ * Tag List Page Styles
+ * デザインシステム準拠 - サイドバーなしレイアウト
+ */
+
+/* ============================================
+   メインコンテンツ
+   ============================================ */
+
+.main {
+  min-height: calc(100vh - 64px);
+  background: var(--bg-base);
+  padding: var(--space-6);
+}
+
+.mainInner {
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.pageHeader {
+  margin-bottom: var(--space-6);
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.pageCount {
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-left: var(--space-3);
+}
+
+.pageDescription {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ============================================
+   フィルターバー（検索）
+   ============================================ */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  flex: 1;
+  transition: all var(--transition-fast);
+}
+
+.searchWrapper:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+}
+
+.searchIcon {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   タググリッド
+   ============================================ */
+
+.tagGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.tagCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all var(--transition-base);
+}
+
+.tagCard:hover {
+  background: var(--bg-hover);
+}
+
+.tagName {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tagHash {
+  color: var(--accent-primary);
+  margin-right: 2px;
+  font-weight: 600;
+}
+
+.tagCount {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-left: var(--space-3);
+}
+
+/* ============================================
+   スケルトンローディング
+   ============================================ */
+
+.tagGridSkeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.tagCardSkeleton {
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    90deg,
+    var(--bg-sunken) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s infinite;
+}
+
+@keyframes skeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================
+   空状態
+   ============================================ */
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-tertiary);
+}
+
+.emptyState i {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.emptyState p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ============================================
+   ページネーション
+   ============================================ */
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-8);
+}
+
+.pageBtn {
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageBtn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.pageDots {
+  padding: 0 var(--space-2);
+  color: var(--text-tertiary);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 767px) {
+  .main {
+    padding: var(--space-4);
+  }
+
+  .pageTitle {
+    font-size: var(--text-xl);
+  }
+
+  .searchWrapper {
+    width: 100%;
+  }
+
+  .tagGrid,
+  .tagGridSkeleton {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+  }
+
+  .tagCard {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .tagName {
+    font-size: var(--text-xs);
+  }
+}
+
+@media (max-width: 479px) {
+  .tagGrid,
+  .tagGridSkeleton {
+    grid-template-columns: 1fr;
+  }
+}

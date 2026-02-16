@@ -136,7 +136,7 @@ export default function PricingListClient() {
         <div className={styles.header}>
           <h1 className={styles.title}>料金表管理</h1>
           <div className={styles.headerActions}>
-            <Link href="/dashboard/pricing/new" className="btn btn-primary">
+            <Link href="/dashboard/pricing/new" className="btn btn-primary btn-sm">
               <i className="fas fa-plus"></i>
               新規追加
             </Link>
@@ -157,7 +157,7 @@ export default function PricingListClient() {
           </h2>
 
           {pricingPlans.length === 0 ? (
-            <div className="empty-state">
+            <div className={`empty-state ${styles.emptyStateCentered}`}>
               <i className="far fa-file-lines"></i>
               <p>料金プランが登録されていません</p>
               <Link href="/dashboard/pricing/new" className="btn btn-primary">

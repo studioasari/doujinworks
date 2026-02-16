@@ -1,0 +1,245 @@
+/* ============================================
+   アカウント情報ページ固有スタイル
+   ============================================ */
+
+/* コンテナ */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* カード */
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* カードヘッダー */
+.cardHeader {
+  padding: var(--space-6) var(--space-5) var(--space-4);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2);
+}
+
+.cardDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ============================================
+   フォーム要素
+   ============================================ */
+
+.card :global(.form-group) {
+  padding: 0 var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.card :global(.form-input) {
+  max-width: 100%;
+}
+
+/* 読み取り専用フィールド */
+.readonlyField {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+}
+
+/* ヒントテキスト */
+.hint {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* 必須マーク */
+.required {
+  color: var(--status-error);
+}
+
+/* ============================================
+   アカウント種別選択
+   ============================================ */
+
+.accountTypeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.accountTypeOptions :global(.radio) {
+  align-items: flex-start;
+  padding: var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.accountTypeOptions :global(.radio):hover {
+  border-color: var(--accent-primary);
+  background: var(--bg-hover);
+}
+
+.accountTypeOptions :global(.radio-mark) {
+  margin-top: var(--space-1);
+  flex-shrink: 0;
+}
+
+.accountTypeContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.accountTypeTitle {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.accountTypeDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* 無効状態 */
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.disabled:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+}
+
+/* ============================================
+   ビジネス情報セクション
+   ============================================ */
+
+.businessSection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-default);
+}
+
+.businessTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 var(--space-5) var(--space-2);
+}
+
+.businessDesc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0 var(--space-5) var(--space-5);
+}
+
+/* トグルグループ（個人/法人） */
+.toggleGroup {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.toggleBtn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toggleBtn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.toggleBtn.active {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  color: white;
+}
+
+/* フォーム行（2列） */
+.formRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.formRow > * {
+  flex: 1;
+}
+
+.formField {
+  flex: 1;
+}
+
+/* ============================================
+   アクションボタン
+   ============================================ */
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--border-default);
+  margin-top: var(--space-6);
+}
+
+/* アラートのマージン調整 */
+.card :global(.alert) {
+  margin: 0 var(--space-5) var(--space-4);
+}
+
+/* ============================================
+   レスポンシブ
+   ============================================ */
+
+@media (max-width: 768px) {
+  .container {
+    margin: 0;
+  }
+
+  .card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .accountTypeOptions {
+    flex-direction: column;
+  }
+
+  .formRow {
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

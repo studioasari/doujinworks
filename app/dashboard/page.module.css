@@ -47,7 +47,7 @@
   width: 160px;
   height: 160px;
   object-fit: contain;
-  margin-bottom: 16px;
+  margin-bottom: 32px;
 }
 
 .emptyDescription {
@@ -264,6 +264,7 @@
   font-size: var(--text-sm);
   font-weight: 500;
   text-decoration: none;
+  text-align: center;
 }
 
 .primaryButton:hover {
@@ -279,6 +280,7 @@
   font-size: var(--text-sm);
   font-weight: 500;
   text-decoration: none;
+  text-align: center;
 }
 
 .secondaryButton:hover {
@@ -300,13 +302,13 @@
   }
 
   .emptyActions {
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
   }
 
-  .primaryButton,
-  .secondaryButton {
-    width: 100%;
-    text-align: center;
+  .emptyActions .primaryButton,
+  .emptyActions .secondaryButton {
+    flex: 1;
+    min-width: 0;
   }
 }

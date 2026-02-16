@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
-import TagListClient from './client'
+import TagList from '@/app/components/TagList'
 
 export const metadata: Metadata = {
-  title: 'タグ一覧 | サイト名',
+  title: 'タグ一覧 | 同人ワークス',
   description: '作品に付けられたタグの一覧ページです。タグから作品を探すことができます。',
   openGraph: {
     title: 'タグ一覧',
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 }
 
 export default function TagListPage() {
-  return <TagListClient />
+  return <TagList />
 }

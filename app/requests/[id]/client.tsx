@@ -164,7 +164,7 @@ export default function RequestDetailPage() {
       .from('work_requests')
       .select('*, profiles!work_requests_requester_id_fkey(id, username, display_name, avatar_url)')
       .eq('id', requestId)
-      .single()
+      .maybeSingle()
 
     if (error) console.error('依頼取得エラー:', error)
     else setRequest(data)

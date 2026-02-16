@@ -141,6 +141,22 @@ export default function Breadcrumb() {
       return
     }
 
+    // タグ一覧ページ
+    if (paths[0] === 'tags' && paths.length === 1) {
+      items.push({ label: 'タグ一覧', href: '/tags' })
+      setBreadcrumbs(items)
+      return
+    }
+
+    // タグ別作品ページ
+    if (paths[0] === 'tags' && paths[1]) {
+      const tagName = decodeURIComponent(paths[1])
+      items.push({ label: 'タグ一覧', href: '/tags' })
+      items.push({ label: `#${tagName}`, href: pathname })
+      setBreadcrumbs(items)
+      return
+    }
+
     // メッセージ詳細ページ
     if (paths[0] === 'messages' && paths.length === 2) {
       items.push({ label: 'メッセージ', href: '/messages' })
@@ -221,6 +237,7 @@ export default function Breadcrumb() {
     // ダッシュボード配下の特別なラベル
     const dashboardLabels: { [key: string]: string } = {
       'profile': 'プロフィール編集',
+      'account': 'アカウント情報',
       'pricing': '料金表管理',
       'business': 'ビジネス情報',
       'portfolio': '作品管理',
@@ -272,6 +289,7 @@ export default function Breadcrumb() {
       'users': 'ユーザー管理',
       'contracts': '契約',
       'review': 'レビュー',
+      'tags': 'タグ一覧',
       ...CATEGORY_LABELS,
     }
 

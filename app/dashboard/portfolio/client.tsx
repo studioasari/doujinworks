@@ -188,7 +188,7 @@ export default function PortfolioManageClient() {
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className={styles.title}>作品管理</h1>
-          <Link href="/dashboard/portfolio/upload" className="btn btn-primary">
+          <Link href="/dashboard/portfolio/upload" className="btn btn-primary btn-sm">
             <i className="fa-solid fa-plus"></i>
             作品をアップロード
           </Link>
@@ -211,7 +211,7 @@ export default function PortfolioManageClient() {
         {/* ヘッダー */}
         <div className={styles.header}>
           <h1 className={styles.title}>作品管理</h1>
-          <Link href="/dashboard/portfolio/upload" className="btn btn-primary">
+          <Link href="/dashboard/portfolio/upload" className="btn btn-primary btn-sm">
             <i className="fa-solid fa-plus"></i>
             作品をアップロード
           </Link>
@@ -246,7 +246,7 @@ export default function PortfolioManageClient() {
 
         {/* 作品一覧 */}
         {items.length === 0 && (
-          <div className="empty-state">
+          <div className={`empty-state ${styles.emptyStateCentered}`}>
             <i className="fa-regular fa-images"></i>
             <p>
               {filter === 'all' 

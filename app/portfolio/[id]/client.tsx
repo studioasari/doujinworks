@@ -268,10 +268,14 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
       .from('portfolio_items')
       .select('*')
       .eq('id', unwrappedParams.id)
-      .single()
+      .maybeSingle()
 
-    if (workError || !workData) {
+    if (workError) {
       console.error('作品取得エラー:', workError)
+      return
+    }
+
+    if (!workData) {
       return
     }
 

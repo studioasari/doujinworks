@@ -285,20 +285,20 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
 
   async function fetchCreator() {
     setLoading(true)
-    const { data, error } = await supabase.from('profiles').select('*').eq('username', username).single()
+    const { data, error } = await supabase.from('profiles').select('*').eq('username', username).maybeSingle()
     if (error) {
       console.error('クリエイター取得エラー:', error)
       setCreator(null)
+    } else if (!data) {
+      setCreator(null)
     } else {
       setCreator(data)
-      if (data) {
-        await Promise.all([
-          fetchPortfolio(data.user_id),
-          fetchPricingPlans(data.id),
-          fetchStats(data.user_id),
-          fetchReviews(data.id)
-        ])
-      }
+      await Promise.all([
+        fetchPortfolio(data.user_id),
+        fetchPricingPlans(data.id),
+        fetchStats(data.user_id),
+        fetchReviews(data.id)
+      ])
     }
     setLoading(false)
   }

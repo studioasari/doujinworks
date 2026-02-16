@@ -86,6 +86,14 @@ export async function updateSession(request: NextRequest) {
     '/signup',
   ]
 
+  // 削除済みアカウントでもアクセス可のパス
+  const allowWhenDeleted = [
+    '/account-deleted',
+    '/auth',
+    '/login',
+    '/signup',
+  ]
+
   // セッション取得
   const {
     data: { user },
@@ -108,16 +116,29 @@ export async function updateSession(request: NextRequest) {
     return response
   }
 
-  // プロフィールチェック
+  // プロフィールチェック（deleted_atも取得）
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, account_type')
+    .select('username, account_type, deleted_at')
     .eq('user_id', user.id)
     .maybeSingle()
 
   // プロフィール未完成の場合は /signup/complete にリダイレクト
   if (!profile || !profile.username || !profile.account_type) {
     return NextResponse.redirect(new URL('/signup/complete', request.url))
+  }
+
+  // ========================================
+  // 4. 削除済みアカウントのチェック
+  // ========================================
+  if (profile.deleted_at) {
+    // 削除済みでもアクセス可のパスならスキップ
+    if (allowWhenDeleted.some(path => pathname === path || pathname.startsWith(path + '/'))) {
+      return response
+    }
+
+    // それ以外は /account-deleted にリダイレクト
+    return NextResponse.redirect(new URL('/account-deleted', request.url))
   }
 
   return response

@@ -36,7 +36,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
   const [isMoreSheetOpen, setIsMoreSheetOpen] = useState(false)
   const sidebarRef = useRef<HTMLElement>(null)
 
-  // propsが更新されたら反映
   useEffect(() => {
     if (accountType !== null) setResolvedAccountType(accountType)
   }, [accountType])
@@ -45,7 +44,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     if (isAdmin) setResolvedIsAdmin(isAdmin)
   }, [isAdmin])
 
-  // propsが渡されなかった場合、自分で取得
   useEffect(() => {
     if (accountType !== null) return
     async function fetchProfile() {
@@ -64,7 +62,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     fetchProfile()
   }, [accountType])
 
-  // 初回マウント時にlocalStorageから状態を復元
   useEffect(() => {
     setIsMounted(true)
     const saved = localStorage.getItem('sidebar-collapsed')
@@ -73,7 +70,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     }
   }, [])
 
-  // ボトムシート開閉時のbodyスクロール制御
   useEffect(() => {
     if (isMoreSheetOpen) {
       document.body.style.overflow = 'hidden'
@@ -85,7 +81,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     }
   }, [isMoreSheetOpen])
 
-  // ツールチップ表示
   const showTooltip = useCallback((text: string, element: HTMLElement) => {
     if (!isCollapsed || !sidebarRef.current) return
     const sidebarRect = sidebarRef.current.getBoundingClientRect()
@@ -98,7 +93,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     setTooltip(prev => ({ ...prev, visible: false }))
   }, [])
 
-  // 折りたたみ状態をlocalStorageに保存
   const toggleCollapse = useCallback(() => {
     setIsCollapsed(prev => {
       const newState = !prev
@@ -150,7 +144,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       if (error) throw error
 
       setIsAcceptingOrders(newStatus)
-      // ヘッダーに通知
       window.dispatchEvent(new CustomEvent('accepting-orders-changed', { detail: newStatus }))
     } catch (error) {
       console.error('受付状態更新エラー:', error)
@@ -159,7 +152,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     }
   }
 
-  // 他方のトグルを受信
   useEffect(() => {
     const handler = (e: Event) => {
       const status = (e as CustomEvent).detail
@@ -188,37 +180,42 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  // PC サイドバー用メニュー項目
+  // メインメニュー（頻度順）
   const menuItems: MenuItem[] = [
     { href: '/dashboard', icon: 'fa-solid fa-house', label: 'ダッシュボード' },
-    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
-    { href: '/dashboard/pricing', icon: 'fa-solid fa-tags', label: '料金表管理' },
     { href: '/dashboard/portfolio', icon: 'fa-solid fa-images', label: '作品管理' },
+    { href: '/dashboard/pricing', icon: 'fa-solid fa-tags', label: '料金表管理' },
+    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
   ]
 
+  // 依頼関連（メッセージ含む）
   const requestItems: MenuItem[] = [
     { href: '/requests/manage', icon: 'fa-solid fa-clipboard-list', label: '依頼管理' },
     { href: '/requests/create', icon: 'fa-solid fa-circle-plus', label: '依頼を作成' },
+    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
   ]
 
+  // 収支管理
   const financeItems: MenuItem[] = [
     { href: '/dashboard/earnings', icon: 'fa-solid fa-chart-line', label: '売上管理' },
     { href: '/dashboard/payments', icon: 'fa-solid fa-credit-card', label: '支払い管理' },
     { href: '/dashboard/bank-account', icon: 'fa-solid fa-building-columns', label: '振込先設定' },
   ]
 
-  const otherItems: MenuItem[] = [
-    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
+  // 設定
+  const settingsItems: MenuItem[] = [
+    { href: '/dashboard/account', icon: 'fa-solid fa-id-card', label: 'アカウント情報' },
     { href: '/dashboard/settings', icon: 'fa-solid fa-gear', label: 'アカウント設定' },
   ]
 
+  // 管理者
   const adminItems: MenuItem[] = resolvedIsAdmin ? [
     { href: '/admin', icon: 'fa-solid fa-gauge-high', label: '管理ダッシュボード', isAdmin: true },
     { href: '/admin/payments', icon: 'fa-solid fa-money-check-dollar', label: '振込管理', isAdmin: true },
     { href: '/admin/users', icon: 'fa-solid fa-users-gear', label: 'ユーザー管理', isAdmin: true },
   ] : []
 
-  // モバイル固定フッター用（主要4項目）
+  // モバイル固定フッター（主要4項目）
   const footerItems: MenuItem[] = [
     { href: '/dashboard', icon: 'fa-solid fa-house', label: 'ホーム' },
     { href: '/dashboard/portfolio', icon: 'fa-solid fa-images', label: '作品' },
@@ -226,24 +223,23 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     { href: '/dashboard/earnings', icon: 'fa-solid fa-chart-line', label: '収支' },
   ]
 
-  // 「もっと」ボトムシート内の項目
+  // 「もっと」ボトムシート内
   const moreItems: MenuItem[] = [
-    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
     { href: '/dashboard/pricing', icon: 'fa-solid fa-tags', label: '料金表管理' },
+    { href: '/dashboard/profile', icon: 'fa-solid fa-user-pen', label: 'プロフィール編集' },
     { href: '/requests/create', icon: 'fa-solid fa-circle-plus', label: '依頼を作成' },
+    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
     { href: '/dashboard/payments', icon: 'fa-solid fa-credit-card', label: '支払い管理' },
     { href: '/dashboard/bank-account', icon: 'fa-solid fa-building-columns', label: '振込先設定' },
-    { href: '/messages', icon: 'fa-solid fa-envelope', label: 'メッセージ' },
+    { href: '/dashboard/account', icon: 'fa-solid fa-id-card', label: 'アカウント情報' },
     { href: '/dashboard/settings', icon: 'fa-solid fa-gear', label: 'アカウント設定' },
   ]
 
-  // 「もっと」内のアイテムがアクティブかどうか
   const isMoreActive = () => {
-    return moreItems.some(item => isActive(item.href)) || 
+    return moreItems.some(item => isActive(item.href)) ||
            (resolvedIsAdmin && adminItems.some(item => isActive(item.href)))
   }
 
-  // サイドバーアイテムのレンダリング
   const renderSidebarItem = (item: MenuItem) => (
     <Link
       key={item.href}
@@ -257,7 +253,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
     </Link>
   )
 
-  // SSR時のちらつき防止
   if (!isMounted) {
     return null
   }
@@ -286,7 +281,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       </nav>
 
       {/* モバイル: ボトムシート */}
-      <div 
+      <div
         className={`${styles.sheetOverlay} ${isMoreSheetOpen ? styles.active : ''}`}
         onClick={() => setIsMoreSheetOpen(false)}
       />
@@ -294,8 +289,7 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
         <div className={styles.sheetHandle} onClick={() => setIsMoreSheetOpen(false)}>
           <span></span>
         </div>
-        
-        {/* 受付状態トグル（ビジネスユーザーのみ） */}
+
         {resolvedAccountType === 'business' && (
           <div className={styles.sheetStatusBar}>
             <div className={`${styles.sheetStatusIndicator} ${isAcceptingOrders ? styles.accepting : ''}`}>
@@ -326,7 +320,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
             </Link>
           ))}
 
-          {/* 管理者メニュー */}
           {resolvedIsAdmin && (
             <>
               <div className={styles.sheetDivider}></div>
@@ -348,13 +341,12 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
       </div>
 
       {/* PC: 左サイドバー */}
-      <aside 
+      <aside
         ref={sidebarRef}
         className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}
       >
-        {/* ツールチップ（JS制御） */}
         {isCollapsed && tooltip.visible && (
-          <div 
+          <div
             className={styles.tooltip}
             style={{ top: tooltip.top }}
           >
@@ -362,7 +354,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
           </div>
         )}
 
-        {/* 折りたたみボタン（右側の耳型） */}
         <button
           className={styles.collapseBtn}
           onClick={toggleCollapse}
@@ -378,7 +369,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
           {resolvedAccountType === 'business' && (
             <div className={`${styles.statusCard} ${isAcceptingOrders ? styles.accepting : styles.paused}`}>
               {isCollapsed ? (
-                // 折りたたみ時: アイコンのみ
                 <button
                   onClick={toggleAcceptingOrders}
                   disabled={isToggleLoading}
@@ -390,7 +380,6 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
                   <i className={`fa-solid ${isAcceptingOrders ? 'fa-circle-check' : 'fa-circle-pause'}`}></i>
                 </button>
               ) : (
-                // 展開時: フルUI
                 <>
                   <div className={styles.statusHeader}>
                     <div className={`${styles.statusIndicator} ${isAcceptingOrders ? styles.accepting : styles.paused}`}>
@@ -409,8 +398,8 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
                     </button>
                   </div>
                   <p className={styles.statusText}>
-                    {isAcceptingOrders 
-                      ? '新規依頼を受け付けています' 
+                    {isAcceptingOrders
+                      ? '新規依頼を受け付けています'
                       : '新規依頼の受付を停止しています'}
                   </p>
                 </>
@@ -441,9 +430,10 @@ export default function DashboardSidebar({ accountType = null, isAdmin = false }
 
           <div className={styles.divider}></div>
 
-          {/* その他 */}
+          {/* 設定 */}
           <div className={styles.menuGroup}>
-            {otherItems.map(renderSidebarItem)}
+            {!isCollapsed && <span className={styles.groupLabel}>設定</span>}
+            {settingsItems.map(renderSidebarItem)}
           </div>
 
           {/* 管理者メニュー */}
