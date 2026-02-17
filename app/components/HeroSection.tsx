@@ -38,8 +38,8 @@ export default function HeroSection() {
         </p>
         
         <img 
-          src="/logotype.png" 
-          alt="DoujinWorks"
+          src="/logotype_white.png" 
+          alt="同人ワークス"
           className={styles.logo}
         />
 

@@ -9,6 +9,7 @@ import styles from './Footer.module.css'
 
 export default function Footer() {
   const [user, setUser] = useState<any>(null)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
   useEffect(() => {
     const checkUser = async () => {
@@ -23,6 +24,19 @@ export default function Footer() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // テーマ監視
+  useEffect(() => {
+    const updateTheme = () => {
+      const current = document.body.dataset.theme as 'light' | 'dark' | undefined
+      setTheme(current || 'light')
+    }
+    updateTheme()
+
+    const observer = new MutationObserver(updateTheme)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
       <Breadcrumb />
@@ -33,7 +47,7 @@ export default function Footer() {
           <div className={styles.mainInner}>
             {/* 左：CTA */}
             <div className={styles.ctaArea}>
-              <Image src="/logotype.png" alt="同人ワークス" width={160} height={32} sizes="160px" className={styles.logo} />
+              <Image src={theme === 'dark' ? '/logotype_white.png' : '/logotype_black.png'} alt="同人ワークス" width={160} height={32} sizes="160px" className={styles.logo} />
               
               <p className={styles.description}>
                 同人界隈特化の<br />

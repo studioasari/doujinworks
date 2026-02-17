@@ -632,7 +632,7 @@ export default function Header() {
       <header className={styles.header}>
         <div className={styles.inner}>
           <Link href="/" className={styles.logoLink}>
-            <Image src="/logotype.png" alt="同人ワークス" width={120} height={20} sizes="120px" className={styles.logo} priority />
+            <Image src="/logotype_black.png" alt="同人ワークス" width={120} height={20} sizes="120px" className={styles.logo} priority />
           </Link>
           <div className={styles.navPlaceholder}></div>
         </div>
@@ -644,7 +644,7 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link href="/" className={styles.logoLink}>
-          <Image src="/logotype.png" alt="同人ワークス" width={120} height={20} sizes="120px" className={styles.logo} priority />
+          <Image src={theme === 'dark' ? '/logotype_white.png' : '/logotype_black.png'} alt="同人ワークス" width={120} height={20} sizes="120px" className={styles.logo} priority />
         </Link>
 
         {/* 検索バー（PC） */}
