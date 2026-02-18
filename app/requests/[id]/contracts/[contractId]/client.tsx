@@ -2365,7 +2365,9 @@ export default function ContractDetailPage() {
         </div>
       )}
 
-      <Footer />
+      <div className={activeTab === 'chat' ? styles.hideOnMobile : ''}>
+        <Footer />
+      </div>
     </>
   )
 }

@@ -160,8 +160,7 @@
 }
 
 .card:hover {
-  border-color: var(--accent-primary);
-  box-shadow: var(--shadow-md);
+  background: var(--bg-hover);
 }
 
 .cardHeader {

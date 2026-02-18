@@ -1418,13 +1418,16 @@
   }
 
   .mobileChat {
-    height: calc(100vh - 180px);
-    height: calc(100dvh - 180px);
+    height: calc(100dvh - 132px);
     min-height: 400px;
   }
 
   .mobileChat .chat {
     height: 100%;
+  }
+
+  .hideOnMobile {
+    display: none;
   }
 }
 
