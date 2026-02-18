@@ -1421,6 +1421,7 @@
     height: calc(100dvh - 132px);
     min-height: 200px;
     transition: height 0.15s ease-out;
+    overflow: hidden;
   }
 
   .mobileChat .chat {

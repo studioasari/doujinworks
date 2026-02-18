@@ -320,36 +320,45 @@ export default function ContractDetailPage() {
     }
   }, [contextMenu])
 
-    // スマホ: キーボード表示時にチャット入力欄を追従させる
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.visualViewport) return
+  // スマホ: キーボード表示時にチャット入力欄を追従させる
+    useEffect(() => {
+      if (typeof window === 'undefined' || !window.visualViewport) return
+      if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return
 
-    const handleResize = () => {
-      const chat = document.querySelector(`.${styles.mobileChat}`) as HTMLElement
-      if (!chat || activeTab !== 'chat') return
+      const handleViewport = () => {
+        const chat = document.querySelector(`.${styles.mobileChat}`) as HTMLElement
+        if (!chat || activeTab !== 'chat') return
 
-      const vv = window.visualViewport!
-      const keyboardHeight = window.innerHeight - vv.height
+        const vv = window.visualViewport!
+        // visualViewportのheight + offsetTopでキーボード分を正確に算出
+        const availableHeight = vv.height - vv.offsetTop
+        const headerAndTab = 132
 
-      if (keyboardHeight > 100) {
-        chat.style.height = `${vv.height - 132}px`
-      } else {
-        chat.style.height = ''
+        if (window.innerHeight - vv.height > 100) {
+          // キーボード表示中
+          chat.style.height = `${availableHeight - headerAndTab}px`
+          chat.style.maxHeight = `${availableHeight - headerAndTab}px`
+        } else {
+          // キーボード非表示
+          chat.style.height = ''
+          chat.style.maxHeight = ''
+        }
+
+        requestAnimationFrame(() => {
+          const container = messagesContainerRef.current
+          if (container) {
+            container.scrollTop = container.scrollHeight
+          }
+        })
       }
 
-      requestAnimationFrame(() => {
-        const container = messagesContainerRef.current
-        if (container) {
-          container.scrollTop = container.scrollHeight
-        }
-      })
-    }
-
-    window.visualViewport.addEventListener('resize', handleResize)
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize)
-    }
-  }, [activeTab])
+      window.visualViewport.addEventListener('resize', handleViewport)
+      window.visualViewport.addEventListener('scroll', handleViewport)
+      return () => {
+        window.visualViewport?.removeEventListener('resize', handleViewport)
+        window.visualViewport?.removeEventListener('scroll', handleViewport)
+      }
+    }, [activeTab])
 
   // メディアモーダル表示時のスクロール無効化
   useEffect(() => {
