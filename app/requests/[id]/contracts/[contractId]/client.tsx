@@ -320,6 +320,37 @@ export default function ContractDetailPage() {
     }
   }, [contextMenu])
 
+    // スマホ: キーボード表示時にチャット入力欄を追従させる
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return
+
+    const handleResize = () => {
+      const chat = document.querySelector(`.${styles.mobileChat}`) as HTMLElement
+      if (!chat || activeTab !== 'chat') return
+
+      const vv = window.visualViewport!
+      const keyboardHeight = window.innerHeight - vv.height
+
+      if (keyboardHeight > 100) {
+        chat.style.height = `${vv.height - 132}px`
+      } else {
+        chat.style.height = ''
+      }
+
+      requestAnimationFrame(() => {
+        const container = messagesContainerRef.current
+        if (container) {
+          container.scrollTop = container.scrollHeight
+        }
+      })
+    }
+
+    window.visualViewport.addEventListener('resize', handleResize)
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize)
+    }
+  }, [activeTab])
+
   // メディアモーダル表示時のスクロール無効化
   useEffect(() => {
     if (enlargedMedia) {
