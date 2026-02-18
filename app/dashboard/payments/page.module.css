@@ -50,6 +50,14 @@
   margin-top: var(--space-6);
 }
 
+.tabContent :global(.empty-state) {
+  min-height: calc(100vh - 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ============================================
    サマリーカード
    ============================================ */

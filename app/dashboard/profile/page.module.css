@@ -456,12 +456,6 @@
     margin: 0;
   }
 
-  .card {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-
   .avatarSection {
     margin-top: -50px;
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/utils/supabase'
@@ -35,8 +35,8 @@ function ConfirmModal({
         <p className={styles.confirmMessage}>
           「{planName}」を削除しますか？<br />この操作は取り消せません。
         </p>
-        <div className="button-group-equal">
-          <button onClick={onCancel} className="btn btn-secondary">
+        <div className={styles.confirmButtons}>
+          <button onClick={onCancel} className={styles.confirmBtnSecondary}>
             キャンセル
           </button>
           <button onClick={onConfirm} className={styles.btnDanger}>
@@ -54,6 +54,8 @@ export default function PricingListClient() {
   const [profileId, setProfileId] = useState<string | null>(null)
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean
     planId: string
@@ -63,6 +65,19 @@ export default function PricingListClient() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // メニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    if (openMenuId) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
+    }
+  }, [openMenuId])
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -97,6 +112,7 @@ export default function PricingListClient() {
   }
 
   function showDeleteConfirm(plan: PricingPlan) {
+    setOpenMenuId(null)
     setConfirmModal({
       show: true,
       planId: plan.id,
@@ -194,21 +210,38 @@ export default function PricingListClient() {
                         ¥{plan.minimum_price.toLocaleString()}〜
                       </p>
                     </div>
-                    <div className={styles.planActions} onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className={styles.planMenu}
+                      ref={openMenuId === plan.id ? menuRef : null}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
-                        onClick={() => router.push(`/dashboard/pricing/${plan.id}/edit`)}
-                        className="btn btn-secondary btn-sm"
+                        className={styles.planMenuBtn}
+                        onClick={() => setOpenMenuId(openMenuId === plan.id ? null : plan.id)}
                       >
-                        <i className="fas fa-pen"></i>
-                        編集
+                        <i className="fas fa-ellipsis-vertical"></i>
                       </button>
-                      <button
-                        onClick={() => showDeleteConfirm(plan)}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        <i className="fas fa-trash-alt"></i>
-                        削除
-                      </button>
+                      {openMenuId === plan.id && (
+                        <div className={styles.planDropdown}>
+                          <button
+                            className={styles.planDropdownItem}
+                            onClick={() => {
+                              setOpenMenuId(null)
+                              router.push(`/dashboard/pricing/${plan.id}/edit`)
+                            }}
+                          >
+                            <i className="fas fa-pen"></i>
+                            編集
+                          </button>
+                          <button
+                            className={`${styles.planDropdownItem} ${styles.delete}`}
+                            onClick={() => showDeleteConfirm(plan)}
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                            削除
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )

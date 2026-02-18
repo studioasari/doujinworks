@@ -149,7 +149,7 @@ const HamburgerMenu = memo(function HamburgerMenu({
 
           {/* 投稿 */}
           <div className={styles.hamburgerSectionTitle}>投稿</div>
-          <Link href="/portfolio/upload" className={styles.hamburgerItem} onClick={onClose}>
+          <Link href="/dashboard/portfolio/upload" className={styles.hamburgerItem} onClick={onClose}>
             <i className="fas fa-cloud-upload-alt"></i>
             <span className={styles.hamburgerItemText}>作品を投稿</span>
           </Link>
@@ -797,7 +797,7 @@ export default function Header() {
                       <div className={styles.dropdownDivider}></div>
                       <Link href="/dashboard/profile" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-user-edit"></i>プロフィール編集</Link>
                       <Link href="/dashboard/portfolio" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-images"></i>作品管理</Link>
-                      <Link href="/portfolio/upload" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-cloud-upload-alt"></i>作品を投稿</Link>
+                      <Link href="/dashboard/portfolio/upload" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-cloud-upload-alt"></i>作品を投稿</Link>
                       <Link href="/dashboard/pricing" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-tags"></i>料金表管理</Link>
                       <Link href="/requests/manage" className={styles.dropdownItem} onClick={() => setIsMenuOpen(false)}><i className="fas fa-clipboard-list"></i>依頼管理</Link>
                       {profile?.account_type === 'business' && (
@@ -818,7 +818,7 @@ export default function Header() {
               {!isMobile && (
                 <div className={styles.uploadMenuContainer}>
                   <div className={styles.uploadBtnGroup}>
-                    <Link href="/portfolio/upload" className="btn btn-primary btn-sm"><i className="fas fa-pen"></i><span>投稿</span></Link>
+                    <Link href="/dashboard/portfolio/upload" className="btn btn-primary btn-sm"><i className="fas fa-pen"></i><span>投稿</span></Link>
                     <button className={`btn btn-primary btn-sm ${styles.uploadDropdownBtn}`} onClick={toggleUploadMenu}><i className="fas fa-chevron-down"></i></button>
                   </div>
                   {isUploadMenuOpen && (

@@ -412,12 +412,6 @@
     gap: var(--space-4);
   }
 
-  .section {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-
   .sectionHeader {
     padding: var(--space-4);
   }

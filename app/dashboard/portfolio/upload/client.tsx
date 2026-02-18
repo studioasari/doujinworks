@@ -115,25 +115,16 @@ export default function UploadSelectClient() {
             href={genre.path}
             className={styles.card}
           >
-            {/* アイコン */}
-            <div className={styles.cardIcon}>
-              <i className={genre.icon}></i>
+            <div className={styles.cardTop}>
+              <div className={styles.cardIcon}>
+                <i className={genre.icon}></i>
+              </div>
+              <div className={styles.cardInfo}>
+                <h2 className={styles.cardTitle}>{genre.name}</h2>
+                <p className={styles.cardDesc}>{genre.description}</p>
+              </div>
             </div>
-
-            {/* ジャンル名 */}
-            <h2 className={styles.cardTitle}>
-              {genre.name}
-            </h2>
-
-            {/* 説明 */}
-            <p className={styles.cardDesc}>
-              {genre.description}
-            </p>
-
-            {/* スペック */}
-            <div className={styles.cardSpecs}>
-              {genre.specs}
-            </div>
+            <div className={styles.cardSpecs}>{genre.specs}</div>
           </Link>
         ))}
       </div>

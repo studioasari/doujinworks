@@ -294,8 +294,13 @@
 
 .emptyState {
   text-align: center;
-  padding: var(--space-12) var(--space-6);
+  padding: var(--space-6);
   color: var(--text-tertiary);
+  min-height: calc(100vh - 360px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .emptyState i {

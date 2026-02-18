@@ -38,22 +38,6 @@
   margin-bottom: var(--space-6);
 }
 
-/* ============================================
-   アラート
-   ============================================ */
-
-.alertError {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--status-error-bg);
-  border-radius: var(--radius-md);
-  color: var(--status-error);
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-5);
-}
-
 .title {
   font-family: var(--font-display);
   font-size: var(--text-2xl);
@@ -69,6 +53,22 @@
 
 .headerActions :global(.btn) {
   white-space: nowrap;
+}
+
+/* ============================================
+   アラート
+   ============================================ */
+
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--status-error-bg);
+  border-radius: var(--radius-md);
+  color: var(--status-error);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
 }
 
 /* ============================================
@@ -105,6 +105,7 @@
   transition: background var(--transition-fast);
   text-decoration: none;
   color: inherit;
+  position: relative;
 }
 
 .planCard:hover {
@@ -148,18 +149,73 @@
   margin: 0;
 }
 
-.planActions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: var(--space-2);
+/* ============================================
+   ⋯ メニュー & ドロップダウン
+   ============================================ */
+
+.planMenu {
+  position: relative;
   flex-shrink: 0;
 }
 
-.planActions :global(.btn) {
+.planMenuBtn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  min-width: 80px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.planMenuBtn:hover {
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+}
+
+.planDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-1);
+  min-width: 140px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.planDropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.planDropdownItem:hover {
+  background: var(--bg-hover);
+}
+
+.planDropdownItem.delete {
+  color: var(--status-error);
+}
+
+.planDropdownItem.delete:hover {
+  background: var(--status-error-bg);
 }
 
 /* ============================================
@@ -229,7 +285,35 @@
   line-height: 1.6;
 }
 
+.confirmButtons {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.confirmBtnSecondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.confirmBtnSecondary:hover {
+  background: var(--bg-hover);
+}
+
 .btnDanger {
+  flex: 1;
   background: var(--status-error);
   color: white;
   border: 1px solid transparent;
@@ -237,7 +321,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   font-size: var(--text-sm);
   font-weight: 500;
   font-family: var(--font-body);
@@ -247,7 +331,7 @@
 }
 
 .btnDanger:hover {
-  background: #dc2626;
+  opacity: 0.9;
 }
 
 /* ============================================
@@ -271,11 +355,10 @@
     aspect-ratio: 1.91 / 1;
   }
 
-  .planActions {
-    flex-direction: row;
-    justify-content: flex-end;
-    padding-top: var(--space-3);
-    border-top: 1px solid var(--border-subtle);
+  .planMenu {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
   }
 
   .emptyStateCentered {

@@ -57,6 +57,7 @@
   margin-bottom: var(--space-8);
 }
 
+/* --- カード --- */
 .card {
   display: flex;
   flex-direction: column;
@@ -69,16 +70,23 @@
   cursor: pointer;
   transition: all var(--transition-base);
   text-decoration: none;
+  gap: var(--space-4);
 }
 
-/* カードホバー: 背景色変化のみ（デザインシステム準拠） */
 .card:hover {
   background: var(--bg-hover);
 }
 
-/* アイコンはサムネイル扱いでopacity変化 */
 .card:hover .cardIcon {
   opacity: 0.85;
+}
+
+/* 1行目: アイコン + テキスト（PC時は縦並び） */
+.cardTop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .cardIcon {
@@ -91,24 +99,32 @@
   border-radius: var(--radius-md);
   color: white;
   font-size: var(--text-xl);
-  margin-bottom: var(--space-4);
+  flex-shrink: 0;
   transition: opacity var(--transition-base);
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
 }
 
 .cardTitle {
   font-size: var(--text-lg);
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-1);
 }
 
 .cardDesc {
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin: 0 0 var(--space-3);
+  margin: 0;
   line-height: 1.5;
 }
 
+/* 2行目: スペック */
 .cardSpecs {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
@@ -200,26 +216,40 @@
   }
 
   .card {
-    flex-direction: row;
+    align-items: flex-start;
     text-align: left;
-    gap: var(--space-4);
     padding: var(--space-4);
+    gap: var(--space-2);
+  }
+
+  /* 1行目: アイコン + 名前 + 説明を横並び */
+  .cardTop {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
   }
 
   .cardIcon {
-    flex-shrink: 0;
-    margin-bottom: 0;
+    width: 40px;
+    height: 40px;
+    font-size: var(--text-base);
+    border-radius: var(--radius-sm);
+  }
+
+  .cardInfo {
+    align-items: flex-start;
   }
 
   .cardTitle {
-    margin-bottom: var(--space-1);
+    margin-bottom: 0;
   }
 
   .cardDesc {
-    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
   }
 
+  /* 2行目: スペック */
   .cardSpecs {
-    display: inline-block;
+    margin-left: calc(40px + var(--space-3));
   }
 }
