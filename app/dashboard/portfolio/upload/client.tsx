@@ -49,7 +49,7 @@ export default function UploadSelectClient() {
       icon: 'fa-solid fa-image',
       description: '1枚絵のイラスト作品',
       path: '/dashboard/portfolio/upload/illustration',
-      specs: 'JPEG / PNG / GIF / 32MB'
+      specs: 'JPEG / PNG / GIF'
     },
     {
       id: 'manga',
@@ -57,7 +57,7 @@ export default function UploadSelectClient() {
       icon: 'fa-solid fa-book',
       description: '複数ページのマンガ作品',
       path: '/dashboard/portfolio/upload/manga',
-      specs: 'JPEG / PNG / GIF / 32MB × 最大50ページ'
+      specs: 'JPEG / PNG / GIF'
     },
     {
       id: 'novel',
@@ -73,15 +73,15 @@ export default function UploadSelectClient() {
       icon: 'fa-solid fa-music',
       description: 'オリジナル楽曲やカバーなど',
       path: '/dashboard/portfolio/upload/music',
-      specs: 'MP3 / WAV / 20MB'
+      specs: 'MP3 / WAV'
     },
     {
       id: 'voice',
-      name: 'ボイス',
+      name: '音声',
       icon: 'fa-solid fa-microphone',
-      description: 'ボイスドラマ、朗読など',
+      description: 'ASMR、ボイスドラマ、朗読など',
       path: '/dashboard/portfolio/upload/voice',
-      specs: 'MP3 / WAV / 20MB'
+      specs: 'MP3 / WAV'
     },
     {
       id: 'video',
@@ -89,7 +89,7 @@ export default function UploadSelectClient() {
       icon: 'fa-solid fa-video',
       description: 'アニメーション、実写など',
       path: '/dashboard/portfolio/upload/video',
-      specs: 'MP4 / MOV / AVI / 200MB'
+      specs: 'MP4 / MOV / AVI'
     }
   ]
 
@@ -115,31 +115,25 @@ export default function UploadSelectClient() {
             href={genre.path}
             className={styles.card}
           >
-            <div className={styles.cardTop}>
-              <div className={styles.cardIcon}>
-                <i className={genre.icon}></i>
-              </div>
-              <div className={styles.cardInfo}>
-                <h2 className={styles.cardTitle}>{genre.name}</h2>
-                <p className={styles.cardDesc}>{genre.description}</p>
-              </div>
+            <div className={styles.cardIcon}>
+              <i className={genre.icon}></i>
             </div>
-            <div className={styles.cardSpecs}>{genre.specs}</div>
+            <div className={styles.cardBody}>
+              <h2 className={styles.cardTitle}>{genre.name}</h2>
+              <p className={styles.cardDesc}>{genre.description}</p>
+              <span className={styles.cardSpecs}>{genre.specs}</span>
+            </div>
+            <i className={`fa-solid fa-chevron-right ${styles.cardArrow}`}></i>
           </Link>
         ))}
       </div>
 
       {/* 補足情報 */}
-      <div className={styles.infoBox}>
-        <i className="fa-solid fa-circle-info"></i>
-        <div className={styles.infoContent}>
-          <h3 className={styles.infoTitle}>アップロードに関する注意事項</h3>
-          <ul className={styles.infoList}>
-            <li>画像ファイル: JPEG、PNG、GIF形式に対応（最大32MB）</li>
-            <li>音声・動画: ファイルアップロードまたは外部リンクに対応</li>
-            <li>公開設定: 全体公開、フォロワー限定、非公開から選択</li>
-          </ul>
-        </div>
+      <div className="alert alert-warning">
+        <i className="fa-solid fa-triangle-exclamation alert-icon"></i>
+        <span>
+          対応形式: 画像（JPEG / PNG / GIF / 最大32MB）、音声（MP3 / WAV / 20MB）、動画（MP4 / MOV / 200MB）。公開設定は全体公開・フォロワー限定・非公開から選択できます。
+        </span>
       </div>
     </div>
   )

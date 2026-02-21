@@ -107,6 +107,7 @@ function UploadIllustrationContent() {
   const [customTag, setCustomTag] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [activePreviewIndex, setActivePreviewIndex] = useState(0)
   const [rating, setRating] = useState<'general' | 'r18' | 'r18g'>('general')
   const [isOriginal, setIsOriginal] = useState(false)
   const [allowComments, setAllowComments] = useState(true)
@@ -119,8 +120,10 @@ function UploadIllustrationContent() {
   const [dragging, setDragging] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showDraftModal, setShowDraftModal] = useState(false)
+  const [openDraftMenu, setOpenDraftMenu] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentDraftId, setCurrentDraftId] = useState<string>(() => `draft_${Date.now()}`)
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -150,6 +153,18 @@ function UploadIllustrationContent() {
     checkAuth()
     loadDrafts()
   }, [])
+
+  // 離脱防止（入力がある場合）
+  useEffect(() => {
+    const hasInput = title.trim() || description.trim() || selectedTags.length > 0 || imageFiles.length > 0
+    if (!hasInput) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [title, description, selectedTags, imageFiles])
 
   // Toast自動消去
   useEffect(() => {
@@ -292,7 +307,28 @@ function UploadIllustrationContent() {
     }
   }
 
+  // カテゴリごとのアップロードページURL
+  const categoryUrls: { [key: string]: string } = {
+    'illustration_drafts': '/dashboard/portfolio/upload/illustration',
+    'manga_drafts': '/dashboard/portfolio/upload/manga',
+    'novel_drafts': '/dashboard/portfolio/upload/novel',
+    'music_drafts': '/dashboard/portfolio/upload/music',
+    'voice_drafts': '/dashboard/portfolio/upload/voice',
+    'video_drafts': '/dashboard/portfolio/upload/video'
+  }
+
   function loadDraft(draft: Draft) {
+    // 他カテゴリの下書き → そのカテゴリのページに遷移
+    if (draft.category && draft.category !== 'illustration_drafts') {
+      const url = categoryUrls[draft.category]
+      if (url) {
+        router.push(`${url}?draft=${draft.id}`)
+        setShowDraftModal(false)
+        return
+      }
+    }
+
+    // イラストの下書き → 復元してIDを引き継ぐ
     setTitle(draft.title)
     setDescription(draft.description)
     setSelectedTags(draft.selectedTags)
@@ -300,6 +336,7 @@ function UploadIllustrationContent() {
     setIsOriginal(draft.isOriginal)
     setAllowComments(draft.allowComments)
     setVisibility(draft.visibility)
+    setCurrentDraftId(draft.id)
     setShowDraftModal(false)
     setToast({ message: '下書きを復元しました', type: 'success' })
   }
@@ -322,7 +359,7 @@ function UploadIllustrationContent() {
     }
   }
 
-  // 自動保存
+  // 自動保存（セッション中は同じIDで上書き、最大10件）
   useEffect(() => {
     if (!currentUserId) return
     if (!title.trim() && selectedTags.length === 0) return
@@ -330,10 +367,9 @@ function UploadIllustrationContent() {
     const autoSaveTimer = setTimeout(() => {
       try {
         const saved = localStorage.getItem('illustration_drafts')
-        let allDrafts = saved ? JSON.parse(saved) : {}
+        let allDrafts: { [key: string]: any } = saved ? JSON.parse(saved) : {}
         
-        const autoSaveId = 'autosave'
-        allDrafts[autoSaveId] = {
+        allDrafts[currentDraftId] = {
           title,
           description,
           selectedTags,
@@ -344,15 +380,26 @@ function UploadIllustrationContent() {
           savedAt: new Date().toISOString()
         }
         
+        // 10件超えたら古い順に削除
+        const entries = Object.entries(allDrafts)
+        if (entries.length > 10) {
+          entries.sort(([, a], [, b]) => 
+            new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime()
+          )
+          const toRemove = entries.slice(0, entries.length - 10)
+          toRemove.forEach(([key]) => delete allDrafts[key])
+        }
+
         localStorage.setItem('illustration_drafts', JSON.stringify(allDrafts))
         recount()
+        loadDrafts()
       } catch (error) {
         console.error('自動保存エラー:', error)
       }
     }, 2000)
 
     return () => clearTimeout(autoSaveTimer)
-  }, [title, description, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId, recount])
+  }, [title, description, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId, recount, currentDraftId])
 
   useEffect(() => {
     if (title.length > 50) {
@@ -454,42 +501,51 @@ function UploadIllustrationContent() {
   function removeImage(index: number) {
     setImageFiles(imageFiles.filter((_, i) => i !== index))
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
+    if (activePreviewIndex >= imagePreviews.length - 1) {
+      setActivePreviewIndex(Math.max(0, imagePreviews.length - 2))
+    }
   }
 
   function handleDragStart(e: React.DragEvent, index: number) {
     setDraggedIndex(index)
     e.dataTransfer.effectAllowed = 'move'
+    // ドラッグ中のゴーストを半透明に
+    const el = e.currentTarget as HTMLElement
+    setTimeout(() => el.style.opacity = '0.4', 0)
   }
 
   function handleDragOver(e: React.DragEvent, index: number) {
     e.preventDefault()
-    if (draggedIndex === null) return
-    if (index !== draggedIndex) {
-      setDragOverIndex(index)
-    }
-  }
+    if (draggedIndex === null || index === draggedIndex) return
 
-  function handleDragEnd() {
-    if (draggedIndex === null || dragOverIndex === null) {
-      setDraggedIndex(null)
-      setDragOverIndex(null)
-      return
-    }
-
+    // リアルタイムで並び替え
     const newFiles = [...imageFiles]
     const newPreviews = [...imagePreviews]
 
-    const draggedFile = newFiles[draggedIndex]
-    const draggedPreview = newPreviews[draggedIndex]
+    const [movedFile] = newFiles.splice(draggedIndex, 1)
+    const [movedPreview] = newPreviews.splice(draggedIndex, 1)
 
-    newFiles.splice(draggedIndex, 1)
-    newPreviews.splice(draggedIndex, 1)
-
-    newFiles.splice(dragOverIndex, 0, draggedFile)
-    newPreviews.splice(dragOverIndex, 0, draggedPreview)
+    newFiles.splice(index, 0, movedFile)
+    newPreviews.splice(index, 0, movedPreview)
 
     setImageFiles(newFiles)
     setImagePreviews(newPreviews)
+
+    // activePreviewIndexも追従
+    if (activePreviewIndex === draggedIndex) {
+      setActivePreviewIndex(index)
+    } else if (draggedIndex < activePreviewIndex && index >= activePreviewIndex) {
+      setActivePreviewIndex(activePreviewIndex - 1)
+    } else if (draggedIndex > activePreviewIndex && index <= activePreviewIndex) {
+      setActivePreviewIndex(activePreviewIndex + 1)
+    }
+
+    setDraggedIndex(index)
+  }
+
+  function handleDragEnd(e: React.DragEvent) {
+    const el = e.currentTarget as HTMLElement
+    el.style.opacity = ''
     setDraggedIndex(null)
     setDragOverIndex(null)
   }
@@ -675,339 +731,373 @@ function UploadIllustrationContent() {
       <Suspense fallback={null}>
         <DraftRestorer onRestore={restoreDraft} />
       </Suspense>
-      
+
       <div className={styles.container}>
-        {/* ヘッダー */}
-        <div className={styles.header}>
-          <h1 className={styles.title}>イラストをアップロード</h1>
-          <button
-            type="button"
-            onClick={() => setShowDraftModal(true)}
-            className="btn btn-secondary btn-sm"
-          >
-            <i className="fa-solid fa-folder-open"></i>
-            下書き ({drafts.length})
-          </button>
-        </div>
+        <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>イラストをアップロード</h1>
 
         {/* 圧縮中 */}
         {compressing && (
-          <div className="alert alert-info">
+          <div className="alert alert-info" style={{ marginBottom: 'var(--space-6)' }}>
             <i className="fa-solid fa-spinner fa-spin alert-icon"></i>
             <span>画像を圧縮しています...</span>
           </div>
         )}
 
-        <form onSubmit={handlePreSubmit} className={styles.form}>
-          {/* 画像アップロード */}
-          <div className={styles.section}>
-            <label className="form-label">
-              イラスト画像 <span className={styles.required}>*</span>
-            </label>
-            <p className={styles.hint}>
-              {imageFiles.length}/100枚 • ドラッグして並び替え可能 • 自動圧縮あり
-            </p>
-
-            {imageFiles.length === 0 ? (
-              <div
-                className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
-                onClick={handleImageClick}
-                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={handleImageDrop}
-              >
-                <div className={styles.dropzoneIcon}>
-                  <i className="fa-solid fa-images"></i>
-                </div>
-                <p className={styles.dropzoneText}>
-                  クリックまたはドラッグして画像を追加
-                </p>
-                <p className={styles.dropzoneHint}>
-                  JPEG / PNG / GIF • 最大100枚（合計200MB以内）
-                </p>
-              </div>
-            ) : (
-              <div className={styles.previewGrid}>
-                {imagePreviews.map((preview, index) => (
+        <form onSubmit={handlePreSubmit}>
+          <div className={styles.layout}>
+            {/* ====== 左カラム: 画像 ====== */}
+            <div className={styles.imageColumn}>
+              {imageFiles.length === 0 ? (
+                <>
                   <div
-                    key={index}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
-                    className={`${styles.previewItem} ${draggedIndex === index ? styles.dragging : ''} ${dragOverIndex === index ? styles.dragover : ''}`}
-                  >
-                    <img src={preview} alt={`プレビュー ${index + 1}`} />
-                    {index === 0 && (
-                      <span className={styles.mainBadge}>メイン</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); removeImage(index) }}
-                      className={styles.removeBtn}
-                    >
-                      <i className="fa-solid fa-xmark"></i>
-                    </button>
-                  </div>
-                ))}
-                {imageFiles.length < 100 && (
-                  <div
+                    className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
                     onClick={handleImageClick}
                     onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
                     onDragLeave={() => setDragging(false)}
                     onDrop={handleImageDrop}
-                    className={styles.addBtn}
                   >
-                    <i className="fa-solid fa-plus"></i>
-                    <span>追加</span>
+                    <div className={styles.dropzoneIcon}>
+                      <i className="fa-solid fa-images"></i>
+                    </div>
+                    <p className={styles.dropzoneText}>クリックまたはドラッグして画像を追加</p>
+                    <p className={styles.dropzoneHint}>JPEG / PNG / GIF • 最大100枚（合計200MB以内）</p>
                   </div>
-                )}
-              </div>
-            )}
 
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/gif"
-              onChange={handleImageChange}
-              multiple
-              style={{ display: 'none' }}
-            />
-
-            {errors.images && (
-              <p className="form-error">
-                <i className="fa-solid fa-circle-exclamation"></i> {errors.images}
-              </p>
-            )}
-          </div>
-
-          {/* タイトル */}
-          <div className={styles.section}>
-            <label className="form-label">
-              タイトル <span className={styles.required}>*</span>
-            </label>
-            <p className={styles.hint}>{title.length}/50文字</p>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="イラストのタイトル"
-              maxLength={50}
-              className={`form-input ${errors.title ? 'error' : ''}`}
-              style={{ maxWidth: '100%' }}
-            />
-            {errors.title && (
-              <p className="form-error">
-                <i className="fa-solid fa-circle-exclamation"></i> {errors.title}
-              </p>
-            )}
-          </div>
-
-          {/* 説明 */}
-          <div className={styles.section}>
-            <label className="form-label">説明</label>
-            <p className={styles.hint}>{description.length}/1000文字</p>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="イラストの説明を入力してください"
-              rows={6}
-              maxLength={1000}
-              className="form-input"
-              style={{ maxWidth: '100%', resize: 'vertical' }}
-            />
-          </div>
-
-          {/* タグ入力 */}
-          <div className={styles.section}>
-            <label className="form-label">
-              タグを追加 <span className={styles.required}>*</span>
-            </label>
-            <p className={styles.hint}>
-              最大10個まで（1個以上必須）{selectedTags.length}/10
-            </p>
-            
-            <div className={styles.tagsInput}>
-              {selectedTags.map((tag, index) => (
-                <div key={index} className={styles.tagItem}>
-                  <span>#{tag}</span>
-                  <button type="button" onClick={() => removeTag(tag)}>
-                    <i className="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
-              ))}
-              <input
-                type="text"
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addCustomTag()
-                  }
-                }}
-                placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
-                disabled={selectedTags.length >= 10}
-              />
-            </div>
-          </div>
-
-          {/* プリセットタグ */}
-          <div className={styles.section}>
-            <label className={styles.labelSub}>プリセットタグから選択</label>
-            <div className={styles.presetTags}>
-              {presetTags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => togglePresetTag(tag)}
-                  className={`${styles.presetTag} ${selectedTags.includes(tag) ? styles.active : ''}`}
-                >
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 年齢制限 */}
-          <div className={styles.section}>
-            <label className="form-label">
-              年齢制限 <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.optionsEqual}>
-              {(['general', 'r18', 'r18g'] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setRating(value)}
-                  className={`${styles.option} ${rating === value ? styles.active : ''}`}
-                >
-                  {ratingLabels[value]}
-                </button>
-              ))}
-            </div>
-            <p className={styles.hint}>
-              R-18: 性的表現を含む / R-18G: 暴力的・グロテスク表現を含む
-            </p>
-          </div>
-
-          {/* オリジナル作品 */}
-          <div className={styles.section}>
-            <label className={`${styles.checkboxCard} ${isOriginal ? styles.checked : ''}`}>
-              <input
-                type="checkbox"
-                checked={isOriginal}
-                onChange={(e) => setIsOriginal(e.target.checked)}
-              />
-              <div className={styles.checkboxContent}>
-                <span className={styles.checkboxTitle}>オリジナル作品</span>
-                <span className={styles.checkboxDesc}>
-                  二次創作ではない、独自に創作した作品の場合はチェック
-                </span>
-              </div>
-            </label>
-          </div>
-
-          {/* コメント設定 */}
-          <div className={styles.section}>
-            <label className="form-label">作品へのコメント</label>
-            <div className={`${styles.options} ${styles.optionsThree}`}>
-              <button
-                type="button"
-                onClick={() => setAllowComments(true)}
-                className={`${styles.option} ${allowComments ? styles.active : ''}`}
-              >
-                <i className="fa-solid fa-comment"></i>
-                許可する
-              </button>
-              <button
-                type="button"
-                onClick={() => setAllowComments(false)}
-                className={`${styles.option} ${!allowComments ? styles.active : ''}`}
-              >
-                <i className="fa-solid fa-comment-slash"></i>
-                許可しない
-              </button>
-            </div>
-          </div>
-
-          {/* 公開範囲 */}
-          <div className={styles.section}>
-            <label className="form-label">
-              公開範囲 <span className={styles.required}>*</span>
-            </label>
-            <div className={`${styles.options} ${styles.optionsThree}`}>
-              {([
-                { value: 'public', icon: 'fa-globe', label: '全体公開' },
-                { value: 'followers', icon: 'fa-users', label: 'フォロワー限定' },
-                { value: 'private', icon: 'fa-lock', label: '非公開' }
-              ] as const).map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setVisibility(item.value)}
-                  className={`${styles.option} ${visibility === item.value ? styles.active : ''}`}
-                >
-                  <i className={`fa-solid ${item.icon}`}></i>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 利用規約同意 */}
-          <div className={styles.section}>
-            <label className={`${styles.checkboxCard} ${styles.terms} ${agreedToTerms ? styles.checked : ''} ${errors.terms ? styles.error : ''}`}>
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => {
-                  setAgreedToTerms(e.target.checked)
-                  if (e.target.checked) {
-                    setErrors(prev => ({ ...prev, terms: '' }))
-                  }
-                }}
-              />
-              <div className={styles.checkboxContent}>
-                <span className={styles.checkboxTitle}>
-                  利用規約への同意 <span className={styles.required}>*</span>
-                </span>
-                <span className={styles.checkboxDesc}>
-                  <Link href="/terms" target="_blank" className="link">利用規約</Link>や
-                  <Link href="/guideline" target="_blank" className="link">ガイドライン</Link>
-                  に違反する作品は削除の対象となります
-                </span>
-              </div>
-            </label>
-            {errors.terms && (
-              <p className="form-error">
-                <i className="fa-solid fa-circle-exclamation"></i> {errors.terms}
-              </p>
-            )}
-          </div>
-
-          {/* ボタン */}
-          <div className={styles.actions}>
-            <Link href="/dashboard/portfolio/upload" className="btn btn-secondary">
-              キャンセル
-            </Link>
-            <button
-              type="submit"
-              disabled={!isFormValid}
-              className="btn btn-primary"
-            >
-              {uploading ? (
-                <>
-                  <i className="fa-solid fa-spinner fa-spin"></i>
-                  アップロード中...
+                  <div className={styles.thumbStrip}>
+                    <button
+                      type="button"
+                      className={styles.thumbAdd}
+                      onClick={handleImageClick}
+                    >
+                      <i className="fa-solid fa-plus"></i>
+                      <span>追加</span>
+                    </button>
+                  </div>
                 </>
               ) : (
-                '確認画面へ'
+                <>
+                  {/* メインプレビュー */}
+                  <div className={styles.mainPreview}>
+                    <img src={imagePreviews[activePreviewIndex]} alt={`プレビュー ${activePreviewIndex + 1}`} />
+                    {activePreviewIndex === 0 && (
+                      <span className={styles.mainBadge}>メイン</span>
+                    )}
+                    <span className={styles.imageCounter}>
+                      <i className="fa-solid fa-images"></i> {imageFiles.length}枚
+                    </span>
+                  </div>
+
+                  {/* サムネイルストリップ */}
+                  <div className={styles.thumbStrip}>
+                    {imagePreviews.map((preview, index) => (
+                      <div
+                        key={index}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        className={`${styles.thumbItem} ${activePreviewIndex === index ? styles.active : ''} ${draggedIndex === index ? styles.dragging : ''}`}
+                        onClick={() => setActivePreviewIndex(index)}
+                      >
+                        <img src={preview} alt={`サムネ ${index + 1}`} />
+                        {index === 0 && (
+                          <span className={styles.thumbMainLabel}>メイン</span>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.thumbRemove}
+                          onClick={(e) => { e.stopPropagation(); removeImage(index) }}
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    ))}
+                    {imageFiles.length < 100 && (
+                      <button
+                        type="button"
+                        className={styles.thumbAdd}
+                        onClick={handleImageClick}
+                        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                        onDragLeave={() => setDragging(false)}
+                        onDrop={handleImageDrop}
+                      >
+                        <i className="fa-solid fa-plus"></i>
+                        <span>追加</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <p className={styles.imageHint}>ドラッグで並び替え • JPEG / PNG / GIF • 最大100枚</p>
+                </>
               )}
-            </button>
+
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif"
+                onChange={handleImageChange}
+                multiple
+                style={{ display: 'none' }}
+              />
+
+              {errors.images && (
+                <p className="form-error">
+                  <i className="fa-solid fa-circle-exclamation"></i> {errors.images}
+                </p>
+              )}
+            </div>
+
+            {/* ====== 右カラム: フォーム ====== */}
+            <div className={styles.formColumn}>
+              {/* 作品情報カード */}
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <span className={styles.cardHeadingIcon}>
+                    <i className="fa-solid fa-pen-nib"></i>
+                  </span>
+                  作品情報
+                </div>
+
+                <div className={styles.field}>
+                  <label className="form-label">
+                    タイトル <span className={styles.required}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="イラストのタイトル"
+                    maxLength={50}
+                    className={`form-input ${errors.title ? 'error' : ''}`}
+                    style={{ maxWidth: '100%', background: 'var(--bg-base)' }}
+                  />
+                  <span className={styles.charCount}>{title.length} / 50</span>
+                  {errors.title && (
+                    <p className="form-error">
+                      <i className="fa-solid fa-circle-exclamation"></i> {errors.title}
+                    </p>
+                  )}
+                </div>
+
+                <div className={styles.field}>
+                  <label className="form-label">説明</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="イラストの説明を入力してください"
+                    rows={4}
+                    maxLength={1000}
+                    className="form-input"
+                    style={{ maxWidth: '100%', resize: 'vertical', background: 'var(--bg-base)' }}
+                  />
+                  <span className={styles.charCount}>{description.length} / 1000</span>
+                </div>
+              </div>
+
+              {/* タグカード */}
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <span className={styles.cardHeadingIcon}>
+                    <i className="fa-solid fa-tags"></i>
+                  </span>
+                  タグ
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.fieldRow}>
+                    <label className="form-label">
+                      タグを追加 <span className={styles.required}>*</span>
+                    </label>
+                    <span className={styles.hint}>{selectedTags.length} / 10</span>
+                  </div>
+                  <div className={styles.tagsInput}>
+                    {selectedTags.map((tag, index) => (
+                      <div key={index} className={styles.tagItem}>
+                        <span>#{tag}</span>
+                        <button type="button" onClick={() => removeTag(tag)}>
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <input
+                      type="text"
+                      value={customTag}
+                      onChange={(e) => setCustomTag(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addCustomTag()
+                        }
+                      }}
+                      placeholder={selectedTags.length === 0 ? "タグを入力してEnter" : ""}
+                      disabled={selectedTags.length >= 10}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.labelSub}>プリセットから選択</label>
+                  <div className={styles.presetTags}>
+                    {presetTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => togglePresetTag(tag)}
+                        className={`${styles.presetTag} ${selectedTags.includes(tag) ? styles.active : ''}`}
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 設定カード */}
+              <div className={styles.formCard}>
+                <div className={styles.cardHeading}>
+                  <span className={styles.cardHeadingIcon}>
+                    <i className="fa-solid fa-sliders"></i>
+                  </span>
+                  設定
+                </div>
+
+                {/* 年齢制限 */}
+                <div className={styles.field}>
+                  <label className="form-label">年齢制限</label>
+                  <div className={styles.optionRow}>
+                    {(['general', 'r18', 'r18g'] as const).map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setRating(value)}
+                        className={`${styles.optionPill} ${rating === value ? styles.active : ''}`}
+                      >
+                        {ratingLabels[value]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 公開範囲 */}
+                <div className={styles.field}>
+                  <label className="form-label">公開範囲</label>
+                  <div className={styles.optionGrid}>
+                    {([
+                      { value: 'public', icon: 'fa-globe', label: '全体公開' },
+                      { value: 'followers', icon: 'fa-users', label: 'フォロワー限定' },
+                      { value: 'private', icon: 'fa-lock', label: '非公開' }
+                    ] as const).map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setVisibility(item.value)}
+                        className={`${styles.optionBtn} ${visibility === item.value ? styles.active : ''}`}
+                      >
+                        <i className={`fa-solid ${item.icon}`}></i>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* オリジナル作品 */}
+                <div
+                  className={`${styles.toggleRow} ${isOriginal ? styles.active : ''}`}
+                  onClick={() => setIsOriginal(!isOriginal)}
+                >
+                  <div className={styles.toggleLabel}>
+                    <strong>オリジナル作品</strong>
+                    <span>二次創作ではない独自の作品</span>
+                  </div>
+                  <div className={styles.toggleSwitch}></div>
+                </div>
+
+                {/* コメント許可 */}
+                <div
+                  className={`${styles.toggleRow} ${allowComments ? styles.active : ''}`}
+                  onClick={() => setAllowComments(!allowComments)}
+                >
+                  <div className={styles.toggleLabel}>
+                    <strong>コメントを許可</strong>
+                    <span>作品へのコメントを受け付けます</span>
+                  </div>
+                  <div className={styles.toggleSwitch}></div>
+                </div>
+              </div>
+
+              {/* 利用規約 */}
+              <label
+                className={`${styles.termsCheck} ${agreedToTerms ? styles.active : ''} ${errors.terms ? styles.error : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => {
+                    setAgreedToTerms(e.target.checked)
+                    if (e.target.checked) {
+                      setErrors(prev => ({ ...prev, terms: '' }))
+                    }
+                  }}
+                />
+                <span className={styles.checkBox}>
+                  <i className="fa-solid fa-check"></i>
+                </span>
+                <div>
+                  <span className={styles.termsTitle}>
+                    利用規約への同意 <span className={styles.required}>*</span>
+                  </span>
+                  <span className={styles.termsDesc}>
+                    <Link href="/terms" target="_blank" className="link">利用規約</Link>や
+                    <Link href="/guideline" target="_blank" className="link">ガイドライン</Link>
+                    に違反する作品は削除の対象となります
+                  </span>
+                </div>
+              </label>
+              {errors.terms && (
+                <p className="form-error">
+                  <i className="fa-solid fa-circle-exclamation"></i> {errors.terms}
+                </p>
+              )}
+
+              {/* アクションボタン */}
+              <div className={styles.actions}>
+                <Link href="/dashboard/portfolio/upload" className="btn btn-secondary">
+                  キャンセル
+                </Link>
+                <button
+                  type="submit"
+                  disabled={!isFormValid}
+                  className="btn btn-primary"
+                >
+                  {uploading ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      アップロード中...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-upload"></i>
+                      確認画面へ
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
+
+      {/* FAB: 下書きボタン（スマホ以外） */}
+      <button
+        type="button"
+        className={styles.fabDraft}
+        onClick={() => setShowDraftModal(true)}
+      >
+        <i className="fa-solid fa-folder-open"></i>
+        {drafts.length > 0 && (
+          <span className={styles.draftCount}>{drafts.length}</span>
+        )}
+      </button>
 
       {/* 確認モーダル */}
       {showConfirmModal && (
@@ -1118,9 +1208,6 @@ function UploadIllustrationContent() {
                               <i className={draft.categoryIcon}></i> {draft.categoryName}
                             </span>
                           )}
-                          {draft.id === 'autosave' && (
-                            <span className={styles.autosaveBadge}>自動保存</span>
-                          )}
                         </div>
                         <h4 className={styles.draftTitle}>{draft.title || '（タイトルなし）'}</h4>
                         <p className={styles.draftDate}>
@@ -1137,18 +1224,40 @@ function UploadIllustrationContent() {
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (confirm('この下書きを削除しますか？')) {
-                            deleteDraft(draft)
-                          }
-                        }}
-                        className={styles.deleteBtn}
-                      >
-                        <i className="fa-solid fa-trash-can"></i>
-                        削除
-                      </button>
+                      <div className={`${styles.draftMenu} ${openDraftMenu === `${draft.category}-${draft.id}` ? styles.open : ''}`}>
+                        <button
+                          type="button"
+                          className={styles.draftMenuBtn}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const key = `${draft.category}-${draft.id}`
+                            setOpenDraftMenu(openDraftMenu === key ? null : key)
+                          }}
+                        >
+                          <i className="fa-solid fa-ellipsis-vertical"></i>
+                        </button>
+                        {openDraftMenu === `${draft.category}-${draft.id}` && (
+                          <>
+                            <div className={styles.draftMenuOverlay} onClick={() => setOpenDraftMenu(null)} />
+                            <div className={styles.draftMenuDropdown}>
+                              <button
+                                type="button"
+                                className={styles.draftMenuDelete}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOpenDraftMenu(null)
+                                  if (confirm('この下書きを削除しますか？')) {
+                                    deleteDraft(draft)
+                                  }
+                                }}
+                              >
+                                <i className="fa-solid fa-trash-can"></i>
+                                削除
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
