@@ -5,7 +5,10 @@ import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
-import { useDraftStore } from '@/stores/draftStore'
+import { LoadingSpinner } from '@/app/components/Skeleton'
+import { useDraft } from '@/app/hooks/useDraft'
+import type { Draft } from '@/app/hooks/useDraft'
+import DraftModal from '@/app/components/DraftModal'
 import styles from './page.module.css'
 
 // 画像圧縮関数
@@ -65,26 +68,6 @@ async function compressImage(file: File, maxWidth: number = 1920, quality: numbe
   })
 }
 
-// 下書きの型定義
-type Draft = {
-  id: string
-  title: string
-  description: string
-  selectedTags: string[]
-  rating: 'general' | 'r18' | 'r18g'
-  isOriginal: boolean
-  allowComments: boolean
-  visibility: 'public' | 'followers' | 'private'
-  timestamp: number
-  category?: string
-  categoryName?: string
-  categoryIcon?: string
-  synopsis?: string
-  content?: string
-  uploadMethod?: 'file' | 'link'
-  externalLink?: string
-}
-
 // 下書き復元用コンポーネント
 function DraftRestorer({ onRestore }: { onRestore: (draftId: string) => void }) {
   const searchParams = useSearchParams()
@@ -111,7 +94,7 @@ function UploadIllustrationContent() {
   const [rating, setRating] = useState<'general' | 'r18' | 'r18g'>('general')
   const [isOriginal, setIsOriginal] = useState(false)
   const [allowComments, setAllowComments] = useState(true)
-  const [visibility, setVisibility] = useState<'public' | 'followers' | 'private'>('public')
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [compressing, setCompressing] = useState(false)
@@ -119,11 +102,7 @@ function UploadIllustrationContent() {
   const [accountType, setAccountType] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [showDraftModal, setShowDraftModal] = useState(false)
-  const [openDraftMenu, setOpenDraftMenu] = useState<string | null>(null)
-  const [drafts, setDrafts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentDraftId, setCurrentDraftId] = useState<string>(() => `draft_${Date.now()}`)
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -134,13 +113,20 @@ function UploadIllustrationContent() {
     terms: ''
   })
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
   const imageInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  
-  // Zustand: 下書きカウント更新用
-  const recount = useDraftStore((state) => state.recount)
+
+  // 下書きフック
+  const formData = {
+    title,
+    description,
+    tags: selectedTags,
+    rating,
+    is_original: isOriginal,
+    allow_comments: allowComments,
+    is_public: visibility === 'public'
+  }
+  const { drafts, currentDraftId, saving, adoptDraftId, deleteDraft, getCategoryUrl, publishDraft } = useDraft('illustration', formData, currentUserId, imageFiles)
 
   const presetTags = [
     'オリジナル', 'ファンアート', 'ファンタジー', '現代', 'SF',
@@ -151,7 +137,6 @@ function UploadIllustrationContent() {
 
   useEffect(() => {
     checkAuth()
-    loadDrafts()
   }, [])
 
   // 離脱防止（入力がある場合）
@@ -166,17 +151,9 @@ function UploadIllustrationContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [title, description, selectedTags, imageFiles])
 
-  // Toast自動消去
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [toast])
-
   // モーダル表示時のスクロール禁止（position: fixedで確実に防ぐ）
   useEffect(() => {
-    if (showConfirmModal || showDraftModal) {
+    if (showConfirmModal) {
       const scrollY = window.scrollY
       document.body.style.position = 'fixed'
       document.body.style.top = `-${scrollY}px`
@@ -202,30 +179,19 @@ function UploadIllustrationContent() {
         window.scrollTo(0, parseInt(scrollY) * -1)
       }
     }
-  }, [showConfirmModal, showDraftModal])
+  }, [showConfirmModal])
 
-  function restoreDraft(draftId: string) {
+  async function restoreDraft(draftId: string) {
     try {
-      const saved = localStorage.getItem('illustration_drafts')
-      if (saved) {
-        const allDrafts = JSON.parse(saved)
-        const draft = allDrafts[draftId]
-        
-        if (draft) {
-          setTitle(draft.title || '')
-          setDescription(draft.description || '')
-          setSelectedTags(draft.selectedTags || [])
-          setRating(draft.rating || 'general')
-          setIsOriginal(draft.isOriginal || false)
-          setAllowComments(draft.allowComments !== undefined ? draft.allowComments : true)
-          setVisibility(draft.visibility || 'public')
-          
-          setToast({ message: '下書きを読み込みました', type: 'success' })
-        }
+      const res = await fetch('/api/drafts')
+      if (!res.ok) return
+      const data = await res.json()
+      const draft = (data.drafts || []).find((d: Draft) => d.id === draftId)
+      if (draft) {
+        handleLoadDraft(draft)
       }
     } catch (error) {
       console.error('下書き復元エラー:', error)
-      setToast({ message: '下書きの読み込みに失敗しました', type: 'error' })
     }
   }
 
@@ -245,161 +211,29 @@ function UploadIllustrationContent() {
         setAccountType(profile.account_type)
         setLoading(false)
       } else {
-        setToast({ message: 'プロフィールが見つかりません', type: 'error' })
         router.push('/profile')
       }
     }
   }
 
-  function loadDrafts() {
-    try {
-      const allCategories = [
-        { key: 'illustration_drafts', name: 'イラスト', icon: 'fa-solid fa-image' },
-        { key: 'manga_drafts', name: 'マンガ', icon: 'fa-solid fa-book' },
-        { key: 'novel_drafts', name: '小説', icon: 'fa-solid fa-file-lines' },
-        { key: 'music_drafts', name: '音楽', icon: 'fa-solid fa-music' },
-        { key: 'voice_drafts', name: 'ボイス', icon: 'fa-solid fa-microphone' },
-        { key: 'video_drafts', name: '動画', icon: 'fa-solid fa-video' }
-      ]
+  // 下書き復元（自カテゴリ）
+  function handleLoadDraft(draft: Draft) {
+    setTitle(draft.title || '')
+    setDescription(draft.description || '')
+    setSelectedTags(draft.tags || [])
+    setRating(draft.rating || 'general')
+    setIsOriginal(draft.is_original ?? false)
+    setAllowComments(draft.allow_comments ?? true)
+    setVisibility(draft.is_public ? 'public' : 'private')
+    adoptDraftId(draft.id)
 
-      let allDrafts: Draft[] = []
-
-      allCategories.forEach(category => {
-        const saved = localStorage.getItem(category.key)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          
-          if (Array.isArray(parsed)) {
-            const draftsArray = parsed.map(draft => ({
-              ...draft,
-              timestamp: draft.timestamp || Date.now(),
-              category: category.key,
-              categoryName: category.name,
-              categoryIcon: category.icon
-            }))
-            allDrafts.push(...draftsArray)
-          } else if (typeof parsed === 'object') {
-            const draftsArray = Object.entries(parsed)
-              .map(([id, data]: [string, any]) => ({
-                id,
-                title: data.title || '無題',
-                description: data.description || '',
-                selectedTags: data.selectedTags || [],
-                rating: data.rating || 'general',
-                isOriginal: data.isOriginal || false,
-                allowComments: data.allowComments !== undefined ? data.allowComments : true,
-                visibility: data.visibility || 'public',
-                timestamp: data.savedAt ? new Date(data.savedAt).getTime() : Date.now(),
-                category: category.key,
-                categoryName: category.name,
-                categoryIcon: category.icon
-              }))
-            allDrafts.push(...draftsArray)
-          }
-        }
-      })
-
-      allDrafts.sort((a, b) => b.timestamp - a.timestamp)
-      setDrafts(allDrafts)
-    } catch (e) {
-      console.error('下書きの読み込みに失敗しました', e)
-      setDrafts([])
+    // 画像URLがある場合はプレビューに復元
+    if (draft.image_urls && draft.image_urls.length > 0) {
+      setImagePreviews(draft.image_urls)
+      setActivePreviewIndex(0)
+      // 注意: Fileオブジェクトは復元できないので、投稿時はpublishDraftを使う
     }
   }
-
-  // カテゴリごとのアップロードページURL
-  const categoryUrls: { [key: string]: string } = {
-    'illustration_drafts': '/dashboard/portfolio/upload/illustration',
-    'manga_drafts': '/dashboard/portfolio/upload/manga',
-    'novel_drafts': '/dashboard/portfolio/upload/novel',
-    'music_drafts': '/dashboard/portfolio/upload/music',
-    'voice_drafts': '/dashboard/portfolio/upload/voice',
-    'video_drafts': '/dashboard/portfolio/upload/video'
-  }
-
-  function loadDraft(draft: Draft) {
-    // 他カテゴリの下書き → そのカテゴリのページに遷移
-    if (draft.category && draft.category !== 'illustration_drafts') {
-      const url = categoryUrls[draft.category]
-      if (url) {
-        router.push(`${url}?draft=${draft.id}`)
-        setShowDraftModal(false)
-        return
-      }
-    }
-
-    // イラストの下書き → 復元してIDを引き継ぐ
-    setTitle(draft.title)
-    setDescription(draft.description)
-    setSelectedTags(draft.selectedTags)
-    setRating(draft.rating)
-    setIsOriginal(draft.isOriginal)
-    setAllowComments(draft.allowComments)
-    setVisibility(draft.visibility)
-    setCurrentDraftId(draft.id)
-    setShowDraftModal(false)
-    setToast({ message: '下書きを復元しました', type: 'success' })
-  }
-
-  function deleteDraft(draft: Draft) {
-    try {
-      const storageKey = draft.category || 'illustration_drafts'
-      const saved = localStorage.getItem(storageKey)
-      if (saved) {
-        const allDrafts = JSON.parse(saved)
-        delete allDrafts[draft.id]
-        localStorage.setItem(storageKey, JSON.stringify(allDrafts))
-        recount()
-        loadDrafts()
-        setToast({ message: '下書きを削除しました', type: 'success' })
-      }
-    } catch (error) {
-      console.error('下書き削除エラー:', error)
-      setToast({ message: '削除に失敗しました', type: 'error' })
-    }
-  }
-
-  // 自動保存（セッション中は同じIDで上書き、最大10件）
-  useEffect(() => {
-    if (!currentUserId) return
-    if (!title.trim() && selectedTags.length === 0) return
-
-    const autoSaveTimer = setTimeout(() => {
-      try {
-        const saved = localStorage.getItem('illustration_drafts')
-        let allDrafts: { [key: string]: any } = saved ? JSON.parse(saved) : {}
-        
-        allDrafts[currentDraftId] = {
-          title,
-          description,
-          selectedTags,
-          rating,
-          isOriginal,
-          allowComments,
-          visibility,
-          savedAt: new Date().toISOString()
-        }
-        
-        // 10件超えたら古い順に削除
-        const entries = Object.entries(allDrafts)
-        if (entries.length > 10) {
-          entries.sort(([, a], [, b]) => 
-            new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime()
-          )
-          const toRemove = entries.slice(0, entries.length - 10)
-          toRemove.forEach(([key]) => delete allDrafts[key])
-        }
-
-        localStorage.setItem('illustration_drafts', JSON.stringify(allDrafts))
-        recount()
-        loadDrafts()
-      } catch (error) {
-        console.error('自動保存エラー:', error)
-      }
-    }, 2000)
-
-    return () => clearTimeout(autoSaveTimer)
-  }, [title, description, selectedTags, rating, isOriginal, allowComments, visibility, currentUserId, recount, currentDraftId])
 
   useEffect(() => {
     if (title.length > 50) {
@@ -421,7 +255,6 @@ function UploadIllustrationContent() {
   async function processImageFiles(files: File[]) {
     const totalFiles = imageFiles.length + files.length
     if (totalFiles > 100) {
-      setToast({ message: '画像は最大100枚までアップロードできます', type: 'error' })
       return
     }
 
@@ -433,7 +266,6 @@ function UploadIllustrationContent() {
       for (const file of files) {
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
         if (!allowedTypes.includes(file.type)) {
-          setToast({ message: `${file.name}: 対応フォーマット JPEG, PNG, GIF`, type: 'error' })
           continue
         }
 
@@ -444,12 +276,10 @@ function UploadIllustrationContent() {
           }
         } catch (compressError) {
           console.error('圧縮エラー:', compressError)
-          setToast({ message: `${file.name}: 圧縮に失敗しました`, type: 'error' })
           continue
         }
 
         if (processedFile.size > 32 * 1024 * 1024) {
-          setToast({ message: `${file.name}: ファイルサイズは32MB以下にしてください`, type: 'error' })
           continue
         }
 
@@ -472,7 +302,6 @@ function UploadIllustrationContent() {
       const totalSize = currentTotalSize + newFilesSize
       
       if (totalSize > 200 * 1024 * 1024) {
-        setToast({ message: '画像の合計サイズは200MB以内にしてください', type: 'error' })
         return
       }
 
@@ -555,7 +384,6 @@ function UploadIllustrationContent() {
       setSelectedTags(selectedTags.filter(t => t !== tag))
     } else {
       if (selectedTags.length >= 10) {
-        setToast({ message: 'タグは10個まで追加できます', type: 'error' })
         return
       }
       setSelectedTags([...selectedTags, tag])
@@ -567,12 +395,10 @@ function UploadIllustrationContent() {
     if (!trimmedTag) return
 
     if (selectedTags.includes(trimmedTag)) {
-      setToast({ message: 'すでに追加されているタグです', type: 'error' })
       return
     }
 
     if (selectedTags.length >= 10) {
-      setToast({ message: 'タグは10個まで追加できます', type: 'error' })
       return
     }
 
@@ -589,34 +415,28 @@ function UploadIllustrationContent() {
 
     if (!title.trim()) {
       setErrors(prev => ({ ...prev, title: 'タイトルは必須です' }))
-      setToast({ message: 'タイトルを入力してください', type: 'error' })
       return
     }
 
     if (title.length > 50) {
-      setToast({ message: 'タイトルは50文字以内にしてください', type: 'error' })
       return
     }
 
     if (imageFiles.length === 0) {
       setErrors(prev => ({ ...prev, images: '画像を選択してください' }))
-      setToast({ message: '画像を選択してください', type: 'error' })
       return
     }
 
     if (selectedTags.length === 0) {
-      setToast({ message: 'タグを1個以上追加してください', type: 'error' })
       return
     }
 
     if (description.length > 1000) {
-      setToast({ message: '説明は1000文字以内にしてください', type: 'error' })
       return
     }
 
     if (!agreedToTerms) {
       setErrors(prev => ({ ...prev, terms: '利用規約に同意してください' }))
-      setToast({ message: '利用規約に同意してください', type: 'error' })
       return
     }
 
@@ -641,30 +461,41 @@ function UploadIllustrationContent() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setToast({ message: 'ログインが必要です', type: 'error' })
         return
       }
 
-      const uploadedUrls: string[] = []
-      
-      for (let i = 0; i < imageFiles.length; i++) {
-        const file = imageFiles[i]
-        
-        try {
-          const { uploadUrl, fileUrl } = await getUploadUrl(
-            'illustration',
-            'image',
-            file.name,
-            file.type,
-            user.id
-          )
-          
-          await uploadToR2(file, uploadUrl)
-          uploadedUrls.push(fileUrl)
-          
-        } catch (uploadError) {
-          console.error(`${i + 1}枚目エラー:`, uploadError)
-          throw new Error(`${i + 1}枚目の画像アップロードに失敗しました`)
+      let finalUrls: string[] = []
+
+      if (currentDraftId && imageFiles.length === 0) {
+        // 下書きから投稿（画像はR2にある→本番パスにコピー）
+        finalUrls = await publishDraft(currentDraftId)
+      } else {
+        // 新規アップロード or 下書きから画像を差し替えた場合
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i]
+          try {
+            const { uploadUrl, fileUrl } = await getUploadUrl(
+              'illustration',
+              'image',
+              file.name,
+              file.type,
+              user.id
+            )
+            await uploadToR2(file, uploadUrl)
+            finalUrls.push(fileUrl)
+          } catch (uploadError) {
+            console.error(`${i + 1}枚目エラー:`, uploadError)
+            throw new Error(`${i + 1}枚目の画像アップロードに失敗しました`)
+          }
+        }
+
+        // 下書きがあれば削除
+        if (currentDraftId) {
+          try {
+            await fetch(`/api/drafts/${currentDraftId}`, { method: 'DELETE' })
+          } catch (e) {
+            console.error('下書き削除エラー:', e)
+          }
         }
       }
 
@@ -679,9 +510,9 @@ function UploadIllustrationContent() {
           is_original: isOriginal,
           allow_comments: allowComments,
           tags: selectedTags,
-          image_url: uploadedUrls[0],
-          thumbnail_url: uploadedUrls[0],
-          image_urls: uploadedUrls.length > 1 ? uploadedUrls : null,
+          image_url: finalUrls[0],
+          thumbnail_url: finalUrls[0],
+          image_urls: finalUrls.length > 1 ? finalUrls : null,
           is_public: visibility === 'public'
         })
 
@@ -689,17 +520,11 @@ function UploadIllustrationContent() {
         throw dbError
       }
 
-      setToast({ message: 'イラストをアップロードしました！', type: 'success' })
-      
       setTimeout(() => {
         router.push('/dashboard/portfolio')
       }, 1500)
     } catch (error) {
       console.error('アップロードエラー:', error)
-      setToast({ 
-        message: error instanceof Error ? error.message : 'アップロードに失敗しました',
-        type: 'error' 
-      })
     } finally {
       setUploading(false)
     }
@@ -707,7 +532,6 @@ function UploadIllustrationContent() {
 
   const visibilityLabels: { [key: string]: string } = {
     public: '全体公開',
-    followers: 'フォロワーのみ',
     private: '非公開（自分のみ）'
   }
 
@@ -718,12 +542,7 @@ function UploadIllustrationContent() {
   }
 
   if (loading) {
-    return (
-      <div className={styles.loading}>
-        <i className="fa-solid fa-spinner fa-spin"></i>
-        <span>読み込み中...</span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
@@ -779,6 +598,13 @@ function UploadIllustrationContent() {
                   {/* メインプレビュー */}
                   <div className={styles.mainPreview}>
                     <img src={imagePreviews[activePreviewIndex]} alt={`プレビュー ${activePreviewIndex + 1}`} />
+                    <button
+                      type="button"
+                      className={styles.mainRemove}
+                      onClick={() => removeImage(activePreviewIndex)}
+                    >
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
                     {activePreviewIndex === 0 && (
                       <span className={styles.mainBadge}>メイン</span>
                     )}
@@ -984,7 +810,6 @@ function UploadIllustrationContent() {
                   <div className={styles.optionGrid}>
                     {([
                       { value: 'public', icon: 'fa-globe', label: '全体公開' },
-                      { value: 'followers', icon: 'fa-users', label: 'フォロワー限定' },
                       { value: 'private', icon: 'fa-lock', label: '非公開' }
                     ] as const).map((item) => (
                       <button
@@ -1087,17 +912,14 @@ function UploadIllustrationContent() {
         </form>
       </div>
 
-      {/* FAB: 下書きボタン（スマホ以外） */}
-      <button
-        type="button"
-        className={styles.fabDraft}
-        onClick={() => setShowDraftModal(true)}
-      >
-        <i className="fa-solid fa-folder-open"></i>
-        {drafts.length > 0 && (
-          <span className={styles.draftCount}>{drafts.length}</span>
-        )}
-      </button>
+      {/* 下書き */}
+      <DraftModal
+        drafts={drafts}
+        categoryKey="illustration"
+        onLoadDraft={handleLoadDraft}
+        onDeleteDraft={deleteDraft}
+        getCategoryUrl={getCategoryUrl}
+      />
 
       {/* 確認モーダル */}
       {showConfirmModal && (
@@ -1177,109 +999,6 @@ function UploadIllustrationContent() {
         </div>
       )}
 
-      {/* 下書きモーダル */}
-      {showDraftModal && (
-        <div className="modal-overlay active" onClick={() => setShowDraftModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                <i className="fa-solid fa-folder-open" style={{ marginRight: 'var(--space-2)' }}></i>
-                保存済みの下書き ({drafts.length}件)
-              </h3>
-              <button className="modal-close" onClick={() => setShowDraftModal(false)}>
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {drafts.length === 0 ? (
-                <div className="empty-state">
-                  <i className="fa-regular fa-file-lines"></i>
-                  <p>保存された下書きはありません</p>
-                </div>
-              ) : (
-                <div className={styles.draftList}>
-                  {drafts.map((draft) => (
-                    <div key={`${draft.category}-${draft.id}`} className={styles.draftItem}>
-                      <div className={styles.draftContent} onClick={() => loadDraft(draft)}>
-                        <div className={styles.draftBadges}>
-                          {draft.categoryName && (
-                            <span className={styles.categoryBadge}>
-                              <i className={draft.categoryIcon}></i> {draft.categoryName}
-                            </span>
-                          )}
-                        </div>
-                        <h4 className={styles.draftTitle}>{draft.title || '（タイトルなし）'}</h4>
-                        <p className={styles.draftDate}>
-                          {new Date(draft.timestamp).toLocaleString('ja-JP')}
-                        </p>
-                        {draft.selectedTags.length > 0 && (
-                          <div className={styles.draftTags}>
-                            {draft.selectedTags.slice(0, 5).map((tag, i) => (
-                              <span key={i}>#{tag}</span>
-                            ))}
-                            {draft.selectedTags.length > 5 && (
-                              <span className={styles.more}>+{draft.selectedTags.length - 5}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <div className={`${styles.draftMenu} ${openDraftMenu === `${draft.category}-${draft.id}` ? styles.open : ''}`}>
-                        <button
-                          type="button"
-                          className={styles.draftMenuBtn}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const key = `${draft.category}-${draft.id}`
-                            setOpenDraftMenu(openDraftMenu === key ? null : key)
-                          }}
-                        >
-                          <i className="fa-solid fa-ellipsis-vertical"></i>
-                        </button>
-                        {openDraftMenu === `${draft.category}-${draft.id}` && (
-                          <>
-                            <div className={styles.draftMenuOverlay} onClick={() => setOpenDraftMenu(null)} />
-                            <div className={styles.draftMenuDropdown}>
-                              <button
-                                type="button"
-                                className={styles.draftMenuDelete}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setOpenDraftMenu(null)
-                                  if (confirm('この下書きを削除しますか？')) {
-                                    deleteDraft(draft)
-                                  }
-                                }}
-                              >
-                                <i className="fa-solid fa-trash-can"></i>
-                                削除
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="modal-footer">
-              <button onClick={() => setShowDraftModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* トースト */}
-      {toast && (
-        <div className={`${styles.toast} ${styles[toast.type]}`}>
-          <i className={toast.type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-exclamation'}></i>
-          <span>{toast.message}</span>
-        </div>
-      )}
     </>
   )
 }
