@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { r2PortfolioClient } from '@/lib/r2-upload'
 
 // PUT: 下書き更新
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -29,7 +32,7 @@ export async function PUT(
         image_urls: body.image_urls || null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('creator_id', user.id)
       .select()
       .single()
@@ -49,9 +52,10 @@ export async function PUT(
 // DELETE: 下書き削除（R2の画像も削除）
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -63,19 +67,19 @@ export async function DELETE(
     const { data: draft } = await supabase
       .from('drafts')
       .select('image_urls')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('creator_id', user.id)
       .single()
 
     // R2から下書き画像を削除
     if (draft?.image_urls && draft.image_urls.length > 0) {
+      const bucketName = process.env.R2_BUCKET_PORTFOLIO!
       for (const url of draft.image_urls) {
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/delete-portfolio`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath: extractR2Path(url) })
-          })
+          await r2PortfolioClient.send(new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: extractR2Path(url)
+          }))
         } catch (e) {
           console.error('R2画像削除エラー:', e)
         }
@@ -86,7 +90,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('drafts')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('creator_id', user.id)
 
     if (error) {

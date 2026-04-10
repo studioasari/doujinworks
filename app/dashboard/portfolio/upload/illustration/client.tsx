@@ -126,7 +126,7 @@ function UploadIllustrationContent() {
     allow_comments: allowComments,
     is_public: visibility === 'public'
   }
-  const { drafts, currentDraftId, saving, adoptDraftId, deleteDraft, getCategoryUrl, publishDraft } = useDraft('illustration', formData, currentUserId, imageFiles)
+  const { drafts, currentDraftId, saving, savedImageUrls, adoptDraftId, deleteDraft, getCategoryUrl, publishDraft } = useDraft('illustration', formData, currentUserId, imageFiles, imagePreviews)
 
   const presetTags = [
     'オリジナル', 'ファンアート', 'ファンタジー', '現代', 'SF',
@@ -138,6 +138,13 @@ function UploadIllustrationContent() {
   useEffect(() => {
     checkAuth()
   }, [])
+
+  // R2保存後、previewsをURLに差し替え（×削除時にR2からも消せるように）
+  useEffect(() => {
+    if (savedImageUrls.length > 0 && imagePreviews.length === savedImageUrls.length) {
+      setImagePreviews(savedImageUrls)
+    }
+  }, [savedImageUrls])
 
   // 離脱防止（入力がある場合）
   useEffect(() => {
@@ -328,6 +335,16 @@ function UploadIllustrationContent() {
   }
 
   function removeImage(index: number) {
+    // R2にアップ済みの下書き画像なら削除
+    const preview = imagePreviews[index]
+    if (preview && preview.startsWith('http')) {
+      fetch('/api/delete-portfolio', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: new URL(preview).pathname.slice(1) })
+      }).catch(e => console.error('R2画像削除エラー:', e))
+    }
+
     setImageFiles(imageFiles.filter((_, i) => i !== index))
     setImagePreviews(imagePreviews.filter((_, i) => i !== index))
     if (activePreviewIndex >= imagePreviews.length - 1) {
@@ -422,7 +439,7 @@ function UploadIllustrationContent() {
       return
     }
 
-    if (imageFiles.length === 0) {
+    if (imageFiles.length === 0 && imagePreviews.length === 0) {
       setErrors(prev => ({ ...prev, images: '画像を選択してください' }))
       return
     }
@@ -446,7 +463,7 @@ function UploadIllustrationContent() {
   const isFormValid = 
     title.trim().length > 0 && 
     title.length <= 50 &&
-    imageFiles.length > 0 && 
+    (imageFiles.length > 0 || imagePreviews.length > 0) && 
     selectedTags.length > 0 && 
     agreedToTerms &&
     !errors.title &&
@@ -455,7 +472,6 @@ function UploadIllustrationContent() {
     !compressing
 
   async function handleConfirmedSubmit() {
-    setShowConfirmModal(false)
     setUploading(true)
 
     try {
@@ -466,26 +482,34 @@ function UploadIllustrationContent() {
 
       let finalUrls: string[] = []
 
-      if (currentDraftId && imageFiles.length === 0) {
+      if (currentDraftId && imageFiles.length === 0 && imagePreviews.some(p => p.startsWith('http'))) {
         // 下書きから投稿（画像はR2にある→本番パスにコピー）
         finalUrls = await publishDraft(currentDraftId)
       } else {
         // 新規アップロード or 下書きから画像を差し替えた場合
-        for (let i = 0; i < imageFiles.length; i++) {
-          const file = imageFiles[i]
-          try {
-            const { uploadUrl, fileUrl } = await getUploadUrl(
-              'illustration',
-              'image',
-              file.name,
-              file.type,
-              user.id
-            )
-            await uploadToR2(file, uploadUrl)
-            finalUrls.push(fileUrl)
-          } catch (uploadError) {
-            console.error(`${i + 1}枚目エラー:`, uploadError)
-            throw new Error(`${i + 1}枚目の画像アップロードに失敗しました`)
+        for (let i = 0; i < imagePreviews.length; i++) {
+          const preview = imagePreviews[i]
+          
+          if (preview.startsWith('http')) {
+            // 既にR2にある画像（下書き復元分）→そのまま使う
+            finalUrls.push(preview)
+          } else if (imageFiles[i]) {
+            // 新規アップロード画像
+            const file = imageFiles[i]
+            try {
+              const { uploadUrl, fileUrl } = await getUploadUrl(
+                'illustration',
+                'image',
+                file.name,
+                file.type,
+                user.id
+              )
+              await uploadToR2(file, uploadUrl)
+              finalUrls.push(fileUrl)
+            } catch (uploadError) {
+              console.error(`${i + 1}枚目エラー:`, uploadError)
+              throw new Error(`${i + 1}枚目の画像アップロードに失敗しました`)
+            }
           }
         }
 
@@ -566,7 +590,7 @@ function UploadIllustrationContent() {
           <div className={styles.layout}>
             {/* ====== 左カラム: 画像 ====== */}
             <div className={styles.imageColumn}>
-              {imageFiles.length === 0 ? (
+              {imageFiles.length === 0 && imagePreviews.length === 0 ? (
                 <>
                   <div
                     className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
@@ -609,7 +633,7 @@ function UploadIllustrationContent() {
                       <span className={styles.mainBadge}>メイン</span>
                     )}
                     <span className={styles.imageCounter}>
-                      <i className="fa-solid fa-images"></i> {imageFiles.length}枚
+                      <i className="fa-solid fa-images"></i> {imagePreviews.length}枚
                     </span>
                   </div>
 
@@ -894,17 +918,8 @@ function UploadIllustrationContent() {
                   disabled={!isFormValid}
                   className="btn btn-primary"
                 >
-                  {uploading ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin"></i>
-                      アップロード中...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fa-solid fa-upload"></i>
-                      確認画面へ
-                    </>
-                  )}
+                  <i className="fa-solid fa-upload"></i>
+                  確認画面へ
                 </button>
               </div>
             </div>
@@ -917,22 +932,39 @@ function UploadIllustrationContent() {
         drafts={drafts}
         categoryKey="illustration"
         onLoadDraft={handleLoadDraft}
-        onDeleteDraft={deleteDraft}
+        onDeleteDraft={(draft) => {
+          const isCurrentDraft = draft.id === currentDraftId
+          deleteDraft(draft)
+          if (isCurrentDraft) {
+            setTitle('')
+            setDescription('')
+            setSelectedTags([])
+            setRating('general')
+            setIsOriginal(false)
+            setAllowComments(true)
+            setVisibility('public')
+            setImageFiles([])
+            setImagePreviews([])
+            setActivePreviewIndex(0)
+          }
+        }}
         getCategoryUrl={getCategoryUrl}
       />
 
       {/* 確認モーダル */}
       {showConfirmModal && (
-        <div className="modal-overlay active" onClick={() => setShowConfirmModal(false)}>
+        <div className="modal-overlay active" onClick={() => !uploading && setShowConfirmModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3 className="modal-title">
                 <i className="fa-solid fa-circle-check" style={{ color: 'var(--status-success)', marginRight: 'var(--space-2)' }}></i>
                 アップロード内容の確認
               </h3>
-              <button className="modal-close" onClick={() => setShowConfirmModal(false)}>
-                <i className="fa-solid fa-xmark"></i>
-              </button>
+              {!uploading && (
+                <button className="modal-close" onClick={() => setShowConfirmModal(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              )}
             </div>
 
             <div className="modal-body">
@@ -940,7 +972,7 @@ function UploadIllustrationContent() {
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className={styles.confirmImage}>
                     <img src={preview} alt={`プレビュー ${index + 1}`} />
-                    {index === 0 && <span className={styles.mainBadge}>メイン</span>}
+                    {index === 0 && <span className={styles.thumbMainLabel}>メイン</span>}
                   </div>
                 ))}
               </div>
@@ -988,11 +1020,18 @@ function UploadIllustrationContent() {
             </div>
 
             <div className="modal-footer button-group-equal">
-              <button onClick={() => setShowConfirmModal(false)} className="btn btn-secondary">
+              <button onClick={() => setShowConfirmModal(false)} className="btn btn-secondary" disabled={uploading}>
                 修正する
               </button>
-              <button onClick={handleConfirmedSubmit} className="btn btn-primary">
-                確定してアップロード
+              <button onClick={handleConfirmedSubmit} className="btn btn-primary" disabled={uploading}>
+                {uploading ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    アップロード中...
+                  </>
+                ) : (
+                  '確定してアップロード'
+                )}
               </button>
             </div>
           </div>

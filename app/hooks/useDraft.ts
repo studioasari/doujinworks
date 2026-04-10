@@ -44,10 +44,11 @@ const CATEGORY_URLS: { [key: string]: string } = {
   video: '/dashboard/portfolio/upload/video'
 }
 
-export function useDraft(category: string, formData: DraftFormData, userId: string, imageFiles?: File[]) {
+export function useDraft(category: string, formData: DraftFormData, userId: string, imageFiles?: File[], imagePreviews?: string[]) {
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savedImageUrls, setSavedImageUrls] = useState<string[]>([])
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const lastSavedRef = useRef<string>('')
 
@@ -86,13 +87,18 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
     return urls
   }
 
+  const formDataSnapshot = JSON.stringify(formData)
+  const imageCount = imageFiles?.length || 0
+  const previewsSnapshot = JSON.stringify(imagePreviews || [])
+
   // 自動保存
   useEffect(() => {
     if (!userId) return
-    if (!formData.title.trim() && formData.tags.length === 0 && (!imageFiles || imageFiles.length === 0)) return
+    // 何も入力がなく、画像もなく、既存の下書きでもない場合はスキップ
+    if (!formData.title.trim() && formData.tags.length === 0 && imageCount === 0 && !currentDraftId) return
 
     // 変更検知（無駄な保存を防ぐ）
-    const snapshot = JSON.stringify({ ...formData, imageCount: imageFiles?.length || 0 })
+    const snapshot = formDataSnapshot + '|' + imageCount + '|' + previewsSnapshot
     if (snapshot === lastSavedRef.current) return
 
     if (saveTimerRef.current) {
@@ -102,15 +108,18 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
     saveTimerRef.current = setTimeout(async () => {
       setSaving(true)
       try {
-        // 画像アップロード（新規ファイルがある場合）
         let imageUrls: string[] | null = null
-        if (imageFiles && imageFiles.length > 0) {
-          // 既存の下書きに画像URLがあればそれを保持、新規ファイルだけアップ
+
+        // previewsにR2のURLが入ってる場合はその順番をそのまま使う
+        const urlPreviews = (imagePreviews || []).filter(p => p.startsWith('http'))
+        if (urlPreviews.length > 0 && urlPreviews.length === (imagePreviews || []).length) {
+          // 全部URLの場合（下書き復元後の並び替え等）
+          imageUrls = imagePreviews!
+        } else if (imageFiles && imageFiles.length > 0) {
           if (currentDraftId) {
             const existing = drafts.find(d => d.id === currentDraftId)
             const existingUrls = existing?.image_urls || []
             
-            // 枚数が変わった場合のみ再アップロード
             if (existingUrls.length !== imageFiles.length) {
               imageUrls = await uploadDraftImages(imageFiles, userId)
             } else {
@@ -120,6 +129,7 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
             imageUrls = await uploadDraftImages(imageFiles, userId)
           }
         }
+        // 両方0 → imageUrlsはnullのまま → DBのimage_urlsがnullに更新される
 
         const payload = {
           category,
@@ -155,6 +165,11 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
           if (!currentDraftId && data.draft?.id) {
             setCurrentDraftId(data.draft.id)
           }
+          if (imageUrls) {
+            setSavedImageUrls(imageUrls)
+          } else {
+            setSavedImageUrls([])
+          }
           lastSavedRef.current = snapshot
           await loadDrafts()
         }
@@ -170,7 +185,7 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
         clearTimeout(saveTimerRef.current)
       }
     }
-  }, [formData, userId, category, currentDraftId, imageFiles?.length])
+  }, [formDataSnapshot, imageCount, previewsSnapshot, userId, category, currentDraftId])
 
   // 下書き削除
   async function deleteDraft(draft: Draft) {
@@ -216,6 +231,7 @@ export function useDraft(category: string, formData: DraftFormData, userId: stri
     drafts,
     currentDraftId,
     saving,
+    savedImageUrls,
     deleteDraft,
     adoptDraftId,
     getCategoryUrl,

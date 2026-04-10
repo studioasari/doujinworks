@@ -6,9 +6,10 @@ import { r2PortfolioClient } from '@/lib/r2-upload'
 // POST: 下書きから投稿確定（画像を本番パスにコピー）
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -20,7 +21,7 @@ export async function POST(
     const { data: draft, error: fetchError } = await supabase
       .from('drafts')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('creator_id', user.id)
       .single()
 
@@ -66,7 +67,7 @@ export async function POST(
     await supabase
       .from('drafts')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('creator_id', user.id)
 
     return NextResponse.json({
