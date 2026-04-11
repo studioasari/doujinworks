@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>デザインシステム サンプル</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    /* ============================================
+       DESIGN TOKENS - CSS変数定義
+       ============================================ */
+    
+    :root {
+      /* === カラーパレット === */
+      
+      /* ライトモード */
+      --bg-base: #faf9f7;
+      --bg-elevated: #ffffff;
+      --bg-sunken: #f0eeeb;
+      --bg-hover: #f8f7f5;
+      
+      --text-primary: #1f1f23;
+      --text-secondary: #5c5c66;
+      --text-tertiary: #8c8c96;
+      
+      --border-default: #e5e3df;
+      --border-subtle: #f0eeeb;
+      
+      /* アクセントカラー - オレンジ/ピンク系 */
+      --accent-primary: #ff6b4a;
+      --accent-primary-hover: #ff5533;
+      --accent-primary-subtle: #fff0ed;
+      
+      --accent-secondary: #ff8fab;
+      --accent-secondary-hover: #ff7a9c;
+      --accent-secondary-subtle: #fff0f4;
+      
+      --accent-gradient: linear-gradient(135deg, #ff6b4a 0%, #ff8fab 100%);
+      
+      /* インタラクション色 */
+      --color-like: #ff6b8a;
+      --color-star: #f59e0b;
+      --color-bookmark: #f59e0b;
+      
+      /* ステータスカラー */
+      --status-success: #22c55e;
+      --status-success-bg: #f0fdf4;
+      --status-warning: #f59e0b;
+      --status-warning-bg: #fffbeb;
+      --status-error: #ef4444;
+      --status-error-bg: #fef2f2;
+      --status-info: #3b82f6;
+      --status-info-bg: #eff6ff;
+      
+      /* シャドウ */
+      --shadow-sm: 0 1px 2px rgba(31, 31, 35, 0.04);
+      --shadow-md: 0 4px 12px rgba(31, 31, 35, 0.08);
+      --shadow-lg: 0 12px 32px rgba(31, 31, 35, 0.12);
+      --shadow-accent: 0 4px 16px rgba(255, 107, 74, 0.24);
+      
+      /* === タイポグラフィ === */
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Noto Sans JP', sans-serif;
+      
+      --text-xs: 0.75rem;
+      --text-sm: 0.875rem;
+      --text-base: 1rem;
+      --text-lg: 1.125rem;
+      --text-xl: 1.25rem;
+      --text-2xl: 1.5rem;
+      --text-3xl: 2rem;
+      
+      /* === スペーシング === */
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      
+      /* === ボーダー === */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-full: 9999px;
+      
+      /* === トランジション === */
+      --transition-fast: 150ms ease;
+      --transition-base: 200ms ease;
+      --transition-slow: 300ms ease;
+    }
+    
+    /* ============================================
+       ダークモード
+       ============================================ */
+    
+    [data-theme="dark"] {
+      --bg-base: #13131a;
+      --bg-elevated: #1c1c26;
+      --bg-sunken: #0d0d12;
+      --bg-hover: #252532;
+      
+      --text-primary: #f5f5f7;
+      --text-secondary: #a0a0b0;
+      --text-tertiary: #6c6c7a;
+      
+      --border-default: #4a4a5a;
+      --border-subtle: #3a3a48;
+      
+      --accent-primary-subtle: #2a1f1d;
+      --accent-secondary-subtle: #2a1f24;
+      
+      --status-success-bg: #14261a;
+      --status-warning-bg: #26200f;
+      --status-error-bg: #261414;
+      --status-info-bg: #141e26;
+      
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+      --shadow-accent: 0 4px 20px rgba(255, 107, 74, 0.3);
+    }
+    
+    /* ============================================
+       ベーススタイル
+       ============================================ */
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--font-body);
+      font-size: var(--text-base);
+      line-height: 1.7;
+      color: var(--text-primary);
+      background: var(--bg-base);
+      transition: background var(--transition-base), color var(--transition-base);
+    }
+    
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    
+    /* ============================================
+       コンポーネント
+       ============================================ */
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+    
+    /* ヘッダー */
+    .header {
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-default);
+      padding: var(--space-4) var(--space-6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .theme-toggle {
+      background: var(--bg-sunken);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-full);
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .theme-toggle:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    
+    /* セクション */
+    .section {
+      margin-bottom: var(--space-12);
+    }
+    
+    .section-title {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      margin-bottom: var(--space-6);
+      color: var(--text-primary);
+    }
+    
+    /* カラーパレット表示 */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: var(--space-4);
+    }
+    
+    .color-swatch {
+      aspect-ratio: 1;
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: var(--space-3);
+      font-size: var(--text-xs);
+      box-shadow: var(--shadow-md);
+      transition: transform var(--transition-fast);
+    }
+    
+    .color-swatch:hover {
+      transform: translateY(-4px);
+    }
+    
+    .color-swatch span {
+      background: rgba(255,255,255,0.9);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-sm);
+      color: #1f1f23;
+      font-weight: 500;
+    }
+    
+    /* ボタン */
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      align-items: center;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      padding: var(--space-3) var(--space-5);
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-decoration: none;
+    }
+    
+    .btn-sm {
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--text-xs);
+    }
+    
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      opacity: 0.85;
+    }
+    
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-default);
+    }
+    
+    .btn-secondary:hover {
+      background: var(--bg-hover);
+    }
+    
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+    }
+    
+    .btn-ghost:hover {
+      color: var(--accent-primary);
+    }
+    
+    /* ボタングループ（幅揃え） */
+    .button-group-equal {
+      display: flex;
+      gap: var(--space-3);
+    }
+    
+    .button-group-equal .btn {
+      flex: 1;
+    }
+    
+    /* カード */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-6);
+    }
+    
+    .card {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-default);
+      transition: all var(--transition-base);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .card:hover {
+      background: var(--bg-hover);
+    }
+    
+    .card-image {
+      aspect-ratio: 1.91 / 1;
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-3xl);
+      position: relative;
+      transition: all var(--transition-base);
+    }
+    
+    .card:hover .card-image {
+      opacity: 0.85;
+    }
+    
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .card-body {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    
+    .card-title {
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+    
+    .card-text {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-4);
+      flex: 1;
+    }
+    
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: var(--text-sm);
+      margin-top: auto;
+    }
+    
+    .card-author {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      background: var(--accent-secondary);
+    }
+    
+    .card-stats {
+      color: var(--text-tertiary);
+    }
+    
+    /* カードカテゴリ */
+    .card-category {
+      font-size: var(--text-xs);
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-1);
+    }
+    
+    /* サービスカード */
+    .card-service .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    
+    .card-seller {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+    
+    .card-stats-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+    
+    .card-service-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+      padding-top: var(--space-2);
+    }
+    
+    .card-price {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: var(--accent-primary);
+    }
+    
+    /* ブログカード */
+    .card-blog .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    
+    .card-blog-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    
+    .card-date {
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+    }
+    
+    .card-views {
+      font-size: var(--text-sm);
+      color: var(--text-tertiary);
+      margin-top: auto;
+    }
+    
+    /* ステータスバッジ */
+    .badge-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: 500;
+    }
+    
+    .badge-open {
+      background: var(--status-success-bg);
+      color: var(--status-success);
+    }
+    
+    .badge-progress {
+      background: var(--status-warning-bg);
+      color: var(--status-warning);
+    }
+    
+    .badge-closed {
+      background: var(--status-error-bg);
+      color: var(--status-error);
+    }
+    
+    .badge-accent {
+      background: var(--accent-primary-subtle);
+      color: var(--accent-primary);
+    }
+    
+    /* フォーム */
+    .form-group {
+      margin-bottom: var(--space-5);
+    }
+    
+    .form-label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      margin-bottom: var(--space-2);
+      color: var(--text-secondary);
+    }
+    
+    .form-input {
+      width: 100%;
+      max-width: 400px;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-base);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+    }
+    
+    .form-input::placeholder {
+      color: var(--text-tertiary);
+    }
+    
+    /* 依頼ステータスカード */
+    .request-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      display: flex;
+      gap: var(--space-5);
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+    
+    .request-card:hover {
+      background: var(--bg-hover);
+    }
+    
+    .request-card + .request-card {
+      margin-top: var(--space-4);
+    }
+    
+    .request-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: var(--accent-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: white;
+      font-size: var(--text-lg);
+    }
+    
+    .request-content {
+      flex: 1;
+    }
+    
+    .request-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-2);
+    }
+    
+    .request-title {
+      font-weight: 600;
+    }
+    
+    .request-desc {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+    
+    /* テキストリンク */
+    .link {
+      color: var(--accent-primary);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      cursor: pointer;
+    }
+    
+    .link:hover {
+      color: var(--accent-primary-hover);
+      text-decoration: underline;
+    }
+    
+    .link-subtle {
+      color: var(--text-secondary);
+      text-decoration: underline;
+      text-decoration-color: var(--border-default);
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+    
+    .link-subtle:hover {
+      color: var(--accent-primary);
+      text-decoration-color: var(--accent-primary);
+    }
+    
+    /* タブ */
+    .tabs {
+      display: flex;
+      gap: var(--space-1);
+      border-bottom: 1px solid var(--border-default);
+      padding-bottom: 0;
+    }
+    
+    .tab {
+      padding: var(--space-3) var(--space-5);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: all var(--transition-fast);
+    }
+    
+    .tab:hover {
+      color: var(--text-primary);
+    }
+    
+    .tab.active {
+      color: var(--accent-primary);
+    }
+    
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-gradient);
+      border-radius: 2px 2px 0 0;
+    }
+    
+    /* ページネーション */
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    
+    .page-btn {
+      min-width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-default);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .page-btn:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    
+    .page-btn.active {
+      background: var(--accent-gradient);
+      border-color: transparent;
+      color: white;
+    }
+    
+    /* タグ */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      background: var(--bg-sunken);
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .tag:hover {
+      background: var(--accent-primary-subtle);
+      color: var(--accent-primary);
+    }
+    
+    .tag-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    
+    /* トグルスイッチ */
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--bg-sunken);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .toggle.active {
+      background: var(--accent-gradient);
+      border-color: transparent;
+    }
+    
+    .toggle.active::after {
+      left: 24px;
+    }
+    
+    /* テーマ切り替えスイッチ */
+    .theme-switch {
+      display: flex;
+      align-items: center;
+      background: var(--bg-sunken);
+      border-radius: var(--radius-full);
+      padding: var(--space-1);
+      gap: 0;
+    }
+    
+    .theme-switch-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .theme-switch-btn:hover {
+      color: var(--text-secondary);
+    }
+    
+    .theme-switch-btn.active {
+      background: var(--bg-elevated);
+      color: var(--accent-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* 小さいバージョン（ヘッダー向け） */
+    .theme-switch-sm {
+      padding: 2px;
+    }
+    
+    .theme-switch-sm .theme-switch-btn {
+      width: 28px;
+      height: 28px;
+      font-size: var(--text-sm);
+    }
+    
+    /* アラート/通知 */
+    .alert {
+      padding: var(--space-4) var(--space-5);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      background: var(--bg-elevated);
+      border-left: 3px solid;
+    }
+    
+    .alert-icon {
+      font-size: var(--text-base);
+    }
+    
+    .alert-info {
+      border-left-color: var(--status-info);
+      color: var(--text-primary);
+    }
+    
+    .alert-info .alert-icon {
+      color: var(--status-info);
+    }
+    
+    .alert-success {
+      border-left-color: var(--status-success);
+      color: var(--text-primary);
+    }
+    
+    .alert-success .alert-icon {
+      color: var(--status-success);
+    }
+    
+    .alert-warning {
+      border-left-color: var(--status-warning);
+      color: var(--text-primary);
+    }
+    
+    .alert-warning .alert-icon {
+      color: var(--status-warning);
+    }
+    
+    .alert-error {
+      border-left-color: var(--status-error);
+      color: var(--text-primary);
+    }
+    
+    .alert-error .alert-icon {
+      color: var(--status-error);
+    }
+    
+    /* ツールチップ */
+    .tooltip-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: var(--space-2) var(--space-3);
+      background: var(--text-primary);
+      color: var(--bg-base);
+      font-size: var(--text-xs);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-fast);
+    }
+    
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--text-primary);
+    }
+    
+    .tooltip-wrap:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    /* 検索バー */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-full);
+      max-width: 400px;
+      transition: all var(--transition-fast);
+    }
+    
+    .search-bar:focus-within {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+    }
+    
+    .search-bar input {
+      flex: 1;
+      border: none;
+      background: none;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+      outline: none;
+    }
+    
+    .search-bar input::placeholder {
+      color: var(--text-tertiary);
+    }
+    
+    .search-icon {
+      color: var(--text-tertiary);
+    }
+    
+    /* 区切り線 */
+    .divider {
+      height: 1px;
+      background: var(--border-default);
+      margin: var(--space-6) 0;
+    }
+    
+    /* オーバーレイバッジ（透過黒） */
+    .overlay-badge {
+      position: absolute;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-1) var(--space-3);
+      background: rgba(0, 0, 0, 0.65);
+      color: white;
+      font-size: var(--text-xs);
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      backdrop-filter: blur(4px);
+    }
+    
+    .overlay-badge-top-left {
+      top: var(--space-3);
+      left: var(--space-3);
+    }
+    
+    .overlay-badge-top-right {
+      top: var(--space-3);
+      right: var(--space-3);
+    }
+    
+    .overlay-badge-bottom-left {
+      bottom: var(--space-3);
+      left: var(--space-3);
+    }
+    
+    .overlay-badge-bottom-right {
+      bottom: var(--space-3);
+      right: var(--space-3);
+    }
+    
+    /* 角丸バージョン */
+    .overlay-badge-pill {
+      border-radius: var(--radius-full);
+    }
+    
+    /* モーダル */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-base);
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .modal {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: auto;
+      transform: translateY(20px);
+      transition: transform var(--transition-base);
+    }
+    
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+    
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-5);
+      border-bottom: 1px solid var(--border-default);
+    }
+    
+    .modal-title {
+      font-weight: 600;
+      font-size: var(--text-lg);
+    }
+    
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+    
+    .modal-body {
+      padding: var(--space-5);
+    }
+    
+    .modal-footer {
+      padding: var(--space-5);
+      border-top: 1px solid var(--border-default);
+    }
+    
+    .modal-footer.button-group-equal {
+      display: flex;
+      gap: var(--space-3);
+    }
+    
+    .modal-footer.button-group-equal .btn {
+      flex: 1;
+    }
+    
+    /* 背景スクロール禁止 */
+    body.modal-open {
+      overflow: hidden;
+    }
+    
+    /* disabled状態 */
+    .btn:disabled,
+    .btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    
+    .form-input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: var(--bg-sunken);
+    }
+    
+    /* フォームエラー状態 */
+    .form-input.error {
+      border-color: var(--status-error);
+    }
+    
+    .form-input.error:focus {
+      box-shadow: 0 0 0 3px var(--status-error-bg);
+    }
+    
+    .form-error {
+      color: var(--status-error);
+      font-size: var(--text-xs);
+      margin-top: var(--space-1);
+    }
+    
+    /* スケルトンローディング */
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--bg-sunken) 25%,
+        var(--bg-hover) 50%,
+        var(--bg-sunken) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+    
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .skeleton-text {
+      height: 1em;
+      margin-bottom: var(--space-2);
+    }
+    
+    .skeleton-text:last-child {
+      width: 60%;
+    }
+    
+    .skeleton-avatar {
+      border-radius: var(--radius-full);
+    }
+    
+    .skeleton-image {
+      aspect-ratio: 1.91 / 1;
+    }
+    
+    /* アバターサイズ */
+    .avatar-xs { width: 24px; height: 24px; }
+    .avatar-sm { width: 32px; height: 32px; }
+    .avatar-md { width: 48px; height: 48px; }
+    .avatar-lg { width: 80px; height: 80px; }
+    .avatar-xl { width: 120px; height: 120px; }
+    
+    /* インタラクションアイコン */
+    .icon-like {
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .icon-like:hover,
+    .icon-like.active {
+      color: var(--color-like);
+    }
+    
+    .icon-star {
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .icon-star:hover,
+    .icon-star.active {
+      color: var(--color-star);
+    }
+    
+    .icon-bookmark {
+      color: var(--text-tertiary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .icon-bookmark:hover,
+    .icon-bookmark.active {
+      color: var(--color-bookmark);
+    }
+    
+    /* 画像コンテナ */
+    .image-container {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    
+    .image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    /* フォーカス状態 */
+    :focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 2px;
+    }
+    
+    button:focus-visible,
+    .btn:focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 2px;
+    }
+    
+    .form-input:focus-visible {
+      outline: none;
+    }
+    
+    /* ドロップダウン */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .dropdown-trigger:hover {
+      background: var(--bg-hover);
+    }
+    
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 180px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: all var(--transition-fast);
+      z-index: 100;
+    }
+    
+    .dropdown.active .dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    
+    .dropdown-item {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    
+    .dropdown-item:hover {
+      background: var(--bg-hover);
+    }
+    
+    .dropdown-item:first-child {
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+    
+    .dropdown-item:last-child {
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    
+    .dropdown-divider {
+      height: 1px;
+      background: var(--border-default);
+    }
+    
+    /* テーブル */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-sm);
+    }
+    
+    .table th,
+    .table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--border-default);
+    }
+    
+    .table th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-sunken);
+    }
+    
+    .table tr:hover td {
+      background: var(--bg-hover);
+    }
+    
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    /* チェックボックス */
+    .checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      cursor: pointer;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+    
+    .checkbox input {
+      display: none;
+    }
+    
+    .checkbox-mark {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+    
+    .checkbox-mark::after {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      font-size: 10px;
+      color: white;
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    
+    .checkbox:hover .checkbox-mark {
+      border-color: var(--accent-primary);
+    }
+    
+    .checkbox input:checked + .checkbox-mark {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+    
+    .checkbox input:checked + .checkbox-mark::after {
+      opacity: 1;
+    }
+    
+    /* ラジオボタン */
+    .radio {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      cursor: pointer;
+      font-size: var(--text-sm);
+      color: var(--text-primary);
+    }
+    
+    .radio input {
+      display: none;
+    }
+    
+    .radio-mark {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-default);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+    
+    .radio-mark::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    
+    .radio:hover .radio-mark {
+      border-color: var(--accent-primary);
+    }
+    
+    .radio input:checked + .radio-mark {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+    
+    .radio input:checked + .radio-mark::after {
+      opacity: 1;
+    }
+    
+    /* 空状態 */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-12) var(--space-6);
+      color: var(--text-tertiary);
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: var(--space-4);
+    }
+    
+    .empty-state p {
+      margin-bottom: var(--space-6);
+      font-size: var(--text-base);
+    }
+    
+    /* ============================================
+       ダークモード調整
+       ============================================ */
+    
+    [data-theme="dark"] .overlay-badge {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+    }
+    
+    [data-theme="dark"] .tag {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    
+    [data-theme="dark"] .badge {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">✦ CreatorHub</div>
+    <button class="theme-toggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i> ダークモード</button>
+  </header>
+  
+  <main class="container">
+    <!-- カラーパレット -->
+    <section class="section">
+      <h2 class="section-title">カラーパレット</h2>
+      <div class="color-grid">
+        <div class="color-swatch" style="background: var(--accent-primary);">
+          <span>Primary</span>
+        </div>
+        <div class="color-swatch" style="background: var(--accent-secondary);">
+          <span>Secondary</span>
+        </div>
+        <div class="color-swatch" style="background: var(--accent-gradient);">
+          <span>Gradient</span>
+        </div>
+        <div class="color-swatch" style="background: var(--status-success);">
+          <span>Success</span>
+        </div>
+        <div class="color-swatch" style="background: var(--status-warning);">
+          <span>Warning</span>
+        </div>
+        <div class="color-swatch" style="background: var(--status-error);">
+          <span>Error</span>
+        </div>
+      </div>
+    </section>
+    
+    <!-- テキスト色 -->
+    <section class="section">
+      <h2 class="section-title">テキスト色</h2>
+      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+        <p style="color: var(--text-primary);"><strong>Primary</strong> - 見出し、本文に使用</p>
+        <p style="color: var(--text-secondary);">Secondary - 説明文、補足テキストに使用</p>
+        <p style="color: var(--text-tertiary);">Tertiary - プレースホルダー、ヒントに使用</p>
+        <p><a class="link">Accent - リンク、強調テキストに使用</a></p>
+        <p style="color: var(--status-error);">Error - エラーメッセージに使用</p>
+      </div>
+    </section>
+    
+    <!-- インタラクションアイコン -->
+    <section class="section">
+      <h2 class="section-title">インタラクションアイコン</h2>
+      <div style="display: flex; gap: var(--space-8); align-items: center;">
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <i class="fa-solid fa-heart icon-like active"></i>
+          <span style="font-size: var(--text-sm);">いいね</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <i class="fa-solid fa-star icon-star active"></i>
+          <span style="font-size: var(--text-sm);">レビュー</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-2);">
+          <i class="fa-solid fa-bookmark icon-bookmark active"></i>
+          <span style="font-size: var(--text-sm);">ブックマーク</span>
+        </div>
+      </div>
+      <p style="color: var(--text-tertiary); font-size: var(--text-sm); margin-top: var(--space-3);">クリックで切り替え（非活性はグレー）</p>
+      <div style="display: flex; gap: var(--space-8); align-items: center; margin-top: var(--space-3);">
+        <i class="fa-regular fa-heart icon-like" onclick="this.classList.toggle('active'); this.classList.toggle('fa-regular'); this.classList.toggle('fa-solid');"></i>
+        <i class="fa-regular fa-star icon-star" onclick="this.classList.toggle('active'); this.classList.toggle('fa-regular'); this.classList.toggle('fa-solid');"></i>
+        <i class="fa-regular fa-bookmark icon-bookmark" onclick="this.classList.toggle('active'); this.classList.toggle('fa-regular'); this.classList.toggle('fa-solid');"></i>
+      </div>
+    </section>
+    
+    <!-- アバター -->
+    <section class="section">
+      <h2 class="section-title">アバター</h2>
+      <div style="display: flex; gap: var(--space-4); align-items: end;">
+        <div style="text-align: center;">
+          <div class="avatar avatar-xs" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">XS 24px</p>
+        </div>
+        <div style="text-align: center;">
+          <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">S 32px</p>
+        </div>
+        <div style="text-align: center;">
+          <div class="avatar avatar-md" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">M 48px</p>
+        </div>
+        <div style="text-align: center;">
+          <div class="avatar avatar-lg" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">L 80px</p>
+        </div>
+        <div style="text-align: center;">
+          <div class="avatar avatar-xl" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-top: var(--space-1);">XL 120px</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 状態 -->
+    <section class="section">
+      <h2 class="section-title">状態</h2>
+      
+      <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-3);">Disabledボタン</p>
+      <div class="button-group" style="margin-bottom: var(--space-6);">
+        <button class="btn btn-primary" disabled>送信できない</button>
+        <button class="btn btn-secondary" disabled>キャンセル</button>
+      </div>
+      
+      <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-3);">フォームエラー</p>
+      <div class="form-group" style="margin-bottom: var(--space-6);">
+        <label class="form-label">メールアドレス</label>
+        <input type="text" class="form-input error" value="invalid-email" style="max-width: 300px;">
+        <p class="form-error"><i class="fa-solid fa-circle-exclamation"></i> 正しいメールアドレスを入力してください</p>
+      </div>
+      
+      <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-3);">スケルトンローディング</p>
+      <div style="max-width: 300px; padding: var(--space-4); background: var(--bg-elevated); border-radius: var(--radius-lg); border: 1px solid var(--border-default);">
+        <div class="skeleton skeleton-image" style="margin-bottom: var(--space-3);"></div>
+        <div class="skeleton skeleton-text" style="width: 80%;"></div>
+        <div class="skeleton skeleton-text" style="width: 100%;"></div>
+        <div class="skeleton skeleton-text" style="width: 60%;"></div>
+      </div>
+    </section>
+    
+    <!-- ボタン -->
+    <section class="section">
+      <h2 class="section-title">ボタン</h2>
+      <div class="button-group">
+        <button class="btn btn-primary">依頼を作成</button>
+        <button class="btn btn-secondary">キャンセル</button>
+        <button class="btn btn-ghost">詳細を見る →</button>
+      </div>
+      <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-top: var(--space-6); margin-bottom: var(--space-3);">小さいボタン（.btn-sm）ヘッダー、カード内向け</p>
+      <div class="button-group">
+        <button class="btn btn-primary btn-sm">会員登録</button>
+        <button class="btn btn-secondary btn-sm">ログイン</button>
+        <button class="btn btn-ghost btn-sm">詳細 →</button>
+      </div>
+      <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-top: var(--space-6); margin-bottom: var(--space-3);">幅揃え（.button-group-equal）</p>
+      <div class="button-group-equal" style="max-width: 320px;">
+        <button class="btn btn-secondary">キャンセル</button>
+        <button class="btn btn-primary">保存する</button>
+      </div>
+    </section>
+    
+    <!-- テキストリンク -->
+    <section class="section">
+      <h2 class="section-title">テキストリンク</h2>
+      <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+        <div>
+          <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-2);">.link（目立たせたいリンク・CTA的）</p>
+          <p>新着作品をチェック <a class="link">もっと見る →</a></p>
+        </div>
+        <div>
+          <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-2);">.link-subtle（本文に馴染む補足リンク）</p>
+          <p>詳しくは<a class="link-subtle">利用規約</a>をご確認ください。<a class="link-subtle">ヘルプページ</a>もあります。</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- タブ -->
+    <section class="section">
+      <h2 class="section-title">タブ</h2>
+      <div class="tabs">
+        <button class="tab active">作品一覧</button>
+        <button class="tab">いいね</button>
+        <button class="tab">ブックマーク</button>
+        <button class="tab">依頼履歴</button>
+      </div>
+    </section>
+    
+    <!-- 検索バー -->
+    <section class="section">
+      <h2 class="section-title">検索バー</h2>
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" placeholder="作品やクリエイターを検索...">
+      </div>
+    </section>
+    
+    <!-- タグ -->
+    <section class="section">
+      <h2 class="section-title">タグ</h2>
+      <div class="tag-group">
+        <span class="tag"># イラスト</span>
+        <span class="tag"># オリジナル</span>
+        <span class="tag"># ファンタジー</span>
+        <span class="tag"># キャラクターデザイン</span>
+        <span class="tag"># 背景</span>
+      </div>
+    </section>
+    
+    <!-- トグルスイッチ -->
+    <section class="section">
+      <h2 class="section-title">トグルスイッチ</h2>
+      <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <div class="toggle" onclick="this.classList.toggle('active')"></div>
+        <span style="color: var(--text-secondary); font-size: var(--text-sm);">通知を受け取る</span>
+      </div>
+    </section>
+    
+    <!-- テーマ切り替えスイッチ -->
+    <section class="section">
+      <h2 class="section-title">テーマ切り替えスイッチ</h2>
+      <p style="color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);">ライト/ダークモードの切り替え</p>
+      <div style="display: flex; align-items: center; gap: var(--space-8);">
+        <div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-bottom: var(--space-2);">通常サイズ</p>
+          <div class="theme-switch">
+            <button class="theme-switch-btn active" onclick="switchTheme(this, 'light')">
+              <i class="fa-solid fa-sun"></i>
+            </button>
+            <button class="theme-switch-btn" onclick="switchTheme(this, 'dark')">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+          </div>
+        </div>
+        <div>
+          <p style="font-size: var(--text-xs); color: var(--text-tertiary); margin-bottom: var(--space-2);">小サイズ（ヘッダー向け）</p>
+          <div class="theme-switch theme-switch-sm">
+            <button class="theme-switch-btn active" onclick="switchTheme(this, 'light')">
+              <i class="fa-solid fa-sun"></i>
+            </button>
+            <button class="theme-switch-btn" onclick="switchTheme(this, 'dark')">
+              <i class="fa-solid fa-moon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- アラート -->
+    <section class="section">
+      <h2 class="section-title">アラート</h2>
+      <div style="display: flex; flex-direction: column; gap: var(--space-3); max-width: 500px;">
+        <div class="alert alert-info"><i class="fa-solid fa-circle-info alert-icon"></i> 新機能が追加されました！</div>
+        <div class="alert alert-success"><i class="fa-solid fa-circle-check alert-icon"></i> 依頼が正常に送信されました</div>
+        <div class="alert alert-warning"><i class="fa-solid fa-triangle-exclamation alert-icon"></i> 入力内容を確認してください</div>
+        <div class="alert alert-error"><i class="fa-solid fa-circle-xmark alert-icon"></i> エラーが発生しました</div>
+      </div>
+    </section>
+    
+    <!-- オーバーレイバッジ -->
+    <section class="section">
+      <h2 class="section-title">オーバーレイバッジ</h2>
+      <p style="color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);">背景に重ねて表示する透過黒バッジ（画像上、バナー上など）</p>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center;">
+        <span class="overlay-badge" style="position: static;">リピート率 84%</span>
+        <span class="overlay-badge overlay-badge-pill" style="position: static;"><i class="fa-solid fa-fire"></i> 人気</span>
+        <span class="overlay-badge" style="position: static;"><i class="fa-solid fa-search-plus"></i> クリックで拡大</span>
+        <span class="overlay-badge" style="position: static;"><i class="fa-solid fa-images"></i> 3枚</span>
+        <span class="overlay-badge" style="position: static;">¥2,998</span>
+        <span class="overlay-badge" style="position: static;"><i class="fa-solid fa-clock"></i> 残り2日</span>
+      </div>
+    </section>
+    
+    <!-- ツールチップ -->
+    <section class="section">
+      <h2 class="section-title">ツールチップ</h2>
+      <div style="display: flex; gap: var(--space-6);">
+        <div class="tooltip-wrap">
+          <button class="btn btn-secondary">ホバーしてね</button>
+          <span class="tooltip">これがツールチップです</span>
+        </div>
+        <div class="tooltip-wrap">
+          <span class="badge badge-accent"><i class="fa-solid fa-sparkles fa-xs"></i> 新着</span>
+          <span class="tooltip">24時間以内の投稿</span>
+        </div>
+      </div>
+    </section>
+    
+    <!-- ページネーション -->
+    <section class="section">
+      <h2 class="section-title">ページネーション</h2>
+      <div class="pagination">
+        <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">...</button>
+        <button class="page-btn">10</button>
+        <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </section>
+    
+    <!-- ドロップダウン -->
+    <section class="section">
+      <h2 class="section-title">ドロップダウン</h2>
+      <div style="display: flex; gap: var(--space-4);">
+        <div class="dropdown" onclick="this.classList.toggle('active')">
+          <button class="dropdown-trigger">並び替え <i class="fa-solid fa-chevron-down"></i></button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item">新着順</div>
+            <div class="dropdown-item">人気順</div>
+            <div class="dropdown-item">価格が安い順</div>
+            <div class="dropdown-item">価格が高い順</div>
+          </div>
+        </div>
+        <div class="dropdown" onclick="this.classList.toggle('active')">
+          <button class="dropdown-trigger">カテゴリ <i class="fa-solid fa-chevron-down"></i></button>
+          <div class="dropdown-menu">
+            <div class="dropdown-item">すべて</div>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item">イラスト</div>
+            <div class="dropdown-item">漫画</div>
+            <div class="dropdown-item">小説</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- チェックボックス / ラジオボタン -->
+    <section class="section">
+      <h2 class="section-title">チェックボックス / ラジオボタン</h2>
+      <div style="display: flex; gap: var(--space-8);">
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-1);">チェックボックス</p>
+          <label class="checkbox">
+            <input type="checkbox" checked>
+            <span class="checkbox-mark"></span>
+            利用規約に同意する
+          </label>
+          <label class="checkbox">
+            <input type="checkbox">
+            <span class="checkbox-mark"></span>
+            メールを受け取る
+          </label>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+          <p style="font-size: var(--text-sm); color: var(--text-tertiary); margin-bottom: var(--space-1);">ラジオボタン</p>
+          <label class="radio">
+            <input type="radio" name="category" checked>
+            <span class="radio-mark"></span>
+            イラスト
+          </label>
+          <label class="radio">
+            <input type="radio" name="category">
+            <span class="radio-mark"></span>
+            漫画
+          </label>
+          <label class="radio">
+            <input type="radio" name="category">
+            <span class="radio-mark"></span>
+            小説
+          </label>
+        </div>
+      </div>
+    </section>
+    
+    <!-- テーブル -->
+    <section class="section">
+      <h2 class="section-title">テーブル</h2>
+      <div style="max-width: 600px; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>依頼名</th>
+              <th>ステータス</th>
+              <th>更新日</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>アイコンイラスト制作</td>
+              <td><span class="badge badge-open"><i class="fa-solid fa-circle fa-xs"></i> 募集中</span></td>
+              <td>2025/01/18</td>
+            </tr>
+            <tr>
+              <td>小説の表紙デザイン</td>
+              <td><span class="badge badge-progress"><i class="fa-solid fa-circle fa-xs"></i> 作業中</span></td>
+              <td>2025/01/15</td>
+            </tr>
+            <tr>
+              <td>キャラクターデザイン</td>
+              <td><span class="badge badge-closed"><i class="fa-solid fa-circle fa-xs"></i> 完了</span></td>
+              <td>2025/01/10</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
+    <!-- 空状態 -->
+    <section class="section">
+      <h2 class="section-title">空状態</h2>
+      <div style="max-width: 400px; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--bg-elevated);">
+        <div class="empty-state">
+          <i class="fa-regular fa-folder-open"></i>
+          <p>作品がありません</p>
+          <button class="btn btn-primary">作品を投稿する</button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 区切り線 -->
+    <section class="section">
+      <h2 class="section-title">区切り線</h2>
+      <div style="max-width: 400px;">
+        <p style="color: var(--text-secondary); font-size: var(--text-sm);">上のコンテンツ</p>
+        <div class="divider"></div>
+        <p style="color: var(--text-secondary); font-size: var(--text-sm);">下のコンテンツ</p>
+      </div>
+    </section>
+    
+    <!-- モーダル -->
+    <section class="section">
+      <h2 class="section-title">モーダル</h2>
+      <button class="btn btn-primary" onclick="openModal()">モーダルを開く</button>
+    </section>
+    
+    <!-- ステータスバッジ -->
+    <section class="section">
+      <h2 class="section-title">依頼ステータス</h2>
+      <div class="badge-group">
+        <span class="badge badge-open"><i class="fa-solid fa-circle fa-xs"></i> 募集中</span>
+        <span class="badge badge-progress"><i class="fa-solid fa-circle fa-xs"></i> 作業中</span>
+        <span class="badge badge-closed"><i class="fa-solid fa-circle fa-xs"></i> 完了</span>
+        <span class="badge badge-accent"><i class="fa-solid fa-sparkles fa-xs"></i> 新着</span>
+      </div>
+    </section>
+    
+    <!-- フォーム -->
+    <section class="section">
+      <h2 class="section-title">フォーム</h2>
+      <div class="form-group">
+        <label class="form-label">タイトル</label>
+        <input type="text" class="form-input" placeholder="作品のタイトルを入力...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">説明</label>
+        <input type="text" class="form-input" placeholder="依頼の詳細を入力...">
+      </div>
+    </section>
+    
+    <!-- 依頼カード -->
+    <section class="section">
+      <h2 class="section-title">依頼リスト</h2>
+      <div class="request-card">
+        <div class="request-icon"><i class="fa-solid fa-palette"></i></div>
+        <div class="request-content">
+          <div class="request-header">
+            <span class="request-title">アイコンイラスト制作</span>
+            <span class="badge badge-open"><i class="fa-solid fa-circle fa-xs"></i> 募集中</span>
+          </div>
+          <p class="request-desc">SNS用のアイコンイラストをお願いしたいです。キャラクターデザインはお任せします。</p>
+        </div>
+      </div>
+      <div class="request-card">
+        <div class="request-icon"><i class="fa-solid fa-pen-nib"></i></div>
+        <div class="request-content">
+          <div class="request-header">
+            <span class="request-title">小説の表紙デザイン</span>
+            <span class="badge badge-progress"><i class="fa-solid fa-circle fa-xs"></i> 作業中</span>
+          </div>
+          <p class="request-desc">同人誌の表紙イラストをお願いしています。ファンタジー系です。</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- 作品カード -->
+    <section class="section">
+      <h2 class="section-title">作品カード</h2>
+      <div class="card-grid">
+        <article class="card">
+          <div class="card-image">
+            <i class="fa-solid fa-image fa-2x" style="color: white;"></i>
+          </div>
+          <div class="card-body">
+            <p class="card-category">イラスト</p>
+            <h3 class="card-title">夕暮れの街角</h3>
+            <p class="card-text">オリジナルイラスト。夏の終わりの情景を描きました。</p>
+            <div class="card-meta">
+              <div class="card-author">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>あおい</span>
+              </div>
+              <span class="card-stats"><i class="fa-solid fa-heart icon-like active"></i> 234</span>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-image">
+            <i class="fa-solid fa-masks-theater fa-2x" style="color: white;"></i>
+          </div>
+          <div class="card-body">
+            <p class="card-category">キャラクターデザイン</p>
+            <h3 class="card-title">オリジナルキャラ立ち絵</h3>
+            <p class="card-text">ご依頼ありがとうございました！</p>
+            <div class="card-meta">
+              <div class="card-author">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>みずき</span>
+              </div>
+              <span class="card-stats"><i class="fa-solid fa-heart icon-like active"></i> 189</span>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-image">
+            <i class="fa-solid fa-book fa-2x" style="color: white;"></i>
+          </div>
+          <div class="card-body">
+            <p class="card-category">表紙デザイン</p>
+            <h3 class="card-title">同人誌表紙</h3>
+            <p class="card-text">冬コミ新刊の表紙イラストを担当させていただきました。</p>
+            <div class="card-meta">
+              <div class="card-author">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>ゆうひ</span>
+              </div>
+              <span class="card-stats"><i class="fa-solid fa-heart icon-like active"></i> 412</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+    
+    <!-- サービスカード -->
+    <section class="section">
+      <h2 class="section-title">サービスカード</h2>
+      <div class="card-grid">
+        <article class="card card-service">
+          <div class="card-image">
+            <i class="fa-solid fa-palette fa-2x" style="color: white;"></i>
+            <span class="overlay-badge overlay-badge-top-right overlay-badge-pill">リピート率 72%</span>
+          </div>
+          <div class="card-body">
+            <h3 class="card-title">アイコンイラスト制作</h3>
+            <div class="card-stats-row">
+              <span><i class="fa-solid fa-star icon-star active"></i> 4.9 (25件)</span>
+              <span><i class="fa-solid fa-box"></i> 131件</span>
+            </div>
+            <div class="card-service-footer">
+              <div class="card-seller">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>スタジオアサリ</span>
+              </div>
+              <span class="card-price">¥333</span>
+            </div>
+          </div>
+        </article>
+        <article class="card card-service">
+          <div class="card-image">
+            <i class="fa-solid fa-pen-nib fa-2x" style="color: white;"></i>
+            <span class="overlay-badge overlay-badge-top-right overlay-badge-pill">リピート率 70%</span>
+          </div>
+          <div class="card-body">
+            <h3 class="card-title">キャラクターデザイン</h3>
+            <div class="card-stats-row">
+              <span><i class="fa-solid fa-star icon-star active"></i> 4.9 (37件)</span>
+              <span><i class="fa-solid fa-box"></i> 152件</span>
+            </div>
+            <div class="card-service-footer">
+              <div class="card-seller">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>不明</span>
+              </div>
+              <span class="card-price">¥2,998</span>
+            </div>
+          </div>
+        </article>
+        <article class="card card-service">
+          <div class="card-image">
+            <i class="fa-solid fa-image fa-2x" style="color: white;"></i>
+            <span class="overlay-badge overlay-badge-top-right overlay-badge-pill">リピート率 85%</span>
+          </div>
+          <div class="card-body">
+            <h3 class="card-title">背景イラスト制作</h3>
+            <div class="card-stats-row">
+              <span><i class="fa-solid fa-star icon-star active"></i> 5.0 (48件)</span>
+              <span><i class="fa-solid fa-box"></i> 203件</span>
+            </div>
+            <div class="card-service-footer">
+              <div class="card-seller">
+                <div class="avatar avatar-sm" style="background: var(--accent-secondary); border-radius: var(--radius-full);"></div>
+                <span>背景工房</span>
+              </div>
+              <span class="card-price">¥5,000</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+    
+    <!-- ブログカード -->
+    <section class="section">
+      <h2 class="section-title">ブログカード</h2>
+      <div class="card-grid">
+        <article class="card card-blog">
+          <div class="card-image" style="background: var(--bg-sunken);">
+            <i class="fa-solid fa-file-lines fa-2x" style="color: var(--text-tertiary);"></i>
+          </div>
+          <div class="card-body">
+            <div class="card-blog-meta">
+              <span class="badge badge-accent">ガイド</span>
+              <span class="card-date">2024-01-15</span>
+            </div>
+            <h3 class="card-title">イラスト依頼の相場ってどれくらい？初心者向けガイド</h3>
+            <div class="card-views">
+              <i class="fa-regular fa-eye"></i> 1,234 views
+            </div>
+          </div>
+        </article>
+        <article class="card card-blog">
+          <div class="card-image" style="background: var(--bg-sunken);">
+            <i class="fa-solid fa-file-lines fa-2x" style="color: var(--text-tertiary);"></i>
+          </div>
+          <div class="card-body">
+            <div class="card-blog-meta">
+              <span class="badge badge-accent">インタビュー</span>
+              <span class="card-date">2024-01-12</span>
+            </div>
+            <h3 class="card-title">人気クリエイターインタビュー Vol.3</h3>
+            <div class="card-views">
+              <i class="fa-regular fa-eye"></i> 876 views
+            </div>
+          </div>
+        </article>
+        <article class="card card-blog">
+          <div class="card-image" style="background: var(--bg-sunken);">
+            <i class="fa-solid fa-file-lines fa-2x" style="color: var(--text-tertiary);"></i>
+          </div>
+          <div class="card-body">
+            <div class="card-blog-meta">
+              <span class="badge badge-accent">Tips</span>
+              <span class="card-date">2024-01-10</span>
+            </div>
+            <h3 class="card-title">依頼時に伝えるべき5つのポイント</h3>
+            <div class="card-views">
+              <i class="fa-regular fa-eye"></i> 2,341 views
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  
+  <!-- モーダル -->
+  <div class="modal-overlay" id="modal" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">依頼を作成</h3>
+        <button class="modal-close" onclick="closeModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">タイトル</label>
+          <input type="text" class="form-input" placeholder="依頼のタイトルを入力..." style="max-width: 100%;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">説明</label>
+          <input type="text" class="form-input" placeholder="依頼の詳細を入力..." style="max-width: 100%;">
+        </div>
+        <p style="color: var(--text-secondary); font-size: var(--text-sm);">
+          依頼を作成すると<a class="link-subtle">利用規約</a>に同意したものとみなされます。
+        </p>
+      </div>
+      <div class="modal-footer button-group-equal">
+        <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+        <button class="btn btn-primary">作成する</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function toggleTheme() {
+      const body = document.body;
+      const btn = document.querySelector('.theme-toggle');
+      const icon = btn.querySelector('i');
+      
+      if (body.dataset.theme === 'dark') {
+        body.dataset.theme = 'light';
+        icon.className = 'fa-solid fa-moon';
+        btn.innerHTML = '<i class="fa-solid fa-moon"></i> ダークモード';
+      } else {
+        body.dataset.theme = 'dark';
+        icon.className = 'fa-solid fa-sun';
+        btn.innerHTML = '<i class="fa-solid fa-sun"></i> ライトモード';
+      }
+    }
+    
+    function switchTheme(btn, theme) {
+      const body = document.body;
+      body.dataset.theme = theme;
+      
+      // 全てのテーマスイッチの状態を更新
+      document.querySelectorAll('.theme-switch').forEach(switchEl => {
+        switchEl.querySelectorAll('.theme-switch-btn').forEach(b => {
+          b.classList.remove('active');
+        });
+      });
+      
+      // クリックされたボタンと同じテーマのボタンをアクティブに
+      document.querySelectorAll('.theme-switch').forEach(switchEl => {
+        const sunBtn = switchEl.querySelector('.fa-sun')?.parentElement;
+        const moonBtn = switchEl.querySelector('.fa-moon')?.parentElement;
+        if (theme === 'light' && sunBtn) sunBtn.classList.add('active');
+        if (theme === 'dark' && moonBtn) moonBtn.classList.add('active');
+      });
+      
+      // ヘッダーのテーマトグルボタンも更新
+      const headerBtn = document.querySelector('.theme-toggle');
+      if (headerBtn) {
+        if (theme === 'dark') {
+          headerBtn.innerHTML = '<i class="fa-solid fa-sun"></i> ライトモード';
+        } else {
+          headerBtn.innerHTML = '<i class="fa-solid fa-moon"></i> ダークモード';
+        }
+      }
+    }
+    
+    function openModal() {
+      document.getElementById('modal').classList.add('active');
+      document.body.classList.add('modal-open');
+    }
+    
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      document.body.classList.remove('modal-open');
+    }
+    
+    function closeModalOnOverlay(event) {
+      if (event.target === event.currentTarget) {
+        closeModal();
+      }
+    }
+    
+    // Escキーでも閉じる
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+</html>
