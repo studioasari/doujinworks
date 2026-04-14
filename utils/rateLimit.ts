@@ -182,6 +182,42 @@ export const notificationCreateLimiter = new Ratelimit({
 })
 
 // ========================================
+// 決済関連API
+// ========================================
+
+// /api/refund 用: 1時間10件（返金は通常の利用では頻繁に発生しない）
+export const refundLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 h'),
+  analytics: true,
+  prefix: 'ratelimit:refund',
+})
+
+// /api/create-checkout-session 用: 1分10件（仮払いボタン連打対策）
+export const checkoutSessionLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:checkout-session',
+})
+
+// /api/payments/create 用: 1分20件（検収承認時に呼ばれる、並行契約で複数回実行もあり）
+export const paymentsCreateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:payments-create',
+})
+
+// /api/requests/[id]/complete 用: 1分30件（検収承認時に呼ばれる、並行契約で複数回実行もあり）
+export const requestsCompleteLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:requests-complete',
+})
+
+// ========================================
 // ヘルパー関数
 // ========================================
 

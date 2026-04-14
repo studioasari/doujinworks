@@ -171,14 +171,32 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', contract.id)
 
-          // work_requestsも完了に更新
-          await supabase
-            .from('work_requests')
-            .update({
-              status: 'completed',
-              completed_at: completedAt
-            })
-            .eq('id', workRequest.id)
+          // 全契約 completed か確認（並行契約対応）
+          // /api/requests/[id]/complete と同じ判定条件:
+          //   contracts.length > 0 && contracts.every(c => c.status === 'completed')
+          // 1つの依頼に複数契約がある場合、他の契約がまだ作業中なら
+          // 親 work_request は completed にしない。
+          const { data: allContracts } = await supabase
+            .from('work_contracts')
+            .select('id, status')
+            .eq('work_request_id', workRequest.id)
+
+          const allCompleted = !!allContracts
+            && allContracts.length > 0
+            && allContracts.every(c => c.status === 'completed')
+
+          if (allCompleted) {
+            // 全部完了 → 親 work_request も完了に更新
+            await supabase
+              .from('work_requests')
+              .update({
+                status: 'completed',
+                completed_at: completedAt
+              })
+              .eq('id', workRequest.id)
+          }
+          // 未完了の契約があれば work_request は更新しない
+          // （手動承認 or 別の契約の自動承認の続きを待つ）
 
           // クリエイターに通知
           await createNotification(
@@ -260,13 +278,30 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', contract.id)
 
-          // work_requestsもキャンセルに更新
-          await supabase
-            .from('work_requests')
-            .update({
-              status: 'cancelled'
-            })
-            .eq('id', workRequest.id)
+          // 全契約 cancelled か確認（並行契約対応）
+          // 納品自動承認の completed 判定と同じ構造:
+          //   contracts.length > 0 && contracts.every(c => c.status === 'cancelled')
+          // 1つでも別ステータス（paid/delivered/completed）の契約が
+          // 残っている場合、親 work_request は cancelled にしない。
+          const { data: allContracts } = await supabase
+            .from('work_contracts')
+            .select('id, status')
+            .eq('work_request_id', workRequest.id)
+
+          const allCancelled = !!allContracts
+            && allContracts.length > 0
+            && allContracts.every(c => c.status === 'cancelled')
+
+          if (allCancelled) {
+            // 全部キャンセル → 親 work_request も cancelled に更新
+            await supabase
+              .from('work_requests')
+              .update({
+                status: 'cancelled'
+              })
+              .eq('id', workRequest.id)
+          }
+          // 他の契約が残っていれば親は触らない
 
           // 返金処理（payment_intent_idがある場合）
           if (contract.payment_intent_id) {

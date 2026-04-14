@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { paymentsCreateLimiter, safeLimit } from '@/utils/rateLimit'
 
 /**
  * 検収承認時に payments レコードを作成するAPI
@@ -81,6 +82,19 @@ export async function POST(request: NextRequest) {
 
     if (!requesterId || requesterId !== myProfile.id) {
       return NextResponse.json({ error: 'この操作を行う権限がありません' }, { status: 403 })
+    }
+
+    // 4-post. レート制限
+    const { success: withinLimit } = await safeLimit(
+      paymentsCreateLimiter,
+      user.id,
+      'paymentsCreate'
+    )
+    if (!withinLimit) {
+      return NextResponse.json(
+        { error: 'リクエスト頻度が上限に達しました。しばらく待ってから再試行してください。' },
+        { status: 429 }
+      )
     }
 
     // 5. ステータス確認

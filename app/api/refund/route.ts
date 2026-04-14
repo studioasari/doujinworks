@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { refundLimiter, safeLimit } from '@/utils/rateLimit'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover'
@@ -109,6 +110,19 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'この操作を行う権限がありません' },
           { status: 403 }
+        )
+      }
+
+      // 3-4. レート制限（ブラウザ経由のみ、cron はスキップ）
+      const { success: withinLimit } = await safeLimit(
+        refundLimiter,
+        user.id,
+        'refund'
+      )
+      if (!withinLimit) {
+        return NextResponse.json(
+          { error: 'リクエスト頻度が上限に達しました。しばらく待ってから再試行してください。' },
+          { status: 429 }
         )
       }
     }

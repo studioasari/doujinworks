@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { checkoutSessionLimiter, safeLimit } from '@/utils/rateLimit'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover'
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ステップ4: 契約を取得
+    // SELECT の '*' により checkout_session_id も自動で取得される
     const { data: contract, error: contractError } = await admin
       .from('work_contracts')
       .select(`
@@ -103,6 +105,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ステップ5.5: レート制限
+    const { success: withinLimit } = await safeLimit(
+      checkoutSessionLimiter,
+      user.id,
+      'checkoutSession'
+    )
+    if (!withinLimit) {
+      return NextResponse.json(
+        { error: 'リクエスト頻度が上限に達しました。しばらく待ってから再試行してください。' },
+        { status: 429 }
+      )
+    }
+
     // ステップ6: 既存のバリデーション
     if (contract.status !== 'contracted') {
       return NextResponse.json(
@@ -118,7 +133,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ステップ7: Stripe Checkout Session を作成
+    // ステップ7: 既存セッションの確認（二重決済防止）
+    // DB に checkout_session_id が保存されている場合、
+    // その Stripe セッションがまだ有効（status='open'）なら再利用する。
+    // 期限切れ（expired）や決済完了（complete）なら新規作成にフォールスルー。
+    if (contract.checkout_session_id) {
+      try {
+        const existing = await stripe.checkout.sessions.retrieve(
+          contract.checkout_session_id
+        )
+        if (existing.status === 'open') {
+          // 既存セッションを再利用
+          return NextResponse.json({ url: existing.url })
+        }
+        // status が 'expired' または 'complete' なら新規作成に進む
+      } catch (retrieveError) {
+        // retrieve 失敗（削除済み、無効な ID 等）は新規作成にフォールスルー
+        // 後から異常を発見できるようログは残す
+        console.error('[create-checkout-session] 既存セッション retrieve エラー:', retrieveError)
+      }
+    }
+
+    // ステップ8: Stripe Checkout Session を作成
     const workRequestData = Array.isArray(workRequest) ? workRequest[0] : workRequest
     const contractor = contract.contractor as { display_name: string } | { display_name: string }[] | null
     const contractorData = Array.isArray(contractor) ? contractor[0] : contractor
@@ -147,7 +183,19 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // ステップ8: 成功レスポンス
+    // ステップ9: 作成したセッションの ID を DB に保存（次回の再利用のため）
+    // 保存失敗してもセッション自体は既に作成済みで url は返せるため、
+    // ログを残すだけで処理は続行する（200 を返す）。
+    const { error: updateSessionError } = await admin
+      .from('work_contracts')
+      .update({ checkout_session_id: session.id })
+      .eq('id', contractId)
+
+    if (updateSessionError) {
+      console.error('[create-checkout-session] checkout_session_id 保存失敗:', updateSessionError)
+    }
+
+    // ステップ10: 成功レスポンス
     return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error('[create-checkout-session] 予期しないエラー:', error)

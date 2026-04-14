@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { requestsCompleteLimiter, safeLimit } from '@/utils/rateLimit'
 
 /**
  * 依頼全体の完了チェック＆ステータス更新API
@@ -70,6 +71,19 @@ export async function POST(
       return NextResponse.json(
         { error: 'この操作を行う権限がありません' },
         { status: 403 }
+      )
+    }
+
+    // 4-post. レート制限
+    const { success: withinLimit } = await safeLimit(
+      requestsCompleteLimiter,
+      user.id,
+      'requestsComplete'
+    )
+    if (!withinLimit) {
+      return NextResponse.json(
+        { error: 'リクエスト頻度が上限に達しました。しばらく待ってから再試行してください。' },
+        { status: 429 }
       )
     }
 

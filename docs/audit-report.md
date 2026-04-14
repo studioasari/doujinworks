@@ -156,8 +156,8 @@
     * `/api/webhooks/stripe`（冪等性対策と併せて別タスク）
 
 ### 3-3. レート制限の不足
-- レート制限があるのは `app/actions/auth.ts`（ログイン、サインアップ、パスワードリセット等）のみ
-- **全APIルートにレート制限がない** — 特に `refund`, `create-checkout-session`, `generate-receipt`, 各アップロード系は対策必須
+- ~~レート制限があるのは `app/actions/auth.ts`（ログイン、サインアップ、パスワードリセット等）のみ~~
+- ~~**全APIルートにレート制限がない**~~ → ✅ **部分対応済み（2026-04-14）** — 主要決済系4ルート（refund, create-checkout-session, payments/create, requests/[id]/complete）に追加。残りは別タスク（generate-receipt, upload-*, r2-signed-url 系, drafts 系等）
 
 ### 3-4. Supabase RLS
 - migrationファイルが存在しないため、RLSの設定状況はコードから確認不可
@@ -473,12 +473,78 @@ WHERE status = 'processing'
 
 | 問題 | 詳細 |
 |------|------|
-| 二重決済 | Checkout Session作成時に既存セッションの確認なし。連打で複数セッション作成可能 |
+| 二重決済 | ~~Checkout Session作成時に既存セッションの確認なし。連打で複数セッション作成可能~~ → ✅ 対応済み（`checkout_session_id` を DB に保存し、既存セッションを再利用） |
 | 返金の二重実行 | ~~`refund_id` の事前チェックなし。同じ契約に2回返金リクエスト可能~~ → ✅ 対応済み（`refund_id` 事前チェック追加、409 で拒否） |
 | 返金後のDB不整合 | ~~Stripe返金成功→DB更新失敗でも `success: true` を返す~~ → ✅ 対応済み（`work_contracts` 更新失敗時に 500 を返すよう修正） |
 | Cron返金の順序問題 | `auto-approve/route.ts` — キャンセル処理でDB状態を先に `cancelled` に変更した後にHTTP経由で返金API呼出。返金失敗時にDBだけキャンセル済みで返金されない |
 | トランザクションなし | Cronの複数テーブル更新がトランザクションで囲まれていない。途中失敗でDB不整合 |
 | Cron同時実行 | 排他制御（ロック）なし。同時に2回起動すると重複処理の可能性 |
+
+### P1 #8 二重決済防止 対応完了（2026-04-14）
+
+実装内容:
+- `work_contracts` に `checkout_session_id`（TEXT、NULL 許容）を新規追加
+- `/api/create-checkout-session` に既存セッション確認ロジックを追加
+  - 既存の `checkout_session_id` があれば `stripe.checkout.sessions.retrieve`
+  - `status='open'` なら既存セッションの `url` を再利用
+  - `status='expired'`/`'complete'` または retrieve エラーは新規作成にフォールスルー
+- 新規セッション作成後、`checkout_session_id` を DB に保存
+  - 保存失敗時はログのみで処理続行（URL は返せる状態）
+
+動作確認（ローカル、テストキー環境）:
+- 初回呼び出し: 新規 `cs_test_xxx` 作成、DB に保存される
+- 連続呼び出し: 既存セッションの URL が再利用される（完全に同一）
+- DB の `checkout_session_id` は1回目から変わらない
+
+別タスクとして記録（将来の改善）:
+- 同時リクエスト発生時の孤立セッションのクリーンアップ（24時間後に自動 expired になるが、cron で `checkout_session_id` を null に戻す処理を追加検討）
+
+### P1 #7 APIルートへのレート制限追加 対応完了（2026-04-14、部分完了）
+
+実装内容:
+- `utils/rateLimit.ts` に4つのリミッター追加:
+  - `refundLimiter`（1時間10件）
+  - `checkoutSessionLimiter`（1分10件）
+  - `paymentsCreateLimiter`（1分20件）
+  - `requestsCompleteLimiter`（1分30件）
+- 4つの API ルートに `safeLimit` + 上記リミッターを組み込み:
+  - `/api/refund`（cron 経由はスキップ、ブラウザ経由のみ制限）
+  - `/api/create-checkout-session`
+  - `/api/payments/create`
+  - `/api/requests/[id]/complete`
+- 各 API で認証・本人確認の後、本処理の前に配置
+- エラーメッセージは統一: 「リクエスト頻度が上限に達しました。しばらく待ってから再試行してください。」
+- key は `user.id`（auth uid）ベース
+- `safeLimit` で Redis 障害時 fail-open
+
+動作確認:
+- `create-checkout-session` で12回連続リクエスト → 1〜8回目は 200、9回目以降は 429（過去1分のカウンターに前回テスト残り2件が含まれていたため、新規8件で上限到達）
+- レート制限が正しく発動することを確認
+- 他3ルート（refund / payments-create / requests-complete）は実装パターンが同一のため動作確認スキップ
+
+未対応（別タスク）:
+- `/api/generate-receipt`（認証なしのため認証追加と同時対応推奨）
+- `/api/upload-*` 系（中リスク）
+- `/api/r2-signed-url` 系
+- `/api/drafts` 系
+- その他のルート
+
+### P1 #14 お問い合わせページ作成 対応完了（2026-04-14）
+
+- 会社のホームページ（社外）に既存の問い合わせフォームがあるため、それを利用する方針
+- Footer のリンクを外部フォームに繋げる対応で実質完了
+- doujinworks.jp 内に独自のフォームを実装する必要なし
+
+P1 対応状況:
+- #6 エラー監視サービス導入: 未着手
+- #7 APIルートへのレート制限追加: ✅ 部分完了（主要4ルート、残りは別タスク）
+- #8 二重決済防止: ✅ 完了
+- #9 Webhook 部分失敗対策: ✅ 完了（P0 #2 と同時対応済み）
+- #10 管理画面の返金TODO実装: 未着手
+- #11 Cron処理のトランザクション化: 未着手
+- #12 status遷移バグ修正: 未着手
+- #13 Edge Functions recipient_id バグ: 未着手
+- #14 お問い合わせページ作成: ✅ 完了（外部フォーム利用）
 
 ---
 
@@ -526,14 +592,14 @@ WHERE status = 'processing'
 
 ### 高（早期対応推奨）
 6. **エラー監視サービス導入**（Sentry等）
-7. **APIルートへのレート制限追加**
-8. **二重決済防止** — Checkout Session作成前の既存セッション確認
+7. ~~**APIルートへのレート制限追加**~~ ✅ 部分完了（2026-04-14、主要決済系4ルート。残りは別タスク）
+8. ~~**二重決済防止** — Checkout Session作成前の既存セッション確認~~ ✅ 完了（2026-04-14、`checkout_session_id` DB保存 + 既存セッション再利用）
 9. **Webhook の部分失敗対策** — work_requests更新失敗時に200を返さない
 10. **管理画面の返金TODO実装** — `app/admin/requests/page.tsx:217`
 11. **Cron処理のトランザクション化・排他制御**
 12. **status 遷移バグの調査と修正** — contracted → paid の遷移漏れ調査（3-11）、過去データ修正SQL、auto-approve の並行契約バグ修正
 13. **Edge Functions の recipient_id カラム名バグ修正** — 3-14、通知作成 INSERT が silent fail している可能性
-14. **お問い合わせページの作成** — Footerのリンク切れ修正
+14. ~~**お問い合わせページの作成** — Footerのリンク切れ修正~~ ✅ 完了（2026-04-14、外部フォーム利用方針）
 
 ### 中（品質向上）
 15. **any型の削減**（74箇所 → 型定義の整備）
