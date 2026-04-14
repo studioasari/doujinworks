@@ -4,15 +4,16 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { cookies } from 'next/headers'
-import { 
+import {
   emailResendLimiter,
   emailResendDailyLimiter,  // 🆕 追加
   signupLimiter,
   signupDailyLimiter,  // 🆕 追加
-  loginFailureLimiter, 
+  loginFailureLimiter,
   passwordResetLimiter,
   passwordResetDailyLimiter,  // 🆕 追加
-  getVagueRetryTime
+  getVagueRetryTime,
+  safeLimit
 } from '@/utils/rateLimit'
 
 // Supabase クライアント作成
@@ -78,7 +79,7 @@ export async function signupAction(formData: FormData) {
 
   // レート制限チェック（時間制限）
   const ip = await getClientIp()
-  const { success: hourlySuccess, reset: hourlyReset } = await signupLimiter.limit(ip)
+  const { success: hourlySuccess, reset: hourlyReset } = await safeLimit(signupLimiter, ip, 'signup')
   
   if (!hourlySuccess) {
     const retryAfterSeconds = Math.ceil((hourlyReset - Date.now()) / 1000)
@@ -90,7 +91,7 @@ export async function signupAction(formData: FormData) {
   }
 
   // 🆕 レート制限チェック（日次制限）
-  const { success: dailySuccess, reset: dailyReset } = await signupDailyLimiter.limit(ip)
+  const { success: dailySuccess, reset: dailyReset } = await safeLimit(signupDailyLimiter, ip, 'signupDaily')
   
   if (!dailySuccess) {
     const retryAfterSeconds = Math.ceil((dailyReset - Date.now()) / 1000)
@@ -136,7 +137,7 @@ export async function resendEmailAction(formData: FormData) {
 
   // レート制限チェック（時間制限）
   const ip = await getClientIp()
-  const { success: hourlySuccess, reset: hourlyReset } = await emailResendLimiter.limit(ip)
+  const { success: hourlySuccess, reset: hourlyReset } = await safeLimit(emailResendLimiter, ip, 'emailResend')
 
   if (!hourlySuccess) {
     const retryAfterSeconds = Math.ceil((hourlyReset - Date.now()) / 1000)
@@ -148,7 +149,7 @@ export async function resendEmailAction(formData: FormData) {
   }
 
   // 🆕 レート制限チェック（日次制限）
-  const { success: dailySuccess, reset: dailyReset } = await emailResendDailyLimiter.limit(ip)
+  const { success: dailySuccess, reset: dailyReset } = await safeLimit(emailResendDailyLimiter, ip, 'emailResendDaily')
 
   if (!dailySuccess) {
     const retryAfterSeconds = Math.ceil((dailyReset - Date.now()) / 1000)
@@ -186,7 +187,7 @@ export async function checkLoginLimitAction(identifier: string) {
   const ip = await getClientIp()
   const limitKey = `${ip}:${identifier}`
   
-  const { success, reset } = await loginFailureLimiter.limit(limitKey)
+  const { success, reset } = await safeLimit(loginFailureLimiter, limitKey, 'loginFailure')
 
   if (!success) {
     const retryAfterSeconds = Math.ceil((reset - Date.now()) / 1000)
@@ -210,7 +211,7 @@ export async function passwordResetAction(formData: FormData) {
   }
 
   // レート制限チェック（時間制限）
-  const { success: hourlySuccess, reset: hourlyReset } = await passwordResetLimiter.limit(email.toLowerCase())
+  const { success: hourlySuccess, reset: hourlyReset } = await safeLimit(passwordResetLimiter, email.toLowerCase(), 'passwordReset')
 
   if (!hourlySuccess) {
     const retryAfterSeconds = Math.ceil((hourlyReset - Date.now()) / 1000)
@@ -222,7 +223,7 @@ export async function passwordResetAction(formData: FormData) {
   }
 
   // 🆕 レート制限チェック（日次制限）
-  const { success: dailySuccess, reset: dailyReset } = await passwordResetDailyLimiter.limit(email.toLowerCase())
+  const { success: dailySuccess, reset: dailyReset } = await safeLimit(passwordResetDailyLimiter, email.toLowerCase(), 'passwordResetDaily')
 
   if (!dailySuccess) {
     const retryAfterSeconds = Math.ceil((dailyReset - Date.now()) / 1000)
@@ -268,7 +269,7 @@ export async function loginAction(formData: FormData) {
   // レート制限チェック
   const ip = await getClientIp()
   const limitKey = `${ip}:${emailOrUsername}`
-  const { success: rateLimitSuccess, reset } = await loginFailureLimiter.limit(limitKey)
+  const { success: rateLimitSuccess, reset } = await safeLimit(loginFailureLimiter, limitKey, 'loginFailure')
 
   if (!rateLimitSuccess) {
     const retryAfterSeconds = Math.ceil((reset - Date.now()) / 1000)
@@ -300,7 +301,7 @@ export async function loginAction(formData: FormData) {
       // ユーザーIDの場合
       if (!profile?.email) {
         // ログイン失敗をカウント
-        await loginFailureLimiter.limit(limitKey)
+        await safeLimit(loginFailureLimiter, limitKey, 'loginFailure')
         return { 
           success: false, 
           error: 'メールアドレスまたはパスワードが正しくありません',
@@ -328,7 +329,7 @@ export async function loginAction(formData: FormData) {
       })
       
       // ログイン失敗をカウント
-      const { success: retrySuccess } = await loginFailureLimiter.limit(limitKey)
+      const { success: retrySuccess } = await safeLimit(loginFailureLimiter, limitKey, 'loginFailure')
       
       return { 
         success: false, 

@@ -1352,24 +1352,40 @@ export default function ContractDetailPage() {
             })
             .eq('id', contractId)
 
-          // paymentsレコードを作成（振込管理用）
+          // paymentsレコードを作成（サーバーサイドAPIに委譲）
           if (contract) {
-            const finalPrice = contract.final_price
-            const platformFee = Math.floor(finalPrice * 0.12)
-            const creatorAmount = finalPrice - platformFee
-            const completedMonth = new Date().toISOString().slice(0, 7)
+            const res = await fetch('/api/payments/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contractId: contract.id }),
+            })
 
-            await supabase
-              .from('payments')
-              .insert({
-                work_request_id: contract.work_request_id,
-                creator_id: contract.contractor_id,
-                amount: creatorAmount,
-                status: 'pending',
-                completed_month: completedMonth,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              console.error('payment作成エラー:', data)
+              alert('振込レコードの作成に失敗しました。運営にお問い合わせください。')
+              setProcessing(false)
+              return
+            }
+          }
+
+          // 依頼全体の完了チェック（並行契約対応）
+          // 全契約が completed なら work_requests.status を 'completed' に更新
+          try {
+            const completeRes = await fetch(`/api/requests/${requestId}/complete`, {
+              method: 'POST',
+            })
+            if (completeRes.ok) {
+              const completeData = await completeRes.json()
+              if (completeData.allCompleted === false) {
+                console.log('依頼完了待ち:', completeData.message)
+              }
+            } else {
+              console.error('依頼完了チェックエラー:', await completeRes.json().catch(() => ({})))
+            }
+          } catch (completeError) {
+            // 検収承認と振込レコード作成は成功済みなので、ここでは警告ログのみ
+            console.error('依頼完了チェック失敗:', completeError)
           }
 
           if (contract?.contractor_id) {

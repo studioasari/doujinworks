@@ -22,7 +22,7 @@ async function createNotification(
       title,
       message,
       link,
-      is_read: false,
+      read: false,
       created_at: new Date().toISOString()
     })
 
@@ -275,6 +275,7 @@ export async function POST(request: NextRequest) {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.CRON_SECRET}`,
                 },
                 body: JSON.stringify({
                   workContractId: contract.id,

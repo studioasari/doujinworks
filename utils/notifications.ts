@@ -1,13 +1,13 @@
 // utils/notifications.ts
 import { supabase } from './supabase'
 
-export type NotificationType = 
-  | 'application' 
-  | 'accepted' 
-  | 'paid' 
-  | 'delivered' 
-  | 'completed' 
-  | 'review' 
+export type NotificationType =
+  | 'application'
+  | 'accepted'
+  | 'paid'
+  | 'delivered'
+  | 'completed'
+  | 'review'
   | 'delivery_rejected'
   | 'cancellation_request'  // キャンセル申請
   | 'cancelled'              // キャンセル完了
@@ -20,18 +20,17 @@ export async function createNotification(
   message: string,
   link?: string
 ) {
-  const { error } = await supabase
-    .from('notifications')
-    .insert({
-      profile_id: profileId,
-      type,
-      title,
-      message,
-      link,
-      read: false
+  try {
+    const res = await fetch('/api/notifications/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId, type, title, message, link }),
     })
-
-  if (error) {
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      console.error('通知作成エラー:', data)
+    }
+  } catch (error) {
     console.error('通知作成エラー:', error)
   }
 }

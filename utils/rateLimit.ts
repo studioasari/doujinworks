@@ -14,6 +14,41 @@ const redis = new Redis({
 })
 
 /**
+ * リミッターの安全な呼び出し（フェイルオープン）
+ *
+ * Upstash Redisが落ちている・接続できない等のエラー時に
+ * リミッター呼び出しで例外が発生するのを防ぐ。
+ * エラー時は success: true を返して処理を通す（＝レート制限を一時的に無効化）。
+ *
+ * - Redis障害でも認証フローが500エラーで止まらない
+ * - エラーは console.error に残すので監視で気付ける
+ *
+ * ⚠ 注意: Redis障害中はレート制限が無効になるため、
+ *        ブルートフォース攻撃への耐性が一時的に下がる。
+ *        本番では Upstash の監視を併用すること。
+ */
+export async function safeLimit(
+  limiter: Ratelimit,
+  key: string,
+  limiterName: string
+): Promise<{ success: boolean; reset: number; limit: number; remaining: number }> {
+  try {
+    return await limiter.limit(key)
+  } catch (error) {
+    console.error(
+      `[rateLimit] ${limiterName} failed, failing open:`,
+      error instanceof Error ? error.message : error
+    )
+    return {
+      success: true,
+      reset: Date.now(),
+      limit: 0,
+      remaining: 0,
+    }
+  }
+}
+
+/**
  * レート制限キーの生成（衝突防止）
  * IP + User-Agent のハッシュを使用
  * 
@@ -131,6 +166,19 @@ export const passwordResetDailyLimiter = new Ratelimit({
   limiter: Ratelimit.slidingWindow(5, '24 h'),
   analytics: true,
   prefix: 'ratelimit:password-reset-daily',
+})
+
+// ========================================
+// 通知作成
+// ========================================
+
+// 1分あたり60件（通常の操作で1アクションにつき1〜2件の通知が
+// 作成されるため、連続操作を考慮しても余裕のある設定）
+export const notificationCreateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:notification-create',
 })
 
 // ========================================

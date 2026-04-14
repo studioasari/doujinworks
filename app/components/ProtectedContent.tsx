@@ -25,6 +25,19 @@ const publicPrefixPaths = [
   '/tags',
 ]
 
+// サーバーサイドで認証・認可チェック済みのパス（前方一致）
+// これらのパスは layout.tsx などのサーバーコンポーネントで
+// 認証チェックして redirect() するため、クライアント側の
+// ProtectedContent では何もせずそのまま描画する。
+// （クライアント側でモーダルを出すとサーバーのリダイレクトを邪魔してしまう）
+//
+// 将来 /dashboard などもサーバー保護に移行する場合は、
+// 対応する layout.tsx をサーバーコンポーネント化した上で
+// ここに追加する。
+const serverProtectedPaths = [
+  '/admin',
+]
+
 // 認証不要の公開パス（特殊ルール）
 // /requests → 公開（一覧）
 // /requests/create → 保護
@@ -35,6 +48,12 @@ const publicPrefixPaths = [
 // /pricing → 公開（一覧）
 // /pricing/[id] → 公開（詳細）
 // /pricing/new → 保護（dashboard配下なので既に保護）
+
+function isServerProtectedPath(pathname: string): boolean {
+  return serverProtectedPaths.some(
+    path => pathname === path || pathname.startsWith(path + '/')
+  )
+}
 
 function isPublicPath(pathname: string): boolean {
   // 完全一致
@@ -79,7 +98,9 @@ function isPublicPath(pathname: string): boolean {
  */
 export default function ProtectedContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const needsAuth = !isPublicPath(pathname)
+  const isServerProtected = isServerProtectedPath(pathname)
+  // サーバー保護ページはクライアント側のチェック対象外
+  const needsAuth = !isServerProtected && !isPublicPath(pathname)
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>(
     needsAuth ? 'checking' : 'authenticated'
   )
@@ -121,6 +142,12 @@ export default function ProtectedContent({ children }: { children: React.ReactNo
       cancelled = true
     }
   }, [pathname, needsAuth])
+
+  // サーバー保護ページ → クライアント側は何もせず透過
+  // （サーバー側の redirect() に任せる）
+  if (isServerProtected) {
+    return <>{children}</>
+  }
 
   // 公開パス → そのまま表示
   if (!needsAuth) {
