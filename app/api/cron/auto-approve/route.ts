@@ -99,11 +99,23 @@ export async function POST(request: NextRequest) {
             `/requests/${workRequest.id}/contracts/${contract.id}`
           )
 
-          // フラグを立てる
-          await supabase
+          // フラグを立てる（既に設定済みならスキップ）
+          const { data: warningUpdated, error: warningUpdateError } = await supabase
             .from('work_contracts')
             .update({ auto_approval_warning_sent_at: new Date().toISOString() })
             .eq('id', contract.id)
+            .is('auto_approval_warning_sent_at', null)
+            .select('id')
+
+          if (warningUpdateError) {
+            console.error(`警告フラグ更新エラー (contract: ${contract.id}):`, warningUpdateError)
+            results.errors.push(`警告フラグ更新失敗: ${contract.id}`)
+            continue
+          }
+          if (!warningUpdated || warningUpdated.length === 0) {
+            console.log(`[auto-approve] スキップ: contract ${contract.id} は既に警告送信済み`)
+            continue
+          }
 
           results.deliveryWarnings++
         } catch (error) {
@@ -152,30 +164,50 @@ export async function POST(request: NextRequest) {
         const workRequest = contract.work_request
 
         try {
-          // 納品を承認
-          await supabase
+          // 納品を承認（pending のときだけ更新）
+          const { data: deliveryUpdated, error: deliveryUpdateError } = await supabase
             .from('work_deliveries')
             .update({
               status: 'approved',
               feedback: '検収期限経過により自動承認されました'
             })
             .eq('id', delivery.id)
+            .eq('status', 'pending')
+            .select('id')
 
-          // 契約を完了
+          if (deliveryUpdateError) {
+            console.error(`納品承認エラー (delivery: ${delivery.id}):`, deliveryUpdateError)
+            results.errors.push(`納品承認失敗: ${delivery.id}`)
+            continue
+          }
+          if (!deliveryUpdated || deliveryUpdated.length === 0) {
+            console.log(`[auto-approve] スキップ: delivery ${delivery.id} は既に処理済み`)
+            continue
+          }
+
+          // 契約を完了（delivered のときだけ更新）
           const completedAt = new Date().toISOString()
-          await supabase
+          const { data: contractUpdated, error: contractUpdateError } = await supabase
             .from('work_contracts')
             .update({
               status: 'completed',
               completed_at: completedAt
             })
             .eq('id', contract.id)
+            .eq('status', 'delivered')
+            .select('id')
+
+          if (contractUpdateError) {
+            console.error(`契約完了エラー (contract: ${contract.id}):`, contractUpdateError)
+            results.errors.push(`契約完了失敗: ${contract.id}`)
+            continue
+          }
+          if (!contractUpdated || contractUpdated.length === 0) {
+            console.log(`[auto-approve] スキップ: contract ${contract.id} は既に完了済みまたは別ステータス`)
+            continue
+          }
 
           // 全契約 completed か確認（並行契約対応）
-          // /api/requests/[id]/complete と同じ判定条件:
-          //   contracts.length > 0 && contracts.every(c => c.status === 'completed')
-          // 1つの依頼に複数契約がある場合、他の契約がまだ作業中なら
-          // 親 work_request は completed にしない。
           const { data: allContracts } = await supabase
             .from('work_contracts')
             .select('id, status')
@@ -186,17 +218,20 @@ export async function POST(request: NextRequest) {
             && allContracts.every(c => c.status === 'completed')
 
           if (allCompleted) {
-            // 全部完了 → 親 work_request も完了に更新
-            await supabase
+            const { data: reqUpdated } = await supabase
               .from('work_requests')
               .update({
                 status: 'completed',
                 completed_at: completedAt
               })
               .eq('id', workRequest.id)
+              .neq('status', 'completed')
+              .select('id')
+
+            if (!reqUpdated || reqUpdated.length === 0) {
+              console.log(`[auto-approve] スキップ: work_request ${workRequest.id} は既に completed`)
+            }
           }
-          // 未完了の契約があれば work_request は更新しない
-          // （手動承認 or 別の契約の自動承認の続きを待つ）
 
           // クリエイターに通知
           await createNotification(
@@ -261,28 +296,48 @@ export async function POST(request: NextRequest) {
         const workRequest = contract.work_request
 
         try {
-          // キャンセル申請を承認
-          await supabase
+          // キャンセル申請を承認（pending のときだけ更新）
+          const { data: cancelUpdated, error: cancelUpdateError } = await supabase
             .from('cancellation_requests')
             .update({
               status: 'approved',
               resolved_at: new Date().toISOString()
             })
             .eq('id', cancelRequest.id)
+            .eq('status', 'pending')
+            .select('id')
 
-          // 契約をキャンセル
-          await supabase
+          if (cancelUpdateError) {
+            console.error(`キャンセル承認エラー (request: ${cancelRequest.id}):`, cancelUpdateError)
+            results.errors.push(`キャンセル承認失敗: ${cancelRequest.id}`)
+            continue
+          }
+          if (!cancelUpdated || cancelUpdated.length === 0) {
+            console.log(`[auto-approve] スキップ: cancellation ${cancelRequest.id} は既に処理済み`)
+            continue
+          }
+
+          // 契約をキャンセル（cancelled 以外のときだけ更新）
+          const { data: contractCancelled, error: contractCancelError } = await supabase
             .from('work_contracts')
             .update({
               status: 'cancelled'
             })
             .eq('id', contract.id)
+            .neq('status', 'cancelled')
+            .select('id')
+
+          if (contractCancelError) {
+            console.error(`契約キャンセルエラー (contract: ${contract.id}):`, contractCancelError)
+            results.errors.push(`契約キャンセル失敗: ${contract.id}`)
+            continue
+          }
+          if (!contractCancelled || contractCancelled.length === 0) {
+            console.log(`[auto-approve] スキップ: contract ${contract.id} は既にキャンセル済み`)
+            continue
+          }
 
           // 全契約 cancelled か確認（並行契約対応）
-          // 納品自動承認の completed 判定と同じ構造:
-          //   contracts.length > 0 && contracts.every(c => c.status === 'cancelled')
-          // 1つでも別ステータス（paid/delivered/completed）の契約が
-          // 残っている場合、親 work_request は cancelled にしない。
           const { data: allContracts } = await supabase
             .from('work_contracts')
             .select('id, status')
@@ -293,15 +348,19 @@ export async function POST(request: NextRequest) {
             && allContracts.every(c => c.status === 'cancelled')
 
           if (allCancelled) {
-            // 全部キャンセル → 親 work_request も cancelled に更新
-            await supabase
+            const { data: reqCancelled } = await supabase
               .from('work_requests')
               .update({
                 status: 'cancelled'
               })
               .eq('id', workRequest.id)
+              .neq('status', 'cancelled')
+              .select('id')
+
+            if (!reqCancelled || reqCancelled.length === 0) {
+              console.log(`[auto-approve] スキップ: work_request ${workRequest.id} は既に cancelled`)
+            }
           }
-          // 他の契約が残っていれば親は触らない
 
           // 返金処理（payment_intent_idがある場合）
           if (contract.payment_intent_id) {
