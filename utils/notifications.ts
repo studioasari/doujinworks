@@ -12,6 +12,8 @@ export type NotificationType =
   | 'cancellation_request'  // キャンセル申請
   | 'cancelled'              // キャンセル完了
   | 'auto_approval_warning'  // 自動承認警告（3日前）
+  | 'delivery_file_expiring'         // 納品ファイル削除予告（7日前）
+  | 'delivery_file_expiring_urgent'  // 納品ファイル削除予告（1日前）
 
 export async function createNotification(
   profileId: string,
