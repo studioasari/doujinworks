@@ -258,6 +258,45 @@ export const deliveryDeleteLimiter = new Ratelimit({
 })
 
 // ========================================
+// アップロード系
+// ========================================
+
+// /api/upload-portfolio 用: 1分20件（ポートフォリオ・プロフィール・
+// 料金表の画像アップロード。複数画像の一括アップを考慮）
+export const portfolioUploadLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:portfolio-upload',
+})
+
+// /api/upload-chat 用: 1分30件（チャットの画像送信。
+// 連続送信を考慮して緩め）
+export const chatUploadLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:chat-upload',
+})
+
+// /api/r2-signed-url 用: 1分60件（チャット添付ファイルの個別ダウンロード）
+export const chatSignedUrlLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:chat-signed-url',
+})
+
+// /api/r2-signed-url-batch 用: 1分30件（1リクエストで最大50件取得するため
+// リクエスト単位では少なめ）
+export const chatSignedUrlBatchLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:chat-signed-url-batch',
+})
+
+// ========================================
 // ヘルパー関数
 // ========================================
 
