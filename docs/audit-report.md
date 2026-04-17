@@ -554,7 +554,33 @@ WHERE c.status = 'completed'
 
 **影響**: Edge Functions から通知を作成する処理が全て silent fail している可能性が高い。ただし Edge Functions の実際の呼び出し頻度・用途は未確認。
 
-**対応**: 別タスクとして記録。今回のスコープ外。Edge Functions 側のコード修正（`recipient_id` → `profile_id`）が必要だが、Edge Functions のデプロイフローを含むため現時点では手を出さない。
+~~**対応**: 別タスクとして記録。今回のスコープ外。Edge Functions 側のコード修正（`recipient_id` → `profile_id`）が必要だが、Edge Functions のデプロイフローを含むため現時点では手を出さない。~~
+
+**対応完了（2026-04-17）**: Edge Functions のカラム名修正ではなく、Edge Functions 自体を廃止する方針で対応。
+
+調査の結果、4つの Edge Functions は既存の Next.js API ルートと**完全に機能重複**していた:
+
+| Edge Function | 対応する Next.js API | 状態 |
+|---|---|---|
+| `auto-approve-cancellations` | `/api/cron/auto-approve`（セクション3） | API 側が修正済み（並行契約対応） |
+| `auto-approve-deliveries` | `/api/cron/auto-approve`（セクション2） | 同上 |
+| `send-deadline-warnings` | `/api/cron/auto-approve`（セクション1） | 同上 |
+| `process-refund` | `/api/refund` | API 側が認証+事前チェック強化済み |
+
+Edge Functions 側の問題:
+- `recipient_id` カラム名バグ（正: `profile_id`）→ 通知 INSERT が全て silent fail
+- `related_request_id` カラム名バグ（正: `link`）→ 同上
+- 並行契約未対応（`work_requests` を直接更新、`work_contracts` を見ていない）
+- Stripe API バージョンが古い（`2024-11-20.acacia`、本体側は `2025-12-15.clover`）
+
+対応内容:
+1. Supabase cron ジョブ（jobid 4, 5, 6）を Supabase ダッシュボードから停止・削除
+2. `supabase/functions/` 配下の4ディレクトリを削除
+   - `auto-approve-cancellations/`
+   - `auto-approve-deliveries/`
+   - `send-deadline-warnings/`
+   - `process-refund/`
+3. 全機能は `/api/cron/auto-approve`（Vercel Cron UTC 19:00）と `/api/refund` が担当
 
 ### 「問題1: payments INSERT が緩い」の対応状況
 
@@ -727,7 +753,7 @@ P1 対応状況:
 - #10 管理画面の返金TODO実装: 別タスク（Stripe審査後）
 - #11 Cron処理のトランザクション化: 未着手
 - #12 status遷移バグ修正: ✅ 完了（2026-04-14、Webhook 問題なし、cron バグ修正、過去データ6件修正）
-- #13 Edge Functions recipient_id バグ: 未着手
+- #13 Edge Functions recipient_id バグ: ✅ 完了（2026-04-17、Edge Functions 廃止。全機能は既存 Next.js API が担当）
 - #14 お問い合わせページ作成: ✅ 完了（外部フォーム利用）
 
 ---
@@ -789,7 +815,7 @@ P1 対応状況:
 10. **管理画面の返金TODO実装** — `app/admin/requests/page.tsx:217`
 11. **Cron処理のトランザクション化・排他制御**
 12. ~~**status 遷移バグの調査と修正**~~ ✅ 完了（2026-04-14、Webhook は問題なし、cron バグ修正、過去データ6件修正）
-13. **Edge Functions の recipient_id カラム名バグ修正** — 3-14、通知作成 INSERT が silent fail している可能性
+13. ~~**Edge Functions の recipient_id カラム名バグ修正** — 3-14、通知作成 INSERT が silent fail している可能性~~ ✅ 完了（2026-04-17、Edge Functions 廃止。詳細は 3-14 参照）
 14. ~~**お問い合わせページの作成** — Footerのリンク切れ修正~~ ✅ 完了（2026-04-14、外部フォーム利用方針）
 
 ### 中（品質向上）
