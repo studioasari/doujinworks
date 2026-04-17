@@ -8,6 +8,8 @@ import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { createNotification } from '@/utils/notifications'
+import DeliveryFileUploader, { type UploadedFile } from './DeliveryFileUploader'
+import DeliveryFileList, { type DeliveryFile } from './DeliveryFileList'
 import styles from './page.module.css'
 
 const MESSAGES_PER_PAGE = 30
@@ -54,6 +56,7 @@ type Delivery = {
   created_at: string
   status: string
   feedback: string | null
+  delivery_files: DeliveryFile[]
 }
 
 type Message = {
@@ -129,6 +132,8 @@ export default function ContractDetailPage() {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
   const [deliveryMessage, setDeliveryMessage] = useState('')
   const [deliveryUrl, setDeliveryUrl] = useState('')
+  const [deliveryId, setDeliveryId] = useState(() => crypto.randomUUID())
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null)
@@ -447,14 +452,19 @@ export default function ContractDetailPage() {
   async function fetchDeliveries() {
     const { data, error } = await supabase
       .from('work_deliveries')
-      .select('*')
+      .select(`
+        *,
+        delivery_files (
+          id, r2_key, original_filename, file_size, mime_type, uploaded_at, deleted_at
+        )
+      `)
       .eq('work_contract_id', contractId)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('納品履歴取得エラー:', error)
     } else {
-      setDeliveries(data || [])
+      setDeliveries((data || []) as Delivery[])
     }
   }
 
@@ -1265,51 +1275,50 @@ export default function ContractDetailPage() {
       return
     }
 
+    const trimmedUrl = deliveryUrl.trim() || null
+    if (uploadedFiles.length === 0 && !trimmedUrl) {
+      alert('ファイルまたは URL のいずれかが必要です')
+      return
+    }
+
+    if (!confirm('納品を送信しますか？\n送信後、依頼者に通知されます。')) return
+
     setProcessing(true)
 
     try {
-      const { error: deliveryError } = await supabase
-        .from('work_deliveries')
-        .insert({
-          work_request_id: contract!.work_request_id,
-          work_contract_id: contractId,
-          contractor_id: currentProfileId,
+      const res = await fetch('/api/deliveries/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractId,
+          deliveryId,
           message: deliveryMessage.trim(),
-          delivery_url: deliveryUrl.trim() || null,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        })
+          deliveryUrl: trimmedUrl,
+          files: uploadedFiles.map(f => ({
+            r2Key: f.r2Key,
+            originalFilename: f.originalFilename,
+            fileSize: f.fileSize,
+            mimeType: f.mimeType,
+          })),
+        }),
+      })
 
-      if (deliveryError) throw new Error('納品の登録に失敗しました')
-
-      await supabase
-        .from('work_contracts')
-        .update({
-          status: 'delivered',
-          delivered_at: new Date().toISOString()
-        })
-        .eq('id', contractId)
-
-      const requesterId = (contract?.work_request as any)?.requester_id
-      if (requesterId) {
-        await createNotification(
-          requesterId,
-          'delivered',
-          '納品されました',
-          `「${(contract?.work_request as any)?.title}」が納品されました。検収をお願いします。`,
-          `/requests/${requestId}/contracts/${contractId}`
-        )
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || '納品に失敗しました')
       }
 
       alert('納品しました！検収をお待ちください。')
       setShowDeliveryModal(false)
       setDeliveryMessage('')
       setDeliveryUrl('')
+      setUploadedFiles([])
+      setDeliveryId(crypto.randomUUID())
       fetchContract()
       fetchDeliveries()
     } catch (error) {
       console.error('納品エラー:', error)
-      alert('納品に失敗しました')
+      alert(error instanceof Error ? error.message : '納品に失敗しました')
     } finally {
       setProcessing(false)
     }
@@ -1911,6 +1920,13 @@ export default function ContractDetailPage() {
                     <i className="fas fa-external-link-alt"></i>納品物を確認
                   </a>
                 )}
+                {delivery.delivery_files && delivery.delivery_files.length > 0 && (
+                  <DeliveryFileList
+                    files={delivery.delivery_files}
+                    isContractor={isContractor}
+                    deliveryStatus={delivery.status}
+                  />
+                )}
                 {delivery.feedback && (
                   <div className={`${styles.deliveryFeedback} ${delivery.status === 'rejected' ? styles.rejected : ''}`}>
                     <div className={styles.deliveryFeedbackLabel}><i className="fas fa-comment"></i>フィードバック</div>
@@ -2285,12 +2301,21 @@ export default function ContractDetailPage() {
 
       {/* 納品モーダル */}
       {showDeliveryModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowDeliveryModal(false)}>
+        <div className={styles.modalOverlay} onClick={() => { setShowDeliveryModal(false); setUploadedFiles([]); setDeliveryId(crypto.randomUUID()) }}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>納品する</h2>
             <form onSubmit={handleSubmitDelivery}>
               <div className={styles.modalGroup}>
-                <label htmlFor="delivery-url" className={styles.modalLabel}>納品物のURL</label>
+                <label className={styles.modalLabel}>ファイルをアップロード</label>
+                <DeliveryFileUploader
+                  contractId={contractId as string}
+                  deliveryId={deliveryId}
+                  onFilesChange={setUploadedFiles}
+                  disabled={processing}
+                />
+              </div>
+              <div className={styles.modalGroup}>
+                <label htmlFor="delivery-url" className={styles.modalLabel}>納品物のURL（任意）</label>
                 <input id="delivery-url" name="delivery-url" type="url" value={deliveryUrl} onChange={(e) => setDeliveryUrl(e.target.value)} placeholder="https://..." className={styles.modalInput} />
                 <div className={styles.modalHint}>ギガファイル便、Google Driveなどの共有URLを入力</div>
               </div>
@@ -2299,8 +2324,8 @@ export default function ContractDetailPage() {
                 <textarea id="delivery-message" name="delivery-message" value={deliveryMessage} onChange={(e) => setDeliveryMessage(e.target.value)} placeholder="納品物の説明を記入してください" required rows={5} className={styles.modalTextarea} />
               </div>
               <div className={styles.modalButtons}>
-                <button type="button" onClick={() => setShowDeliveryModal(false)} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>キャンセル</button>
-                <button type="submit" disabled={processing} className={`${styles.btn} ${styles.primary}`}>{processing ? '送信中...' : '納品する'}</button>
+                <button type="button" onClick={() => { setShowDeliveryModal(false); setUploadedFiles([]); setDeliveryId(crypto.randomUUID()) }} disabled={processing} className={`${styles.btn} ${styles.secondary}`}>キャンセル</button>
+                <button type="submit" disabled={processing || uploadedFiles.length === 0 && !deliveryUrl.trim()} className={`${styles.btn} ${styles.primary}`}>{processing ? '送信中...' : '納品する'}</button>
               </div>
             </form>
           </div>

@@ -140,20 +140,83 @@
   - 403（auth uid が含まれない任意のパス）
 - 正常系テストは実施せず（本物の R2 ファイル削除を避けるため）。認証・認可が機能することが確認できれば、既存の削除ロジックは変更していないので十分と判断
 
-残 API Route 認証チェック対応状況:
+#### P0 #1 残り API ルート対応（2026-04-14）
+
+追加で対応した3ルート:
+
+**`/api/posts-images`（GET, DELETE）**
+- `requireAdmin()` ヘルパーをファイル内に定義
+- `profiles.is_admin` で管理者チェック
+- ログインなし → 401、admin でない → 403
+- GET と DELETE の両方の handler 先頭で実行
+
+**`/api/upload-posts`（POST）**
+- POST handler に admin チェックを直書き（1箇所だけなのでヘルパー化せず)
+- ロジックは posts-images と同じパターン
+
+**`/api/generate-receipt`（POST）— 設計変更レベルの大幅修正**
+- 認証なし → 認証 + 認可 + サーバー側確定値の組み立てに変更
+- 引数を `contractId`, `title`, `addressee` の3つに縮小（旧: `requestId`, `requesterId`, `creatorId`, `amount`, `paidAt` もクライアントから受け取っていた = 改ざん可能）
+- `amount`, `paidAt`, `requesterId`, `creatorId` はサーバー側で contract から取得（改ざん不可）
+- 当事者チェック: 依頼者本人のみ
+- 仮払い済みチェック追加
+- PDF データ・ファイル名・領収書番号を `contractId` ベースに変更(並行契約で番号衝突を回避)
+- Python サブプロセス処理は変更なし
+
+#### receipt_metadata テーブルのマイグレーション（2026-04-14）
+
+generate-receipt の設計変更に伴い、`receipt_metadata` の構造を `contract_id` ベースに変更:
+
+実行した SQL:
+- `ALTER TABLE receipt_metadata ADD COLUMN contract_id UUID NULL`
+- 既存1件のレコードに `contract_id` を補完（`request_id='b4123b3b-...'` のレコードに `contract_id='8459d4f1-...'`）
+- `ALTER TABLE ... ALTER COLUMN contract_id SET NOT NULL`
+- `ALTER TABLE ... ADD CONSTRAINT receipt_metadata_contract_id_key UNIQUE (contract_id)`
+- `ALTER TABLE ... DROP CONSTRAINT receipt_metadata_request_id_key`
+
+結果:
+- `contract_id` が新たに UNIQUE 制約付きで追加
+- `request_id` カラムは残存（後方互換性）
+- `request_id` の UNIQUE 制約は削除
+
+別タスクとして記録（将来）:
+- `request_id` カラムは利用がなくなった時点で削除検討
+
+#### app/dashboard/payments/client.tsx の修正
+
+generate-receipt の引数変更に追従:
+- `ReceiptEditData` 型の `requestId` → `contractId`
+- `openReceiptEditor` の `receipt_metadata` SELECT 条件を `contract_id` ベースに
+- `generateReceipt` の find 条件と fetch body を `contractId` ベースに
+- UI 表示部分（2箇所）の find 条件も `contract_id` ベースに
+- `receipt_metadata` INSERT には `contract_id` と `request_id` の両方を保存（後方互換性のため）
+
+#### 動作確認（2026-04-14）
+
+Console から fetch でテスト実施（client アカウントでログイン中）:
+- 400（contractId なし）: ✅ 「リクエストが不正です」
+- 403（他人の契約）: ✅ 「この操作を行う権限がありません」
+- 404（存在しない契約）: ✅ 「契約が見つかりません」
+- 200（正常系）: ✅ PDF 生成成功（28KB）
+- 401 はテストスキップ（payments/create と同じパターンなので動作保証あり）
+
+#### 残 API Route 認証チェック対応状況（2026-04-14 更新）
+
 - `/api/refund`: ✅ 完了
 - `/api/create-checkout-session`: ✅ 完了
 - `/api/delete-portfolio`: ✅ 完了
-- その他 10ルート程度: ⏸️ 未着手
-  主な未対応ルート:
-    * `/api/check-username`
-    * `/api/drafts/*`
-    * `/api/generate-receipt`
-    * `/api/get-email-by-username`
-    * `/api/posts-images`
-    * `/api/r2-signed-url`, `/api/r2-signed-url-batch`
-    * `/api/upload-*`
-    * `/api/webhooks/stripe`（冪等性対策と併せて別タスク）
+- `/api/posts-images`: ✅ 完了（2026-04-14）
+- `/api/upload-posts`: ✅ 完了（2026-04-14）
+- `/api/generate-receipt`: ✅ 完了（2026-04-14、設計変更あり）
+- `/api/drafts`, `/api/drafts/[id]`, `/api/drafts/[id]/publish`: ✅ **既に実装済み**（ログイン + creator_id チェック）
+
+残る未対応ルート（別タスク、P1 レート制限と並行して対応検討）:
+- `/api/check-username`（公開でOKの仕様）
+- `/api/get-email-by-username`（高リスク、レート制限主体）
+- `/api/upload-url`（高リスク、workRequestId 検証必要）
+- `/api/upload-chat`（中リスク、チャット参加者チェック必要）
+- `/api/upload-portfolio`（中リスク、delete-portfolio と同じパターン）
+- `/api/r2-signed-url`, `/api/r2-signed-url-batch`（中リスク、バケット別認可ロジック必要）
 
 ### 3-3. レート制限の不足
 - ~~レート制限があるのは `app/actions/auth.ts`（ログイン、サインアップ、パスワードリセット等）のみ~~
@@ -330,10 +393,55 @@ WHERE c.status = 'completed'
 
 1. **3-10**: payments INSERT が silent fail していた（エラーチェックなし、並行契約で2件目以降が消えていた）
 2. **検収承認 → 依頼完了**: `handleSubmitReview` で `work_requests.status` が `paid` → `completed` に更新されていなかった（今日 `/api/requests/[id]/complete` を新設して修正済み）
-3. **3-11（本件）**: 決済完了で `work_requests.status` が `contracted` → `paid` に更新されていない可能性（未対応）
-4. **auto-approve cron の並行契約判定バグ**: `/api/cron/auto-approve/route.ts` で、契約が1件自動承認されるたびに親の `work_requests.status` を無条件で `completed` に更新している。並行契約の場合、他のクリエイターがまだ作業中でも親が `completed` になってしまう。手動承認側は今日 `/api/requests/[id]/complete` で並行契約を正しく判定するよう修正したが、auto-approve 側は未修正。優先度リストの 12 番でまとめて対応予定。
+3. **3-11（本件）**: 決済完了で `work_requests.status` が `contracted` → `paid` に更新されていない可能性 → ✅ **対応完了（2026-04-14）**: Webhook は問題なし、過去データ6件を修正
+4. **auto-approve cron の並行契約判定バグ**: ✅ **対応完了（2026-04-14）**: 納品自動承認・キャンセル自動承認の両方を「全契約 completed/cancelled のときのみ親を更新」に修正
 
 これらは全て「status の遷移管理が手動で散在している」ことが根本原因とも言える。将来的には status 遷移を DB トリガーまたは専用関数に集約するリファクタが望ましい。
+
+**対応完了（2026-04-14）**:
+
+調査結果:
+- Stripe Webhook（`app/api/webhooks/stripe/route.ts`）は既に正しく動作しており、`work_contracts` 更新後に `work_requests` も `paid` に更新するロジックがある（L189-204）
+- 昨日の Webhook 修正（P0 #2）で、`work_requests` 更新失敗時に 500 を返すよう既に対策済み
+- つまり今後の決済については問題なし
+- 過去データに残っていた `status='contracted'` のレコードは、修正前の旧 webhook の取りこぼしか、テストデータが webhook を経由していなかったか、のいずれか
+
+→ Webhook コード自体の修正は不要。過去データを修正することで対応完了。
+
+#### 過去データ修正（2026-04-14）
+
+不整合の調査結果:
+
+- **パターン1（contracted のまま、全契約は完了済）**: 5件
+  - fdsfsafsda（`5526d43a-65df-485c-a8da-29a79b26000a`）— 並行契約2件
+  - いぬうう（`37569aeb-2fef-4000-bf65-3d37d7667ebd`）
+  - ｓｓｓｓｓｓｓ（`d4ad5dd5-07e6-4082-81d8-601954c61bd5`）
+  - 44（`b4123b3b-bf35-4565-a685-49535276386a`）
+  - fwef（`2755d57e-f849-49f7-8210-10082cee6ebf`）
+  - すべて契約が completed まで進んでいたので、`status='completed'` に直接更新（2段階遷移を1回でスキップ）
+  - `paid_at` と `completed_at` も契約のタイムスタンプから補完
+
+- **パターン2（paid のまま、全契約は completed）**: 1件
+  - ああああああああああ（`6e7ed0b9-1af7-464a-9d27-fc3b136c3abb`）
+  - `contract.completed_at` と一致する `completed_at` で更新
+
+修正後、両方の調査SQLで0件であることを確認済み。
+
+#### auto-approve cron バグ修正（2026-04-14）
+
+ファイル: `app/api/cron/auto-approve/route.ts`
+
+**修正1: 納品自動承認の並行契約バグ**（L174-199）
+- 修正前: 1契約が completed になるたびに無条件で親 `work_requests` を completed にしていた
+- 修正後: 全契約が completed のときのみ親を completed に更新
+- 判定式: `contracts.length > 0 && contracts.every(c => c.status === 'completed')`
+- `/api/requests/[id]/complete` と同じ条件
+
+**修正2: キャンセル自動承認の並行契約バグ**（L281-304）
+- 修正前: 1契約が cancelled になるたびに無条件で親 `work_requests` を cancelled にしていた
+- 修正後: 全契約が cancelled のときのみ親を cancelled に更新
+- 判定式: `contracts.length > 0 && contracts.every(c => c.status === 'cancelled')`
+- 上記の completed 判定と同じパターン
 
 ### 3-12. reviews テーブル UNIQUE 制約の業務仕様との矛盾
 
@@ -536,13 +644,13 @@ WHERE status = 'processing'
 - doujinworks.jp 内に独自のフォームを実装する必要なし
 
 P1 対応状況:
-- #6 エラー監視サービス導入: 未着手
+- #6 エラー監視サービス導入: 別タスク（本番運用後）
 - #7 APIルートへのレート制限追加: ✅ 部分完了（主要4ルート、残りは別タスク）
 - #8 二重決済防止: ✅ 完了
 - #9 Webhook 部分失敗対策: ✅ 完了（P0 #2 と同時対応済み）
-- #10 管理画面の返金TODO実装: 未着手
+- #10 管理画面の返金TODO実装: 別タスク（Stripe審査後）
 - #11 Cron処理のトランザクション化: 未着手
-- #12 status遷移バグ修正: 未着手
+- #12 status遷移バグ修正: ✅ 完了（2026-04-14、Webhook 問題なし、cron バグ修正、過去データ6件修正）
 - #13 Edge Functions recipient_id バグ: 未着手
 - #14 お問い合わせページ作成: ✅ 完了（外部フォーム利用）
 
@@ -584,11 +692,18 @@ P1 対応状況:
 ## 優先度別アクションリスト
 
 ### 致命的（運用開始前に必須）
-1. **全APIルートに認証チェックを追加** — 特に `refund`, `create-checkout-session`, `delete-portfolio`, `get-email-by-username`
+1. ~~**全APIルートに認証チェックを追加**~~ ✅ 部分完了（2026-04-14、主要6ルート: refund/create-checkout-session/delete-portfolio/posts-images/upload-posts/generate-receipt + drafts系は既存実装済み。残り7ルートは別タスク）
 2. ~~**Stripe Webhook の冪等性対策** — event.id の重複チェックテーブル追加~~ ✅ 完了（2026-04-13、`stripe_events` テーブル + Webhook ハンドラ書き換え + 既存バグ修正）
 3. ~~**返金APIのステータス事前チェック** — 返金済み契約への再返金を防止~~ ✅ 完了（2026-04-13、`/api/refund` 修正に含む。`refund_id` 事前チェック + DB更新エラーハンドリング）
 4. **管理画面のサーバーサイド認証** — middleware またはサーバーコンポーネントでの管理者チェック
 5. **ビルドエラー修正** — tsconfig.json の exclude に supabase/functions を追加
+
+### 致命的 完了状況（2026-04-14 時点）
+- #1 全APIルート認証チェック: ✅ 部分完了（6/13ルート、残り7は別タスク）
+- #2 Stripe Webhook 冪等性: ✅ 完了
+- #3 返金APIステータス事前チェック: ✅ 完了
+- #4 管理画面のサーバーサイド認証: ✅ 完了
+- #5 ビルドエラー修正: ✅ 完了
 
 ### 高（早期対応推奨）
 6. **エラー監視サービス導入**（Sentry等）
@@ -597,7 +712,7 @@ P1 対応状況:
 9. **Webhook の部分失敗対策** — work_requests更新失敗時に200を返さない
 10. **管理画面の返金TODO実装** — `app/admin/requests/page.tsx:217`
 11. **Cron処理のトランザクション化・排他制御**
-12. **status 遷移バグの調査と修正** — contracted → paid の遷移漏れ調査（3-11）、過去データ修正SQL、auto-approve の並行契約バグ修正
+12. ~~**status 遷移バグの調査と修正**~~ ✅ 完了（2026-04-14、Webhook は問題なし、cron バグ修正、過去データ6件修正）
 13. **Edge Functions の recipient_id カラム名バグ修正** — 3-14、通知作成 INSERT が silent fail している可能性
 14. ~~**お問い合わせページの作成** — Footerのリンク切れ修正~~ ✅ 完了（2026-04-14、外部フォーム利用方針）
 

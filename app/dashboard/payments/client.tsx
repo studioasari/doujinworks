@@ -32,7 +32,7 @@ type MonthlyPayment = {
 }
 
 type ReceiptEditData = {
-  requestId: string
+  contractId: string
   addressee: string
   purpose: string
   isFirstTime: boolean
@@ -182,12 +182,12 @@ export default function PaymentsClient() {
     const { data: existingMetadata } = await supabase
       .from('receipt_metadata')
       .select('*')
-      .eq('request_id', contract.work_request_id)
+      .eq('contract_id', contract.id)
       .single()
 
     if (existingMetadata) {
       setEditingReceipt({
-        requestId: contract.work_request_id,
+        contractId: contract.id,
         addressee: existingMetadata.addressee,
         purpose: existingMetadata.purpose,
         isFirstTime: false
@@ -209,13 +209,13 @@ export default function PaymentsClient() {
       }
 
       setEditingReceipt({
-        requestId: contract.work_request_id,
+        contractId: contract.id,
         addressee: defaultAddressee,
         purpose: contract.work_request.title,
         isFirstTime: true
       })
     }
-    
+
     setShowEditModal(true)
   }
 
@@ -246,7 +246,7 @@ export default function PaymentsClient() {
     try {
       setGeneratingPdf(true)
       
-      const contract = paidContracts.find(c => c.work_request_id === editingReceipt.requestId)
+      const contract = paidContracts.find(c => c.id === editingReceipt.contractId)
       if (!contract) {
         alert('契約情報が見つかりません')
         return
@@ -256,7 +256,8 @@ export default function PaymentsClient() {
         const { error: saveError } = await supabase
           .from('receipt_metadata')
           .insert({
-            request_id: editingReceipt.requestId,
+            contract_id: editingReceipt.contractId,
+            request_id: contract.work_request_id,
             addressee: editingReceipt.addressee,
             purpose: editingReceipt.purpose
           })
@@ -274,13 +275,9 @@ export default function PaymentsClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          requestId: editingReceipt.requestId,
+          contractId: editingReceipt.contractId,
           title: editingReceipt.purpose,
           addressee: editingReceipt.addressee,
-          amount: contract.final_price,
-          paidAt: contract.paid_at,
-          requesterId: currentProfileId,
-          creatorId: contract.contractor.id
         }),
       })
 
@@ -681,7 +678,7 @@ export default function PaymentsClient() {
               <div className="form-group">
                 <label className="form-label">金額（変更不可）</label>
                 <div className={styles.formAmount}>
-                  {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                  {paidContracts.find(c => c.id === editingReceipt.contractId)?.final_price.toLocaleString()}円
                 </div>
               </div>
             </div>
@@ -733,7 +730,7 @@ export default function PaymentsClient() {
                 <div className={styles.confirmItem}>
                   <div className={styles.confirmLabel}>金額</div>
                   <div className={`${styles.confirmValue} ${styles.large}`}>
-                    {paidContracts.find(c => c.work_request_id === editingReceipt.requestId)?.final_price.toLocaleString()}円
+                    {paidContracts.find(c => c.id === editingReceipt.contractId)?.final_price.toLocaleString()}円
                   </div>
                 </div>
               </div>

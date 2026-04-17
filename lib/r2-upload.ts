@@ -10,6 +10,16 @@ export const r2PortfolioClient = new S3Client({
   }
 })
 
+// 納品物用R2クライアント（R2_BUCKET_DELIVERIES を使う）
+export const r2DeliveriesClient = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!
+  }
+})
+
 /**
  * R2にアップロードするための署名付きURLを取得
  */

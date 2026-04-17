@@ -378,6 +378,10 @@
   color: var(--accent-primary);
 }
 
+.step.done.active .stepIcon {
+  color: white;
+}
+
 .stepLabel {
   font-size: var(--text-xs);
   font-weight: 500;
@@ -559,6 +563,257 @@
 .deliveryActions {
   display: flex;
   gap: var(--space-3);
+}
+
+/* ============================================
+   納品ファイル ドロップゾーン
+   ============================================ */
+
+.fileDropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  background: var(--bg-sunken);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.fileDropZone:hover,
+.fileDropZone.dragging {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.fileDropZone.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fileDropZoneIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  font-size: var(--text-xl);
+}
+
+.fileDropZoneText {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.fileDropZoneHint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ============================================
+   納品ファイル アップロード一覧
+   ============================================ */
+
+.pendingFileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pendingFileItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.pendingFileIcon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.pendingFileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.pendingFileName {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pendingFileMeta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.pendingFileProgress {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-sunken);
+  border-radius: 2px;
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+
+.pendingFileProgressBar {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.pendingFileStatus {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.pendingFileStatus.done {
+  color: var(--status-success);
+}
+
+.pendingFileStatus.error {
+  color: var(--status-error);
+}
+
+.pendingFileStatus.uploading {
+  color: var(--accent-primary);
+}
+
+.pendingFileRemove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.pendingFileRemove:hover {
+  background: var(--bg-sunken);
+  color: var(--status-error);
+}
+
+/* ============================================
+   納品ファイル 一覧（納品履歴内）
+   ============================================ */
+
+.deliveryFileList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.deliveryFileItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.deliveryFileIcon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.deliveryFileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.deliveryFileName {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deliveryFileMeta {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.deliveryFileActions {
+  flex-shrink: 0;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.deliveryFileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deliveryFileBtn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.deliveryFileBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deliveryFileBtn.danger:hover:not(:disabled) {
+  border-color: var(--status-error);
+  color: var(--status-error);
 }
 
 /* ============================================

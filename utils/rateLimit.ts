@@ -218,6 +218,46 @@ export const requestsCompleteLimiter = new Ratelimit({
 })
 
 // ========================================
+// 納品ファイルアップロード
+// ========================================
+
+// /api/upload-delivery 用: 1分20件（1納品あたり最大10ファイル、
+// 2セッション分の余裕を持たせる）
+export const deliveryUploadLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:delivery-upload',
+})
+
+// /api/deliveries/create 用: 1分5件（納品確定は稀、
+// DB書き込みと通知発火を伴うのでアップロードより厳しく）
+export const deliveryCreateLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:delivery-create',
+})
+
+// /api/delivery-files/download 用: 1分60件（一覧で複数ファイル分を
+// まとめて取得する場合を想定、緩め）
+export const deliveryDownloadLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(60, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:delivery-download',
+})
+
+// /api/delivery-files/delete 用: 1分10件（削除は稀、
+// 1納品あたり最大10ファイルなので十分）
+export const deliveryDeleteLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:delivery-delete',
+})
+
+// ========================================
 // ヘルパー関数
 // ========================================
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/utils/supabase/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import fs from 'fs'
@@ -10,28 +11,28 @@ const execPromise = promisify(exec)
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { requestId, title, addressee, amount, paidAt, requesterId, creatorId } = body
+    // ステップ1: ログイン確認
+    const supabaseAuth = await createServerClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
 
-    if (!requestId || !title || !amount || !paidAt || !requesterId || !creatorId) {
-      console.error('Missing fields:', { requestId, title, amount, paidAt, requesterId, creatorId })
+    if (!user) {
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { contractId, title, addressee } = body
+
+    // バリデーション: クライアントから受け取るのは contractId, title, addressee の3つのみ
+    // requesterId/creatorId/amount/paidAt はサーバー側で contract から取得する（改ざん防止）
+    if (typeof contractId !== 'string' || contractId.length === 0
+        || typeof title !== 'string' || title.length === 0) {
       return NextResponse.json(
-        { 
-          error: 'Missing required fields',
-          missing: {
-            requestId: !requestId,
-            title: !title,
-            amount: !amount,
-            paidAt: !paidAt,
-            requesterId: !requesterId,
-            creatorId: !creatorId
-          }
-        },
+        { error: 'リクエストが不正です' },
         { status: 400 }
       )
     }
 
-    if (!addressee || addressee.trim() === '') {
+    if (typeof addressee !== 'string' || addressee.trim() === '') {
       console.error('Addressee is empty')
       return NextResponse.json(
         { error: 'Addressee is required' },
@@ -60,29 +61,98 @@ export async function POST(request: Request) {
       supabaseKey
     )
 
+    // ステップ2: profiles.id を取得（auth uid → profiles.id 変換）
+    const { data: myProfile, error: myProfileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (myProfileError || !myProfile) {
+      return NextResponse.json(
+        { error: 'プロフィールが見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    // ステップ3: 契約を取得（必要な情報を全部 JOIN）
+    const { data: contract, error: contractError } = await supabase
+      .from('work_contracts')
+      .select(`
+        id,
+        contractor_id,
+        final_price,
+        paid_at,
+        work_request_id,
+        work_request:work_requests!work_request_id (
+          id,
+          requester_id
+        )
+      `)
+      .eq('id', contractId)
+      .single()
+
+    if (contractError || !contract) {
+      return NextResponse.json(
+        { error: '契約が見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    // ステップ4: 当事者チェック（依頼者本人のみ）
+    // 領収書は依頼者（お金を払った側）が発行する
+    const workRequestRaw = contract.work_request as
+      | { id: string; requester_id: string }
+      | { id: string; requester_id: string }[]
+      | null
+    const requesterIdFromDb = Array.isArray(workRequestRaw)
+      ? workRequestRaw[0]?.requester_id
+      : workRequestRaw?.requester_id
+
+    if (!requesterIdFromDb || requesterIdFromDb !== myProfile.id) {
+      return NextResponse.json(
+        { error: 'この操作を行う権限がありません' },
+        { status: 403 }
+      )
+    }
+
+    // ステップ5: 仮払い済みチェック
+    if (!contract.paid_at) {
+      return NextResponse.json(
+        { error: 'この契約はまだ仮払いされていません' },
+        { status: 400 }
+      )
+    }
+
+    // ステップ6: サーバー側で確定値を組み立てる（クライアント改ざん不可）
+    const serverRequesterId = requesterIdFromDb
+    const serverCreatorId = contract.contractor_id
+    const serverAmount = contract.final_price
+    const serverPaidAt = contract.paid_at
+
     // Requester（宛名）のビジネス情報取得
     const { data: requesterBusiness, error: requesterError } = await supabase
       .from('business_profiles')
       .select('*')
-      .eq('profile_id', requesterId)
+      .eq('profile_id', serverRequesterId)
       .single()
 
     if (requesterError) {
       console.error('Requester business profile error:', requesterError)
       return NextResponse.json(
-        { 
+        {
           error: 'Requester business profile not found',
           details: requesterError.message,
-          requesterId
+          requesterId: serverRequesterId
         },
         { status: 404 }
       )
     }
 
     if (!requesterBusiness) {
-      console.error('Requester business is null for requesterId:', requesterId)
+      console.error('Requester business is null for requesterId:', serverRequesterId)
       return NextResponse.json(
-        { error: 'Requester business profile not found', requesterId },
+        { error: 'Requester business profile not found', requesterId: serverRequesterId },
         { status: 404 }
       )
     }
@@ -91,25 +161,25 @@ export async function POST(request: Request) {
     const { data: creatorBusiness, error: creatorError } = await supabase
       .from('business_profiles')
       .select('*')
-      .eq('profile_id', creatorId)
+      .eq('profile_id', serverCreatorId)
       .single()
 
     if (creatorError) {
       console.error('Creator business profile error:', creatorError)
       return NextResponse.json(
-        { 
+        {
           error: 'Creator business profile not found',
           details: creatorError.message,
-          creatorId
+          creatorId: serverCreatorId
         },
         { status: 404 }
       )
     }
 
     if (!creatorBusiness) {
-      console.error('Creator business is null for creatorId:', creatorId)
+      console.error('Creator business is null for creatorId:', serverCreatorId)
       return NextResponse.json(
-        { error: 'Creator business profile not found', creatorId },
+        { error: 'Creator business profile not found', creatorId: serverCreatorId },
         { status: 404 }
       )
     }
@@ -135,13 +205,17 @@ export async function POST(request: Request) {
     }
 
     // PDFに渡すデータを準備
+    // Python スクリプトの requestId フィールドには contractId を入れる:
+    //   - 領収書番号生成（DW-{requestId[:8]}）が contractId ベースになる
+    //   - PDF 内の「取引ID」表示も contractId ベースになる
+    //   並行契約でも領収書番号が衝突しなくなる
     const receiptData = {
-      requestId,
+      requestId: contractId,
       title,
       addressee,
       requester_account_type: requesterBusiness.account_type,
-      amount,
-      paidAt,
+      amount: serverAmount,
+      paidAt: serverPaidAt,
       creator: {
         last_name: creatorBusiness.last_name,
         first_name: creatorBusiness.first_name,
@@ -539,7 +613,7 @@ except Exception as e:
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="receipt_' + requestId + '.pdf"',
+        'Content-Disposition': 'attachment; filename="receipt_' + contractId + '.pdf"',
       },
     })
   } catch (error) {

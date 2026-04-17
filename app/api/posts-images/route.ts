@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { createClient } from '@/utils/supabase/server'
 
 const r2Client = new S3Client({
   region: 'auto',
@@ -10,9 +11,38 @@ const r2Client = new S3Client({
   }
 })
 
+/**
+ * 管理者チェック（API ルート用）
+ * app/admin/layout.tsx と同じロジックを API 用に書き換えたもの
+ */
+async function requireAdmin(): Promise<NextResponse | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!profile?.is_admin) {
+    return NextResponse.json({ error: 'この操作を行う権限がありません' }, { status: 403 })
+  }
+
+  return null
+}
+
 // 画像一覧取得
 export async function GET() {
   try {
+    // 管理者チェック
+    const authError = await requireAdmin()
+    if (authError) return authError
+
     const bucketName = process.env.R2_BUCKET_POSTS
     
     if (!bucketName) {
@@ -59,6 +89,10 @@ export async function GET() {
 // 画像削除
 export async function DELETE(req: Request) {
   try {
+    // 管理者チェック
+    const authError = await requireAdmin()
+    if (authError) return authError
+
     const { key } = await req.json()
     
     if (!key) {
