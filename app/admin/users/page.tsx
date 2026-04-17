@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '../../../utils/supabase/client'
 
 type Profile = {
@@ -218,7 +219,7 @@ export default function AdminUsers() {
                       <div className="admin-user-cell">
                         <div className="admin-user-avatar">
                           {user.avatar_url ? (
-                            <img src={user.avatar_url} alt="" />
+                            <Image src={user.avatar_url} alt="" width={40} height={40} />
                           ) : (
                             <i className="fas fa-user"></i>
                           )}

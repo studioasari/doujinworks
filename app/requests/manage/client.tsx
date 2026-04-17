@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
+import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
@@ -400,7 +401,7 @@ export default function DashboardPage() {
                             <div className={styles.cardUser}>
                               <div className={styles.avatar}>
                                 {request.selected_applicant.avatar_url ? (
-                                  <img src={request.selected_applicant.avatar_url} alt="" />
+                                  <Image src={request.selected_applicant.avatar_url} alt="" width={28} height={28} />
                                 ) : (
                                   <span>{request.selected_applicant.display_name?.charAt(0) || '?'}</span>
                                 )}
@@ -502,7 +503,7 @@ export default function DashboardPage() {
                             <div className={styles.cardUser}>
                               <div className={styles.avatar}>
                                 {application.work_request.requester.avatar_url ? (
-                                  <img src={application.work_request.requester.avatar_url} alt="" />
+                                  <Image src={application.work_request.requester.avatar_url} alt="" width={28} height={28} />
                                 ) : (
                                   <span>{application.work_request.requester.display_name?.charAt(0) || '?'}</span>
                                 )}

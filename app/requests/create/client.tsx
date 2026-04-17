@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
@@ -594,7 +595,7 @@ function CreateRequestContent() {
             <div className={styles.recipientCard}>
               <div className={styles.recipientAvatar}>
                 {recipientProfile.avatar_url ? (
-                  <img src={recipientProfile.avatar_url} alt={recipientProfile.display_name || ''} />
+                  <Image src={recipientProfile.avatar_url} alt={recipientProfile.display_name || ''} width={48} height={48} />
                 ) : (
                   recipientProfile.display_name?.charAt(0) || '?'
                 )}

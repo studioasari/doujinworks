@@ -751,10 +751,37 @@ P1 対応状況:
 - #8 二重決済防止: ✅ 完了
 - #9 Webhook 部分失敗対策: ✅ 完了（P0 #2 と同時対応済み）
 - #10 管理画面の返金TODO実装: 別タスク（Stripe審査後）
-- #11 Cron処理のトランザクション化: 未着手
+- #11 Cron処理のトランザクション化: ✅ 完了（2026-04-17、楽観的ステータスチェック方式。詳細は P1 #11 セクション参照）
 - #12 status遷移バグ修正: ✅ 完了（2026-04-14、Webhook 問題なし、cron バグ修正、過去データ6件修正）
 - #13 Edge Functions recipient_id バグ: ✅ 完了（2026-04-17、Edge Functions 廃止。全機能は既存 Next.js API が担当）
 - #14 お問い合わせページ作成: ✅ 完了（外部フォーム利用）
+
+### P1 #11 Cron 処理のトランザクション化 対応完了（2026-04-17）
+
+方針: 案C（楽観的ステータスチェック）を採用。PL/pgSQL トランザクションや手動ロールバックではなく、各 UPDATE に現在ステータスの WHERE 条件を追加して冪等性と二重実行防止を実現。
+
+変更内容（`app/api/cron/auto-approve/route.ts`、+84行 -25行）:
+
+**セクション1（納品警告）:**
+- `work_contracts` UPDATE に `.is('auto_approval_warning_sent_at', null)` 追加
+- 既に警告済みならスキップ
+
+**セクション2（納品自動承認）:**
+- `work_deliveries` UPDATE に `.eq('status', 'pending')` 追加
+- `work_contracts` UPDATE に `.eq('status', 'delivered')` 追加
+- `work_requests` UPDATE に `.neq('status', 'completed')` 追加
+- 各ステップで `.select('id')` + 0行更新 = スキップ
+
+**セクション3（キャンセル自動承認）:**
+- `cancellation_requests` UPDATE に `.eq('status', 'pending')` 追加
+- `work_contracts` UPDATE に `.neq('status', 'cancelled')` 追加
+- `work_requests` UPDATE に `.neq('status', 'cancelled')` 追加
+
+効果:
+- 二重トリガー対策: 2回目の実行はステータスが既に変わっているので全スキップ
+- 冪等性: 同じ cron を何回叩いても同じ最終状態
+- 既存ロジック維持: 処理の順序・構造は変更なし、WHERE 句の追加のみ
+- ログ追跡: スキップ時に `[auto-approve] スキップ:` ログを残すので二重実行の検知が可能
 
 ---
 
@@ -813,7 +840,7 @@ P1 対応状況:
 8. ~~**二重決済防止** — Checkout Session作成前の既存セッション確認~~ ✅ 完了（2026-04-14、`checkout_session_id` DB保存 + 既存セッション再利用）
 9. **Webhook の部分失敗対策** — work_requests更新失敗時に200を返さない
 10. **管理画面の返金TODO実装** — `app/admin/requests/page.tsx:217`
-11. **Cron処理のトランザクション化・排他制御**
+11. ~~**Cron処理のトランザクション化・排他制御**~~ ✅ 完了（2026-04-17、楽観的ステータスチェック方式。各 UPDATE に WHERE 条件追加で冪等性確保）
 12. ~~**status 遷移バグの調査と修正**~~ ✅ 完了（2026-04-14、Webhook は問題なし、cron バグ修正、過去データ6件修正）
 13. ~~**Edge Functions の recipient_id カラム名バグ修正** — 3-14、通知作成 INSERT が silent fail している可能性~~ ✅ 完了（2026-04-17、Edge Functions 廃止。詳細は 3-14 参照）
 14. ~~**お問い合わせページの作成** — Footerのリンク切れ修正~~ ✅ 完了（2026-04-14、外部フォーム利用方針）

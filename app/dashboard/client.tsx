@@ -282,7 +282,7 @@ export default function DashboardClient() {
           <p className={styles.welcomeText}>お仕事機能を使ってみよう</p>
         </div>
         <div className={styles.emptyCenter}>
-          <img src="/illustrations/dashboard-upgrade.png" alt="" className={styles.emptyImage} />
+          <Image src="/illustrations/dashboard-upgrade.png" alt="" width={500} height={500} className={styles.emptyImage} />
           <p className={styles.emptyDescription}>
             依頼を受けたり、出したり。<br />
             ビジネスアカウントで始めよう。
@@ -303,7 +303,7 @@ export default function DashboardClient() {
           <p className={styles.welcomeText}>新しいお仕事を始めましょう</p>
         </div>
         <div className={styles.emptyCenter}>
-          <img src="/illustrations/dashboard-empty.png" alt="" className={styles.emptyImage} />
+          <Image src="/illustrations/dashboard-empty.png" alt="" width={500} height={500} className={styles.emptyImage} />
           <div className={styles.emptyActions}>
             <Link href="/requests" className={styles.secondaryButton}>依頼を探す</Link>
             <Link href="/requests/create" className={styles.primaryButton}>依頼を作成</Link>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -466,11 +467,15 @@ export default function AdminEditPostPage() {
             </label>
             {formData.thumbnail_url ? (
               <div>
-                <img
-                  src={formData.thumbnail_url}
-                  alt="thumbnail"
-                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '8px', marginBottom: '8px' }}
-                />
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+                  <Image
+                    src={formData.thumbnail_url}
+                    alt="thumbnail"
+                    fill
+                    sizes="300px"
+                    style={{ objectFit: 'cover' }}
+                  />
+                </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={() => openImagePicker('thumbnail')} className="admin-action-btn secondary" style={{ flex: 1, padding: '6px', fontSize: '0.75rem' }}>
                     変更

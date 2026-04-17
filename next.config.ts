@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'deliveries.doujinworks.jp',
       },
+      // R2 - Posts（ブログ記事画像用）
+      {
+        protocol: 'https',
+        hostname: 'posts.doujinworks.jp',
+      },
     ],
   },
   async redirects() {

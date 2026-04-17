@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -317,10 +318,11 @@ export default function AdminPostsPage() {
                     overflow: 'hidden',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    position: 'relative'
                   }}>
                     {post.thumbnail_url ? (
-                      <img src={post.thumbnail_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src={post.thumbnail_url} alt="" fill sizes="64px" style={{ objectFit: 'cover' }} />
                     ) : (
                       <i className="fas fa-image" style={{ color: '#d1d5db', fontSize: '20px' }}></i>
                     )}

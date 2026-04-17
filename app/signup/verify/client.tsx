@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, useTransition } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { resendEmailAction } from '@/app/actions/auth'
 import styles from './page.module.css'
 
@@ -124,7 +125,7 @@ export default function VerifyClient() {
       <div className={styles.container}>
         {/* 左側：ロゴ */}
         <div className={styles.logoArea}>
-          <img src="/logotype.png" alt="同人ワークス" className={styles.logo} />
+          <Image src="/logotype.png" alt="同人ワークス" width={720} height={110} className={styles.logo} priority />
         </div>
 
         {/* 右側：フォーム */}

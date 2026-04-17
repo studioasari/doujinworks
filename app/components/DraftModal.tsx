@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import type { Draft } from '@/app/hooks/useDraft'
 import styles from './DraftModal.module.css'
 
@@ -115,7 +116,7 @@ export default function DraftModal({
                         {/* サムネイル */}
                         {draft.image_urls && draft.image_urls.length > 0 && (
                           <div className={styles.thumb} onClick={() => handleLoadDraft(draft)}>
-                            <img src={draft.image_urls[0]} alt="" />
+                            <Image src={draft.image_urls[0]} alt="" width={56} height={56} />
                           </div>
                         )}
                         <div className={styles.content} onClick={() => handleLoadDraft(draft)}>

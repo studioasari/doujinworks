@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 type ImageItem = {
   key: string
@@ -163,15 +164,12 @@ export default function ImagePickerModal({ isOpen, onClose, onSelect, mode }: Im
                     e.currentTarget.style.transform = 'scale(1)'
                   }}
                 >
-                  <img
+                  <Image
                     src={image.url}
                     alt=""
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                    loading="lazy"
+                    fill
+                    sizes="120px"
+                    style={{ objectFit: 'cover' }}
                   />
                   <div style={{
                     position: 'absolute',

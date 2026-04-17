@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 type ImageItem = {
@@ -243,15 +244,12 @@ export default function AdminPostImagesPage() {
                     position: 'relative',
                     overflow: 'hidden'
                   }}>
-                    <img
+                    <Image
                       src={image.url}
                       alt=""
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 768px) 33vw, 200px"
+                      style={{ objectFit: 'cover' }}
                     />
                     {/* チェックマーク */}
                     <div style={{

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
+import Image from 'next/image'
 import { WorkGridSkeleton } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
@@ -271,9 +272,11 @@ export default function PortfolioManageClient() {
                 {/* 画像 */}
                 <Link href={`/portfolio/${item.id}`} className={styles.cardImageLink}>
                   <div className={styles.cardImage}>
-                    <img
+                    <Image
                       src={item.thumbnail_url || item.image_url}
                       alt={item.title}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
                     />
                     {/* 公開状態バッジ */}
                     <span className={`${styles.statusBadge} ${item.is_public ? styles.public : styles.private}`}>

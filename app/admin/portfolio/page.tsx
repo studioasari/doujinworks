@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '../../../utils/supabase/client'
 
 type PortfolioItem = {
@@ -331,7 +332,7 @@ export default function AdminWorks() {
                       <div className="admin-work-cell">
                         <div className="admin-work-thumbnail">
                           {work.thumbnail_url || work.image_url ? (
-                            <img src={work.thumbnail_url || work.image_url || ''} alt="" />
+                            <Image src={work.thumbnail_url || work.image_url || ''} alt="" width={60} height={60} />
                           ) : (
                             <i className="fas fa-image"></i>
                           )}

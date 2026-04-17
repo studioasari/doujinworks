@@ -37,10 +37,13 @@ export default function HeroSection() {
           理想のクリエイターがきっと見つかる
         </p>
         
-        <img 
-          src="/logotype_white.png" 
+        <Image
+          src="/logotype_white.png"
           alt="同人ワークス"
+          width={965}
+          height={150}
           className={styles.logo}
+          priority
         />
 
         {/* Search Box */}

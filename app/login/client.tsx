@@ -4,6 +4,7 @@ import { Suspense, useState, useTransition, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { loginAction, resendEmailAction } from '@/app/actions/auth'
+import Image from 'next/image'
 import { createClient } from '../../utils/supabase/client'
 import styles from './page.module.css'
 
@@ -233,7 +234,7 @@ function LoginForm() {
             disabled={isPending}
             className={styles.socialBtn}
           >
-            <img src="/icons/google.svg" alt="Google" />
+            <Image src="/icons/google.svg" alt="Google" width={24} height={24} unoptimized />
             Googleでログイン
           </button>
           <button
@@ -241,7 +242,7 @@ function LoginForm() {
             disabled={isPending}
             className={styles.socialBtn}
           >
-            <img src="/icons/x.svg" alt="X" />
+            <Image src="/icons/x.svg" alt="X" width={24} height={24} unoptimized />
             Xでログイン
           </button>
           {/* <button
@@ -270,7 +271,7 @@ export default function LoginClient() {
       <div className={styles.container}>
         {/* 左側：ロゴ */}
         <div className={styles.logoArea}>
-          <img src="/logotype.png" alt="同人ワークス" className={styles.logo} />
+          <Image src="/logotype.png" alt="同人ワークス" width={720} height={110} className={styles.logo} priority />
         </div>
 
         {/* 右側：フォーム */}

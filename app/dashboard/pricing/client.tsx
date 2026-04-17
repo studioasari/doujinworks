@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/utils/supabase'
+import Image from 'next/image'
 import { PricingPlan, CATEGORIES } from './_components/types'
 import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
@@ -191,9 +192,11 @@ export default function PricingListClient() {
                     className={styles.planCard}
                     onClick={() => router.push(`/pricing/${plan.id}`)}
                   >
-                    <img
+                    <Image
                       src={plan.thumbnail_url}
                       alt={plan.plan_name}
+                      width={120}
+                      height={80}
                       className={styles.planThumbnail}
                     />
                     <div className={styles.planContent}>

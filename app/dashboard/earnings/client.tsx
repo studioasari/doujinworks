@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
+import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
@@ -400,7 +401,7 @@ export default function EarningsClient() {
                                 <div className={styles.workMeta}>
                                   <div className="avatar avatar-xs">
                                     {payment.work_request?.requester?.avatar_url ? (
-                                      <img src={payment.work_request.requester.avatar_url} alt="" />
+                                      <Image src={payment.work_request.requester.avatar_url} alt="" width={24} height={24} />
                                     ) : (
                                       <i className="fa-solid fa-user"></i>
                                     )}
@@ -504,7 +505,7 @@ export default function EarningsClient() {
                                 <div className={styles.workMeta}>
                                   <div className="avatar avatar-xs">
                                     {payment.work_request?.requester?.avatar_url ? (
-                                      <img src={payment.work_request.requester.avatar_url} alt="" />
+                                      <Image src={payment.work_request.requester.avatar_url} alt="" width={24} height={24} />
                                     ) : (
                                       <i className="fa-solid fa-user"></i>
                                     )}

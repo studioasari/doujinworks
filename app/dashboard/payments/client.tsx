@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
+import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
 import styles from './page.module.css'
 
@@ -466,7 +467,7 @@ export default function PaymentsClient() {
                         <div className={styles.recentMeta}>
                           <div className="avatar avatar-xs">
                             {contract.contractor.avatar_url ? (
-                              <img src={contract.contractor.avatar_url} alt="" />
+                              <Image src={contract.contractor.avatar_url} alt="" width={24} height={24} />
                             ) : (
                               <i className="fa-solid fa-user"></i>
                             )}
@@ -541,7 +542,7 @@ export default function PaymentsClient() {
                                 <div className={styles.workCreator}>
                                   <div className="avatar avatar-xs">
                                     {contract.contractor.avatar_url ? (
-                                      <img src={contract.contractor.avatar_url} alt="" />
+                                      <Image src={contract.contractor.avatar_url} alt="" width={24} height={24} />
                                     ) : (
                                       <i className="fa-solid fa-user"></i>
                                     )}
@@ -603,7 +604,7 @@ export default function PaymentsClient() {
                       <div className={styles.historyCreator}>
                         <div className="avatar avatar-sm">
                           {contract.contractor.avatar_url ? (
-                            <img src={contract.contractor.avatar_url} alt="" />
+                            <Image src={contract.contractor.avatar_url} alt="" width={32} height={32} />
                           ) : (
                             <i className="fa-solid fa-user"></i>
                           )}

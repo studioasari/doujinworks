@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signupAction } from '@/app/actions/auth'
+import Image from 'next/image'
 import { createClient } from '../../utils/supabase/client'
 import styles from './page.module.css'
 
@@ -142,7 +143,7 @@ export default function SignupClient() {
         <div className={styles.container}>
           {/* 左側：ロゴ */}
           <div className={styles.logoArea}>
-            <img src="/logotype.png" alt="同人ワークス" className={styles.logo} />
+            <Image src="/logotype.png" alt="同人ワークス" width={720} height={110} className={styles.logo} priority />
           </div>
 
           {/* 右側：フォームカード */}
@@ -293,7 +294,7 @@ export default function SignupClient() {
                 disabled={isPending}
                 className={styles.socialBtn}
               >
-                <img src="/icons/google.svg" alt="Google" />
+                <Image src="/icons/google.svg" alt="Google" width={24} height={24} unoptimized />
                 Googleで登録
               </button>
               <button
@@ -301,7 +302,7 @@ export default function SignupClient() {
                 disabled={isPending}
                 className={styles.socialBtn}
               >
-                <img src="/icons/x.svg" alt="X" />
+                <Image src="/icons/x.svg" alt="X" width={24} height={24} unoptimized />
                 Xで登録
               </button>
               {/* <button
