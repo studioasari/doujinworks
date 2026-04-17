@@ -16,7 +16,7 @@ import styles from './AuthRequiredModal.module.css'
  * standalone=true の場合はAuthContextに依存せず単体で表示する（ProtectedContent用）
  */
 export default function AuthRequiredModal({ standalone = false }: { standalone?: boolean }) {
-  const auth = standalone ? null : useAuth()
+  const auth = useAuth()
   const pathname = usePathname()
 
   const isVisible = standalone || auth?.showAuthModal
