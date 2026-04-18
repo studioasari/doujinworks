@@ -18,8 +18,9 @@ type WorkRequest = {
   budget_max: number | null
   deadline: string | null
   category: string
-  status: string
+  recruitment_status: string
   request_type: string
+  contracted_count: number | null
   created_at: string
   requester_id: string
   payment_type: string | null
@@ -125,7 +126,7 @@ export default function RequestList() {
       .from('work_requests')
       .select('*, profiles!work_requests_requester_id_fkey(id, display_name, avatar_url, username)')
       .eq('request_type', 'public')
-      .eq('status', 'open')
+      .eq('recruitment_status', 'open')
       .order('created_at', { ascending: false })
 
     const { data, error } = await query
@@ -397,7 +398,7 @@ export default function RequestList() {
                       <div className={styles.statsRow}>
                         <div className={styles.statItem}>
                           <i className="fas fa-user"></i>
-                          <span>0/{request.number_of_positions || 1}人</span>
+                          <span>{request.contracted_count || 0}/{request.number_of_positions || 1}人</span>
                         </div>
                         <div className={styles.statItem}>
                           <i className="fas fa-clock"></i>

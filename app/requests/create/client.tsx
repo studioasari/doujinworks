@@ -478,7 +478,6 @@ function CreateRequestContent() {
           budget_max: budgetMaxValue,
           deadline: deadline || null,
           category: category,
-          status: 'open',
           request_type: requestType,
           selected_applicant_id: requestType === 'direct' ? recipientProfile!.id : null,
           reference_urls: referenceUrls.filter(url => url.trim()).length > 0 ? referenceUrls.filter(url => url.trim()) : null,

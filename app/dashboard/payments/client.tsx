@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
+import { CONTRACT_STATUS_LABELS } from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type PaidContract = {
@@ -355,15 +356,9 @@ export default function PaymentsClient() {
     return categories[category] || category
   }
 
-  function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = {
-      contracted: '契約済み',
-      paid: '作業中',
-      delivered: '納品済み',
-      completed: '完了',
-      cancelled: 'キャンセル'
-    }
-    return statuses[status] || status
+  function getStatusLabel(status: string): string {
+    const key = status as keyof typeof CONTRACT_STATUS_LABELS
+    return CONTRACT_STATUS_LABELS[key] ?? status
   }
 
   function getStatusBadgeClass(status: string) {

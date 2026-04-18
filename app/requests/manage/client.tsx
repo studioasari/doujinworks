@@ -8,12 +8,19 @@ import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
+import {
+  CONTRACT_STATUS_LABELS,
+  APPLICATION_STATUS_LABELS,
+  getWorkRequestDisplayLabel,
+  getWorkRequestDisplayColorClass,
+} from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type WorkRequest = {
   id: string
   title: string
-  status: string
+  recruitment_status: string
+  progress_status: string
   final_price: number | null
   created_at: string
   deadline: string | null
@@ -30,10 +37,12 @@ type Application = {
   status: string
   created_at: string
   contract_id: string | null
+  contract_status: string | null
   work_request: {
     id: string
     title: string
-    status: string
+    recruitment_status: string
+    progress_status: string
     final_price: number | null
     category: string
     deadline: string | null
@@ -44,20 +53,40 @@ type Application = {
   }
 }
 
+function getCategoryLabel(category: string) {
+  const categories: { [key: string]: string } = {
+    illustration: 'イラスト',
+    manga: 'マンガ',
+    novel: '小説',
+    music: '音楽',
+    voice: 'ボイス',
+    video: '動画',
+    logo: 'ロゴ',
+    design: 'デザイン',
+    other: 'その他'
+  }
+  return categories[category] || category
+}
+
+function formatDate(dateString: string) {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [accountType, setAccountType] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [view, setView] = useState<'requester' | 'creator'>('requester')
-  
+
   // 依頼者ビュー
   const [myRequests, setMyRequests] = useState<WorkRequest[]>([])
   const [requestTab, setRequestTab] = useState<'open' | 'active' | 'completed'>('active')
-  
+
   // クリエイタービュー
   const [myApplications, setMyApplications] = useState<Application[]>([])
-  const [applicationTab, setApplicationTab] = useState<'pending' | 'accepted' | 'completed'>('accepted')
+  const [applicationTab, setApplicationTab] = useState<'accepted' | 'pending' | 'completed' | 'rejected'>('accepted')
 
   useEffect(() => {
     loadData()
@@ -70,7 +99,8 @@ export default function DashboardPage() {
         .select(`
           id,
           title,
-          status,
+          recruitment_status,
+          progress_status,
           final_price,
           created_at,
           deadline,
@@ -90,7 +120,6 @@ export default function DashboardPage() {
           let selected_applicant = undefined
           let contract_id = null
 
-          // 選択された応募者の情報を取得
           if (request.selected_applicant_id) {
             const { data: applicantData } = await supabase
               .from('profiles')
@@ -100,8 +129,7 @@ export default function DashboardPage() {
             selected_applicant = applicantData || undefined
           }
 
-          // 契約IDを取得（open以外のステータスの場合）
-          if (request.status !== 'open') {
+          if (request.progress_status !== 'pending') {
             const { data: contractData } = await supabase
               .from('work_contracts')
               .select('id')
@@ -133,7 +161,7 @@ export default function DashboardPage() {
         (data || []).map(async (app) => {
           const { data: requestData } = await supabase
             .from('work_requests')
-            .select(`id, title, status, final_price, category, deadline, requester_id`)
+            .select(`id, title, recruitment_status, progress_status, final_price, category, deadline, requester_id`)
             .eq('id', app.work_request_id)
             .single()
 
@@ -145,18 +173,19 @@ export default function DashboardPage() {
             .eq('id', requestData.requester_id)
             .single()
 
-          // 採用された場合は契約IDを取得
           let contractId: string | null = null
+          let contractStatus: string | null = null
           if (app.status === 'accepted') {
             const { data: contractData } = await supabase
               .from('work_contracts')
-              .select('id')
+              .select('id, status')
               .eq('work_request_id', app.work_request_id)
               .eq('contractor_id', currentProfileId)
               .single()
 
             if (contractData) {
               contractId = contractData.id
+              contractStatus = contractData.status
             }
           }
 
@@ -165,10 +194,12 @@ export default function DashboardPage() {
             status: app.status,
             created_at: app.created_at,
             contract_id: contractId,
+            contract_status: contractStatus,
             work_request: {
               id: requestData.id,
               title: requestData.title,
-              status: requestData.status,
+              recruitment_status: requestData.recruitment_status,
+              progress_status: requestData.progress_status,
               final_price: requestData.final_price,
               category: requestData.category,
               deadline: requestData.deadline,
@@ -206,78 +237,75 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = {
-      open: '募集中',
-      closed: '募集終了',
-      contracted: '仮払い待ち',
-      paid: '作業中',
-      delivered: '納品済み',
-      completed: '完了',
-      cancelled: 'キャンセル',
-      pending: '応募中',
-      accepted: '採用',
-      rejected: '不採用'
-    }
-    return statuses[status] || status
-  }
-
-  function getCategoryLabel(category: string) {
-    const categories: { [key: string]: string } = {
-      illustration: 'イラスト',
-      manga: 'マンガ',
-      novel: '小説',
-      music: '音楽',
-      voice: 'ボイス',
-      video: '動画',
-      logo: 'ロゴ',
-      design: 'デザイン',
-      other: 'その他'
-    }
-    return categories[category] || category
-  }
-
-  function formatDate(dateString: string) {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
-  }
-
   // 統計情報
   const requestStats = {
-    open: myRequests.filter(r => r.status === 'open').length,
-    active: myRequests.filter(r => ['closed', 'contracted', 'paid', 'delivered'].includes(r.status)).length,
-    completed: myRequests.filter(r => r.status === 'completed').length,
+    open: myRequests.filter(r => r.recruitment_status === 'open').length,
+    active: myRequests.filter(r => r.progress_status === 'active').length,
+    completed: myRequests.filter(r => ['completed', 'cancelled'].includes(r.progress_status) && r.recruitment_status !== 'open').length,
     total: myRequests.length
   }
 
   const applicationStats = {
-    pending: myApplications.filter(a => a.status === 'pending').length,
-    accepted: myApplications.filter(a => a.status === 'accepted' && a.work_request?.status !== 'completed').length,
-    completed: myApplications.filter(a => a.work_request?.status === 'completed').length,
+    pending: myApplications.filter(a =>
+      a.status === 'pending' &&
+      a.work_request?.recruitment_status === 'open' &&
+      ['pending', 'active'].includes(a.work_request?.progress_status)
+    ).length,
+    accepted: myApplications.filter(a =>
+      a.status === 'accepted' &&
+      a.contract_status !== null &&
+      ['contracted', 'paid', 'delivered'].includes(a.contract_status)
+    ).length,
+    completed: myApplications.filter(a =>
+      a.status === 'accepted' &&
+      a.contract_status === 'completed'
+    ).length,
+    rejected: myApplications.filter(a => a.status === 'rejected').length,
     total: myApplications.length
   }
 
   // フィルタリング
   const filteredRequests = myRequests.filter(r => {
-    if (requestTab === 'open') return r.status === 'open'
-    if (requestTab === 'active') return ['closed', 'contracted', 'paid', 'delivered'].includes(r.status)
-    if (requestTab === 'completed') return r.status === 'completed'
+    if (requestTab === 'open') return r.recruitment_status === 'open'
+    if (requestTab === 'active') return r.progress_status === 'active'
+    if (requestTab === 'completed') return ['completed', 'cancelled'].includes(r.progress_status) && r.recruitment_status !== 'open'
     return true
   })
 
   const filteredApplications = myApplications.filter(a => {
-    if (applicationTab === 'pending') return a.status === 'pending'
-    if (applicationTab === 'accepted') return a.status === 'accepted' && a.work_request?.status !== 'completed'
-    if (applicationTab === 'completed') return a.work_request?.status === 'completed'
+    if (applicationTab === 'pending') {
+      return a.status === 'pending' &&
+        a.work_request?.recruitment_status === 'open' &&
+        ['pending', 'active'].includes(a.work_request?.progress_status)
+    }
+    if (applicationTab === 'accepted') {
+      return a.status === 'accepted' &&
+        a.contract_status !== null &&
+        ['contracted', 'paid', 'delivered'].includes(a.contract_status)
+    }
+    if (applicationTab === 'completed') {
+      return a.status === 'accepted' && a.contract_status === 'completed'
+    }
+    if (applicationTab === 'rejected') {
+      return a.status === 'rejected'
+    }
     return true
   })
 
-  // クリエイター用のリンク先を決定
   function getCreatorLink(application: Application) {
     if (application.status === 'accepted' && application.contract_id) {
       return `/requests/${application.work_request?.id}/contracts/${application.contract_id}`
     }
     return `/requests/${application.work_request?.id}`
+  }
+
+  function getCreatorBadgeLabel(application: Application): string {
+    if (application.status === 'accepted' && application.contract_status) {
+      const key = application.contract_status as keyof typeof CONTRACT_STATUS_LABELS
+      return CONTRACT_STATUS_LABELS[key] ?? application.contract_status
+    }
+    const appKey = application.status as keyof typeof APPLICATION_STATUS_LABELS
+    return APPLICATION_STATUS_LABELS[appKey] ?? application.status
   }
 
   return (
@@ -313,7 +341,6 @@ export default function DashboardPage() {
               {/* 依頼者ビュー */}
               {view === 'requester' && (
                 <>
-                  {/* 統計 */}
                   <div className={styles.stats}>
                     <div className={styles.statCard}>
                       <div className={styles.statValue}>{requestStats.total}</div>
@@ -329,7 +356,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* タブ */}
                   <div className={styles.tabs}>
                     <button
                       onClick={() => setRequestTab('active')}
@@ -351,7 +377,6 @@ export default function DashboardPage() {
                     </button>
                   </div>
 
-                  {/* 依頼一覧 */}
                   {filteredRequests.length === 0 ? (
                     <div className={styles.empty}>
                       <i className="fas fa-inbox"></i>
@@ -367,9 +392,9 @@ export default function DashboardPage() {
                         <Link
                           key={request.id}
                           href={
-                            request.status === 'open' 
-                              ? `/requests/${request.id}/manage` 
-                              : request.contract_id 
+                            request.recruitment_status === 'open'
+                              ? `/requests/${request.id}/manage`
+                              : request.contract_id
                                 ? `/requests/${request.id}/contracts/${request.contract_id}`
                                 : `/requests/${request.id}`
                           }
@@ -377,8 +402,8 @@ export default function DashboardPage() {
                         >
                           <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>{request.title}</h3>
-                            <span className={`${styles.statusBadge} ${styles[request.status]}`}>
-                              {getStatusLabel(request.status)}
+                            <span className={`${styles.statusBadge} ${styles[getWorkRequestDisplayColorClass({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })]}`}>
+                              {getWorkRequestDisplayLabel({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })}
                             </span>
                           </div>
 
@@ -419,7 +444,6 @@ export default function DashboardPage() {
               {/* クリエイタービュー */}
               {view === 'creator' && (
                 <>
-                  {/* 統計 */}
                   <div className={styles.stats}>
                     <div className={styles.statCard}>
                       <div className={styles.statValue}>{applicationStats.total}</div>
@@ -427,7 +451,7 @@ export default function DashboardPage() {
                     </div>
                     <div className={styles.statCard}>
                       <div className={styles.statValue}>{applicationStats.accepted}</div>
-                      <div className={styles.statLabel}>進行中</div>
+                      <div className={styles.statLabel}>受注中</div>
                     </div>
                     <div className={styles.statCard}>
                       <div className={styles.statValue}>{applicationStats.completed}</div>
@@ -435,7 +459,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* タブ */}
                   <div className={styles.tabs}>
                     <button
                       onClick={() => setApplicationTab('accepted')}
@@ -455,9 +478,14 @@ export default function DashboardPage() {
                     >
                       完了 ({applicationStats.completed})
                     </button>
+                    <button
+                      onClick={() => setApplicationTab('rejected')}
+                      className={`${styles.tab} ${applicationTab === 'rejected' ? styles.active : ''}`}
+                    >
+                      不採用 ({applicationStats.rejected})
+                    </button>
                   </div>
 
-                  {/* 応募一覧 */}
                   {filteredApplications.length === 0 ? (
                     <div className={styles.empty}>
                       <i className="fas fa-inbox"></i>
@@ -477,10 +505,17 @@ export default function DashboardPage() {
                         >
                           <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>{application.work_request?.title}</h3>
-                            <span className={`${styles.statusBadge} ${styles[application.status === 'accepted' ? (application.work_request?.status || '') : application.status]}`}>
-                              {application.status === 'accepted' 
-                                ? getStatusLabel(application.work_request?.status || '') 
-                                : getStatusLabel(application.status)}
+                            <span className={`${styles.statusBadge} ${styles[
+                              application.status === 'accepted' && application.contract_status
+                                ? (application.contract_status === 'contracted' ? 'statusWarning'
+                                  : application.contract_status === 'paid' ? 'statusInfo'
+                                  : application.contract_status === 'delivered' ? 'statusSuccess'
+                                  : application.contract_status === 'completed' ? 'statusSuccess'
+                                  : 'statusNeutral')
+                                : application.status === 'rejected' ? 'statusError'
+                                : 'statusNeutral'
+                            ]}`}>
+                              {getCreatorBadgeLabel(application)}
                             </span>
                           </div>
 

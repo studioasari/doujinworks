@@ -209,14 +209,6 @@ export const paymentsCreateLimiter = new Ratelimit({
   prefix: 'ratelimit:payments-create',
 })
 
-// /api/requests/[id]/complete 用: 1分30件（検収承認時に呼ばれる、並行契約で複数回実行もあり）
-export const requestsCompleteLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(30, '1 m'),
-  analytics: true,
-  prefix: 'ratelimit:requests-complete',
-})
-
 // ========================================
 // 納品ファイルアップロード
 // ========================================

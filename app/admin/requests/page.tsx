@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '../../../utils/supabase/client'
+import {
+  getWorkRequestDisplayLabel,
+} from '@/lib/status-labels'
 
 type WorkRequest = {
   id: string
@@ -9,7 +12,8 @@ type WorkRequest = {
   title: string
   description: string | null
   category: string
-  status: string
+  recruitment_status: string
+  progress_status: string
   request_type: string
   budget_min: number | null
   budget_max: number | null
@@ -45,11 +49,10 @@ const CATEGORIES = [
 const STATUSES = [
   { value: '', label: 'すべて' },
   { value: 'open', label: '募集中' },
-  { value: 'contracted', label: '契約済み' },
-  { value: 'paid', label: '支払済み' },
-  { value: 'delivered', label: '納品済み' },
+  { value: 'active', label: '進行中' },
   { value: 'completed', label: '完了' },
   { value: 'cancelled', label: 'キャンセル' },
+  { value: 'withdrawn', label: '取下げ' },
 ]
 
 const PER_PAGE = 20
@@ -105,9 +108,25 @@ export default function AdminRequests() {
       query = query.eq('category', category)
     }
 
-    // ステータス
+    // ステータスフィルター(新スキーマ対応)
     if (status) {
-      query = query.eq('status', status)
+      switch (status) {
+        case 'open':
+          query = query.eq('recruitment_status', 'open')
+          break
+        case 'active':
+          query = query.eq('progress_status', 'active')
+          break
+        case 'completed':
+          query = query.eq('progress_status', 'completed')
+          break
+        case 'cancelled':
+          query = query.eq('progress_status', 'cancelled')
+          break
+        case 'withdrawn':
+          query = query.eq('recruitment_status', 'withdrawn')
+          break
+      }
     }
 
     // ページネーション
@@ -142,7 +161,6 @@ export default function AdminRequests() {
     setModalAction(null)
   }
 
-  // チェックボックス操作
   function toggleSelect(id: string) {
     const newSet = new Set(selectedIds)
     if (newSet.has(id)) {
@@ -161,7 +179,6 @@ export default function AdminRequests() {
     }
   }
 
-  // 一括削除
   async function bulkDelete() {
     if (selectedIds.size === 0) return
 
@@ -204,19 +221,19 @@ export default function AdminRequests() {
         break
       case 'cancel':
         updateData = {
-          status: 'cancelled'
+          progress_status: 'cancelled'
         }
         break
       case 'complete':
         updateData = {
-          status: 'completed',
+          progress_status: 'completed',
           completed_at: new Date().toISOString()
         }
         break
       case 'refund':
         // TODO: Stripe返金処理を実装
         updateData = {
-          status: 'cancelled'
+          progress_status: 'cancelled'
         }
         break
     }
@@ -242,17 +259,18 @@ export default function AdminRequests() {
     return cat ? cat.label : value
   }
 
-  function getStatusLabel(value: string) {
-    const s = STATUSES.find(st => st.value === value)
-    return s ? s.label : value
+  function getStatusLabel(request: WorkRequest): string {
+    return getWorkRequestDisplayLabel({
+      recruitment_status: request.recruitment_status,
+      progress_status: request.progress_status,
+    })
   }
 
-  function getStatusColor(value: string) {
-    switch (value) {
-      case 'open': return 'blue'
-      case 'contracted': return 'yellow'
-      case 'paid': return 'purple'
-      case 'delivered': return 'green'
+  function getStatusColor(request: WorkRequest): string {
+    if (request.recruitment_status === 'open') return 'blue'
+    if (request.recruitment_status === 'withdrawn') return 'gray'
+    switch (request.progress_status) {
+      case 'active': return 'yellow'
       case 'completed': return 'green'
       case 'cancelled': return 'red'
       default: return 'gray'
@@ -430,8 +448,8 @@ export default function AdminRequests() {
                       </span>
                     </td>
                     <td>
-                      <span className={`admin-badge ${getStatusColor(request.status)}`}>
-                        {getStatusLabel(request.status)}
+                      <span className={`admin-badge ${getStatusColor(request)}`}>
+                        {getStatusLabel(request)}
                       </span>
                     </td>
                     <td>
@@ -442,7 +460,7 @@ export default function AdminRequests() {
                     </td>
                     <td>
                       <div className="admin-actions">
-                        {request.status === 'open' && (
+                        {request.recruitment_status === 'open' && (
                           <button
                             className="admin-action-btn warning"
                             onClick={() => openModal(request, 'cancel')}
@@ -450,7 +468,7 @@ export default function AdminRequests() {
                             キャンセル
                           </button>
                         )}
-                        {(request.status === 'paid' || request.status === 'delivered') && (
+                        {request.progress_status === 'active' && (
                           <>
                             <button
                               className="admin-action-btn primary"

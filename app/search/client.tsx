@@ -65,6 +65,7 @@ type WorkRequest = {
   job_features: string[] | null
   required_skills: string[] | null
   number_of_positions: number | null
+  contracted_count: number | null
   application_deadline: string | null
   created_at: string
   profiles: WorkRequestProfile
@@ -247,9 +248,9 @@ function SearchContent() {
   const searchRequests = async () => {
     const { data, error } = await supabase
       .from('work_requests')
-      .select('id, title, description, budget_min, budget_max, category, payment_type, hourly_rate_min, price_negotiable, job_features, required_skills, number_of_positions, application_deadline, created_at, profiles!work_requests_requester_id_fkey(id, display_name, avatar_url, username)')
+      .select('id, title, description, budget_min, budget_max, category, payment_type, hourly_rate_min, price_negotiable, job_features, required_skills, number_of_positions, contracted_count, application_deadline, created_at, profiles!work_requests_requester_id_fkey(id, display_name, avatar_url, username)')
       .eq('request_type', 'public')
-      .eq('status', 'open')
+      .eq('recruitment_status', 'open')
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false })
       .limit(6)
@@ -505,7 +506,7 @@ function SearchContent() {
                     <div className={styles.requestStatsRow}>
                       <div className={styles.requestStatItem}>
                         <i className="fas fa-user"></i>
-                        <span>0/{request.number_of_positions || 1}人</span>
+                        <span>{request.contracted_count || 0}/{request.number_of_positions || 1}人</span>
                       </div>
                       <div className={styles.requestStatItem}>
                         <i className="fas fa-clock"></i>

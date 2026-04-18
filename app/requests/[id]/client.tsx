@@ -8,6 +8,10 @@ import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { useAuth } from '@/app/components/AuthContext'
+import {
+  getWorkRequestDisplayLabel,
+  getWorkRequestDisplayColorClass,
+} from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type WorkRequest = {
@@ -18,7 +22,8 @@ type WorkRequest = {
   budget_max: number | null
   deadline: string | null
   category: string
-  status: string
+  recruitment_status: string
+  progress_status: string
   created_at: string
   requester_id: string
   selected_applicant_id: string | null
@@ -45,11 +50,6 @@ type WorkRequest = {
 const CATEGORY_LABELS: { [key: string]: string } = {
   illustration: 'イラスト', manga: 'マンガ', novel: '小説', music: '音楽',
   voice: 'ボイス', video: '動画', logo: 'ロゴ', design: 'デザイン', other: 'その他'
-}
-
-const STATUS_LABELS: { [key: string]: string } = {
-  open: '募集中', contracted: '募集終了', paid: '作業中',
-  delivered: '納品済み', completed: '完了', cancelled: 'キャンセル'
 }
 
 const JOB_FEATURE_LABELS: { [key: string]: string } = {
@@ -211,7 +211,7 @@ export default function RequestDetailPage() {
       .from('work_requests')
       .select('*', { count: 'exact', head: true })
       .eq('requester_id', requesterId)
-      .eq('status', 'completed')
+      .eq('progress_status', 'completed')
 
     const { data: reviews } = await supabase
       .from('reviews')
@@ -457,8 +457,8 @@ export default function RequestDetailPage() {
                   <span className="badge badge-accent">
                     {CATEGORY_LABELS[request.category] || request.category}
                   </span>
-                  <span className={`badge ${styles.statusBadge} ${styles[request.status]}`}>
-                    {STATUS_LABELS[request.status] || request.status}
+                  <span className={`badge ${styles.statusBadge} ${styles[getWorkRequestDisplayColorClass({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })]}`}>
+                    {getWorkRequestDisplayLabel({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })}
                   </span>
                 </div>
                 <h1 className={styles.title}>{request.title}</h1>
@@ -653,7 +653,7 @@ export default function RequestDetailPage() {
                 </div>
 
                 {/* 応募ボタン */}
-                {request.status === 'open' && !isRequester && (
+                {request.recruitment_status === 'open' && !isRequester && (
                   <>
                     {(request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
                       <div className={styles.closedBadge}>
@@ -679,7 +679,7 @@ export default function RequestDetailPage() {
 
                 {/* 依頼者向けリンク */}
                 {isRequester && (
-                  request.status === 'open' ? (
+                  request.recruitment_status === 'open' ? (
                     <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                       <i className="fas fa-cog"></i>応募を管理する
                     </Link>
@@ -980,7 +980,7 @@ export default function RequestDetailPage() {
                 </span>
               </div>
               <div className={styles.mobileFooterAction}>
-                {request.status === 'open' && !isRequester && (
+                {request.recruitment_status === 'open' && !isRequester && (
                   (request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
                     <span className={styles.mobileClosedBadge}>募集定員に達しました</span>
                   ) : isLoggedIn ? (
@@ -994,7 +994,7 @@ export default function RequestDetailPage() {
                   )
                 )}
                 {isRequester && (
-                  request.status === 'open' ? (
+                  request.recruitment_status === 'open' ? (
                     <Link href={`/requests/${requestId}/manage`} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                       応募を管理
                     </Link>
@@ -1011,7 +1011,7 @@ export default function RequestDetailPage() {
                     契約進捗を確認
                   </Link>
                 )}
-                {!isRequester && !myContractId && request.status !== 'open' && (
+                {!isRequester && !myContractId && request.recruitment_status !== 'open' && (
                   <span className={styles.mobileClosedBadge}>募集終了</span>
                 )}
               </div>

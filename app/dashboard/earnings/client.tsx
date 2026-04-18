@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
+import { getWorkRequestDisplayLabel } from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type Payment = {
@@ -21,7 +22,8 @@ type Payment = {
     title: string
     final_price: number
     completed_at: string
-    status: string
+    recruitment_status: string
+    progress_status: string
     requester: {
       display_name: string | null
       avatar_url: string | null
@@ -82,7 +84,8 @@ export default function EarningsClient() {
           title,
           final_price,
           completed_at,
-          status,
+          recruitment_status,
+          progress_status,
           requester:profiles!work_requests_requester_id_fkey (
             display_name,
             avatar_url
@@ -109,7 +112,8 @@ export default function EarningsClient() {
           title,
           final_price,
           completed_at,
-          status,
+          recruitment_status,
+          progress_status,
           requester:profiles!work_requests_requester_id_fkey (
             display_name,
             avatar_url
@@ -171,26 +175,14 @@ export default function EarningsClient() {
     return `${year}年${parseInt(month)}月`
   }
 
-  function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = {
-      open: '募集中',
-      in_progress: '進行中',
-      delivered: '納品済み',
-      completed: '完了',
-      cancelled: 'キャンセル'
+  function getStatusBadgeClass(recruitmentStatus: string, progressStatus: string) {
+    if (recruitmentStatus === 'open') return 'badge-open'
+    switch (progressStatus) {
+      case 'active': return 'badge-progress'
+      case 'completed': return 'badge-open'
+      case 'cancelled': return 'badge-closed'
+      default: return ''
     }
-    return statuses[status] || status
-  }
-
-  function getStatusBadgeClass(status: string) {
-    const classes: { [key: string]: string } = {
-      open: 'badge-open',
-      in_progress: 'badge-progress',
-      delivered: 'badge-accent',
-      completed: 'badge-open',
-      cancelled: 'badge-closed'
-    }
-    return classes[status] || ''
   }
 
   // 振込待ち合計
@@ -409,8 +401,8 @@ export default function EarningsClient() {
                                   <span className={styles.requesterName}>
                                     {payment.work_request?.requester?.display_name || '名前未設定'}
                                   </span>
-                                  <span className={`badge ${getStatusBadgeClass(payment.work_request?.status || '')}`}>
-                                    {getStatusLabel(payment.work_request?.status || '')}
+                                  <span className={`badge ${getStatusBadgeClass(payment.work_request?.recruitment_status || '', payment.work_request?.progress_status || '')}`}>
+                                    {payment.work_request ? getWorkRequestDisplayLabel({ recruitment_status: payment.work_request.recruitment_status, progress_status: payment.work_request.progress_status }) : ''}
                                   </span>
                                 </div>
                               </div>

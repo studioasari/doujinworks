@@ -195,7 +195,7 @@ export default function SettingsClient() {
       .from('work_contracts')
       .select('id')
       .eq('contractor_id', profileId)
-      .eq('status', 'contracted')
+      .in('status', ['contracted', 'paid', 'delivered'])
 
     // 進行中の契約（発注側：自分のwork_requestsに紐づく契約）
     const { data: myRequests } = await supabase
@@ -210,7 +210,7 @@ export default function SettingsClient() {
         .from('work_contracts')
         .select('id')
         .in('work_request_id', requestIds)
-        .eq('status', 'contracted')
+        .in('status', ['contracted', 'paid', 'delivered'])
       contractsAsRequester = data || []
     }
 
