@@ -351,7 +351,17 @@ export default function Header() {
     return () => { document.body.style.overflow = '' }
   }, [isHamburgerOpen, isMobile, isMessageMenuOpen, isNotificationMenuOpen])
 
+  const loadProfile = async (userId: string) => {
+    const { data } = await supabase.from('profiles').select('*').eq('user_id', userId).single()
+    setProfile(data)
+  }
+
   useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      if (user) loadProfile(user.id)
+    }
     checkUser()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -421,17 +431,6 @@ export default function Header() {
   useEffect(() => {
     setIsHamburgerOpen(false)
   }, [pathname])
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    setUser(user)
-    if (user) loadProfile(user.id)
-  }
-
-  const loadProfile = async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('user_id', userId).single()
-    setProfile(data)
-  }
 
   const loadAcceptingStatus = async (profileId: string) => {
     try {

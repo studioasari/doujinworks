@@ -64,6 +64,123 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    const loadMyRequests = async () => {
+      const { data, error } = await supabase
+        .from('work_requests')
+        .select(`
+          id,
+          title,
+          status,
+          final_price,
+          created_at,
+          deadline,
+          category,
+          selected_applicant_id
+        `)
+        .eq('requester_id', currentProfileId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('依頼取得エラー:', error)
+        return
+      }
+
+      const requestsWithApplicants = await Promise.all(
+        (data || []).map(async (request) => {
+          let selected_applicant = undefined
+          let contract_id = null
+
+          // 選択された応募者の情報を取得
+          if (request.selected_applicant_id) {
+            const { data: applicantData } = await supabase
+              .from('profiles')
+              .select('display_name, avatar_url')
+              .eq('id', request.selected_applicant_id)
+              .single()
+            selected_applicant = applicantData || undefined
+          }
+
+          // 契約IDを取得（open以外のステータスの場合）
+          if (request.status !== 'open') {
+            const { data: contractData } = await supabase
+              .from('work_contracts')
+              .select('id')
+              .eq('work_request_id', request.id)
+              .single()
+            contract_id = contractData?.id || null
+          }
+
+          return { ...request, selected_applicant, contract_id }
+        })
+      )
+
+      setMyRequests(requestsWithApplicants)
+    }
+
+    const loadMyApplications = async () => {
+      const { data, error } = await supabase
+        .from('work_request_applications')
+        .select(`id, status, created_at, work_request_id`)
+        .eq('applicant_id', currentProfileId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('応募取得エラー:', error)
+        return
+      }
+
+      const applicationsWithDetails = await Promise.all(
+        (data || []).map(async (app) => {
+          const { data: requestData } = await supabase
+            .from('work_requests')
+            .select(`id, title, status, final_price, category, deadline, requester_id`)
+            .eq('id', app.work_request_id)
+            .single()
+
+          if (!requestData) return null
+
+          const { data: requesterData } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url')
+            .eq('id', requestData.requester_id)
+            .single()
+
+          // 採用された場合は契約IDを取得
+          let contractId: string | null = null
+          if (app.status === 'accepted') {
+            const { data: contractData } = await supabase
+              .from('work_contracts')
+              .select('id')
+              .eq('work_request_id', app.work_request_id)
+              .eq('contractor_id', currentProfileId)
+              .single()
+
+            if (contractData) {
+              contractId = contractData.id
+            }
+          }
+
+          return {
+            id: app.id,
+            status: app.status,
+            created_at: app.created_at,
+            contract_id: contractId,
+            work_request: {
+              id: requestData.id,
+              title: requestData.title,
+              status: requestData.status,
+              final_price: requestData.final_price,
+              category: requestData.category,
+              deadline: requestData.deadline,
+              requester: requesterData || { display_name: null, avatar_url: null }
+            }
+          }
+        })
+      )
+
+      setMyApplications(applicationsWithDetails.filter(Boolean) as Application[])
+    }
+
     if (currentProfileId) {
       loadMyRequests()
       loadMyApplications()
@@ -79,131 +196,14 @@ export default function DashboardPage() {
       .select('id, account_type, is_admin')
       .eq('user_id', user.id)
       .single()
-    
+
     if (profile) {
       setCurrentProfileId(profile.id)
       setAccountType(profile.account_type)
       setIsAdmin(profile.is_admin || false)
     }
-    
+
     setLoading(false)
-  }
-
-  async function loadMyRequests() {
-    const { data, error } = await supabase
-      .from('work_requests')
-      .select(`
-        id,
-        title,
-        status,
-        final_price,
-        created_at,
-        deadline,
-        category,
-        selected_applicant_id
-      `)
-      .eq('requester_id', currentProfileId)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('依頼取得エラー:', error)
-      return
-    }
-
-    const requestsWithApplicants = await Promise.all(
-      (data || []).map(async (request) => {
-        let selected_applicant = undefined
-        let contract_id = null
-
-        // 選択された応募者の情報を取得
-        if (request.selected_applicant_id) {
-          const { data: applicantData } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('id', request.selected_applicant_id)
-            .single()
-          selected_applicant = applicantData || undefined
-        }
-
-        // 契約IDを取得（open以外のステータスの場合）
-        if (request.status !== 'open') {
-          const { data: contractData } = await supabase
-            .from('work_contracts')
-            .select('id')
-            .eq('work_request_id', request.id)
-            .single()
-          contract_id = contractData?.id || null
-        }
-
-        return { ...request, selected_applicant, contract_id }
-      })
-    )
-
-    setMyRequests(requestsWithApplicants)
-  }
-
-  async function loadMyApplications() {
-    const { data, error } = await supabase
-      .from('work_request_applications')
-      .select(`id, status, created_at, work_request_id`)
-      .eq('applicant_id', currentProfileId)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('応募取得エラー:', error)
-      return
-    }
-
-    const applicationsWithDetails = await Promise.all(
-      (data || []).map(async (app) => {
-        const { data: requestData } = await supabase
-          .from('work_requests')
-          .select(`id, title, status, final_price, category, deadline, requester_id`)
-          .eq('id', app.work_request_id)
-          .single()
-
-        if (!requestData) return null
-
-        const { data: requesterData } = await supabase
-          .from('profiles')
-          .select('display_name, avatar_url')
-          .eq('id', requestData.requester_id)
-          .single()
-
-        // 採用された場合は契約IDを取得
-        let contractId: string | null = null
-        if (app.status === 'accepted') {
-          const { data: contractData } = await supabase
-            .from('work_contracts')
-            .select('id')
-            .eq('work_request_id', app.work_request_id)
-            .eq('contractor_id', currentProfileId)
-            .single()
-          
-          if (contractData) {
-            contractId = contractData.id
-          }
-        }
-
-        return {
-          id: app.id,
-          status: app.status,
-          created_at: app.created_at,
-          contract_id: contractId,
-          work_request: {
-            id: requestData.id,
-            title: requestData.title,
-            status: requestData.status,
-            final_price: requestData.final_price,
-            category: requestData.category,
-            deadline: requestData.deadline,
-            requester: requesterData || { display_name: null, avatar_url: null }
-          }
-        }
-      })
-    )
-
-    setMyApplications(applicationsWithDetails.filter(Boolean) as Application[])
   }
 
   function getStatusLabel(status: string) {

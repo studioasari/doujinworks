@@ -63,10 +63,6 @@ export default function AdminReports() {
   const [adminNote, setAdminNote] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadReports()
-  }, [reportType, status, page])
-
   async function loadReports() {
     setLoading(true)
 
@@ -121,6 +117,10 @@ export default function AdminReports() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadReports()
+  }, [reportType, status, page])
 
   function openModal(report: Report) {
     setModalReport(report)

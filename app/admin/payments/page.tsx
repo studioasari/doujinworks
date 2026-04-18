@@ -67,10 +67,6 @@ export default function AdminPayments() {
   // 前月（振込対象の最新月）
   const lastMonth = getLastMonth()
 
-  useEffect(() => {
-    loadSummaries()
-  }, [statusFilter])
-
   async function loadSummaries() {
     setLoading(true)
 
@@ -163,6 +159,10 @@ export default function AdminPayments() {
     setSummaries(result)
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadSummaries()
+  }, [statusFilter])
 
   async function openModal(summary: PaymentSummary) {
     setModalSummary(summary)

@@ -99,10 +99,6 @@ export default function RequestList() {
     fetchRequests()
   }, [currentProfileId])
 
-  useEffect(() => {
-    applyFilters()
-  }, [requests, categoryFilter, searchQuery, budgetRange, paymentTypeFilter, jobFeatureFilter])
-
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     
@@ -189,6 +185,10 @@ export default function RequestList() {
 
     setFilteredRequests(filtered)
   }
+
+  useEffect(() => {
+    applyFilters()
+  }, [requests, categoryFilter, searchQuery, budgetRange, paymentTypeFilter, jobFeatureFilter])
 
   function getCategoryLabel(category: string) {
     return CATEGORIES.find(c => c.value === category)?.label || category

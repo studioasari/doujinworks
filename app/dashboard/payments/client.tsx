@@ -57,12 +57,6 @@ export default function PaymentsClient() {
     loadData()
   }, [])
 
-  useEffect(() => {
-    if (currentProfileId) {
-      loadPaidContracts()
-    }
-  }, [currentProfileId])
-
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -72,11 +66,11 @@ export default function PaymentsClient() {
       .select('id, account_type, is_admin')
       .eq('user_id', user.id)
       .single()
-    
+
     if (profile) {
       setCurrentProfileId(profile.id)
     }
-    
+
     setLoading(false)
   }
 
@@ -158,6 +152,12 @@ export default function PaymentsClient() {
 
     setMonthlyPayments(monthlyData)
   }
+
+  useEffect(() => {
+    if (currentProfileId) {
+      loadPaidContracts()
+    }
+  }, [currentProfileId])
 
   function formatDate(dateString: string) {
     const date = new Date(dateString)

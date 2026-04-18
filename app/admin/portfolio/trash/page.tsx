@@ -42,10 +42,6 @@ export default function AdminPortfolioTrash() {
   const [modalAction, setModalAction] = useState<'restore' | 'delete' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadWorks()
-  }, [search, page])
-
   async function loadWorks() {
     setLoading(true)
 
@@ -83,6 +79,10 @@ export default function AdminPortfolioTrash() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadWorks()
+  }, [search, page])
 
   function openModal(work: PortfolioItem, action: 'restore' | 'delete') {
     setModalWork(work)

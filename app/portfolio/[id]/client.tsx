@@ -225,6 +225,17 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
   const [submittingReport, setSubmittingReport] = useState(false)
 
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        await loadWorkData(currentUserId)
+        await incrementViewCount()
+      } catch (error) {
+        console.error('データ読み込みエラー:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
     loadData()
   }, [unwrappedParams.id, currentUserId])
 
@@ -250,18 +261,6 @@ export default function PortfolioDetailClient({ params }: { params: Promise<{ id
     }
     return () => { document.body.style.overflow = '' }
   }, [showReportModal])
-
-  async function loadData() {
-    setLoading(true)
-    try {
-      await loadWorkData(currentUserId)
-      await incrementViewCount()
-    } catch (error) {
-      console.error('データ読み込みエラー:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function loadWorkData(userId: string | null) {
     const { data: workData, error: workError } = await supabase

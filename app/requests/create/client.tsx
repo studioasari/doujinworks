@@ -376,6 +376,22 @@ function CreateRequestContent() {
   function clearDraft() { localStorage.removeItem('request_draft') }
 
   useEffect(() => {
+    const fetchRecipient = async () => {
+      if (!toUsername) return
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .eq('username', toUsername)
+        .single()
+
+      if (error) {
+        console.error('受取人取得エラー:', error)
+        alert('指定されたクリエイターが見つかりませんでした')
+        router.push('/requests/create')
+      } else {
+        setRecipientProfile(data)
+      }
+    }
     if (toUsername) {
       setRequestType('direct')
       fetchRecipient()
@@ -391,28 +407,11 @@ function CreateRequestContent() {
       .select('id, account_type, is_admin')
       .eq('user_id', user.id)
       .single()
-    
+
     if (profile) {
       setCurrentProfileId(profile.id)
       setAccountType(profile.account_type)
       setIsAdmin(profile.is_admin || false)
-    }
-  }
-
-  async function fetchRecipient() {
-    if (!toUsername) return
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .eq('username', toUsername)
-      .single()
-
-    if (error) {
-      console.error('受取人取得エラー:', error)
-      alert('指定されたクリエイターが見つかりませんでした')
-      router.push('/requests/create')
-    } else {
-      setRecipientProfile(data)
     }
   }
 

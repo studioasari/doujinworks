@@ -54,29 +54,28 @@ export default function BookmarksClient() {
   const itemsPerPage = 30
 
   useEffect(() => {
+    const checkAuthAndFetch = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser()
+
+        if (error || !data?.user) {
+          router.push('/login?redirect=/bookmarks')
+          return
+        }
+
+        setUserId(data.user.id)
+        await fetchBookmarks(data.user.id)
+      } catch (error) {
+        console.error('認証エラー:', error)
+        router.push('/login?redirect=/bookmarks')
+      }
+    }
     checkAuthAndFetch()
   }, [])
 
   useEffect(() => {
     setCurrentPage(1)
   }, [sortOrder])
-
-  async function checkAuthAndFetch() {
-    try {
-      const { data, error } = await supabase.auth.getUser()
-      
-      if (error || !data?.user) {
-        router.push('/login?redirect=/bookmarks')
-        return
-      }
-      
-      setUserId(data.user.id)
-      await fetchBookmarks(data.user.id)
-    } catch (error) {
-      console.error('認証エラー:', error)
-      router.push('/login?redirect=/bookmarks')
-    }
-  }
 
   async function fetchBookmarks(uid: string) {
     setLoading(true)

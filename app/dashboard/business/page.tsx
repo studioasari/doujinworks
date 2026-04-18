@@ -68,10 +68,7 @@ export default function SettingsPage() {
   const router = useRouter()
 
   useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
+    const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
@@ -117,7 +114,9 @@ export default function SettingsPage() {
     }
 
     setLoading(false)
-  }
+    }
+    checkUser()
+  }, [])
 
   // バリデーション関数
   const validateKana = (value: string, setError: (error: string) => void) => {

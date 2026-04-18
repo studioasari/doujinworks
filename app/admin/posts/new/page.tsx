@@ -43,6 +43,10 @@ export default function AdminNewPostPage() {
   })
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('post_categories').select('*').order('sort_order')
+      if (data) setCategories(data)
+    }
     fetchCategories()
   }, [])
 
@@ -51,15 +55,32 @@ export default function AdminNewPostPage() {
     if (currentData === lastSavedRef.current) return
     if (!formData.title) return
 
+    const handleAutoSave = async () => {
+      if (!formData.title || !formData.slug) return
+      setSaveStatus('saving')
+      const postData = { ...formData, category_id: formData.category_id || null, status: 'draft', published_at: null }
+      try {
+        if (postId) {
+          const { error } = await supabase.from('posts').update({ ...postData, updated_at: new Date().toISOString() }).eq('id', postId)
+          if (error) throw error
+        } else {
+          const { data, error } = await supabase.from('posts').insert(postData).select('id').single()
+          if (error) throw error
+          if (data) setPostId(data.id)
+        }
+        lastSavedRef.current = JSON.stringify(formData)
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } catch (error) {
+        console.error('Auto-save error:', error)
+        setSaveStatus('error')
+      }
+    }
+
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     autoSaveTimerRef.current = setTimeout(() => handleAutoSave(), 30000)
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current) }
   }, [formData])
-
-  const fetchCategories = async () => {
-    const { data } = await supabase.from('post_categories').select('*').order('sort_order')
-    if (data) setCategories(data)
-  }
 
   const generateSlug = (title: string) => {
     const timestamp = Date.now().toString(36)
@@ -164,28 +185,6 @@ export default function AdminNewPostPage() {
     }
     setUploadingInline(false)
   }, [formData.content])
-
-  const handleAutoSave = async () => {
-    if (!formData.title || !formData.slug) return
-    setSaveStatus('saving')
-    const postData = { ...formData, category_id: formData.category_id || null, status: 'draft', published_at: null }
-    try {
-      if (postId) {
-        const { error } = await supabase.from('posts').update({ ...postData, updated_at: new Date().toISOString() }).eq('id', postId)
-        if (error) throw error
-      } else {
-        const { data, error } = await supabase.from('posts').insert(postData).select('id').single()
-        if (error) throw error
-        if (data) setPostId(data.id)
-      }
-      lastSavedRef.current = JSON.stringify(formData)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 3000)
-    } catch (error) {
-      console.error('Auto-save error:', error)
-      setSaveStatus('error')
-    }
-  }
 
   const handleSubmit = async (publish: boolean = false) => {
     if (!formData.title || !formData.slug || !formData.content) {

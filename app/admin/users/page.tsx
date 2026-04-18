@@ -39,10 +39,6 @@ export default function AdminUsers() {
   const [lockDays, setLockDays] = useState(7)
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadUsers()
-  }, [search, filter, page])
-
   async function loadUsers() {
     setLoading(true)
     
@@ -81,6 +77,10 @@ export default function AdminUsers() {
     
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadUsers()
+  }, [search, filter, page])
 
   function openModal(user: Profile, action: 'lock' | 'unlock' | 'ban' | 'unban') {
     setModalUser(user)

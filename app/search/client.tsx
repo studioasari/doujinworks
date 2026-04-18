@@ -150,27 +150,26 @@ function SearchContent() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const searchAll = async () => {
+      setLoading(true)
+
+      try {
+        await Promise.all([
+          searchWorks(),
+          searchCreators(),
+          searchRequests(),
+          searchServices(),
+        ])
+      } catch (error) {
+        console.error('検索エラー:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
     if (query) {
       searchAll()
     }
   }, [query])
-
-  const searchAll = async () => {
-    setLoading(true)
-
-    try {
-      await Promise.all([
-        searchWorks(),
-        searchCreators(),
-        searchRequests(),
-        searchServices(),
-      ])
-    } catch (error) {
-      console.error('検索エラー:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   /* ---------- 作品検索 ---------- */
   const searchWorks = async () => {

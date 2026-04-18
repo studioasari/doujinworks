@@ -63,54 +63,53 @@ export default function BusinessPage() {
   const router = useRouter()
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
 
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      return
-    }
+      if (!user) {
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+        return
+      }
 
-    setUser(user)
+      setUser(user)
 
-    // プロフィール取得
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileData) {
-      setProfile(profileData)
-
-      // ビジネスプロフィール取得
-      const { data: businessData } = await supabase
-        .from('business_profiles')
+      // プロフィール取得
+      const { data: profileData } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('profile_id', profileData.id)
+        .eq('user_id', user.id)
         .single()
 
-      if (businessData) {
-        setBusinessProfile(businessData)
-        setBusinessAccountType(businessData.account_type || 'individual')
-        setFullName(businessData.full_name || '')
-        setFullNameKana(businessData.full_name_kana || '')
-        setCompanyName(businessData.company_name || '')
-        setPhone(businessData.phone || '')
-        setPostalCode(businessData.postal_code || '')
-        setPrefecture(businessData.prefecture || '')
-        setAddress1(businessData.address1 || '')
-        setAddress2(businessData.address2 || '')
-        setBirthDate(businessData.birth_date || '')
-        setGender(businessData.gender || '')
-      }
-    }
+      if (profileData) {
+        setProfile(profileData)
 
-    setLoading(false)
-  }
+        // ビジネスプロフィール取得
+        const { data: businessData } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('profile_id', profileData.id)
+          .single()
+
+        if (businessData) {
+          setBusinessProfile(businessData)
+          setBusinessAccountType(businessData.account_type || 'individual')
+          setFullName(businessData.full_name || '')
+          setFullNameKana(businessData.full_name_kana || '')
+          setCompanyName(businessData.company_name || '')
+          setPhone(businessData.phone || '')
+          setPostalCode(businessData.postal_code || '')
+          setPrefecture(businessData.prefecture || '')
+          setAddress1(businessData.address1 || '')
+          setAddress2(businessData.address2 || '')
+          setBirthDate(businessData.birth_date || '')
+          setGender(businessData.gender || '')
+        }
+      }
+
+      setLoading(false)
+    }
+    checkUser()
+  }, [])
 
   // バリデーション関数
   const validateFullNameKana = (value: string) => {

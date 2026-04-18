@@ -60,14 +60,7 @@ export default function TagPortfolioList({ tagName, pageTitle, pageDescription }
   const itemsPerPage = 30
 
   useEffect(() => {
-    fetchPortfolioItems()
-  }, [tagName, categoryFilter])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [sortOrder])
-
-  async function fetchPortfolioItems() {
+    const fetchPortfolioItems = async () => {
     setLoading(true)
 
     try {
@@ -135,7 +128,13 @@ export default function TagPortfolioList({ tagName, pageTitle, pageDescription }
     } finally {
       setLoading(false)
     }
-  }
+    }
+    fetchPortfolioItems()
+  }, [tagName, categoryFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [sortOrder])
 
   // ソート済みアイテム
   const sortedItems = useMemo(() => {

@@ -52,24 +52,23 @@ export default function MessagesPage() {
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
 
   useEffect(() => {
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profile) {
+        setCurrentProfileId(profile.id)
+        fetchChatRooms(profile.id)
+      }
+    }
     loadData()
   }, [])
-
-  async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profile) {
-      setCurrentProfileId(profile.id)
-      fetchChatRooms(profile.id)
-    }
-  }
 
   async function fetchChatRooms(profileId: string) {
     setLoading(true)

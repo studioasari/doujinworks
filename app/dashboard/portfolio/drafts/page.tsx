@@ -86,34 +86,27 @@ export default function DraftsPage() {
   ]
 
   useEffect(() => {
-    checkAuth()
-  }, [])
-
-  useEffect(() => {
-    if (currentUserId) {
-      loadDrafts()
-    }
-  }, [currentUserId, selectedCategory])
-
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-    } else {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (profile) {
-        setCurrentUserId(profile.id)
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
       } else {
-        alert('プロフィールが見つかりません')
-        router.push('/profile')
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profile) {
+          setCurrentUserId(profile.id)
+        } else {
+          alert('プロフィールが見つかりません')
+          router.push('/profile')
+        }
       }
     }
-  }
+    checkAuth()
+  }, [])
 
   function loadDrafts() {
     try {
@@ -210,6 +203,12 @@ export default function DraftsPage() {
       setDrafts([])
     }
   }
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadDrafts()
+    }
+  }, [currentUserId, selectedCategory])
 
   function deleteDraft(draft: Draft) {
     if (!confirm('この下書きを削除しますか？')) return

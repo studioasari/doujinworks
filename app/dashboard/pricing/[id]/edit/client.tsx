@@ -19,39 +19,38 @@ export default function PricingEditClient() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profile) return
+
+      setProfileId(profile.id)
+
+      // 料金プランデータを取得
+      const { data: plan, error } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .eq('id', planId)
+        .eq('creator_id', profile.id)
+        .single()
+
+      if (error || !plan) {
+        setError('料金プランが見つかりません')
+        return
+      }
+
+      setPlanData(plan)
+      setLoading(false)
+    }
     loadData()
   }, [planId])
-
-  async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile) return
-
-    setProfileId(profile.id)
-
-    // 料金プランデータを取得
-    const { data: plan, error } = await supabase
-      .from('pricing_plans')
-      .select('*')
-      .eq('id', planId)
-      .eq('creator_id', profile.id)
-      .single()
-
-    if (error || !plan) {
-      setError('料金プランが見つかりません')
-      return
-    }
-
-    setPlanData(plan)
-    setLoading(false)
-  }
 
   function handleCancel() {
     router.push('/dashboard/pricing')

@@ -151,6 +151,27 @@ function UploadMusicContent() {
   ]
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, account_type')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profile) {
+          setCurrentUserId(user.id)
+          setAccountType(profile.account_type)
+          setLoading(false)
+        } else {
+          setToast({ message: 'プロフィールが見つかりません', type: 'error' })
+          router.push('/profile')
+        }
+      }
+    }
     checkAuth()
     loadDrafts()
   }, [])
@@ -218,28 +239,6 @@ function UploadMusicContent() {
     } catch (error) {
       console.error('下書き復元エラー:', error)
       setToast({ message: '下書きの読み込みに失敗しました', type: 'error' })
-    }
-  }
-
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, account_type')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (profile) {
-        setCurrentUserId(user.id)
-        setAccountType(profile.account_type)
-        setLoading(false)
-      } else {
-        setToast({ message: 'プロフィールが見つかりません', type: 'error' })
-        router.push('/profile')
-      }
     }
   }
 

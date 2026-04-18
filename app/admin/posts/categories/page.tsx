@@ -25,20 +25,9 @@ export default function AdminCategoriesPage() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
-  useEffect(() => {
-    if (editingId && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
-    }
-  }, [editingId])
-
   const fetchCategories = async () => {
     setLoading(true)
-    
+
     // カテゴリーと記事数を取得
     const { data: cats, error } = await supabase
       .from('post_categories')
@@ -71,6 +60,17 @@ export default function AdminCategoriesPage() {
     setCategories(categoriesWithCount)
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editingId])
 
   const generateSlug = (name: string) => {
     return name

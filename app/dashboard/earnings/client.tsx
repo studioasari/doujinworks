@@ -54,13 +54,6 @@ export default function EarningsClient() {
     loadData()
   }, [])
 
-  useEffect(() => {
-    if (currentProfileId) {
-      loadPayments()
-      loadBankAccount()
-    }
-  }, [currentProfileId])
-
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -70,11 +63,11 @@ export default function EarningsClient() {
       .select('id, account_type, is_admin')
       .eq('user_id', user.id)
       .single()
-    
+
     if (profile) {
       setCurrentProfileId(profile.id)
     }
-    
+
     setLoading(false)
   }
 
@@ -150,6 +143,13 @@ export default function EarningsClient() {
       setBankAccount(data)
     }
   }
+
+  useEffect(() => {
+    if (currentProfileId) {
+      loadPayments()
+      loadBankAccount()
+    }
+  }, [currentProfileId])
 
   function toggleMonth(month: string) {
     const newExpanded = new Set(expandedMonths)

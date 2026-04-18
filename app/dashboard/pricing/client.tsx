@@ -64,6 +64,22 @@ export default function PricingListClient() {
   }>({ show: false, planId: '', planName: '' })
 
   useEffect(() => {
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, account_type')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profile) return
+
+      setProfileId(profile.id)
+      await fetchPricingPlans(profile.id)
+      setLoading(false)
+    }
     loadData()
   }, [])
 
@@ -79,23 +95,6 @@ export default function PricingListClient() {
       return () => document.removeEventListener('click', handleClick)
     }
   }, [openMenuId])
-
-  async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, account_type')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile) return
-
-    setProfileId(profile.id)
-    await fetchPricingPlans(profile.id)
-    setLoading(false)
-  }
 
   async function fetchPricingPlans(pid: string) {
     const { data, error } = await supabase

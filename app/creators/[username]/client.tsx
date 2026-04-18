@@ -254,8 +254,43 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
     return currentProfileId && creator && currentProfileId === creator.id
   }, [currentProfileId, creator])
 
-  useEffect(() => { loadProfile() }, [currentUserId])
-  useEffect(() => { if (username) fetchCreator() }, [username])
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!currentUserId) {
+        setCurrentProfileId('')
+        return
+      }
+      try {
+        const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', currentUserId).single()
+        if (profile) setCurrentProfileId(profile.id)
+      } catch (error) {
+        console.error('プロフィール取得エラー:', error)
+      }
+    }
+    loadProfile()
+  }, [currentUserId])
+  useEffect(() => {
+    const fetchCreator = async () => {
+      setLoading(true)
+      const { data, error } = await supabase.from('profiles').select('*').eq('username', username).maybeSingle()
+      if (error) {
+        console.error('クリエイター取得エラー:', error)
+        setCreator(null)
+      } else if (!data) {
+        setCreator(null)
+      } else {
+        setCreator(data)
+        await Promise.all([
+          fetchPortfolio(data.user_id),
+          fetchPricingPlans(data.id),
+          fetchStats(data.user_id),
+          fetchReviews(data.id)
+        ])
+      }
+      setLoading(false)
+    }
+    if (username) fetchCreator()
+  }, [username])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -269,39 +304,6 @@ export default function CreatorDetailClient({ params }: { params: Promise<{ user
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [isShareDropdownOpen])
-
-  async function loadProfile() {
-    if (!currentUserId) {
-      setCurrentProfileId('')
-      return
-    }
-    try {
-      const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', currentUserId).single()
-      if (profile) setCurrentProfileId(profile.id)
-    } catch (error) {
-      console.error('プロフィール取得エラー:', error)
-    }
-  }
-
-  async function fetchCreator() {
-    setLoading(true)
-    const { data, error } = await supabase.from('profiles').select('*').eq('username', username).maybeSingle()
-    if (error) {
-      console.error('クリエイター取得エラー:', error)
-      setCreator(null)
-    } else if (!data) {
-      setCreator(null)
-    } else {
-      setCreator(data)
-      await Promise.all([
-        fetchPortfolio(data.user_id),
-        fetchPricingPlans(data.id),
-        fetchStats(data.user_id),
-        fetchReviews(data.id)
-      ])
-    }
-    setLoading(false)
-  }
 
   async function fetchReviews(creatorId: string) {
     setReviewsLoading(true)

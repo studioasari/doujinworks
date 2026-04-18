@@ -70,15 +70,7 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
   const itemsPerPage = 20
 
   useEffect(() => {
-    fetchPricingPlans()
-  }, [category])
-
-  useEffect(() => {
-    applyFilters()
-    setCurrentPage(1)
-  }, [pricingPlans, priceRange, acceptingOnly, sortOrder])
-
-  async function fetchPricingPlans() {
+    const fetchPricingPlans = async () => {
     setLoading(true)
     
     try {
@@ -148,41 +140,47 @@ export default function PricingList({ category, pageTitle, pageDescription }: Pr
     } finally {
       setLoading(false)
     }
-  }
-
-  function applyFilters() {
-    let result = [...pricingPlans]
-
-    if (priceRange) {
-      const [min, max] = priceRange.split('-').map(v => v ? parseInt(v) : null)
-      result = result.filter(p => {
-        if (min !== null && p.minimum_price < min) return false
-        if (max !== null && p.minimum_price > max) return false
-        return true
-      })
     }
+    fetchPricingPlans()
+  }, [category])
 
-    if (acceptingOnly) {
-      result = result.filter(p => p.profiles.is_accepting_orders)
+  useEffect(() => {
+    const applyFilters = () => {
+      let result = [...pricingPlans]
+
+      if (priceRange) {
+        const [min, max] = priceRange.split('-').map(v => v ? parseInt(v) : null)
+        result = result.filter(p => {
+          if (min !== null && p.minimum_price < min) return false
+          if (max !== null && p.minimum_price > max) return false
+          return true
+        })
+      }
+
+      if (acceptingOnly) {
+        result = result.filter(p => p.profiles.is_accepting_orders)
+      }
+
+      switch (sortOrder) {
+        case 'newest':
+          result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          break
+        case 'price_low':
+          result.sort((a, b) => a.minimum_price - b.minimum_price)
+          break
+        case 'price_high':
+          result.sort((a, b) => b.minimum_price - a.minimum_price)
+          break
+        case 'rating':
+          result.sort((a, b) => b.averageRating - a.averageRating)
+          break
+      }
+
+      setFilteredPlans(result)
     }
-
-    switch (sortOrder) {
-      case 'newest':
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        break
-      case 'price_low':
-        result.sort((a, b) => a.minimum_price - b.minimum_price)
-        break
-      case 'price_high':
-        result.sort((a, b) => b.minimum_price - a.minimum_price)
-        break
-      case 'rating':
-        result.sort((a, b) => b.averageRating - a.averageRating)
-        break
-    }
-
-    setFilteredPlans(result)
-  }
+    applyFilters()
+    setCurrentPage(1)
+  }, [pricingPlans, priceRange, acceptingOnly, sortOrder])
 
   function getCategoryLabel(cat: string) {
     return CATEGORIES.find(c => c.value === cat)?.label || cat

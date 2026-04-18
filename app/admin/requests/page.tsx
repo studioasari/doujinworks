@@ -72,10 +72,6 @@ export default function AdminRequests() {
   const [modalAction, setModalAction] = useState<'delete' | 'cancel' | 'complete' | 'refund' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadRequests()
-  }, [search, category, status, page])
-
   async function loadRequests() {
     setLoading(true)
 
@@ -131,6 +127,10 @@ export default function AdminRequests() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadRequests()
+  }, [search, category, status, page])
 
   function openModal(request: WorkRequest, action: 'delete' | 'cancel' | 'complete' | 'refund') {
     setModalRequest(request)

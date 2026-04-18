@@ -17,39 +17,38 @@ export default function AccountDeletedClient() {
   const RESTORE_PERIOD_DAYS = 30
 
   useEffect(() => {
+    const loadDeletedStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('deleted_at')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profile?.deleted_at) {
+        // 削除されていない → ダッシュボードへ
+        router.push('/dashboard')
+        return
+      }
+
+      const deleted = new Date(profile.deleted_at)
+      const now = new Date()
+      const diffMs = now.getTime() - deleted.getTime()
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      const remaining = RESTORE_PERIOD_DAYS - diffDays
+
+      setDeletedAt(deleted)
+      setDaysRemaining(Math.max(0, remaining))
+      setCanRestore(remaining > 0)
+      setLoading(false)
+    }
     loadDeletedStatus()
   }, [])
-
-  const loadDeletedStatus = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('deleted_at')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile?.deleted_at) {
-      // 削除されていない → ダッシュボードへ
-      router.push('/dashboard')
-      return
-    }
-
-    const deleted = new Date(profile.deleted_at)
-    const now = new Date()
-    const diffMs = now.getTime() - deleted.getTime()
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    const remaining = RESTORE_PERIOD_DAYS - diffDays
-
-    setDeletedAt(deleted)
-    setDaysRemaining(Math.max(0, remaining))
-    setCanRestore(remaining > 0)
-    setLoading(false)
-  }
 
   const handleRestore = async () => {
     setRestoring(true)

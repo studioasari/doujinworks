@@ -56,14 +56,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
   const itemsPerPage = 30
 
   useEffect(() => {
-    fetchPortfolioItems()
-  }, [category])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [sortOrder, searchQuery])
-
-  async function fetchPortfolioItems() {
+    const fetchPortfolioItems = async () => {
     setLoading(true)
     
     try {
@@ -130,7 +123,13 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
     } finally {
       setLoading(false)
     }
-  }
+    }
+    fetchPortfolioItems()
+  }, [category])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [sortOrder, searchQuery])
 
   // おすすめ作品（いいね数上位8件）
   const featuredItems = useMemo(() => {

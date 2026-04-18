@@ -36,19 +36,6 @@ export default function AdminPostsPage() {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
 
-  useEffect(() => {
-    fetchCategories()
-    fetchPosts()
-  }, [])
-
-  const fetchCategories = async () => {
-    const { data } = await supabase
-      .from('post_categories')
-      .select('*')
-      .order('sort_order')
-    if (data) setCategories(data)
-  }
-
   const fetchPosts = async () => {
     setLoading(true)
     const { data, error } = await supabase
@@ -70,6 +57,18 @@ export default function AdminPostsPage() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from('post_categories')
+        .select('*')
+        .order('sort_order')
+      if (data) setCategories(data)
+    }
+    fetchCategories()
+    fetchPosts()
+  }, [])
 
   const handleDelete = async (id: string, title: string, e: React.MouseEvent) => {
     e.stopPropagation()

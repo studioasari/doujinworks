@@ -111,7 +111,35 @@ export default function RequestDetailPage() {
 
   useEffect(() => { loadUser() }, [])
 
+  async function checkApplication() {
+    // 応募者数
+    const { data, error } = await supabase
+      .from('work_request_applications')
+      .select('id, applicant_id, status')
+      .eq('work_request_id', requestId)
+
+    if (!error && data) {
+      setApplicationCount(data.length)
+      if (currentProfileId) {
+        const myApp = data.find(app => app.applicant_id === currentProfileId)
+        setHasApplied(!!myApp)
+      }
+    }
+  }
+
   useEffect(() => {
+    const fetchRequest = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('work_requests')
+        .select('*, profiles!work_requests_requester_id_fkey(id, username, display_name, avatar_url)')
+        .eq('id', requestId)
+        .maybeSingle()
+
+      if (error) console.error('依頼取得エラー:', error)
+      else setRequest(data)
+      setLoading(false)
+    }
     if (requestId) {
       fetchRequest()
       checkApplication()
@@ -119,6 +147,26 @@ export default function RequestDetailPage() {
   }, [requestId, currentProfileId])
 
   useEffect(() => {
+    const checkMyContract = async () => {
+      if (!currentProfileId || !request) return
+
+      // クリエイターの場合：自分が契約者の契約を取得
+      // 依頼者の場合：この依頼に紐づく契約を取得
+      const isReq = request.requester_id === currentProfileId
+
+      let query = supabase
+        .from('work_contracts')
+        .select('id')
+        .eq('work_request_id', requestId)
+
+      if (!isReq) {
+        query = query.eq('contractor_id', currentProfileId)
+      }
+
+      const { data, error } = await query.maybeSingle()
+
+      if (!error && data) setMyContractId(data.id)
+    }
     if (requestId && currentProfileId && request) { checkMyContract() }
   }, [requestId, currentProfileId, request])
 
@@ -156,56 +204,6 @@ export default function RequestDetailPage() {
     setIsLoggedIn(true)
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
     if (profile) setCurrentProfileId(profile.id)
-  }
-
-  async function fetchRequest() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('work_requests')
-      .select('*, profiles!work_requests_requester_id_fkey(id, username, display_name, avatar_url)')
-      .eq('id', requestId)
-      .maybeSingle()
-
-    if (error) console.error('依頼取得エラー:', error)
-    else setRequest(data)
-    setLoading(false)
-  }
-
-  async function checkApplication() {
-    // 応募者数
-    const { data, error } = await supabase
-      .from('work_request_applications')
-      .select('id, applicant_id, status')
-      .eq('work_request_id', requestId)
-
-    if (!error && data) {
-      setApplicationCount(data.length)
-      if (currentProfileId) {
-        const myApp = data.find(app => app.applicant_id === currentProfileId)
-        setHasApplied(!!myApp)
-      }
-    }
-  }
-
-  async function checkMyContract() {
-    if (!currentProfileId || !request) return
-    
-    // クリエイターの場合：自分が契約者の契約を取得
-    // 依頼者の場合：この依頼に紐づく契約を取得
-    const isReq = request.requester_id === currentProfileId
-    
-    let query = supabase
-      .from('work_contracts')
-      .select('id')
-      .eq('work_request_id', requestId)
-    
-    if (!isReq) {
-      query = query.eq('contractor_id', currentProfileId)
-    }
-    
-    const { data, error } = await query.maybeSingle()
-
-    if (!error && data) setMyContractId(data.id)
   }
 
   async function fetchClientStats(requesterId: string) {

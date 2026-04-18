@@ -94,12 +94,6 @@ export default function PortfolioManageClient() {
     loadAuth()
   }, [])
 
-  useEffect(() => {
-    if (currentProfileId) {
-      fetchMyPortfolio()
-    }
-  }, [currentProfileId])
-
   async function loadAuth() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -131,6 +125,12 @@ export default function PortfolioManageClient() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (currentProfileId) {
+      fetchMyPortfolio()
+    }
+  }, [currentProfileId])
 
   function showDeleteConfirm(itemId: string, title: string) {
     setConfirmModal({

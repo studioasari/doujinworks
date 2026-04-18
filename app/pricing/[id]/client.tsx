@@ -91,6 +91,48 @@ export default function PricingDetailClient() {
   }, [])
 
   useEffect(() => {
+    const fetchPlanAndCreator = async () => {
+      setLoading(true)
+
+      const { data: planData, error: planError } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .eq('id', planId)
+        .eq('is_public', true)
+        .maybeSingle()
+
+      if (planError) {
+        console.error('料金プラン取得エラー:', planError)
+        setPlan(null)
+        setLoading(false)
+        return
+      }
+
+      if (!planData) {
+        setPlan(null)
+        setLoading(false)
+        return
+      }
+
+      setPlan(planData)
+
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('profiles')
+        .select('id, user_id, username, display_name, bio, avatar_url')
+        .eq('id', planData.creator_id)
+        .maybeSingle()
+
+      if (creatorError) {
+        console.error('クリエイター取得エラー:', creatorError)
+        setCreator(null)
+      } else if (!creatorData) {
+        setCreator(null)
+      } else {
+        setCreator(creatorData)
+      }
+
+      setLoading(false)
+    }
     if (planId) {
       fetchPlanAndCreator()
     }
@@ -126,49 +168,6 @@ export default function PricingDetailClient() {
     setIsLoggedIn(true)
     const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
     if (profile) setCurrentProfileId(profile.id)
-  }
-
-  async function fetchPlanAndCreator() {
-    setLoading(true)
-
-    const { data: planData, error: planError } = await supabase
-      .from('pricing_plans')
-      .select('*')
-      .eq('id', planId)
-      .eq('is_public', true)
-      .maybeSingle()
-
-    if (planError) {
-      console.error('料金プラン取得エラー:', planError)
-      setPlan(null)
-      setLoading(false)
-      return
-    }
-
-    if (!planData) {
-      setPlan(null)
-      setLoading(false)
-      return
-    }
-
-    setPlan(planData)
-
-    const { data: creatorData, error: creatorError } = await supabase
-      .from('profiles')
-      .select('id, user_id, username, display_name, bio, avatar_url')
-      .eq('id', planData.creator_id)
-      .maybeSingle()
-
-    if (creatorError) {
-      console.error('クリエイター取得エラー:', creatorError)
-      setCreator(null)
-    } else if (!creatorData) {
-      setCreator(null)
-    } else {
-      setCreator(creatorData)
-    }
-
-    setLoading(false)
   }
 
   function handleShare(platform: 'twitter' | 'facebook' | 'line' | 'copy') {

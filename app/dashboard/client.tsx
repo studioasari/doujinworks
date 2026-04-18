@@ -60,29 +60,28 @@ export default function DashboardClient() {
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
 
   useEffect(() => {
+    const loadDashboard = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, user_id, account_type, display_name, avatar_url')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profileData) return
+
+      setProfile(profileData)
+
+      if (profileData.account_type === 'business') {
+        await loadWorkItems(profileData.id)
+      }
+
+      setLoading(false)
+    }
     loadDashboard()
   }, [])
-
-  async function loadDashboard() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, user_id, account_type, display_name, avatar_url')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profileData) return
-
-    setProfile(profileData)
-
-    if (profileData.account_type === 'business') {
-      await loadWorkItems(profileData.id)
-    }
-
-    setLoading(false)
-  }
 
   function isStale(updatedAt: string | null): boolean {
     if (!updatedAt) return false

@@ -34,33 +34,32 @@ export default function CreatorList() {
   const [accountTypeFilter, setAccountTypeFilter] = useState<AccountTypeFilter>('all')
 
   useEffect(() => {
+    const fetchCreators = async () => {
+      setLoading(true)
+
+      let query = supabase
+        .from('profiles')
+        .select('id, username, display_name, bio, avatar_url, account_type, is_accepting_orders')
+        .order('created_at', { ascending: false })
+
+      if (accountTypeFilter === 'casual') {
+        query = query.eq('account_type', 'casual')
+      } else if (accountTypeFilter === 'business') {
+        query = query.eq('account_type', 'business')
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('クリエイター取得エラー:', error)
+      } else {
+        setCreators(data || [])
+      }
+
+      setLoading(false)
+    }
     fetchCreators()
   }, [accountTypeFilter])
-
-  async function fetchCreators() {
-    setLoading(true)
-    
-    let query = supabase
-      .from('profiles')
-      .select('id, username, display_name, bio, avatar_url, account_type, is_accepting_orders')
-      .order('created_at', { ascending: false })
-
-    if (accountTypeFilter === 'casual') {
-      query = query.eq('account_type', 'casual')
-    } else if (accountTypeFilter === 'business') {
-      query = query.eq('account_type', 'business')
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('クリエイター取得エラー:', error)
-    } else {
-      setCreators(data || [])
-    }
-    
-    setLoading(false)
-  }
 
   const filteredCreators = creators.filter(creator => {
     if (!searchQuery) return true

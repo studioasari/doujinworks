@@ -54,10 +54,6 @@ export default function AdminWorks() {
   const [modalAction, setModalAction] = useState<'hide' | 'show' | 'delete' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadWorks()
-  }, [search, category, filter, page])
-
   async function loadWorks() {
     setLoading(true)
 
@@ -109,6 +105,10 @@ export default function AdminWorks() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadWorks()
+  }, [search, category, filter, page])
 
   function openModal(work: PortfolioItem, action: 'hide' | 'show' | 'delete') {
     setModalWork(work)

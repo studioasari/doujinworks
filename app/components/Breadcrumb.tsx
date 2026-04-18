@@ -106,10 +106,7 @@ export default function Breadcrumb() {
   }
   
   useEffect(() => {
-    generateBreadcrumbs()
-  }, [pathname, dynamicData])
-
-  function generateBreadcrumbs() {
+    const generateBreadcrumbs = () => {
     const paths = pathname.split('/').filter(Boolean)
     const items: BreadcrumbItem[] = [{ label: 'ホーム', href: '/' }]
 
@@ -231,7 +228,9 @@ export default function Breadcrumb() {
     })
 
     setBreadcrumbs(items)
-  }
+    }
+    generateBreadcrumbs()
+  }, [pathname, dynamicData])
 
   function getPathLabel(path: string, isLast: boolean, paths: string[], index: number): string {
     // ダッシュボード配下の特別なラベル

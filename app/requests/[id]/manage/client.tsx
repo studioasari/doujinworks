@@ -89,21 +89,6 @@ export default function RequestManagePage() {
     return () => document.body.classList.remove('modal-open')
   }, [showContractModal, selectedApplication])
 
-  useEffect(() => {
-    if (requestId && currentProfileId) {
-      fetchRequest()
-      fetchApplications()
-      fetchContracts()
-    }
-  }, [requestId, currentProfileId])
-
-  async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
-    if (profile) setCurrentProfileId(profile.id)
-  }
-
   async function fetchRequest() {
     const { data, error } = await supabase.from('work_requests').select('*').eq('id', requestId).single()
     if (error) { console.error('依頼取得エラー:', error); return }
@@ -132,6 +117,21 @@ export default function RequestManagePage() {
       .eq('work_request_id', requestId)
       .order('created_at', { ascending: false })
     if (!error) setContracts(data || [])
+  }
+
+  useEffect(() => {
+    if (requestId && currentProfileId) {
+      fetchRequest()
+      fetchApplications()
+      fetchContracts()
+    }
+  }, [requestId, currentProfileId])
+
+  async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
+    if (profile) setCurrentProfileId(profile.id)
   }
 
   function handleAcceptApplicationClick(applicationId: string, applicantId: string, proposedPrice: number | null) {

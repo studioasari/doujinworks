@@ -127,29 +127,6 @@ export default function BankAccountClient() {
     loadData()
   }, [])
 
-  useEffect(() => {
-    if (currentProfileId) {
-      loadBankAccount()
-    }
-  }, [currentProfileId])
-
-  async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, account_type, is_admin')
-      .eq('user_id', user.id)
-      .single()
-    
-    if (profile) {
-      setCurrentProfileId(profile.id)
-    }
-    
-    setLoading(false)
-  }
-
   async function loadBankAccount() {
     const { data, error } = await supabase
       .from('bank_accounts')
@@ -177,6 +154,29 @@ export default function BankAccountClient() {
         setBranchCode(data.branch_code)
       }
     }
+  }
+
+  useEffect(() => {
+    if (currentProfileId) {
+      loadBankAccount()
+    }
+  }, [currentProfileId])
+
+  async function loadData() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, account_type, is_admin')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (profile) {
+      setCurrentProfileId(profile.id)
+    }
+    
+    setLoading(false)
   }
 
   // 銀行名検索

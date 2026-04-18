@@ -47,6 +47,31 @@ export default function AdminEditPostPage() {
   })
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase.from('post_categories').select('*').order('sort_order')
+      if (data) setCategories(data)
+    }
+    const fetchPost = async () => {
+      const { data, error } = await supabase.from('posts').select('*').eq('id', postId).single()
+      if (error || !data) {
+        alert('記事が見つかりません')
+        router.push('/admin/posts')
+        return
+      }
+      const loadedData = {
+        title: data.title,
+        slug: data.slug,
+        category_id: data.category_id || '',
+        excerpt: data.excerpt || '',
+        content: data.content,
+        thumbnail_url: data.thumbnail_url || '',
+        status: data.status,
+        published_at: data.published_at
+      }
+      setFormData(loadedData)
+      lastSavedRef.current = JSON.stringify(loadedData)
+      setLoading(false)
+    }
     fetchCategories()
     fetchPost()
   }, [postId])
@@ -57,37 +82,33 @@ export default function AdminEditPostPage() {
     if (currentData === lastSavedRef.current) return
     if (!formData.title) return
 
+    const handleAutoSave = async () => {
+      if (!formData.title || !formData.slug) return
+      setSaveStatus('saving')
+      try {
+        const { error } = await supabase.from('posts').update({
+          title: formData.title,
+          slug: formData.slug,
+          category_id: formData.category_id || null,
+          excerpt: formData.excerpt || null,
+          content: formData.content,
+          thumbnail_url: formData.thumbnail_url || null,
+          updated_at: new Date().toISOString()
+        }).eq('id', postId)
+        if (error) throw error
+        lastSavedRef.current = JSON.stringify(formData)
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } catch (error) {
+        console.error('Auto-save error:', error)
+        setSaveStatus('error')
+      }
+    }
+
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
     autoSaveTimerRef.current = setTimeout(() => handleAutoSave(), 30000)
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current) }
   }, [formData, loading])
-
-  const fetchCategories = async () => {
-    const { data } = await supabase.from('post_categories').select('*').order('sort_order')
-    if (data) setCategories(data)
-  }
-
-  const fetchPost = async () => {
-    const { data, error } = await supabase.from('posts').select('*').eq('id', postId).single()
-    if (error || !data) {
-      alert('記事が見つかりません')
-      router.push('/admin/posts')
-      return
-    }
-    const loadedData = {
-      title: data.title,
-      slug: data.slug,
-      category_id: data.category_id || '',
-      excerpt: data.excerpt || '',
-      content: data.content,
-      thumbnail_url: data.thumbnail_url || '',
-      status: data.status,
-      published_at: data.published_at
-    }
-    setFormData(loadedData)
-    lastSavedRef.current = JSON.stringify(loadedData)
-    setLoading(false)
-  }
 
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
@@ -180,29 +201,6 @@ export default function AdminEditPostPage() {
     }
     setUploadingInline(false)
   }, [formData.content])
-
-  const handleAutoSave = async () => {
-    if (!formData.title || !formData.slug) return
-    setSaveStatus('saving')
-    try {
-      const { error } = await supabase.from('posts').update({
-        title: formData.title,
-        slug: formData.slug,
-        category_id: formData.category_id || null,
-        excerpt: formData.excerpt || null,
-        content: formData.content,
-        thumbnail_url: formData.thumbnail_url || null,
-        updated_at: new Date().toISOString()
-      }).eq('id', postId)
-      if (error) throw error
-      lastSavedRef.current = JSON.stringify(formData)
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 3000)
-    } catch (error) {
-      console.error('Auto-save error:', error)
-      setSaveStatus('error')
-    }
-  }
 
   const handleSubmit = async (publish?: boolean) => {
     if (!formData.title || !formData.slug || !formData.content) {

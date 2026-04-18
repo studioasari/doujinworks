@@ -136,6 +136,26 @@ function UploadIllustrationContent() {
   ]
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, account_type')
+          .eq('user_id', user.id)
+          .single()
+
+        if (profile) {
+          setCurrentUserId(user.id)
+          setAccountType(profile.account_type)
+          setLoading(false)
+        } else {
+          router.push('/profile')
+        }
+      }
+    }
     checkAuth()
   }, [])
 
@@ -199,27 +219,6 @@ function UploadIllustrationContent() {
       }
     } catch (error) {
       console.error('下書き復元エラー:', error)
-    }
-  }
-
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, account_type')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (profile) {
-        setCurrentUserId(user.id)
-        setAccountType(profile.account_type)
-        setLoading(false)
-      } else {
-        router.push('/profile')
-      }
     }
   }
 

@@ -37,10 +37,6 @@ export default function AdminRequestsTrash() {
   const [modalAction, setModalAction] = useState<'restore' | 'delete' | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
-    loadRequests()
-  }, [search, page])
-
   async function loadRequests() {
     setLoading(true)
 
@@ -78,6 +74,10 @@ export default function AdminRequestsTrash() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadRequests()
+  }, [search, page])
 
   function openModal(request: WorkRequest, action: 'restore' | 'delete') {
     setModalRequest(request)
