@@ -7,7 +7,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
-import { createNotification } from '@/utils/notifications'
+import {
+  CONTRACT_STATUS_LABELS,
+  RECRUITMENT_STATUS_LABELS,
+} from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type WorkRequest = {
@@ -18,7 +21,8 @@ type WorkRequest = {
   budget_max: number | null
   deadline: string | null
   category: string
-  status: string
+  recruitment_status: string
+  progress_status: string
   created_at: string
   requester_id: string
   payment_type: string | null
@@ -27,6 +31,7 @@ type WorkRequest = {
   price_negotiable: boolean | null
   number_of_positions: number | null
   application_deadline: string | null
+  contracted_count: number | null
 }
 
 type Application = {
@@ -58,6 +63,31 @@ type Contract = {
   }
 }
 
+function getRequestStatusLabel(
+  recruitmentStatus: string,
+  progressStatus: string
+): string {
+  if (recruitmentStatus === 'open') {
+    return RECRUITMENT_STATUS_LABELS.open
+  }
+  if (recruitmentStatus === 'filled') {
+    return RECRUITMENT_STATUS_LABELS.filled
+  }
+  if (recruitmentStatus === 'withdrawn') {
+    return RECRUITMENT_STATUS_LABELS.withdrawn
+  }
+  return progressStatus
+}
+
+function getContractStatusLabel(status: string): string {
+  const key = status as keyof typeof CONTRACT_STATUS_LABELS
+  return CONTRACT_STATUS_LABELS[key] ?? status
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
 export default function RequestManagePage() {
   const [request, setRequest] = useState<WorkRequest | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -65,12 +95,11 @@ export default function RequestManagePage() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
-  
+
   const [showContractModal, setShowContractModal] = useState(false)
   const [contractPrice, setContractPrice] = useState('')
   const [contractDeadline, setContractDeadline] = useState('')
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
-  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null)
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null)
 
   const params = useParams()
@@ -97,7 +126,7 @@ export default function RequestManagePage() {
       router.push(`/requests/${requestId}`)
       return
     }
-    setRequest(data)
+    setRequest(data as WorkRequest)
     setLoading(false)
   }
 
@@ -138,7 +167,6 @@ export default function RequestManagePage() {
     const alreadyContracted = contracts.some(c => c.contractor_id === applicantId)
     if (alreadyContracted) { alert('この応募者とは既に契約済みです'); return }
     setSelectedApplicationId(applicationId)
-    setSelectedApplicantId(applicantId)
     setContractPrice(proposedPrice?.toString() || request?.budget_max?.toString() || '')
     setContractDeadline(request?.deadline || '')
     setShowContractModal(true)
@@ -149,70 +177,26 @@ export default function RequestManagePage() {
     const price = parseInt(contractPrice)
     if (price < 500) { alert('金額は500円以上で設定してください'); return }
     if (!contractDeadline) { alert('納期を入力してください'); return }
-    if (!selectedApplicationId || !selectedApplicantId) { alert('エラー: 応募情報が見つかりません'); return }
+    if (!selectedApplicationId) { alert('エラー: 応募情報が見つかりません'); return }
 
     setProcessing(true)
     try {
-      const { data: newContract, error: contractError } = await supabase
-        .from('work_contracts')
-        .insert({
-          work_request_id: requestId,
-          contractor_id: selectedApplicantId,
-          application_id: selectedApplicationId,
-          final_price: price,
-          deadline: contractDeadline,
-          status: 'contracted',
-          contracted_at: new Date().toISOString()
-        })
-        .select().single()
-
-      if (contractError) {
-        if (contractError.code === '23505') alert('この応募者とは既に契約済みです')
-        else alert('契約の作成に失敗しました')
+      const response = await fetch(`/api/applications/${selectedApplicationId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finalPrice: price, deadline: contractDeadline }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error ?? '採用処理に失敗しました')
         setProcessing(false)
         return
       }
 
-      await supabase.from('work_request_applications').update({ status: 'accepted' }).eq('id', selectedApplicationId)
-
-      // チャットルーム作成
-      const { data: existingRooms } = await supabase.from('chat_room_participants').select('chat_room_id').eq('profile_id', currentProfileId)
-      let targetRoomId: string | null = null
-
-      if (existingRooms && existingRooms.length > 0) {
-        for (const room of existingRooms) {
-          const { data: participants } = await supabase.from('chat_room_participants').select('profile_id').eq('chat_room_id', room.chat_room_id)
-          const profileIds = participants?.map(p => p.profile_id) || []
-          if (profileIds.length === 2 && profileIds.includes(selectedApplicantId)) {
-            targetRoomId = room.chat_room_id
-            break
-          }
-        }
-      }
-
-      if (!targetRoomId) {
-        const { data: newRoom } = await supabase.from('chat_rooms').insert({ related_request_id: requestId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }).select().single()
-        if (newRoom) {
-          targetRoomId = newRoom.id
-          await supabase.from('chat_room_participants').insert([
-            { chat_room_id: targetRoomId, profile_id: currentProfileId, last_read_at: new Date().toISOString(), pinned: false, hidden: false },
-            { chat_room_id: targetRoomId, profile_id: selectedApplicantId, last_read_at: new Date().toISOString(), pinned: false, hidden: false }
-          ])
-        }
-      }
-
-      await createNotification(selectedApplicantId, 'accepted', '応募が採用されました', `「${request!.title}」の応募が採用されました。仮払いをお待ちください。`, `/requests/${requestId}/contracts/${newContract.id}`)
-
-      const newContractsCount = contracts.length + 1
-      const maxPositions = request?.number_of_positions || 1
-
-      if (newContractsCount >= maxPositions) {
-        await supabase.from('work_request_applications').update({ status: 'rejected' }).eq('work_request_id', requestId).eq('status', 'pending')
-        await supabase.from('work_requests').update({ status: 'contracted', contracted_count: newContractsCount }).eq('id', requestId)
-        alert(`契約を確定しました！募集人数（${maxPositions}人）に達したため、募集を終了しました。`)
+      if (result.filled) {
+        alert('契約を確定しました！募集人数に達したため、募集を終了しました。')
       } else {
-        await supabase.from('work_requests').update({ contracted_count: newContractsCount }).eq('id', requestId)
-        alert(`契約を確定しました！（${newContractsCount}/${maxPositions}人採用済み）`)
+        alert('契約を確定しました！')
       }
 
       setShowContractModal(false)
@@ -220,8 +204,8 @@ export default function RequestManagePage() {
       fetchContracts()
       fetchRequest()
     } catch (error) {
-      console.error('契約確定エラー:', error)
-      alert('契約の確定に失敗しました')
+      console.error('[accept] error:', error)
+      alert('採用処理に失敗しました')
     }
     setProcessing(false)
   }
@@ -229,19 +213,43 @@ export default function RequestManagePage() {
   async function handleRejectApplication(applicationId: string) {
     if (!confirm('この応募を却下しますか？')) return
     setProcessing(true)
-    const { error } = await supabase.from('work_request_applications').update({ status: 'rejected' }).eq('id', applicationId)
-    if (error) alert('却下に失敗しました')
-    else { alert('応募を却下しました'); fetchApplications() }
+    try {
+      const response = await fetch(`/api/applications/${applicationId}/reject`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error ?? '却下に失敗しました')
+      } else {
+        alert('応募を却下しました')
+        fetchApplications()
+      }
+    } catch (error) {
+      console.error('[reject] error:', error)
+      alert('却下に失敗しました')
+    }
     setProcessing(false)
   }
 
   async function handleCloseRecruitment() {
     if (!confirm('募集を終了しますか？\n※未対応の応募は全て却下されます。')) return
     setProcessing(true)
-    await supabase.from('work_request_applications').update({ status: 'rejected' }).eq('work_request_id', requestId).eq('status', 'pending')
-    const { error } = await supabase.from('work_requests').update({ status: 'contracted' }).eq('id', requestId)
-    if (error) alert('募集終了に失敗しました')
-    else { alert('募集を終了しました'); fetchRequest(); fetchApplications() }
+    try {
+      const response = await fetch(`/api/requests/${requestId}/withdraw`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error ?? '募集終了処理に失敗しました')
+      } else {
+        alert('募集を終了しました')
+        fetchRequest()
+        fetchApplications()
+      }
+    } catch (error) {
+      console.error('[withdraw] error:', error)
+      alert('募集終了処理に失敗しました')
+    }
     setProcessing(false)
   }
 
@@ -249,24 +257,22 @@ export default function RequestManagePage() {
     if (contracts.length > 0) { alert('既に契約が存在するため、依頼をキャンセルできません。'); return }
     if (!confirm('この依頼をキャンセルしますか？')) return
     setProcessing(true)
-    const { error } = await supabase.from('work_requests').update({ status: 'cancelled' }).eq('id', requestId)
-    if (error) alert('キャンセルに失敗しました')
-    else { alert('依頼をキャンセルしました'); router.push('/requests/manage') }
+    try {
+      const response = await fetch(`/api/requests/${requestId}/withdraw`, {
+        method: 'POST',
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        alert(result.error ?? 'キャンセルに失敗しました')
+      } else {
+        alert('依頼をキャンセルしました')
+        router.push('/requests/manage')
+      }
+    } catch (error) {
+      console.error('[cancel] error:', error)
+      alert('キャンセルに失敗しました')
+    }
     setProcessing(false)
-  }
-
-  function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = { open: '募集中', contracted: '募集終了', cancelled: 'キャンセル' }
-    return statuses[status] || status
-  }
-
-  function getContractStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = { contracted: '仮払い待ち', paid: '作業中', delivered: '納品済み', completed: '完了', cancelled: 'キャンセル' }
-    return statuses[status] || status
-  }
-
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
   }
 
   if (loading) {
@@ -315,6 +321,19 @@ export default function RequestManagePage() {
   const rejectedApplications = applications.filter(app => app.status === 'rejected')
   const maxPositions = request.number_of_positions || 1
   const remainingPositions = maxPositions - contracts.length
+  const statusLabel = getRequestStatusLabel(request.recruitment_status, request.progress_status)
+
+  // バッジ色の決定
+  let statusBadgeClass = styles.open
+  if (request.recruitment_status === 'filled' || request.recruitment_status === 'withdrawn') {
+    statusBadgeClass = styles.contracted
+  }
+  if (request.progress_status === 'completed') {
+    statusBadgeClass = styles.completed
+  }
+  if (request.progress_status === 'cancelled') {
+    statusBadgeClass = styles.cancelled
+  }
 
   return (
     <>
@@ -327,7 +346,7 @@ export default function RequestManagePage() {
               <h1 className={styles.title}>{request.title}</h1>
             </div>
             <div className={styles.badges}>
-              <span className={`${styles.badge} ${styles[request.status]}`}>{getStatusLabel(request.status)}</span>
+              <span className={`${styles.badge} ${statusBadgeClass}`}>{statusLabel}</span>
               <span className={`${styles.badge} ${styles.info}`}>{contracts.length} / {maxPositions} 人採用済み</span>
             </div>
           </div>
@@ -411,8 +430,8 @@ export default function RequestManagePage() {
                         <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
                           <div className={styles.applicationMain}>
                             {app.profiles?.username ? (
-                              <Link 
-                                href={`/creators/${app.profiles.username}`} 
+                              <Link
+                                href={`/creators/${app.profiles.username}`}
                                 className={styles.applicationAvatarLink}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -461,8 +480,8 @@ export default function RequestManagePage() {
                           <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
                             <div className={styles.applicationMain}>
                               {app.profiles?.username ? (
-                                <Link 
-                                  href={`/creators/${app.profiles.username}`} 
+                                <Link
+                                  href={`/creators/${app.profiles.username}`}
                                   className={styles.applicationAvatarLink}
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -509,8 +528,8 @@ export default function RequestManagePage() {
                         <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
                           <div className={styles.applicationMain}>
                             {app.profiles?.username ? (
-                              <Link 
-                                href={`/creators/${app.profiles.username}`} 
+                              <Link
+                                href={`/creators/${app.profiles.username}`}
                                 className={styles.applicationAvatarLink}
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -549,7 +568,7 @@ export default function RequestManagePage() {
           </div>
 
           {/* 依頼のキャンセル（契約がない時のみ表示） */}
-          {request.status === 'open' && contracts.length === 0 && (
+          {request.recruitment_status === 'open' && contracts.length === 0 && (
             <div className={styles.dangerSection}>
               <h3 className={styles.dangerTitle}>この依頼をキャンセルする</h3>
               <p className={styles.dangerDescription}>
@@ -563,7 +582,7 @@ export default function RequestManagePage() {
           )}
 
           {/* 募集終了（契約がある時のみ表示） */}
-          {request.status === 'open' && contracts.length > 0 && (
+          {request.recruitment_status === 'open' && contracts.length > 0 && (
             <div className={styles.dangerSection}>
               <h3 className={styles.dangerTitle}>募集を終了する</h3>
               <p className={styles.dangerDescription}>
@@ -576,9 +595,9 @@ export default function RequestManagePage() {
             </div>
           )}
 
-          {request.status !== 'open' && (
+          {request.recruitment_status !== 'open' && (
             <div className={styles.closed}>
-              <p>この依頼は{getStatusLabel(request.status)}です。</p>
+              <p>この依頼は{statusLabel}です。</p>
               <Link href={`/requests/${requestId}`} className={`${styles.btn} ${styles.primary}`}>依頼詳細を見る</Link>
             </div>
           )}
@@ -635,7 +654,7 @@ export default function RequestManagePage() {
             <div className={styles.modalHeader}>
               <div className={styles.appModalUser}>
                 {selectedApplication.profiles?.username ? (
-                  <Link 
+                  <Link
                     href={`/creators/${selectedApplication.profiles.username}`}
                     className={styles.appModalAvatarLink}
                     onClick={() => setSelectedApplication(null)}
@@ -671,8 +690,8 @@ export default function RequestManagePage() {
                 <div className={styles.appModalInfoRow}>
                   <span className={styles.appModalInfoLabel}>希望金額</span>
                   <span className={styles.appModalInfoValue}>
-                    {selectedApplication.proposed_price 
-                      ? `¥${selectedApplication.proposed_price.toLocaleString()}` 
+                    {selectedApplication.proposed_price
+                      ? `¥${selectedApplication.proposed_price.toLocaleString()}`
                       : '未指定'}
                   </span>
                 </div>
@@ -690,22 +709,22 @@ export default function RequestManagePage() {
             </div>
 
             {/* フッター */}
-            {selectedApplication.status === 'pending' && request.status === 'open' && (
+            {selectedApplication.status === 'pending' && request.recruitment_status === 'open' && (
               <div className={styles.modalFooter}>
-                <button 
-                  onClick={() => { handleRejectApplication(selectedApplication.id); setSelectedApplication(null); }} 
-                  disabled={processing} 
+                <button
+                  onClick={() => { handleRejectApplication(selectedApplication.id); setSelectedApplication(null); }}
+                  disabled={processing}
                   className={`${styles.btn} ${styles.secondary}`}
                 >
                   却下する
                 </button>
                 {remainingPositions > 0 ? (
-                  <button 
-                    onClick={() => { 
-                      handleAcceptApplicationClick(selectedApplication.id, selectedApplication.applicant_id, selectedApplication.proposed_price); 
-                      setSelectedApplication(null); 
-                    }} 
-                    disabled={processing} 
+                  <button
+                    onClick={() => {
+                      handleAcceptApplicationClick(selectedApplication.id, selectedApplication.applicant_id, selectedApplication.proposed_price);
+                      setSelectedApplication(null);
+                    }}
+                    disabled={processing}
                     className={`${styles.btn} ${styles.primary}`}
                   >
                     採用する

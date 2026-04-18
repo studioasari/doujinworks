@@ -12,7 +12,11 @@ import { contractsRejectLimiter, safeLimit } from '@/utils/rateLimit'
  *   1. ログイン済み
  *   2. 対象 work_contract の親 work_request の依頼者本人
  *
+ * リクエストボディ:
+ *   { deliveryId: string, feedback?: string }
+ *
  * 挙動:
+ *   - work_deliveries.status を 'pending' → 'rejected' に(feedback も保存)
  *   - work_contracts.status を 'delivered' → 'paid' に
  *   - delivered_at はクリアしない(納品履歴として残す)
  *   - 親ステータスは変化しない(active のまま)
@@ -35,6 +39,20 @@ export async function POST(
         { status: 401 }
       )
     }
+
+    // リクエストボディ取得
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body.deliveryId !== 'string') {
+      return NextResponse.json(
+        { error: 'deliveryId が不正です' },
+        { status: 400 }
+      )
+    }
+    const deliveryId: string = body.deliveryId
+    const feedback: string | null =
+      typeof body.feedback === 'string' && body.feedback.trim()
+        ? body.feedback.trim()
+        : null
 
     const admin = createAdminClient()
 
@@ -106,6 +124,53 @@ export async function POST(
       )
     }
 
+    // 納品物の確認と差戻し
+    const { data: delivery, error: deliveryFetchError } = await admin
+      .from('work_deliveries')
+      .select('id, status, work_contract_id')
+      .eq('id', deliveryId)
+      .single()
+
+    if (deliveryFetchError || !delivery) {
+      return NextResponse.json(
+        { error: '納品物が見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    if (delivery.work_contract_id !== contractId) {
+      return NextResponse.json(
+        { error: '納品物と契約の関係が不正です' },
+        { status: 400 }
+      )
+    }
+
+    if (delivery.status !== 'pending') {
+      return NextResponse.json(
+        { error: 'この納品物は既に処理済みです' },
+        { status: 400 }
+      )
+    }
+
+    // work_deliveries を rejected に更新(feedback も保存)
+    const { error: deliveryUpdateError } = await admin
+      .from('work_deliveries')
+      .update({
+        status: 'rejected',
+        feedback,
+      })
+      .eq('id', deliveryId)
+      .eq('status', 'pending')
+
+    if (deliveryUpdateError) {
+      console.error('[contracts/reject] 納品物更新エラー:', deliveryUpdateError)
+      return NextResponse.json(
+        { error: '差戻し処理に失敗しました' },
+        { status: 500 }
+      )
+    }
+
+    // 契約を paid に戻す
     const { error: updateError } = await admin
       .from('work_contracts')
       .update({ status: 'paid' })

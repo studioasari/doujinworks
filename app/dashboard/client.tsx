@@ -6,6 +6,12 @@ import type { WorkContractRow } from '@/types/supabase-helpers'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
+import {
+  APPLICATION_STATUS_LABELS,
+  CONTRACT_STATUS_LABELS,
+  RECRUITMENT_STATUS_LABELS,
+  REJECTION_REASON_MESSAGES,
+} from '@/lib/status-labels'
 import styles from './page.module.css'
 
 type Profile = {
@@ -30,22 +36,27 @@ type WorkItem = {
   price: number | null
   otherPartyName: string | null
   otherPartyAvatar: string | null
+  recruitmentStatus?: string
+  progressStatus?: string
+}
+
+type RejectionItem = {
+  id: string
+  workRequestId: string
+  title: string
+  description: string | null
+  rejectedAt: string | null
+  rejectionReason: string | null
+  requesterName: string | null
+  requesterAvatar: string | null
 }
 
 const STALE_DAYS = 30
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: '応募中',
-  contracted: '仮払い待ち',
-  paid: '作業中',
-  delivered: '納品済み',
-  open: '応募選定中',
-}
-
 function getGreeting(): string {
   const now = new Date()
   const jstHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' })).getHours()
-  
+
   if (jstHour >= 5 && jstHour < 12) {
     return 'おはようございます'
   } else if (jstHour >= 12 && jstHour < 18) {
@@ -59,6 +70,7 @@ export default function DashboardClient() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [workItems, setWorkItems] = useState<WorkItem[]>([])
+  const [recentRejectionItems, setRecentRejectionItems] = useState<RejectionItem[]>([])
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -95,19 +107,20 @@ export default function DashboardClient() {
   async function loadWorkItems(profileId: string) {
     const items: WorkItem[] = []
 
+    // 依頼者視点: 自分が出した依頼(進行中 = pending or active)
     const { data: myRequests } = await supabase
       .from('work_requests')
       .select(`
-        id, title, description, status, updated_at, budget_min, budget_max,
+        id, title, description, recruitment_status, progress_status, updated_at, budget_min, budget_max,
         work_contracts ( id, status, deadline, contracted_at, updated_at, final_price, contractor_id )
       `)
       .eq('requester_id', profileId)
-      .in('status', ['open', 'contracted'])
+      .in('progress_status', ['pending', 'active'])
 
     if (myRequests) {
       for (const request of myRequests) {
         const contracts = request.work_contracts as WorkContractRow[]
-        
+
         if (contracts && contracts.length > 0) {
           for (const contract of contracts) {
             if (['contracted', 'paid', 'delivered'].includes(contract.status)) {
@@ -133,10 +146,12 @@ export default function DashboardClient() {
                 price: contract.final_price || request.budget_max || request.budget_min,
                 otherPartyName: contractor?.display_name || null,
                 otherPartyAvatar: contractor?.avatar_url || null,
+                recruitmentStatus: request.recruitment_status,
+                progressStatus: request.progress_status,
               })
             }
           }
-        } else if (request.status === 'open') {
+        } else if (request.recruitment_status === 'open') {
           if (isStale(request.updated_at)) continue
 
           items.push({
@@ -153,54 +168,60 @@ export default function DashboardClient() {
             price: request.budget_max || request.budget_min,
             otherPartyName: null,
             otherPartyAvatar: null,
+            recruitmentStatus: request.recruitment_status,
+            progressStatus: request.progress_status,
           })
         }
       }
     }
 
+    // 受注者視点: 応募中(親が募集中かつ進行中の場合のみ表示)
     const { data: myApplications } = await supabase
       .from('work_request_applications')
       .select(`
         id, status, proposed_price, created_at,
-        work_requests ( id, title, description, requester_id, budget_min, budget_max )
+        work_requests ( id, title, description, requester_id, budget_min, budget_max, recruitment_status, progress_status )
       `)
       .eq('applicant_id', profileId)
       .eq('status', 'pending')
 
     if (myApplications) {
       for (const app of myApplications) {
-        const request = app.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null }
-        if (request) {
-          const { data: requester } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('id', request.requester_id)
-            .single()
+        const request = app.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null; recruitment_status: string; progress_status: string }
+        if (!request) continue
+        if (request.recruitment_status !== 'open') continue
+        if (!['pending', 'active'].includes(request.progress_status)) continue
 
-          items.push({
-            id: app.id,
-            workRequestId: request.id,
-            contractId: null,
-            title: request.title,
-            description: request.description,
-            type: 'applicant',
-            status: 'pending',
-            deadline: null,
-            contractedAt: null,
-            updatedAt: app.created_at,
-            price: app.proposed_price || request.budget_max || request.budget_min,
-            otherPartyName: requester?.display_name || null,
-            otherPartyAvatar: requester?.avatar_url || null,
-          })
-        }
+        const { data: requester } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('id', request.requester_id)
+          .single()
+
+        items.push({
+          id: app.id,
+          workRequestId: request.id,
+          contractId: null,
+          title: request.title,
+          description: request.description,
+          type: 'applicant',
+          status: 'pending',
+          deadline: null,
+          contractedAt: null,
+          updatedAt: app.created_at,
+          price: app.proposed_price || request.budget_max || request.budget_min,
+          otherPartyName: requester?.display_name || null,
+          otherPartyAvatar: requester?.avatar_url || null,
+        })
       }
     }
 
+    // 受注者視点: 受注中の契約
     const { data: myContracts } = await supabase
       .from('work_contracts')
       .select(`
         id, status, deadline, contracted_at, updated_at, final_price,
-        work_requests ( id, title, description, requester_id, budget_min, budget_max )
+        work_requests ( id, title, description, requester_id, budget_min, budget_max, recruitment_status, progress_status )
       `)
       .eq('contractor_id', profileId)
       .in('status', ['contracted', 'paid', 'delivered'])
@@ -209,7 +230,7 @@ export default function DashboardClient() {
       for (const contract of myContracts) {
         if (isStale(contract.updated_at)) continue
 
-        const request = contract.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null }
+        const request = contract.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null; recruitment_status: string; progress_status: string }
         if (request) {
           const { data: requester } = await supabase
             .from('profiles')
@@ -231,10 +252,53 @@ export default function DashboardClient() {
             price: contract.final_price || request.budget_max || request.budget_min,
             otherPartyName: requester?.display_name || null,
             otherPartyAvatar: requester?.avatar_url || null,
+            recruitmentStatus: request.recruitment_status,
+            progressStatus: request.progress_status,
           })
         }
       }
     }
+
+    // 最近7日以内の選考結果(不採用)を取得
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+    const { data: recentRejections } = await supabase
+      .from('work_request_applications')
+      .select(`
+        id, status, rejected_at, rejection_reason, created_at,
+        work_requests ( id, title, description, requester_id )
+      `)
+      .eq('applicant_id', profileId)
+      .eq('status', 'rejected')
+      .gte('rejected_at', sevenDaysAgo.toISOString())
+      .order('rejected_at', { ascending: false })
+
+    const rejectionItems: RejectionItem[] = []
+    if (recentRejections) {
+      for (const rejection of recentRejections) {
+        const request = rejection.work_requests as unknown as { id: string; title: string; description: string; requester_id: string } | null
+        if (!request) continue
+
+        const { data: requester } = await supabase
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('id', request.requester_id)
+          .single()
+
+        rejectionItems.push({
+          id: rejection.id,
+          workRequestId: request.id,
+          title: request.title,
+          description: request.description,
+          rejectedAt: rejection.rejected_at,
+          rejectionReason: rejection.rejection_reason,
+          requesterName: requester?.display_name || null,
+          requesterAvatar: requester?.avatar_url || null,
+        })
+      }
+    }
+    setRecentRejectionItems(rejectionItems)
 
     items.sort((a, b) => {
       const dateA = a.contractedAt || a.updatedAt || ''
@@ -295,7 +359,7 @@ export default function DashboardClient() {
     )
   }
 
-  if (workItems.length === 0) {
+  if (workItems.length === 0 && recentRejectionItems.length === 0) {
     return (
       <div className={styles.emptyContainer}>
         <div className={styles.welcome}>
@@ -333,18 +397,31 @@ export default function DashboardClient() {
           const canShowDeadline = ['paid', 'delivered'].includes(item.status)
           const isOverdue = canShowDeadline && daysLeft !== null && daysLeft < 0
 
-          let displayStatus = STATUS_LABELS[item.status] || item.status
-          let statusClass = styles.statusNeutral
+          let displayStatus: string
+          let statusClass: string
 
           if (isOverdue) {
             displayStatus = '納期遅れ'
             statusClass = styles.statusError
-          } else if (item.status === 'contracted') {
-            statusClass = styles.statusWarning
-          } else if (item.status === 'paid') {
+          } else if (item.type === 'requester' && item.recruitmentStatus === 'open' && !item.contractId) {
+            displayStatus = RECRUITMENT_STATUS_LABELS.open
             statusClass = styles.statusInfo
-          } else if (item.status === 'delivered') {
-            statusClass = styles.statusSuccess
+          } else if (item.type === 'applicant') {
+            displayStatus = APPLICATION_STATUS_LABELS.pending
+            statusClass = styles.statusNeutral
+          } else {
+            const contractStatus = item.status as keyof typeof CONTRACT_STATUS_LABELS
+            displayStatus = CONTRACT_STATUS_LABELS[contractStatus] ?? item.status
+
+            if (item.status === 'contracted') {
+              statusClass = styles.statusWarning
+            } else if (item.status === 'paid') {
+              statusClass = styles.statusInfo
+            } else if (item.status === 'delivered') {
+              statusClass = styles.statusSuccess
+            } else {
+              statusClass = styles.statusNeutral
+            }
           }
 
           return (
@@ -377,6 +454,26 @@ export default function DashboardClient() {
           )
         })}
       </div>
+
+      {recentRejectionItems.length > 0 && (
+        <div className={styles.rejectionSection}>
+          <h2 className={styles.sectionTitle}>最近の選考結果</h2>
+          <ul className={styles.rejectionList}>
+            {recentRejectionItems.map((item) => {
+              const reasonKey = item.rejectionReason as keyof typeof REJECTION_REASON_MESSAGES
+              const message = REJECTION_REASON_MESSAGES[reasonKey] ?? '選考が終了しました'
+              return (
+                <li key={item.id} className={styles.rejectionItem}>
+                  <Link href={`/requests/${item.workRequestId}`} className={styles.rejectionLink}>
+                    <span className={styles.rejectionTitle}>{item.title}</span>
+                    <span className={styles.rejectionMessage}>{message}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       <p className={styles.note}>※ 30日以上更新のないお仕事は表示されません</p>
     </div>

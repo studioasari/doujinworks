@@ -349,11 +349,11 @@ export async function acceptApplication(params: {
   const { applicationId, workRequestId, finalPrice, deadline } = params
   const admin = createAdminClient()
 
-  // 親案件の情報を取得(定員判定用)
+  // 親案件の情報を取得(定員判定 + 通知/チャット用)
   const { data: request, error: fetchError } = await admin
     .from('work_requests')
     .select(
-      'id, recruitment_status, progress_status, number_of_positions, contracted_count'
+      'id, recruitment_status, progress_status, number_of_positions, contracted_count, requester_id, title'
     )
     .eq('id', workRequestId)
     .single()
@@ -472,6 +472,114 @@ export async function acceptApplication(params: {
   // 6. 定員到達時は残り pending を一括却下
   if (reachedCapacity) {
     await rejectPendingApplications({ workRequestId, reason: 'filled' })
+  }
+
+  // ============================================================================
+  // チャットルーム確保(採用者と依頼者の間の連絡チャンネル)
+  // ベストエフォート: 失敗してもログに記録するだけで採用は成功扱い
+  // ============================================================================
+  try {
+    const requesterId = request.requester_id
+    const contractorId = application.applicant_id
+
+    // 既存のチャットルームを検索(2人の共通ルーム)
+    const { data: myRooms } = await admin
+      .from('chat_room_participants')
+      .select('chat_room_id')
+      .eq('profile_id', requesterId)
+
+    let targetRoomId: string | null = null
+    if (myRooms && myRooms.length > 0) {
+      for (const room of myRooms) {
+        if (!room.chat_room_id) continue
+        const { data: participants } = await admin
+          .from('chat_room_participants')
+          .select('profile_id')
+          .eq('chat_room_id', room.chat_room_id)
+        const profileIds = (participants ?? [])
+          .map((p) => p.profile_id)
+          .filter((id): id is string => !!id)
+        if (
+          profileIds.length === 2 &&
+          profileIds.includes(contractorId)
+        ) {
+          targetRoomId = room.chat_room_id
+          break
+        }
+      }
+    }
+
+    // 無ければ新規作成
+    if (!targetRoomId) {
+      const nowIso = new Date().toISOString()
+      const { data: newRoom, error: roomInsertError } = await admin
+        .from('chat_rooms')
+        .insert({
+          related_request_id: workRequestId,
+          created_at: nowIso,
+          updated_at: nowIso,
+        })
+        .select('id')
+        .single()
+
+      if (roomInsertError || !newRoom) {
+        console.error(
+          `${LOG_PREFIX} acceptApplication: chat_rooms INSERT failed`,
+          roomInsertError
+        )
+      } else {
+        targetRoomId = newRoom.id
+        const { error: participantsError } = await admin
+          .from('chat_room_participants')
+          .insert([
+            {
+              chat_room_id: targetRoomId,
+              profile_id: requesterId,
+              last_read_at: nowIso,
+              pinned: false,
+              hidden: false,
+            },
+            {
+              chat_room_id: targetRoomId,
+              profile_id: contractorId,
+              last_read_at: nowIso,
+              pinned: false,
+              hidden: false,
+            },
+          ])
+        if (participantsError) {
+          console.error(
+            `${LOG_PREFIX} acceptApplication: chat_room_participants INSERT failed`,
+            participantsError
+          )
+        }
+      }
+    }
+
+    // 採用通知(被採用者へ)
+    const { error: notifyError } = await admin
+      .from('notifications')
+      .insert({
+        profile_id: contractorId,
+        type: 'accepted',
+        title: '応募が採用されました',
+        message: `「${request.title}」の応募が採用されました。仮払いをお待ちください。`,
+        link: `/requests/${workRequestId}/contracts/${newContract.id}`,
+        read: false,
+        created_at: new Date().toISOString(),
+      })
+    if (notifyError) {
+      console.error(
+        `${LOG_PREFIX} acceptApplication: notification INSERT failed`,
+        notifyError
+      )
+    }
+  } catch (sideEffectError) {
+    // ベストエフォート: 副作用の失敗は採用全体を失敗にしない
+    console.error(
+      `${LOG_PREFIX} acceptApplication: side effect (chat/notification) error`,
+      sideEffectError
+    )
   }
 
   return {

@@ -13,7 +13,11 @@ import { syncProgressStatus } from '@/lib/work-request-status'
  *   1. ログイン済み
  *   2. 対象 work_contract の親 work_request の依頼者本人
  *
+ * リクエストボディ:
+ *   { deliveryId: string }
+ *
  * 挙動:
+ *   - work_deliveries.status を 'pending' → 'approved' に
  *   - work_contracts.status を 'delivered' → 'completed' に
  *   - completed_at を設定
  *   - 親 progress_status を再計算(全契約完了なら 'completed' に遷移)
@@ -37,6 +41,16 @@ export async function POST(
         { status: 401 }
       )
     }
+
+    // リクエストボディ取得
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body.deliveryId !== 'string') {
+      return NextResponse.json(
+        { error: 'deliveryId が不正です' },
+        { status: 400 }
+      )
+    }
+    const deliveryId: string = body.deliveryId
 
     const admin = createAdminClient()
 
@@ -115,6 +129,49 @@ export async function POST(
       return NextResponse.json(
         { error: '検収承認できる状態ではありません' },
         { status: 400 }
+      )
+    }
+
+    // 納品物の確認と承認
+    const { data: delivery, error: deliveryFetchError } = await admin
+      .from('work_deliveries')
+      .select('id, status, work_contract_id')
+      .eq('id', deliveryId)
+      .single()
+
+    if (deliveryFetchError || !delivery) {
+      return NextResponse.json(
+        { error: '納品物が見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    if (delivery.work_contract_id !== contractId) {
+      return NextResponse.json(
+        { error: '納品物と契約の関係が不正です' },
+        { status: 400 }
+      )
+    }
+
+    if (delivery.status !== 'pending') {
+      return NextResponse.json(
+        { error: 'この納品物は既に処理済みです' },
+        { status: 400 }
+      )
+    }
+
+    // work_deliveries を approved に更新
+    const { error: deliveryUpdateError } = await admin
+      .from('work_deliveries')
+      .update({ status: 'approved' })
+      .eq('id', deliveryId)
+      .eq('status', 'pending')
+
+    if (deliveryUpdateError) {
+      console.error('[contracts/approve] 納品物更新エラー:', deliveryUpdateError)
+      return NextResponse.json(
+        { error: '納品物の承認に失敗しました' },
+        { status: 500 }
       )
     }
 

@@ -9,6 +9,7 @@ import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { createNotification } from '@/utils/notifications'
+import { CONTRACT_STATUS_LABELS } from '@/lib/status-labels'
 import DeliveryFileUploader, { type UploadedFile } from './DeliveryFileUploader'
 import DeliveryFileList, { type DeliveryFile } from './DeliveryFileList'
 import styles from './page.module.css'
@@ -1240,17 +1241,6 @@ export default function ContractDetailPage() {
           .eq('id', contractId)
           .eq('status', 'contracted')
 
-        // work_requests も更新
-        if (currentContract?.work_request_id) {
-          await supabase
-            .from('work_requests')
-            .update({
-              status: 'paid',
-              paid_at: paidAt
-            })
-            .eq('id', currentContract.work_request_id)
-        }
-
         if (contract?.contractor_id) {
           await createNotification(
             contract.contractor_id,
@@ -1345,61 +1335,39 @@ export default function ContractDetailPage() {
     setProcessing(true)
 
     try {
-      await supabase
-        .from('work_deliveries')
-        .update({
-          status: reviewAction === 'approve' ? 'approved' : 'rejected',
-          feedback: reviewFeedback.trim() || null
+      if (reviewAction === 'approve') {
+        // 検収承認: API経由で work_deliveries + work_contracts + 親同期を実行
+        const approveResponse = await fetch(`/api/contracts/${contractId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deliveryId: selectedDeliveryId }),
         })
-        .eq('id', selectedDeliveryId)
+        const approveResult = await approveResponse.json()
+        if (!approveResponse.ok) {
+          alert(approveResult.error ?? '検収承認に失敗しました')
+          setProcessing(false)
+          return
+        }
 
-        if (reviewAction === 'approve') {
-          await supabase
-            .from('work_contracts')
-            .update({
-              status: 'completed',
-              completed_at: new Date().toISOString()
-            })
-            .eq('id', contractId)
+        // paymentsレコードを作成（サーバーサイドAPIに委譲）
+        if (contract) {
+          const res = await fetch('/api/payments/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId: contract.id }),
+          })
 
-          // paymentsレコードを作成（サーバーサイドAPIに委譲）
-          if (contract) {
-            const res = await fetch('/api/payments/create', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ contractId: contract.id }),
-            })
-
-            if (!res.ok) {
-              const data = await res.json().catch(() => ({}))
-              console.error('payment作成エラー:', data)
-              alert('振込レコードの作成に失敗しました。運営にお問い合わせください。')
-              setProcessing(false)
-              return
-            }
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            console.error('payment作成エラー:', data)
+            alert('振込レコードの作成に失敗しました。運営にお問い合わせください。')
+            setProcessing(false)
+            return
           }
+        }
 
-          // 依頼全体の完了チェック（並行契約対応）
-          // 全契約が completed なら work_requests.status を 'completed' に更新
-          try {
-            const completeRes = await fetch(`/api/requests/${requestId}/complete`, {
-              method: 'POST',
-            })
-            if (completeRes.ok) {
-              const completeData = await completeRes.json()
-              if (completeData.allCompleted === false) {
-                console.log('依頼完了待ち:', completeData.message)
-              }
-            } else {
-              console.error('依頼完了チェックエラー:', await completeRes.json().catch(() => ({})))
-            }
-          } catch (completeError) {
-            // 検収承認と振込レコード作成は成功済みなので、ここでは警告ログのみ
-            console.error('依頼完了チェック失敗:', completeError)
-          }
-
-          if (contract?.contractor_id) {
-            await createNotification(
+        if (contract?.contractor_id) {
+          await createNotification(
             contract.contractor_id,
             'completed',
             '検収が完了しました',
@@ -1410,10 +1378,18 @@ export default function ContractDetailPage() {
 
         alert('検収が完了しました！')
       } else {
-        await supabase
-          .from('work_contracts')
-          .update({ status: 'paid' })
-          .eq('id', contractId)
+        // 差戻し: API経由で work_deliveries + work_contracts を更新
+        const rejectResponse = await fetch(`/api/contracts/${contractId}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deliveryId: selectedDeliveryId, feedback: reviewFeedback.trim() || null }),
+        })
+        const rejectResult = await rejectResponse.json()
+        if (!rejectResponse.ok) {
+          alert(rejectResult.error ?? '差戻しに失敗しました')
+          setProcessing(false)
+          return
+        }
 
         if (contract?.contractor_id) {
           await createNotification(
@@ -1547,12 +1523,20 @@ export default function ContractDetailPage() {
       }
 
       if (isApproval) {
-        await supabase
-          .from('work_contracts')
-          .update({
-            status: 'cancelled'
-          })
-          .eq('id', contractId)
+        // 契約キャンセル: API経由で work_contracts + 親同期を実行
+        const cancelResponse = await fetch(`/api/contracts/${contractId}/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cancellationRequestId: cancellationRequest.id,
+          }),
+        })
+        const cancelResult = await cancelResponse.json()
+        if (!cancelResponse.ok) {
+          alert(cancelResult.error ?? 'キャンセル処理に失敗しました')
+          setProcessing(false)
+          return
+        }
 
         // 仮払い済みの場合は返金処理
         if (contract?.payment_intent_id) {
@@ -1611,15 +1595,9 @@ export default function ContractDetailPage() {
     }
   }
 
-  function getStatusLabel(status: string) {
-    const statuses: { [key: string]: string } = {
-      contracted: '仮払い待ち',
-      paid: '作業中',
-      delivered: '納品済み',
-      completed: '完了',
-      cancelled: 'キャンセル'
-    }
-    return statuses[status] || status
+  function getStatusLabel(status: string): string {
+    const key = status as keyof typeof CONTRACT_STATUS_LABELS
+    return CONTRACT_STATUS_LABELS[key] ?? status
   }
 
   function formatDate(dateString: string) {
