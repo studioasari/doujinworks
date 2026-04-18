@@ -107,8 +107,8 @@ export default function ProfileClient() {
       setUrl(newUrl)
       setSuccess(successMsg)
       setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || `${successMsg}に失敗しました`)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : `${successMsg}に失敗しました`)
       setPreview(oldUrl)
     } finally {
       setUploading(false)
@@ -169,8 +169,8 @@ export default function ProfileClient() {
       setAvatarPreview(null)
       setSuccess('アイコン画像を削除しました')
       setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'アイコン画像の削除に失敗しました')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'アイコン画像の削除に失敗しました')
     } finally {
       setUploadingAvatar(false)
     }
@@ -190,8 +190,8 @@ export default function ProfileClient() {
       setHeaderPreview(null)
       setSuccess('ヘッダー画像を削除しました')
       setTimeout(() => setSuccess(''), 3000)
-    } catch (err: any) {
-      setError(err.message || 'ヘッダー画像の削除に失敗しました')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'ヘッダー画像の削除に失敗しました')
     } finally {
       setUploadingHeader(false)
     }
@@ -205,7 +205,7 @@ export default function ProfileClient() {
     setError('')
     setSuccess('')
 
-    const profileData: any = {
+    const profileData: Record<string, unknown> = {
       user_id: user.id,
       display_name: displayName,
       bio: bio,

@@ -207,7 +207,7 @@ function SearchContent() {
     const commentMap = new Map()
     comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
 
-    setWorks(worksData.map((work: any) => ({
+    setWorks(worksData.map((work: { id: string; title: string; description: string | null; image_url: string; thumbnail_url: string | null; creator_id: string; category: string; created_at: string }) => ({
       ...work,
       profiles: creatorMap.get(work.creator_id),
       likeCount: likeMap.get(work.id) || 0,

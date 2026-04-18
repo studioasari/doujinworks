@@ -121,8 +121,8 @@ export default function SignupClient() {
         })
 
         if (error) throw error
-      } catch (error: any) {
-        setError(error.message || '登録に失敗しました')
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : '登録に失敗しました')
       }
     })
   }

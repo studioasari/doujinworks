@@ -106,7 +106,7 @@ export default function PortfolioList({ category, pageTitle, pageDescription }: 
       const commentMap = new Map()
       comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
 
-      const itemsWithStats = validItems.map((item: any) => ({
+      const itemsWithStats = validItems.map((item: { id: string; title: string; image_url: string; thumbnail_url: string | null; creator_id: string; category: string; created_at: string }) => ({
         ...item,
         profiles: creatorMap.get(item.creator_id) || {
           username: '',

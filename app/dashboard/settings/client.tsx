@@ -203,9 +203,9 @@ export default function SettingsClient() {
       .select('id')
       .eq('requester_id', profileId)
 
-    let contractsAsRequester: any[] = []
+    let contractsAsRequester: { id: string }[] = []
     if (myRequests && myRequests.length > 0) {
-      const requestIds = myRequests.map((r: any) => r.id)
+      const requestIds = myRequests.map((r: { id: string }) => r.id)
       const { data } = await supabase
         .from('work_contracts')
         .select('id')
@@ -226,7 +226,7 @@ export default function SettingsClient() {
       .eq('status', 'pending')
 
     if (pendingPayments) {
-      const total = pendingPayments.reduce((sum: number, row: any) => sum + (row.amount || 0), 0)
+      const total = pendingPayments.reduce((sum: number, row: { amount?: number }) => sum + (row.amount || 0), 0)
       setPendingBalance(total)
     } else {
       setPendingBalance(0)

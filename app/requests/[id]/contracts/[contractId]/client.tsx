@@ -1205,9 +1205,9 @@ export default function ContractDetailPage() {
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('仮払いエラー:', error)
-      alert(error.message || '仮払いに失敗しました')
+      alert(error instanceof Error ? error.message : '仮払いに失敗しました')
     } finally {
       setProcessing(false)
     }

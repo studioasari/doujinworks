@@ -365,11 +365,12 @@ export async function loginAction(formData: FormData) {
       isEmailUnconfirmed: false
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 🔒 エラーログのサニタイズ
+    const err = error instanceof Error ? error : null
     console.error('Login error:', {
-      message: error?.message || 'Unknown error',
-      code: error?.code,
+      message: err?.message || 'Unknown error',
+      code: (error as Record<string, unknown>)?.code,
     })
     
     return { 
@@ -444,11 +445,12 @@ export async function updatePasswordAction(formData: FormData) {
       message: 'パスワードを更新しました' 
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 🔒 エラーログのサニタイズ
+    const err = error instanceof Error ? error : null
     console.error('Update password error:', {
-      message: error?.message || 'Unknown error',
-      code: error?.code,
+      message: err?.message || 'Unknown error',
+      code: (error as Record<string, unknown>)?.code,
     })
     return { 
       success: false, 

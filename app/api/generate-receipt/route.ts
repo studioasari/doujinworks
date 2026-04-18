@@ -563,14 +563,15 @@ except Exception as e:
       })
       stdout = result.stdout
       stderr = result.stderr
-    } catch (execError: any) {
+    } catch (execError: unknown) {
       console.error('Python execution error:', execError)
+      const execErr = execError instanceof Error ? execError : null
       return NextResponse.json(
-        { 
+        {
           error: 'Python execution failed',
-          details: execError.message,
-          stdout: execError.stdout,
-          stderr: execError.stderr
+          details: execErr?.message,
+          stdout: (execError as Record<string, unknown>)?.stdout,
+          stderr: (execError as Record<string, unknown>)?.stderr
         },
         { status: 500 }
       )

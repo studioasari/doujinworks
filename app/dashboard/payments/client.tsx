@@ -129,7 +129,7 @@ export default function PaymentsClient() {
     setPaidContracts(myContracts)
 
     // 月別にグループ化
-    const groupedByMonth = myContracts.reduce((acc: any, contract: any) => {
+    const groupedByMonth = myContracts.reduce((acc: Record<string, typeof myContracts>, contract: (typeof myContracts)[number]) => {
       const paidDate = new Date(contract.paid_at)
       const monthKey = `${paidDate.getFullYear()}-${String(paidDate.getMonth() + 1).padStart(2, '0')}`
       
@@ -140,8 +140,8 @@ export default function PaymentsClient() {
       return acc
     }, {})
 
-    const monthlyData = Object.entries(groupedByMonth).map(([month, contracts]: [string, any]) => {
-      const totalAmount = contracts.reduce((sum: number, c: any) => sum + (c.final_price || 0), 0)
+    const monthlyData = Object.entries(groupedByMonth).map(([month, contracts]: [string, (typeof myContracts)]) => {
+      const totalAmount = contracts.reduce((sum: number, c: { final_price: number }) => sum + (c.final_price || 0), 0)
       
       return {
         month,

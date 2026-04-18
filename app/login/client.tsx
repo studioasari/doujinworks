@@ -125,8 +125,8 @@ function LoginForm() {
         })
 
         if (error) throw error
-      } catch (error: any) {
-        setError(error.message || 'ログインに失敗しました')
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'ログインに失敗しました')
       }
     })
   }

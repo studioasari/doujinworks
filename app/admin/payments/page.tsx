@@ -142,7 +142,7 @@ export default function AdminPayments() {
         .select('*')
         .in('profile_id', creatorIds)
 
-      const bankMap: { [key: string]: any } = {}
+      const bankMap: { [key: string]: { bank_name: string; branch_name: string; account_type: string; account_number: string; account_holder_name: string } } = {}
       for (const account of bankAccounts || []) {
         bankMap[account.profile_id] = account
       }

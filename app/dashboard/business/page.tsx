@@ -190,7 +190,7 @@ export default function SettingsPage() {
     setError('')
     setSuccess('')
 
-    const businessData: any = {
+    const businessData: Record<string, unknown> = {
       profile_id: profile.id,
       account_type: businessAccountType,
       last_name: lastName,

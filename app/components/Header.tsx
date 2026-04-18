@@ -30,7 +30,13 @@ type Notification = {
 type HamburgerMenuProps = {
   isOpen: boolean
   onClose: () => void
-  profile: any
+  profile: {
+    id: string
+    username: string | null
+    display_name: string | null
+    avatar_url: string | null
+    account_type: string | null
+  } | null
   theme: 'light' | 'dark'
   onToggleTheme: () => void
   isAcceptingOrders: boolean

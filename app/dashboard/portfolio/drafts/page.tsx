@@ -15,7 +15,7 @@ type Draft = {
   title: string
   savedAt: string
   category: Category
-  data: any
+  data: Record<string, unknown>
 }
 
 type CategoryInfo = {

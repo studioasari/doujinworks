@@ -230,7 +230,7 @@ export function SignupCompleteClient({ user }: Props) {
         return
       }
 
-      const profileData: any = {
+      const profileData: Record<string, unknown> = {
         user_id: currentUser.id,
         username: username.toLowerCase(),
         display_name: displayName,
@@ -257,7 +257,7 @@ export function SignupCompleteClient({ user }: Props) {
       }
 
       if (userType === 'business') {
-        const businessData: any = {
+        const businessData: Record<string, unknown> = {
           profile_id: profile.id,
           account_type: accountType,
           last_name: lastName,
@@ -290,12 +290,13 @@ export function SignupCompleteClient({ user }: Props) {
 
       window.location.href = '/dashboard'
       
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : null
       console.error('Profile registration error:', {
-        message: error?.message,
-        code: error?.code,
+        message: err?.message || 'Unknown error',
+        code: (error as Record<string, unknown>)?.code,
       })
-      setError(error.message || '登録に失敗しました')
+      setError(err?.message || '登録に失敗しました')
     } finally {
       setLoading(false)
     }

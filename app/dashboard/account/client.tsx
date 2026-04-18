@@ -169,7 +169,7 @@ export default function AccountClient() {
 
     // ビジネス情報保存
     if (accountType === 'business') {
-      const businessData: any = {
+      const businessData: Record<string, unknown> = {
         profile_id: profile.id,
         account_type: businessAccountType,
         last_name: lastName,

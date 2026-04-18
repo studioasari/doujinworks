@@ -133,7 +133,7 @@ export default function BookmarksClient() {
       comments?.forEach(c => commentMap.set(c.portfolio_item_id, (commentMap.get(c.portfolio_item_id) || 0) + 1))
 
       // データ結合
-      const itemsWithStats = portfolioItems.map((item: any) => {
+      const itemsWithStats = portfolioItems.map((item: { id: string; title: string; image_url: string; thumbnail_url: string | null; creator_id: string; category: string; created_at: string }) => {
         const bookmark = bookmarkMap.get(item.id)
         return {
           ...item,

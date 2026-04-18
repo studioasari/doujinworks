@@ -625,7 +625,7 @@ function UploadMusicContent() {
         }
       }
 
-      const insertData: any = {
+      const insertData: Record<string, unknown> = {
         creator_id: currentUserId,
         title: title.trim(),
         description: description.trim() || null,

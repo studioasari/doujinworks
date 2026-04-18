@@ -180,7 +180,7 @@ export default function BusinessPage() {
     setError('')
     setSuccess('')
 
-    const businessData: any = {
+    const businessData: Record<string, unknown> = {
       profile_id: profile.id,
       account_type: businessAccountType,
       full_name: fullName,

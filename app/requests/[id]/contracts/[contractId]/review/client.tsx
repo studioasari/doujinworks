@@ -206,9 +206,9 @@ export default function ReviewClient() {
       )
 
       router.push(`/requests/${requestId}/contracts/${contractId}`)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('レビュー送信エラー:', err)
-      alert(err.message || 'レビューの送信に失敗しました')
+      alert(err instanceof Error ? err.message : 'レビューの送信に失敗しました')
     } finally {
       setSubmitting(false)
     }
