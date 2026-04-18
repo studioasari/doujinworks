@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 import { getUploadUrl, uploadToR2 } from '@/lib/r2-upload'
@@ -478,7 +479,7 @@ export default function PricingForm({ initialData, userId, onSuccess, onCancel }
             </div>
           ) : (
             <div className={styles.thumbnailPreview}>
-              <img src={thumbnailPreview} alt="サムネイル" />
+              <Image src={thumbnailPreview} alt="サムネイル" width={200} height={200} unoptimized />
               <button type="button" onClick={removeThumbnail} className={styles.imageRemoveBtn}>
                 <i className="fas fa-times"></i>
               </button>
@@ -507,7 +508,7 @@ export default function PricingForm({ initialData, userId, onSuccess, onCancel }
           <div className={styles.sampleGrid}>
             {samplePreviews.map((preview, index) => (
               <div key={index} className={styles.sampleItem}>
-                <img src={preview} alt={`サンプル${index + 1}`} />
+                <Image src={preview} alt={`サンプル${index + 1}`} width={150} height={150} unoptimized />
                 <button
                   type="button"
                   onClick={() => removeSampleImage(index)}

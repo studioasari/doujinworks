@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
+import NextImage from 'next/image'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -847,7 +848,7 @@ function UploadVoiceContent() {
                 </div>
               ) : (
                 <div className={styles.thumbnailPreview}>
-                  <img src={thumbnailPreview} alt="サムネイル" />
+                  <NextImage src={thumbnailPreview} alt="サムネイル" width={200} height={200} unoptimized />
                   <button type="button" onClick={removeThumbnail} className={styles.thumbnailRemove}>
                     <i className="fa-solid fa-xmark"></i>
                     削除
@@ -1110,7 +1111,7 @@ function UploadVoiceContent() {
             <div className="modal-body">
               {thumbnailPreview && (
                 <div className={styles.confirmThumbnail}>
-                  <img src={thumbnailPreview} alt="サムネイル" />
+                  <NextImage src={thumbnailPreview} alt="サムネイル" width={200} height={200} unoptimized />
                 </div>
               )}
 

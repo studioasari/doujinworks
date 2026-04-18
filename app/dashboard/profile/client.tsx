@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -259,7 +260,7 @@ export default function ProfileClient() {
           >
             {headerPreview ? (
               <>
-                <img src={headerPreview} alt="ヘッダー画像" className={styles.headerImage} />
+                <Image src={headerPreview} alt="ヘッダー画像" className={styles.headerImage} width={1500} height={500} unoptimized />
                 <div className={styles.uploadOverlay}>
                   <i className="fa-solid fa-camera"></i>
                   <span>クリックして変更</span>
@@ -310,7 +311,7 @@ export default function ProfileClient() {
             >
               {avatarPreview ? (
                 <>
-                  <img src={avatarPreview} alt="アイコン画像" className={styles.avatarImage} />
+                  <Image src={avatarPreview} alt="アイコン画像" className={styles.avatarImage} width={120} height={120} unoptimized />
                   <div className={styles.avatarOverlay}>
                     <i className="fa-solid fa-camera"></i>
                   </div>

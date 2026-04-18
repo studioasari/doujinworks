@@ -1303,7 +1303,7 @@ export default function ChatRoomPage() {
             {selectedFile && (
               <div className={styles.filePreview}>
                 <div className={styles.filePreviewInner}>
-                  {selectedFile.type.startsWith('image/') && previewUrl && <img src={previewUrl} alt="プレビュー" />}
+                  {selectedFile.type.startsWith('image/') && previewUrl && <Image src={previewUrl} alt="プレビュー" width={200} height={200} unoptimized />}
                   {selectedFile.type.startsWith('video/') && previewUrl && <video src={previewUrl} controls />}
                   {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
                     <div className={styles.filePreviewInfo}>

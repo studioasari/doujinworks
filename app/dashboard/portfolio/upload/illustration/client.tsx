@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
+import NextImage from 'next/image'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -620,7 +621,7 @@ function UploadIllustrationContent() {
                 <>
                   {/* メインプレビュー */}
                   <div className={styles.mainPreview}>
-                    <img src={imagePreviews[activePreviewIndex]} alt={`プレビュー ${activePreviewIndex + 1}`} />
+                    <NextImage src={imagePreviews[activePreviewIndex]} alt={`プレビュー ${activePreviewIndex + 1}`} width={400} height={400} unoptimized />
                     <button
                       type="button"
                       className={styles.mainRemove}
@@ -648,7 +649,7 @@ function UploadIllustrationContent() {
                         className={`${styles.thumbItem} ${activePreviewIndex === index ? styles.active : ''} ${draggedIndex === index ? styles.dragging : ''}`}
                         onClick={() => setActivePreviewIndex(index)}
                       >
-                        <img src={preview} alt={`サムネ ${index + 1}`} />
+                        <NextImage src={preview} alt={`サムネ ${index + 1}`} width={80} height={80} unoptimized />
                         {index === 0 && (
                           <span className={styles.thumbMainLabel}>メイン</span>
                         )}
@@ -970,7 +971,7 @@ function UploadIllustrationContent() {
               <div className={styles.confirmImages}>
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className={styles.confirmImage}>
-                    <img src={preview} alt={`プレビュー ${index + 1}`} />
+                    <NextImage src={preview} alt={`プレビュー ${index + 1}`} width={200} height={200} unoptimized />
                     {index === 0 && <span className={styles.thumbMainLabel}>メイン</span>}
                   </div>
                 ))}

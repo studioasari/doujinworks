@@ -2179,7 +2179,7 @@ export default function ContractDetailPage() {
       {selectedFile && (
         <div className={styles.chatFilePreview}>
           <div className={styles.chatFilePreviewInner}>
-            {selectedFile.type.startsWith('image/') && previewUrl && <img src={previewUrl} alt="プレビュー" />}
+            {selectedFile.type.startsWith('image/') && previewUrl && <Image src={previewUrl} alt="プレビュー" width={200} height={200} unoptimized />}
             {selectedFile.type.startsWith('video/') && previewUrl && <video src={previewUrl} controls />}
             {!selectedFile.type.startsWith('image/') && !selectedFile.type.startsWith('video/') && (
               <div className={styles.chatFilePreviewInfo}>

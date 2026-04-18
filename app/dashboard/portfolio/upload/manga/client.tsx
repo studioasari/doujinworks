@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
+import NextImage from 'next/image'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -731,7 +732,7 @@ function UploadMangaContent() {
                     onDragEnd={handleDragEnd}
                     className={`${styles.previewItem} ${draggedIndex === index ? styles.dragging : ''} ${dragOverIndex === index ? styles.dragover : ''}`}
                   >
-                    <img src={preview} alt={`${index + 1}ページ目`} />
+                    <NextImage src={preview} alt={`${index + 1}ページ目`} width={200} height={280} unoptimized />
                     <span className={styles.pageBadge}>{index + 1}p</span>
                     <button
                       type="button"
@@ -1019,7 +1020,7 @@ function UploadMangaContent() {
               <div className={styles.confirmImages}>
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className={styles.confirmImage}>
-                    <img src={preview} alt={`${index + 1}ページ目`} />
+                    <NextImage src={preview} alt={`${index + 1}ページ目`} width={200} height={280} unoptimized />
                     <span className={styles.pageBadge}>{index + 1}p</span>
                   </div>
                 ))}

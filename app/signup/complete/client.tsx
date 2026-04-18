@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -401,9 +402,11 @@ export function SignupCompleteClient({ user }: Props) {
                   <div key={option.type} className={styles.emblaSlide}>
                     <div className={styles.userTypeCardNew}>
                       <span className={styles.userTypeBadge}>{option.label}</span>
-                      <img 
-                        src={option.image} 
+                      <Image
+                        src={option.image}
                         alt={option.title}
+                        width={500}
+                        height={500}
                         className={styles.userTypeImage}
                       />
                       <div className={styles.userTypeCardTitle}>{option.title}</div>
@@ -448,9 +451,11 @@ export function SignupCompleteClient({ user }: Props) {
                   className={styles.userTypeCardNew}
                 >
                   <span className={styles.userTypeBadge}>{option.label}</span>
-                  <img 
-                    src={option.image} 
+                  <Image
+                    src={option.image}
                     alt={option.title}
+                    width={500}
+                    height={500}
                     className={styles.userTypeImage}
                   />
                   <div className={styles.userTypeCardTitle}>{option.title}</div>
