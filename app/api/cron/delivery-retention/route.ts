@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { r2DeliveriesClient } from '@/lib/r2-upload'
+import type { WorkContractRow } from '@/types/supabase-helpers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
       for (const [contractId, files] of grouped) {
         try {
-          const contract = (files[0] as any).work_contract
+          const contract = (files[0] as unknown as { work_contract: WorkContractRow & { work_request: { id: string; title: string; requester_id: string } } }).work_contract
           const workRequest = Array.isArray(contract.work_request)
             ? contract.work_request[0]
             : contract.work_request
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
 
       for (const [contractId, files] of grouped) {
         try {
-          const contract = (files[0] as any).work_contract
+          const contract = (files[0] as unknown as { work_contract: WorkContractRow & { work_request: { id: string; title: string; requester_id: string } } }).work_contract
           const workRequest = Array.isArray(contract.work_request)
             ? contract.work_request[0]
             : contract.work_request

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq('id', contractId)
     .single()
 
-  const title = (data?.work_requests as any)?.title || '契約詳細'
+  const title = (data?.work_requests as { title?: string } | null)?.title || '契約詳細'
 
   return {
     title: `${title} - 契約詳細 | 同人ワークス`,

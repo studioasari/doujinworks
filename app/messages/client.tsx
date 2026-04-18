@@ -125,7 +125,7 @@ export default function MessagesPage() {
         .single()
 
       if (otherParticipants && otherParticipants.length > 0) {
-        const otherUser = otherParticipants[0].profiles as any
+        const otherUser = otherParticipants[0].profiles as unknown as { id: string; display_name: string | null; avatar_url: string | null; username: string | null }
 
         roomsData.push({
           id: roomId,

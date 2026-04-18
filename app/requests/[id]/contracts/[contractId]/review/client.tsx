@@ -103,7 +103,7 @@ export default function ReviewClient() {
       return
     }
 
-    const workRequest = contract.work_request as any
+    const workRequest = contract.work_request as unknown as { id: string; title: string; requester_id: string; requester?: { id: string; username: string | null; display_name: string | null; avatar_url: string | null } }
     const requesterId = workRequest?.requester_id
     const contractorId = contract.contractor_id
 
@@ -135,10 +135,10 @@ export default function ReviewClient() {
       })
     } else {
       setReviewTarget({
-        id: workRequest?.requester?.id,
-        username: workRequest?.requester?.username,
-        display_name: workRequest?.requester?.display_name,
-        avatar_url: workRequest?.requester?.avatar_url
+        id: workRequest?.requester?.id || '',
+        username: workRequest?.requester?.username || null,
+        display_name: workRequest?.requester?.display_name || null,
+        avatar_url: workRequest?.requester?.avatar_url || null
       })
     }
 

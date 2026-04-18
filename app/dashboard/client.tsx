@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/utils/supabase'
+import type { WorkContractRow } from '@/types/supabase-helpers'
 import Link from 'next/link'
 import Image from 'next/image'
 import { LoadingSpinner } from '@/app/components/Skeleton'
@@ -105,7 +106,7 @@ export default function DashboardClient() {
 
     if (myRequests) {
       for (const request of myRequests) {
-        const contracts = request.work_contracts as any[]
+        const contracts = request.work_contracts as WorkContractRow[]
         
         if (contracts && contracts.length > 0) {
           for (const contract of contracts) {
@@ -168,7 +169,7 @@ export default function DashboardClient() {
 
     if (myApplications) {
       for (const app of myApplications) {
-        const request = app.work_requests as any
+        const request = app.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null }
         if (request) {
           const { data: requester } = await supabase
             .from('profiles')
@@ -208,7 +209,7 @@ export default function DashboardClient() {
       for (const contract of myContracts) {
         if (isStale(contract.updated_at)) continue
 
-        const request = contract.work_requests as any
+        const request = contract.work_requests as unknown as { id: string; title: string; description: string; requester_id: string; budget_min: number | null; budget_max: number | null }
         if (request) {
           const { data: requester } = await supabase
             .from('profiles')

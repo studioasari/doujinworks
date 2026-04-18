@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/utils/supabase'
+import type { WorkRequestRow, WorkContractRow, MessageRow } from '@/types/supabase-helpers'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -431,7 +432,7 @@ export default function ContractDetailPage() {
       return
     }
 
-    const requesterId = (data.work_request as any)?.requester_id
+    const requesterId = (data.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.requester_id
     const contractorId = data.contractor_id
 
     const isReq = requesterId === currentProfileId
@@ -445,7 +446,7 @@ export default function ContractDetailPage() {
 
     setIsRequester(isReq)
     setIsContractor(isCon)
-    setContract(data as any)
+    setContract(data as unknown as Contract)
     setLoading(false)
   }
 
@@ -512,7 +513,7 @@ export default function ContractDetailPage() {
   async function initializeChatRoom() {
     if (!contract) return
 
-    const workRequest = contract.work_request as any
+    const workRequest = contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } }
     const requesterId = workRequest?.requester_id
     const contractorId = contract.contractor_id
     const otherUserId = currentProfileId === requesterId ? contractorId : requesterId
@@ -526,10 +527,10 @@ export default function ContractDetailPage() {
       })
     } else {
       setOtherUser({
-        id: workRequest?.requester?.id,
-        username: workRequest?.requester?.username,
-        display_name: workRequest?.requester?.display_name,
-        avatar_url: workRequest?.requester?.avatar_url
+        id: workRequest?.requester?.id || '',
+        username: workRequest?.requester?.username || null,
+        display_name: workRequest?.requester?.display_name || null,
+        avatar_url: workRequest?.requester?.avatar_url || null
       })
     }
 
@@ -789,7 +790,7 @@ export default function ContractDetailPage() {
           filter: `chat_room_id=eq.${chatRoomId}`
         },
         (payload) => {
-          const updated = payload.new as any
+          const updated = payload.new as { profile_id: string; last_read_at: string }
           if (updated.profile_id !== currentProfileId) {
             setOtherUserLastReadAt(updated.last_read_at)
           }
@@ -1255,7 +1256,7 @@ export default function ContractDetailPage() {
             contract.contractor_id,
             'paid',
             '仮払いが完了しました',
-            `「${(contract.work_request as any)?.title}」の仮払いが完了しました。作業を開始してください。`,
+            `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」の仮払いが完了しました。作業を開始してください。`,
             `/requests/${requestId}/contracts/${contractId}`
           )
         }
@@ -1402,7 +1403,7 @@ export default function ContractDetailPage() {
             contract.contractor_id,
             'completed',
             '検収が完了しました',
-            `「${(contract.work_request as any)?.title}」の検収が完了しました。お疲れ様でした！`,
+            `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」の検収が完了しました。お疲れ様でした！`,
             `/requests/${requestId}/contracts/${contractId}`
           )
         }
@@ -1419,7 +1420,7 @@ export default function ContractDetailPage() {
             contract.contractor_id,
             'review',
             '納品が差し戻されました',
-            `「${(contract.work_request as any)?.title}」の納品が差し戻されました。`,
+            `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」の納品が差し戻されました。`,
             `/requests/${requestId}/contracts/${contractId}`
           )
         }
@@ -1482,8 +1483,8 @@ export default function ContractDetailPage() {
       const recipientId = isRequester ? contract?.contractor_id : contract?.work_request?.requester_id
       if (recipientId && contract) {
         const notificationMessage = cancelType === 'free' 
-          ? `「${(contract.work_request as any)?.title}」についてキャンセル申請がありました。7日以内に同意または拒否してください。応答がない場合は自動的にキャンセルされます。`
-          : `「${(contract.work_request as any)?.title}」について納期超過によるキャンセル申請がありました。`
+          ? `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」についてキャンセル申請がありました。7日以内に同意または拒否してください。応答がない場合は自動的にキャンセルされます。`
+          : `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」について納期超過によるキャンセル申請がありました。`
         
         await createNotification(
           recipientId,
@@ -1580,7 +1581,7 @@ export default function ContractDetailPage() {
           cancellationRequest.requester_id,
           'cancelled',
           'キャンセルが承認されました',
-          `「${(contract?.work_request as any)?.title}」のキャンセル申請が承認されました。契約が解除されました。`,
+          `「${(contract?.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」のキャンセル申請が承認されました。契約が解除されました。`,
           `/requests/${requestId}/contracts/${contractId}`
         )
 
@@ -1591,7 +1592,7 @@ export default function ContractDetailPage() {
           cancellationRequest.requester_id,
           'cancelled',
           'キャンセル申請が拒否されました',
-          `「${(contract?.work_request as any)?.title}」のキャンセル申請が拒否されました。`,
+          `「${(contract?.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」のキャンセル申請が拒否されました。`,
           `/requests/${requestId}/contracts/${contractId}`
         )
 
@@ -1697,7 +1698,7 @@ export default function ContractDetailPage() {
     )
   }
 
-  const workRequest = contract.work_request as any
+  const workRequest = contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } }
   const pendingDeliveries = deliveries.filter(d => d.status === 'pending')
   const progressSteps = getProgressSteps()
 

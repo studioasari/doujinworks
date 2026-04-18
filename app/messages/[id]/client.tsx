@@ -369,7 +369,7 @@ export default function ChatRoomPage() {
 
   // ========== Handler Functions ==========
   
-  function handleNewMessage(payload: any) {
+  function handleNewMessage(payload: { new: Record<string, unknown> }) {
     const newMsg = payload.new as Message
     // 楽観的UIで既に追加済みの場合は、_optimisticフラグを外すだけ
     setMessages(prev => {
@@ -397,15 +397,15 @@ export default function ChatRoomPage() {
     updateSidebarLastMessage(newMsg)
   }
 
-  function handleMessageUpdate(payload: any) {
+  function handleMessageUpdate(payload: { new: Record<string, unknown> }) {
     const updatedMsg = payload.new as Message
     if (updatedMsg.deleted) {
       setMessages(prev => prev.filter(m => m.id !== updatedMsg.id))
     }
   }
 
-  function handleReadStatusUpdate(payload: any) {
-    const updated = payload.new as any
+  function handleReadStatusUpdate(payload: { new: Record<string, unknown> }) {
+    const updated = payload.new as { profile_id: string; last_read_at: string }
     if (updated.profile_id !== currentProfileId) {
       setOtherUserLastReadAt(updated.last_read_at)
     }
@@ -493,7 +493,7 @@ export default function ChatRoomPage() {
         .single()
 
       if (otherParticipants && otherParticipants.length > 0) {
-        const otherUserData = otherParticipants[0].profiles as any
+        const otherUserData = otherParticipants[0].profiles as unknown as { id: string; display_name: string | null; avatar_url: string | null; username: string | null }
         roomsData.push({
           id: roomIdTemp,
           updated_at: roomData?.updated_at || '',
@@ -523,7 +523,7 @@ export default function ChatRoomPage() {
       .single()
 
     if (data) {
-      const profile = data.profiles as any
+      const profile = data.profiles as unknown as { id: string; username: string | null; display_name: string | null; avatar_url: string | null; bio: string | null }
       setOtherUser({
         id: profile.id,
         username: profile.username,

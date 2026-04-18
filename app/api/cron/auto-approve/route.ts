@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import type { WorkContractRow } from '@/types/supabase-helpers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       results.errors.push(`警告取得失敗: ${warningError.message}`)
     } else if (warningTargets && warningTargets.length > 0) {
       for (const delivery of warningTargets) {
-        const contract = delivery.work_contracts as any
+        const contract = delivery.work_contracts as unknown as WorkContractRow & { work_request: { id: string; title: string; requester_id: string } }
         const workRequest = contract.work_request
 
         try {
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       results.errors.push(`自動承認取得失敗: ${approvalError.message}`)
     } else if (approvalTargets && approvalTargets.length > 0) {
       for (const delivery of approvalTargets) {
-        const contract = delivery.work_contracts as any
+        const contract = delivery.work_contracts as unknown as WorkContractRow & { work_request: { id: string; title: string; requester_id: string } }
         const workRequest = contract.work_request
 
         try {
@@ -292,7 +293,7 @@ export async function POST(request: NextRequest) {
       results.errors.push(`キャンセル申請取得失敗: ${cancelError.message}`)
     } else if (cancelTargets && cancelTargets.length > 0) {
       for (const cancelRequest of cancelTargets) {
-        const contract = cancelRequest.work_contracts as any
+        const contract = cancelRequest.work_contracts as unknown as WorkContractRow & { work_request: { id: string; title: string; requester_id: string } }
         const workRequest = contract.work_request
 
         try {

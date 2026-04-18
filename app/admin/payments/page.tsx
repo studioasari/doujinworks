@@ -115,7 +115,7 @@ export default function AdminPayments() {
           count: 0,
           status: payment.status,
           note: payment.note || null,
-          creator: payment.creator as any
+          creator: payment.creator as unknown as { username: string; display_name: string }
         }
       }
       
