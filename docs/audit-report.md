@@ -846,9 +846,99 @@ P1 対応状況:
 14. ~~**お問い合わせページの作成** — Footerのリンク切れ修正~~ ✅ 完了（2026-04-14、外部フォーム利用方針）
 
 ### 中（品質向上）
-15. **any型の削減**（74箇所 → 型定義の整備）
-16. **useEffectの関数定義順序修正**（33ファイル）
-17. **AuthRequiredModal.tsx のuseAuth条件呼び出し修正**
-18. **`<img>` → Next.js `<Image>` への置き換え**（54箇所）
-19. **構造化ログの導入**
-20. **ルート別error.tsxの追加**（dashboard, messages等）
+15. ~~**any型の削減**（74箇所 → 型定義の整備）~~ ✅ ほぼ完了（2026-04-18、66→3箇所、95%削減。database.types.ts 生成。残り3箇所は createClient<Database> 移行時に対応）
+16. ~~**useEffectの関数定義順序修正**（33ファイル）~~ ✅ 完了（2026-04-18、45ファイル修正。exhaustive-deps 警告13件削減）
+17. ~~**AuthRequiredModal.tsx のuseAuth条件呼び出し修正**~~ ✅ 完了
+18. ~~**`<img>` → Next.js `<Image>` への置き換え**（54箇所）~~ ✅ 完了（2026-04-18、置換可能な50箇所すべて対応。残り10箇所は置換不要/不可）
+19. **構造化ログの導入** — 別タスク（Sentry P1 #6 と同時対応）
+20. ~~**ルート別error.tsxの追加**（dashboard, messages等）~~ ✅ 完了
+
+---
+
+## 7. P2 対応詳細（2026-04-18）
+
+### P2 #15 any型の削減
+
+**対応完了（2026-04-18）**
+
+実施内容:
+- `types/database.types.ts` を Supabase CLI で生成（1,786行、29テーブル）
+- `types/supabase-helpers.ts` にヘルパー型を定義（`WorkContractRow`, `WorkRequestRow` 等）
+- `as any` を63箇所削減（66→3、95%減）
+  - Phase 1: `catch (error: any)` → `catch (error: unknown)` + 型ガード（10箇所）
+  - Phase 2: コールバック引数の型定義（7箇所）
+  - Phase 3: INSERT/UPDATE データ型 `Record<string, unknown>`（10箇所）
+  - Phase 4: Supabase JOIN 結果キャスト `as WorkContractRow` 等（31箇所）
+  - Header.tsx の `profile: any` → 具体的な型定義
+  - `auth/callback/route.ts` の `type as any` → union 型に変更
+
+残り3箇所:
+- `dashboard/payments/client.tsx`（2箇所）と `search/client.tsx`（1箇所）
+- Supabase JOIN 結果の filter/map で、`createClient<Database>` なしでは型推論が効かない
+- `createClient<Database>` の追加は試行したが、全ファイルのローカル型定義と DB スキーマの nullable 不一致で大量ビルドエラーが発生するため見送り
+- → 将来的にローカル型定義を `database.types.ts` ベースに統一するリファクタと合わせて対応
+
+### P2 #16 useEffect関数定義順序修正
+
+**対応完了（2026-04-18）**
+
+実施内容:
+- 45ファイル修正
+- パターンC（useEffect内インライン化）: 32関数 — 関数定義を useEffect の中に移動。exhaustive-deps 警告が解消
+- パターンA（前に移動）: 13関数 — 複数箇所から呼ばれる関数を useEffect の前に移動。定義順序は改善、依存配列の警告は残存（意図的な省略）
+- exhaustive-deps 警告: 73件→60件（13件削減）
+- 残り60件の内訳: チャット系の複雑なファイル2件（別タスク）、非関数の依存（router, supabase 等）、パターンA の意図的な依存省略
+- 動作変更ゼロ（関数の定義場所移動のみ）
+
+### P2 #18 img→Image置換
+
+**対応完了（2026-04-18）**
+
+実施内容:
+- フェーズ1（静的画像）: 10箇所 — `priority`/`unoptimized` を適切に設定。画像実サイズを確認して `width`/`height` 指定
+- フェーズ2（動的リモートURL）: 19箇所 — アバター/サムネイル/ブログ画像。`fill`/`sizes`/固定サイズ指定。`next.config.ts` に `posts.doujinworks.jp` を追加
+- フェーズ3（Blobプレビュー）: 20箇所 — `unoptimized` 付き。upload系6ファイルは `new Image()`（ブラウザネイティブ）との名前衝突を `import NextImage from 'next/image'` で回避
+- 合計50箇所を `<Image>` に置換
+- 残り10箇所はカテゴリD（HTML文字列6箇所 + 署名付きURL 2箇所 + 拡大表示オーバーレイ2箇所）で置換不要/不可
+
+### P2 #19 構造化ログ導入
+
+未着手。Sentry（P1 #6）導入時に合わせて対応する方針。
+理由: Sentry SDK のエラーキャプチャと構造化ログを同時に243箇所に適用する方が効率的（2回同じ箇所を触らずに済む）。
+
+---
+
+## 8. 全体進捗サマリ（2026-04-18 最終）
+
+### P0 致命的 — 5/5 完了（100%）
+- #1 全APIルート認証チェック: ✅ 完了
+- #2 Stripe Webhook 冪等性: ✅ 完了
+- #3 返金APIステータス事前チェック: ✅ 完了
+- #4 管理画面サーバーサイド認証: ✅ 完了
+- #5 ビルドエラー修正: ✅ 完了
+
+### P1 高 — 7/9 完了（実質100%、外部依存2件を除く）
+- #6 Sentry 導入: 別タスク（本番運用後）
+- #7 API レート制限: ✅ 完了
+- #8 二重決済防止: ✅ 完了
+- #9 Webhook 部分失敗対策: ✅ 完了
+- #10 管理画面の返金TODO: 別タスク（Stripe 審査後）
+- #11 Cron トランザクション化: ✅ 完了
+- #12 status 遷移バグ修正: ✅ 完了
+- #13 Edge Functions: ✅ 完了（廃止）
+- #14 お問い合わせページ: ✅ 完了
+
+### P2 中 — 5/6 完了
+- #15 any型の削減: ✅ ほぼ完了（95%削減、残り3箇所）
+- #16 useEffect関数定義順序: ✅ 完了
+- #17 AuthRequiredModal useAuth: ✅ 完了
+- #18 img→Image: ✅ 完了
+- #19 構造化ログ: 別タスク（Sentry と同時対応）
+- #20 ルート別error.tsx: ✅ 完了
+
+### 追加成果
+- 納品ファイルアップロード機能（フェーズ1〜8 全完了）
+- generate-receipt の設計変更（contractId ベース化）
+- Edge Functions 4つの廃止（Supabase cron 停止）
+- `database.types.ts` 生成（Supabase 型安全の基盤）
+- `types/supabase-helpers.ts`（Row 型エイリアス）
