@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { WorkContractRow } from '@/types/supabase-helpers'
+import { syncProgressStatus } from '@/lib/work-request-status'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -208,30 +209,11 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          // 全契約 completed か確認（並行契約対応）
-          const { data: allContracts } = await supabase
-            .from('work_contracts')
-            .select('id, status')
-            .eq('work_request_id', workRequest.id)
-
-          const allCompleted = !!allContracts
-            && allContracts.length > 0
-            && allContracts.every(c => c.status === 'completed')
-
-          if (allCompleted) {
-            const { data: reqUpdated } = await supabase
-              .from('work_requests')
-              .update({
-                status: 'completed',
-                completed_at: completedAt
-              })
-              .eq('id', workRequest.id)
-              .neq('status', 'completed')
-              .select('id')
-
-            if (!reqUpdated || reqUpdated.length === 0) {
-              console.log(`[auto-approve] スキップ: work_request ${workRequest.id} は既に completed`)
-            }
+          // 親 progress_status 同期（共通関数に委譲）
+          try {
+            await syncProgressStatus(workRequest.id)
+          } catch (syncError) {
+            console.error(`[auto-approve] syncProgressStatus エラー (work_request: ${workRequest.id}):`, syncError)
           }
 
           // クリエイターに通知
@@ -338,29 +320,11 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          // 全契約 cancelled か確認（並行契約対応）
-          const { data: allContracts } = await supabase
-            .from('work_contracts')
-            .select('id, status')
-            .eq('work_request_id', workRequest.id)
-
-          const allCancelled = !!allContracts
-            && allContracts.length > 0
-            && allContracts.every(c => c.status === 'cancelled')
-
-          if (allCancelled) {
-            const { data: reqCancelled } = await supabase
-              .from('work_requests')
-              .update({
-                status: 'cancelled'
-              })
-              .eq('id', workRequest.id)
-              .neq('status', 'cancelled')
-              .select('id')
-
-            if (!reqCancelled || reqCancelled.length === 0) {
-              console.log(`[auto-approve] スキップ: work_request ${workRequest.id} は既に cancelled`)
-            }
+          // 親 progress_status 同期（共通関数に委譲）
+          try {
+            await syncProgressStatus(workRequest.id)
+          } catch (syncError) {
+            console.error(`[auto-approve] syncProgressStatus エラー (work_request: ${workRequest.id}):`, syncError)
           }
 
           // 返金処理（payment_intent_idがある場合）

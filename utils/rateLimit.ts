@@ -297,6 +297,59 @@ export const chatSignedUrlBatchLimiter = new Ratelimit({
 })
 
 // ========================================
+// 採用・募集終了
+// ========================================
+
+// /api/applications/[id]/accept 用: 1分5件（採用操作は慎重に行う想定、
+// 並行契約で複数人採用する場合を考慮）
+export const applicationsAcceptLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:applications-accept',
+})
+
+// /api/requests/[id]/withdraw 用: 1分3件（募集終了は稀な操作）
+export const requestsWithdrawLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:requests-withdraw',
+})
+
+// /api/applications/[id]/reject 用: 1分5件（個別却下）
+export const applicationsRejectLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:applications-reject',
+})
+
+// /api/contracts/[id]/approve 用: 1分5件（検収承認）
+export const contractsApproveLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:contracts-approve',
+})
+
+// /api/contracts/[id]/cancel 用: 1分5件（キャンセル承認）
+export const contractsCancelLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:contracts-cancel',
+})
+
+// /api/contracts/[id]/reject 用: 1分5件（差戻し）
+export const contractsRejectLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit:contracts-reject',
+})
+
+// ========================================
 // ヘルパー関数
 // ========================================
 

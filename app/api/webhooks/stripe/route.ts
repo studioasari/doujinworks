@@ -186,23 +186,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
       }
 
-      // 5-4. work_requests を更新
-      if (contractData?.work_request_id) {
-        const { error: requestError } = await admin
-          .from('work_requests')
-          .update({
-            status: 'paid',
-            paid_at: paidAt,
-          })
-          .eq('id', contractData.work_request_id)
-
-        if (requestError) {
-          console.error('[webhook] work_requests 更新エラー:', requestError)
-          await updateEventStatus(admin, eventId, 'failed', `work_requests 更新失敗: ${requestError.message}`)
-          return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
-        }
-      }
-
       console.log('[webhook] 仮払い完了 - 契約ID:', contractId)
     }
 
