@@ -942,3 +942,19 @@ P1 対応状況:
 - Edge Functions 4つの廃止（Supabase cron 停止）
 - `database.types.ts` 生成（Supabase 型安全の基盤）
 - `types/supabase-helpers.ts`（Row 型エイリアス）
+
+## 別タスクとして保留中の課題(Phase 3 時点)
+
+ステータス設計リファクタリング (docs/status-redesign.md) の際に
+スコープ外として保留した以下の課題がある。別タスクで対応予定。
+
+### G: Stripe Webhook の他イベント対応
+
+現状、Stripe Webhook は `checkout.session.completed` のみを処理している。
+以下のイベントへの対応が必要:
+- charge.refunded (返金処理の確認)
+- charge.dispute.created (チャージバック)
+- その他エラーハンドリングの強化
+
+優先度: 本番運用開始前
+対応場所: app/api/webhooks/stripe/route.ts

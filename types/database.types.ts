@@ -1446,6 +1446,8 @@ export type Database = {
           message: string | null
           proposed_deadline: string | null
           proposed_price: number | null
+          rejected_at: string | null
+          rejection_reason: string | null
           status: string | null
           work_request_id: string
         }
@@ -1456,6 +1458,8 @@ export type Database = {
           message?: string | null
           proposed_deadline?: string | null
           proposed_price?: number | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
           status?: string | null
           work_request_id: string
         }
@@ -1466,6 +1470,8 @@ export type Database = {
           message?: string | null
           proposed_deadline?: string | null
           proposed_price?: number | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
           status?: string | null
           work_request_id?: string
         }
@@ -1517,13 +1523,14 @@ export type Database = {
           payment_intent_id: string | null
           payment_type: string | null
           price_negotiable: boolean | null
+          progress_status: string
+          recruitment_status: string
           reference_urls: string[] | null
           refund_id: string | null
           request_type: string
           requester_id: string
           required_skills: string[] | null
           selected_applicant_id: string | null
-          status: string
           target_creator_id: string | null
           title: string
           updated_at: string
@@ -1558,13 +1565,14 @@ export type Database = {
           payment_intent_id?: string | null
           payment_type?: string | null
           price_negotiable?: boolean | null
+          progress_status?: string
+          recruitment_status?: string
           reference_urls?: string[] | null
           refund_id?: string | null
           request_type: string
           requester_id: string
           required_skills?: string[] | null
           selected_applicant_id?: string | null
-          status?: string
           target_creator_id?: string | null
           title: string
           updated_at?: string
@@ -1599,13 +1607,14 @@ export type Database = {
           payment_intent_id?: string | null
           payment_type?: string | null
           price_negotiable?: boolean | null
+          progress_status?: string
+          recruitment_status?: string
           reference_urls?: string[] | null
           refund_id?: string | null
           request_type?: string
           requester_id?: string
           required_skills?: string[] | null
           selected_applicant_id?: string | null
-          status?: string
           target_creator_id?: string | null
           title?: string
           updated_at?: string
