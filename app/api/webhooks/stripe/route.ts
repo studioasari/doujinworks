@@ -177,13 +177,42 @@ export async function POST(request: NextRequest) {
           payment_intent_id: session.payment_intent as string,
         })
         .eq('id', contractId)
-        .select('work_request_id')
+        .select('id, work_request_id, contractor_id')
         .single()
 
       if (contractError) {
         console.error('[webhook] work_contracts 更新エラー:', contractError)
         await updateEventStatus(admin, eventId, 'failed', `work_contracts 更新失敗: ${contractError.message}`)
         return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
+      }
+
+      // 仮払い完了通知(受注者へ)
+      // ベストエフォート: 通知失敗でも Webhook 自体は成功扱いにする
+      if (contractData?.contractor_id && contractData?.work_request_id) {
+        try {
+          const { data: workReq } = await admin
+            .from('work_requests')
+            .select('title')
+            .eq('id', contractData.work_request_id)
+            .single()
+
+          const { error: notifyError } = await admin
+            .from('notifications')
+            .insert({
+              profile_id: contractData.contractor_id,
+              type: 'paid',
+              title: '仮払いが完了しました',
+              message: `「${workReq?.title ?? ''}」の仮払いが完了しました。作業を開始してください。`,
+              link: `/requests/${contractData.work_request_id}/contracts/${contractData.id}`,
+              read: false,
+              created_at: new Date().toISOString(),
+            })
+          if (notifyError) {
+            console.error('[webhook] 仮払い通知の送信に失敗:', notifyError)
+          }
+        } catch (notifyBlockError) {
+          console.error('[webhook] 仮払い通知処理でエラー:', notifyBlockError)
+        }
       }
 
       console.log('[webhook] 仮払い完了 - 契約ID:', contractId)

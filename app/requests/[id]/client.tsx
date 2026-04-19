@@ -8,10 +8,7 @@ import Image from 'next/image'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import { useAuth } from '@/app/components/AuthContext'
-import {
-  getWorkRequestDisplayLabel,
-  getWorkRequestDisplayColorClass,
-} from '@/lib/status-labels'
+import { createNotification } from '@/utils/notifications'
 import styles from './page.module.css'
 
 type WorkRequest = {
@@ -67,6 +64,34 @@ const REPORT_REASONS = [
   { value: 'other', label: 'その他の規約違反' }
 ]
 
+type ViewerRole = 'requester' | 'contractor' | 'other'
+
+function getDetailBadgeLabel(
+  request: { recruitment_status: string; progress_status: string },
+  role: ViewerRole
+): string {
+  if (request.progress_status === 'completed') return '完了'
+  if (request.progress_status === 'cancelled') {
+    if (request.recruitment_status === 'withdrawn') return '取下げ'
+    return 'キャンセル'
+  }
+  if (request.recruitment_status === 'open') return '募集中'
+  // filled or withdrawn（progress は active or pending）
+  if (role === 'requester' || role === 'contractor') return '進行中'
+  return '募集終了'
+}
+
+function getDetailBadgeColorClass(
+  request: { recruitment_status: string; progress_status: string },
+  role: ViewerRole
+): string {
+  if (request.progress_status === 'completed') return 'statusSuccess'
+  if (request.progress_status === 'cancelled') return 'statusError'
+  if (request.recruitment_status === 'open') return 'statusInfo'
+  if (role === 'requester' || role === 'contractor') return 'statusWarning'
+  return 'statusNeutral'
+}
+
 function formatDate(dateString: string) {
   const date = new Date(dateString)
   return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -76,6 +101,7 @@ export default function RequestDetailPage() {
   const [request, setRequest] = useState<WorkRequest | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
+  const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
   const [applicationCount, setApplicationCount] = useState(0)
@@ -202,8 +228,11 @@ export default function RequestDetailPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setIsLoggedIn(true)
-    const { data: profile } = await supabase.from('profiles').select('id').eq('user_id', user.id).single()
-    if (profile) setCurrentProfileId(profile.id)
+    const { data: profile } = await supabase.from('profiles').select('id, display_name').eq('user_id', user.id).single()
+    if (profile) {
+      setCurrentProfileId(profile.id)
+      setCurrentDisplayName(profile.display_name)
+    }
   }
 
   async function fetchClientStats(requesterId: string) {
@@ -319,6 +348,20 @@ export default function RequestDetailPage() {
       console.error('応募エラー:', error)
       alert(error.code === '23505' ? 'すでに応募済みです' : '応募に失敗しました')
     } else {
+      // 応募通知（依頼者へ） - ベストエフォート
+      try {
+        const applicantName = currentDisplayName || '匿名ユーザー'
+        await createNotification(
+          request!.requester_id,
+          'application',
+          '新しい応募がありました',
+          `「${request!.title}」に${applicantName}さんから応募がありました。`,
+          `/requests/${requestId}/manage`
+        )
+      } catch (notifyError) {
+        console.error('応募通知の送信に失敗:', notifyError)
+      }
+
       alert('応募しました！')
       setShowApplicationForm(false)
       setApplicationMessage('')
@@ -457,9 +500,14 @@ export default function RequestDetailPage() {
                   <span className="badge badge-accent">
                     {CATEGORY_LABELS[request.category] || request.category}
                   </span>
-                  <span className={`badge ${styles.statusBadge} ${styles[getWorkRequestDisplayColorClass({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })]}`}>
-                    {getWorkRequestDisplayLabel({ recruitment_status: request.recruitment_status, progress_status: request.progress_status })}
-                  </span>
+                  {(() => {
+                    const role: ViewerRole = isRequester ? 'requester' : (myContractId ? 'contractor' : 'other')
+                    return (
+                      <span className={`badge ${styles.statusBadge} ${styles[getDetailBadgeColorClass(request, role)]}`}>
+                        {getDetailBadgeLabel(request, role)}
+                      </span>
+                    )
+                  })()}
                 </div>
                 <h1 className={styles.title}>{request.title}</h1>
               </div>
