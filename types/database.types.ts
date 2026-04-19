@@ -638,6 +638,7 @@ export type Database = {
           status: string
           transfer_fee: number | null
           updated_at: string | null
+          work_contract_id: string | null
           work_request_id: string
         }
         Insert: {
@@ -651,6 +652,7 @@ export type Database = {
           status?: string
           transfer_fee?: number | null
           updated_at?: string | null
+          work_contract_id?: string | null
           work_request_id: string
         }
         Update: {
@@ -664,6 +666,7 @@ export type Database = {
           status?: string
           transfer_fee?: number | null
           updated_at?: string | null
+          work_contract_id?: string | null
           work_request_id?: string
         }
         Relationships: [
@@ -672,6 +675,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_work_contract_id_fkey"
+            columns: ["work_contract_id"]
+            isOneToOne: false
+            referencedRelation: "work_contracts"
             referencedColumns: ["id"]
           },
           {

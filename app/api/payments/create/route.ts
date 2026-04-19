@@ -10,7 +10,7 @@ import { paymentsCreateLimiter, safeLimit } from '@/utils/rateLimit'
  *  1. ログイン済みであること
  *  2. 対象 work_contract の依頼者（work_request.requester_id）本人であること
  *  3. work_contract.status が 'completed' であること
- *  4. 同じ work_request_id の payments レコードがまだ存在しないこと（冪等性）
+ *  4. 同じ work_contract_id の payments レコードがまだ存在しないこと（冪等性）
  *
  * 金額は contract.final_price からサーバー側で計算するため、
  * クライアントから金額を指定することはできない（改ざん防止）。
@@ -106,16 +106,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. 二重INSERT防止
-    //    同じ依頼に対して複数クリエイターと並行契約することがあるため、
-    //    work_request_id 単体ではなく (work_request_id, creator_id) の
-    //    組み合わせで重複判定する。
-    //    同じ依頼×同じクリエイターの組み合わせは DB側の一意制約で弾かれるので
-    //    このチェックは冪等レスポンスを返すための追加の安全網。
+    //    契約単位で冪等性を担保する。
+    //    同じ契約に対する payments が既に存在すれば成功扱いで返す。
     const { data: existing, error: existingError } = await admin
       .from('payments')
       .select('id')
-      .eq('work_request_id', contract.work_request_id)
-      .eq('creator_id', contract.contractor_id)
+      .eq('work_contract_id', contractId)
       .maybeSingle()
 
     if (existingError) {
@@ -157,6 +153,7 @@ export async function POST(request: NextRequest) {
       .from('payments')
       .insert({
         work_request_id: contract.work_request_id,
+        work_contract_id: contractId,
         creator_id: contract.contractor_id,
         amount: creatorAmount,
         status: 'pending',
