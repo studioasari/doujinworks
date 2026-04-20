@@ -102,6 +102,7 @@ export default function RequestDetailPage() {
   const [loading, setLoading] = useState(true)
   const [currentProfileId, setCurrentProfileId] = useState<string>('')
   const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(null)
+  const [currentAccountType, setCurrentAccountType] = useState<string | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
   const [applicationCount, setApplicationCount] = useState(0)
@@ -228,10 +229,11 @@ export default function RequestDetailPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setIsLoggedIn(true)
-    const { data: profile } = await supabase.from('profiles').select('id, display_name').eq('user_id', user.id).single()
+    const { data: profile } = await supabase.from('profiles').select('id, display_name, account_type').eq('user_id', user.id).single()
     if (profile) {
       setCurrentProfileId(profile.id)
       setCurrentDisplayName(profile.display_name)
+      setCurrentAccountType(profile.account_type)
     }
   }
 
@@ -712,6 +714,13 @@ export default function RequestDetailPage() {
                         <div className={styles.appliedBadge}>
                           <i className="fas fa-check-circle"></i>応募済みです
                         </div>
+                      ) : currentAccountType !== 'business' ? (
+                        <>
+                          <Link href="/dashboard/account" className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                            ビジネスアカウントに切り替える
+                          </Link>
+                          <p className={styles.businessCtaNote}>応募にはビジネスアカウントが必要です</p>
+                        </>
                       ) : (
                         <button onClick={() => setShowApplicationForm(!showApplicationForm)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                           応募画面へ
@@ -1032,9 +1041,15 @@ export default function RequestDetailPage() {
                   (request.contracted_count || 0) >= (request.number_of_positions || 1) ? (
                     <span className={styles.mobileClosedBadge}>募集定員に達しました</span>
                   ) : isLoggedIn ? (
-                    <button onClick={() => setShowApplicationForm(true)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
-                      応募画面へ
-                    </button>
+                    currentAccountType !== 'business' ? (
+                      <Link href="/dashboard/account" className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                        ビジネスアカウントに切り替える
+                      </Link>
+                    ) : (
+                      <button onClick={() => setShowApplicationForm(true)} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
+                        応募画面へ
+                      </button>
+                    )
                   ) : (
                     <button onClick={() => requireAuth()} className={`${styles.btn} ${styles.primary} ${styles.full}`}>
                       応募する

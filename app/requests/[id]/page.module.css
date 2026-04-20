@@ -644,6 +644,13 @@ a.clientInfo:hover {
   font-size: var(--text-base);
 }
 
+.businessCtaNote {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  margin: var(--space-2) 0 0;
+}
+
 /* メッセージカード */
 .messageCard {
   background: var(--bg-elevated);

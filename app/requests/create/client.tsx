@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { supabase } from '@/utils/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import Header from '@/app/components/Header'
 import Footer from '@/app/components/Footer'
 import DashboardSidebar from '@/app/components/DashboardSidebar'
@@ -605,8 +606,24 @@ function CreateRequestContent() {
             </div>
           )}
 
+          {accountType !== null && accountType !== 'business' ? (
+            <div className={styles.businessRequiredCta}>
+              <div className={styles.ctaIcon}>
+                <i className="fas fa-briefcase"></i>
+              </div>
+              <h2 className={styles.ctaTitle}>
+                案件の作成にはビジネスアカウントが必要です
+              </h2>
+              <p className={styles.ctaMessage}>
+                同人ワークスで依頼を出すには、ビジネス情報の登録をお願いします。
+              </p>
+              <Link href="/dashboard/account" className={`${styles.btn} ${styles.primary}`}>
+                ビジネスアカウントに切り替える
+              </Link>
+            </div>
+          ) : (
           <form onSubmit={handlePreSubmit} className={styles.formCard}>
-            
+
             {/* カテゴリ */}
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>カテゴリ <span className={styles.required}>*</span></label>
@@ -857,6 +874,7 @@ function CreateRequestContent() {
               </button>
             </div>
           </form>
+          )}
 
           {showConfirmModal && (
             <ConfirmModal
