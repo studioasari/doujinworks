@@ -8,7 +8,7 @@ export default function CookiePolicyPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '900px' }}>
+        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '900px', margin: '0 auto' }}>
           <h1 className="section-title mb-32">外部送信ポリシー</h1>
 
           <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#4A4A4A' }}>

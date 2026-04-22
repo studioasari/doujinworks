@@ -8,7 +8,7 @@ export default function LawPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '900px' }}>
+        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '900px', margin: '0 auto' }}>
           <h1 className="section-title mb-32">特定商取引法に基づく表記</h1>
 
           <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#4A4A4A' }}>
@@ -150,7 +150,7 @@ export default function LawPage() {
                       <p>銀行振込</p>
                       <p style={{ marginLeft: '20px', fontSize: '13px', marginTop: '8px' }}>
                         締日: 毎月末日<br />
-                        支払日: 翌月20日<br />
+                        支払日: 翌月20日（土日祝日の場合は翌営業日）<br />
                         最低振込額: 1,000円
                       </p>
                       <div className="note">
@@ -176,7 +176,8 @@ export default function LawPage() {
                       <div className="subsection-title">■ クリエイター</div>
                       <p>月末締め、翌月20日に登録された銀行口座へ振込</p>
                       <div className="note">
-                        例: 12月1日～12月31日に完了した取引 → 翌年1月20日に振込
+                        例: 12月1日～12月31日に完了した取引 → 翌年1月20日に振込<br />
+                        ※振込日が土日祝日の場合は翌営業日に順延されます
                       </div>
                     </div>
                   </td>

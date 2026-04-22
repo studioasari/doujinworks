@@ -8,7 +8,7 @@ export default function TermsPage() {
     <>
       <Header />
       <div style={{ minHeight: '100vh', backgroundColor: '#FFFFFF' }}>
-        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '800px' }}>
+        <div className="container-narrow" style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto' }}>
           <h1 className="section-title mb-32">利用規約</h1>
 
           <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#4A4A4A' }}>
