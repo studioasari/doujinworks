@@ -7,7 +7,13 @@
       "Read(//c/Users/2to3t/.claude/projects/c--Users-2to3t-Desktop-doujinworks/0983f4a7-0418-41f0-8a02-9d98676db6bc/tool-results/**)",
       "Bash(npm run *)",
       "Bash(npx supabase *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(npx tsc *)",
+      "Bash(mkdir -p \"c:/Users/2to3t/Desktop/doujinworks/app/api/contracts/[id]/approve\")",
+      "Bash(mkdir -p \"c:/Users/2to3t/Desktop/doujinworks/app/api/contracts/[id]/reject\")",
+      "Bash(mkdir -p \"c:/Users/2to3t/Desktop/doujinworks/app/api/contracts/[id]/cancel\")",
+      "Bash(rm \"c:/Users/2to3t/Desktop/doujinworks/app/api/requests/[id]/complete/route.ts\")",
+      "Bash(rmdir \"c:/Users/2to3t/Desktop/doujinworks/app/api/requests/[id]/complete\")"
     ]
   }
 }

@@ -11,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 /**
  * Stripe Checkout Session 作成API
  *
- * 仮払い（エスクロー決済）のための Stripe 決済ページを作成する。
+ * 依頼の決済のための Stripe 決済ページを作成する。
  *
  * 認可:
  *  1. ログイン済みであること
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     // ステップ6: 既存のバリデーション
     if (contract.status !== 'contracted') {
       return NextResponse.json(
-        { error: 'この契約は仮払い待ち状態ではありません' },
+        { error: 'この契約は決済待ち状態ではありません' },
         { status: 400 }
       )
     }
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'jpy',
             product_data: {
-              name: `仮払い: ${workRequestData?.title || '依頼'}`,
+              name: `決済: ${workRequestData?.title || '依頼'}`,
               description: `クリエイター: ${contractorData?.display_name || '名前未設定'}`,
             },
             unit_amount: contract.final_price,

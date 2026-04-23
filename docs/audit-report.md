@@ -159,7 +159,7 @@
 - 引数を `contractId`, `title`, `addressee` の3つに縮小（旧: `requestId`, `requesterId`, `creatorId`, `amount`, `paidAt` もクライアントから受け取っていた = 改ざん可能）
 - `amount`, `paidAt`, `requesterId`, `creatorId` はサーバー側で contract から取得（改ざん不可）
 - 当事者チェック: 依頼者本人のみ
-- 仮払い済みチェック追加
+- 決済済みチェック追加
 - PDF データ・ファイル名・領収書番号を `contractId` ベースに変更(並行契約で番号衝突を回避)
 - Python サブプロセス処理は変更なし
 
@@ -449,13 +449,13 @@ WHERE c.status = 'completed'
 
 ### 3-11. 決済完了時の work_requests.status 遷移が抜けている可能性
 
-**発見経緯**: `/requests/manage` の「仮払い待ち」表示バグ調査中、検収承認済み（contract.status = completed, delivery.status = approved, contract.paid_at と contract.completed_at に値あり）にも関わらず、親の work_requests.status が `'contracted'` のまま放置されているレコードが複数見つかった。
+**発見経緯**: `/requests/manage` の「決済待ち」表示バグ調査中、検収承認済み（contract.status = completed, delivery.status = approved, contract.paid_at と contract.completed_at に値あり）にも関わらず、親の work_requests.status が `'contracted'` のまま放置されているレコードが複数見つかった。
 
 例:
 - `work_request_id: b4123b3b-bf35-4565-a685-49535276386a` (44)
 - `work_request_id: d4ad5dd5-07e6-4082-81d8-601954c61bd5` (ｓｓｓｓｓｓｓ)
 
-これらは画面上「仮払い待ち」と誤表示される。
+これらは画面上「決済待ち」と誤表示される。
 
 **仮説**:
 - 今日発見した「検収承認時に paid → completed の遷移が抜けていた」バグ（今回 `/api/requests/[id]/complete` を新設して修正済み）の兄弟バグで、決済完了時の contracted → paid の遷移にも同様の抜けがある可能性
@@ -993,7 +993,7 @@ P1 対応状況:
 
 ---
 
-## 10. 応募通知・仮払い通知・バッジ表示改善（2026-04-19）
+## 10. 応募通知・決済通知・バッジ表示改善（2026-04-19）
 
 ### 10-1. 応募通知の新規実装
 
@@ -1007,9 +1007,9 @@ P1 対応状況:
 - ベストエフォート（通知失敗で応募エラーにしない）
 - `loadUser()` の select に `display_name` を追加し、応募者名を取得
 
-### 10-2. 仮払い完了通知の追加
+### 10-2. 決済完了通知の追加
 
-**背景**: Stripe Webhook の `checkout.session.completed` ハンドラに通知送信処理がなく、画面側フォールバックも早期 return によりスキップされ、正常系で仮払い完了通知が届かない状態だった。
+**背景**: Stripe Webhook の `checkout.session.completed` ハンドラに通知送信処理がなく、画面側フォールバックも早期 return によりスキップされ、正常系で決済完了通知が届かない状態だった。
 
 **対応**: `app/api/webhooks/stripe/route.ts` に notifications INSERT を追加（Admin client で直接 INSERT、ベストエフォート）。
 

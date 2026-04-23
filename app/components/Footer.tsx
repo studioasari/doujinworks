@@ -51,7 +51,7 @@ export default function Footer() {
               
               <p className={styles.description}>
                 同人界隈特化の<br />
-                クリエイターマッチングサービス
+                クリエイティブ制作の取引プラットフォーム
               </p>
 
               <p className={styles.ctaText}>

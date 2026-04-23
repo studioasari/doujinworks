@@ -194,7 +194,7 @@ export const refundLimiter = new Ratelimit({
   prefix: 'ratelimit:refund',
 })
 
-// /api/create-checkout-session 用: 1分10件（仮払いボタン連打対策）
+// /api/create-checkout-session 用: 1分10件（決済ボタン連打対策）
 export const checkoutSessionLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(10, '1 m'),

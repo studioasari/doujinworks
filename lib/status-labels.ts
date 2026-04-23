@@ -34,7 +34,7 @@ export type ProgressStatus = keyof typeof PROGRESS_STATUS_LABELS
 // Work Contract Status（個別契約状態）
 // ============================================================================
 export const CONTRACT_STATUS_LABELS = {
-  contracted: '仮払い待ち',
+  contracted: '決済待ち',
   paid: '作業中',
   delivered: '納品済み',
   completed: '完了',

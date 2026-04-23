@@ -88,9 +88,10 @@ export default function LawPage() {
                 <tr>
                   <th>サービス内容</th>
                   <td>
-                    クリエイターと依頼者をマッチングするプラットフォームサービスの提供
+                    依頼者とクリエイターをつなぐ取引の場の提供および、クリエイターに代わり依頼者から代金を受領する収納代行機能の提供
                     <div className="note">
-                      ※本サービスは、依頼者とクリエイター間の取引の場を提供するものであり、当社は取引の当事者とはなりません。
+                      ※本サービスは、依頼者とクリエイター間の取引の場を提供するものであり、当社は取引（業務委託契約）の当事者とはなりません。<br />
+                      ※当社は、クリエイターから代理受領権限の付与を受け、依頼者からクリエイターへの代金を代理で受領します（収納代行）。
                     </div>
                   </td>
                 </tr>
@@ -109,7 +110,7 @@ export default function LawPage() {
                     <div className="subsection">
                       <div className="subsection-title">■ クリエイターの手数料</div>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>1. プラットフォーム手数料:</strong> 報酬額の12%（クリエイター負担）
+                        <strong>1. 利用手数料（サービス手数料）:</strong> 報酬額の12%（クリエイター負担）
                       </p>
                       <p>
                         <strong>2. 振込手数料:</strong> 330円（クリエイター負担）
@@ -123,7 +124,7 @@ export default function LawPage() {
                       <div className="subsection-title">■ 手数料計算例（報酬額10,000円の場合）</div>
                       <p style={{ marginLeft: '20px', fontSize: '13px' }}>
                         依頼者支払額: 10,000円<br />
-                        プラットフォーム手数料（12%）: -1,200円<br />
+                        利用手数料（12%）: -1,200円<br />
                         振込手数料: -330円<br />
                         <strong>クリエイター実受取額: 8,470円</strong>
                       </p>
@@ -136,12 +137,13 @@ export default function LawPage() {
                   <td>
                     <div className="subsection">
                       <div className="subsection-title">■ 依頼者の支払方法</div>
-                      <p>クレジットカード決済（Stripe）</p>
+                      <p>クレジットカード決済、コンビニ決済、銀行振込、QRコード決済等</p>
                       <p style={{ marginLeft: '20px', fontSize: '13px', marginTop: '8px' }}>
                         対応カードブランド: VISA、Mastercard、American Express、JCB、Diners Club、Discover
                       </p>
                       <div className="note">
-                        ※本サービスはStripe社の決済システムを利用しています
+                        ※決済は、当社が契約する決済代行サービスを通じて行われます<br />
+                        ※ご利用可能な決済手段は、決済代行サービスの仕様により変更される場合があります
                       </div>
                     </div>
 
@@ -166,9 +168,10 @@ export default function LawPage() {
                   <td>
                     <div className="subsection">
                       <div className="subsection-title">■ 依頼者</div>
-                      <p>契約確定後、仮払いを行う際に支払い</p>
+                      <p>契約確定時（クリエイター採用時）に決済を実行</p>
                       <div className="note">
-                        ※仮払い制度により、作業開始前に報酬額を当社が預かります
+                        ※クリエイター採用時に決済が実行され、当社はクリエイターに代わって代金を受領します（収納代行）<br />
+                        ※クリエイターへは、業務委託契約の履行後、当社から代金の精算が行われます
                       </div>
                     </div>
 
@@ -199,18 +202,18 @@ export default function LawPage() {
                     <div className="subsection">
                       <div className="subsection-title">■ 依頼者側のキャンセル</div>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>・仮払い前:</strong> 自由にキャンセル可能
+                        <strong>・採用前（決済前）:</strong> 自由にキャンセル可能（請求は発生しません）
                       </p>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>・仮払い後、作業開始前:</strong> 依頼者とクリエイターの協議により決定
+                        <strong>・採用後（決済後）、作業開始前:</strong> 依頼者とクリエイターの協議により決定（成立時は返金処理）
                       </p>
                       <p style={{ marginBottom: '8px' }}>
                         <strong>・作業開始後:</strong> 原則としてキャンセル不可
                       </p>
                       <div className="note">
                         但し、以下の場合はキャンセル可能:<br />
-                        ① クリエイターが納期を30日以上遅延し、依頼者の催告後7日以内に納品しない場合<br />
-                        ② クリエイターが連絡不能となり、依頼者の連絡後14日以上応答がない場合<br />
+                        ① クリエイターが納期を7日以上遅延し、依頼者の催告後7日以内に納品しない場合<br />
+                        ② クリエイターが連絡不能となり、依頼者の連絡後7日以上応答がない場合<br />
                         ③ その他当社が特別に認めた場合
                       </div>
                     </div>
@@ -309,6 +312,17 @@ export default function LawPage() {
                     </div>
 
                     <div className="subsection">
+                      <div className="subsection-title">■ 適格請求書（インボイス）について</div>
+                      <p>
+                        クリエイターが消費税法上の適格請求書発行事業者として登録されている場合、当社は取引成立後、依頼者に対して適格請求書（インボイス）を発行します。
+                      </p>
+                      <div className="note">
+                        ※クリエイターは適格請求書発行事業者登録をしている場合、登録番号を当社に通知する必要があります（利用規約第6条）<br />
+                        ※未登録のクリエイターとの取引については、仕入税額控除の経過措置が適用される場合があります
+                      </div>
+                    </div>
+
+                    <div className="subsection">
                       <div className="subsection-title">■ トラブル対応について</div>
                       <p>
                         取引に関するトラブルについては、当事者間で解決していただくことを原則としますが、必要に応じて運営者が仲裁を行います。
@@ -335,29 +349,30 @@ export default function LawPage() {
               <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#1A1A1A', marginBottom: '16px' }}>【重要】ご利用にあたっての注意事項</h2>
               
               <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#F5F5F5', borderLeft: '4px solid #4A4A4A' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>■ 仮払い制度について</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>■ 決済の仕組みについて（収納代行）</h3>
                 <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#4A4A4A' }}>
-                  本サービスでは、依頼者の皆様に安心してご利用いただくため、仮払い制度を採用しています。契約成立後、依頼者が報酬額を当社に事前に支払い、納品・検収完了後にクリエイターへお支払いする仕組みです。
+                  本サービスでは、依頼者とクリエイター間の業務委託契約に基づく代金の支払を、当社が決済代行サービスを通じて代理で受領する「収納代行」方式を採用しています。具体的には、依頼者は依頼時にお支払い情報を登録のうえ与信を確保し、クリエイター採用時に決済が実行されます。当社は、クリエイターから付与された代理受領権限に基づき代金を受領し、業務委託契約の履行後、利用手数料および振込手数料を控除した金額をクリエイターへ業務委託報酬として精算します。
                 </p>
               </div>
 
               <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#F5F5F5', borderLeft: '4px solid #4A4A4A' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>■ プラットフォーム外取引の禁止</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>■ 本サービス外での直接取引の禁止</h3>
                 <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#4A4A4A' }}>
-                  本サービスを通じて知り合った相手と、本サービスを介さずに直接取引を行うことは利用規約により禁止されています。違反した場合、違約金（取引報酬のプラットフォーム手数料相当額又は100万円のいずれか高い方）をお支払いいただく場合があります。
+                  本サービスを通じて知り合った相手と、本サービスを介さずに直接取引を行うことは利用規約により禁止されています。違反した場合、違約金（取引報酬の利用手数料相当額又は100万円のいずれか高い方）をお支払いいただく場合があります。
                 </p>
               </div>
 
               <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#F5F5F5', borderLeft: '4px solid #4A4A4A' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1A1A1A' }}>■ お支払いの安全性について</h3>
                 <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#4A4A4A' }}>
-                  本サービスの決済は、世界的に信頼されているStripe社の決済システムを利用しています。クレジットカード情報は当社サーバーには保存されず、安全に処理されます。
+                  本サービスの決済は、当社が契約する決済代行サービスを通じて処理されます。クレジットカード情報等の決済情報は当社サーバーには保存されず、決済代行サービスにおいて安全に処理されます。
                 </p>
               </div>
             </div>
 
             <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #E0E0E0', textAlign: 'center', color: '#999', fontSize: '12px' }}>
               <p>2024年12月8日 制定</p>
+              <p>2026年4月23日 改定</p>
               <p style={{ marginTop: '8px' }}>合同会社スタジオアサリ</p>
             </div>
           </div>

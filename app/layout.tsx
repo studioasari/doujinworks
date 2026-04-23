@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "同人ワークス",
-  description: "クリエイターと依頼者を繋ぐマッチングプラットフォーム",
+  description: "クリエイターと依頼者を繋ぐクリエイティブ制作の取引プラットフォーム",
 };
 
 // テーマちらつき防止スクリプト

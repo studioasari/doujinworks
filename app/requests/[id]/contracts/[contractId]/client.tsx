@@ -1187,7 +1187,7 @@ export default function ContractDetailPage() {
   }
 
   async function handlePayment() {
-    if (!confirm('仮払いを実行しますか？\n※Stripeの決済ページに移動します。')) return
+    if (!confirm('決済を実行しますか？\n※決済ページに移動します。')) return
 
     setProcessing(true)
 
@@ -1208,8 +1208,8 @@ export default function ContractDetailPage() {
         window.location.href = data.url
       }
     } catch (error: unknown) {
-      console.error('仮払いエラー:', error)
-      alert(error instanceof Error ? error.message : '仮払いに失敗しました')
+      console.error('決済エラー:', error)
+      alert(error instanceof Error ? error.message : '決済に失敗しました')
     } finally {
       setProcessing(false)
     }
@@ -1224,7 +1224,7 @@ export default function ContractDetailPage() {
           .single()
 
         if (currentContract?.status === 'paid' && currentContract?.paid_at) {
-          alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+          alert('決済が完了しました！クリエイターが作業を開始できます。')
           await fetchContract()
           return
         }
@@ -1245,16 +1245,16 @@ export default function ContractDetailPage() {
           await createNotification(
             contract.contractor_id,
             'paid',
-            '仮払いが完了しました',
-            `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」の仮払いが完了しました。作業を開始してください。`,
+            '決済が完了しました',
+            `「${(contract.work_request as unknown as WorkRequestRow & { requester?: { id: string; display_name: string | null; avatar_url: string | null; username: string | null } })?.title}」の決済が完了しました。作業を開始してください。`,
             `/requests/${requestId}/contracts/${contractId}`
           )
         }
 
-        alert('仮払いが完了しました！クリエイターが作業を開始できます。')
+        alert('決済が完了しました！クリエイターが作業を開始できます。')
         await fetchContract()
       } catch (error) {
-        console.error('仮払い完了処理エラー:', error)
+        console.error('決済完了処理エラー:', error)
       }
     }
 
@@ -1503,7 +1503,7 @@ export default function ContractDetailPage() {
 
     if (!confirm(
       isApproval 
-        ? 'キャンセル申請に同意しますか？\n※契約が解除され、仮払い済みの場合は返金されます。'
+        ? 'キャンセル申請に同意しますか？\n※契約が解除され、決済済みの場合は返金されます。'
         : 'キャンセル申請を拒否しますか？'
     )) return
 
@@ -1538,7 +1538,7 @@ export default function ContractDetailPage() {
           return
         }
 
-        // 仮払い済みの場合は返金処理
+        // 決済済みの場合は返金処理
         if (contract?.payment_intent_id) {
           try {
             const refundResponse = await fetch('/api/refund', {
@@ -1615,7 +1615,7 @@ export default function ContractDetailPage() {
   function getProgressSteps() {
     return [
       { key: 'contracted', label: '契約', done: true, date: contract?.contracted_at },
-      { key: 'paid', label: '仮払い', done: !!contract?.paid_at, active: contract?.status === 'contracted', date: contract?.paid_at },
+      { key: 'paid', label: '決済', done: !!contract?.paid_at, active: contract?.status === 'contracted', date: contract?.paid_at },
       { key: 'working', label: '作業中', done: !!contract?.delivered_at, active: contract?.status === 'paid' },
       { key: 'delivered', label: '納品', done: !!contract?.completed_at, active: contract?.status === 'delivered', date: contract?.delivered_at },
       { key: 'completed', label: '完了', done: !!contract?.completed_at, date: contract?.completed_at },
@@ -1689,12 +1689,12 @@ export default function ContractDetailPage() {
               <i className="fas fa-credit-card"></i>
             </div>
             <div className={styles.actionBarText}>
-              <h3>仮払いを行ってください</h3>
-              <p>仮払いを行うと、クリエイターが作業を開始できます。</p>
+              <h3>決済を行ってください</h3>
+              <p>決済を行うと、クリエイターが作業を開始できます。</p>
             </div>
           </div>
           <button onClick={handlePayment} disabled={processing} className={styles.actionBarBtn}>
-            {processing ? '処理中...' : '仮払いする'}
+            {processing ? '処理中...' : '決済する'}
           </button>
         </div>
       )
@@ -1708,8 +1708,8 @@ export default function ContractDetailPage() {
               <i className="fas fa-clock"></i>
             </div>
             <div className={styles.actionBarText}>
-              <h3>仮払いをお待ちください</h3>
-              <p>依頼者が仮払いを完了すると、作業を開始できます。</p>
+              <h3>決済をお待ちください</h3>
+              <p>依頼者が決済を完了すると、作業を開始できます。</p>
             </div>
           </div>
         </div>
@@ -2371,7 +2371,7 @@ export default function ContractDetailPage() {
               {cancellationResponseAction === 'approve' && (
                 <div className={`${styles.modalInfo} ${styles.warning}`}>
                   <i className="fas fa-exclamation-triangle"></i>
-                  同意すると契約が解除されます。仮払い済みの場合は返金処理が行われます。
+                  同意すると契約が解除されます。決済済みの場合は返金処理が行われます。
                 </div>
               )}
               {cancellationResponseAction === 'reject' && (

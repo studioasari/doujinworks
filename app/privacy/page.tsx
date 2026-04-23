@@ -64,7 +64,7 @@ export default function PrivacyPage() {
               <p>本プライバシーポリシーにおいて使用する用語の定義は、以下のとおりとします。</p>
               
               <ul className="item-list">
-                <li><strong>「本サービス」:</strong> 当社が運営する「同人ワークス」という名称のマッチングプラットフォームサービス</li>
+                <li><strong>「本サービス」:</strong> 当社が運営する「同人ワークス」という名称のクリエイティブ制作の取引プラットフォーム</li>
                 <li><strong>「利用者」:</strong> 本サービスを利用して仕事を依頼する個人または法人</li>
                 <li><strong>「クリエイター」:</strong> 本サービスを利用して仕事を受注する個人または法人</li>
                 <li><strong>「お客様」:</strong> 利用者、クリエイター及び本サービスの閲覧者の総称</li>

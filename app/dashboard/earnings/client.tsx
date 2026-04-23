@@ -331,7 +331,7 @@ export default function EarningsClient() {
             </h3>
             <div className={styles.infoContent}>
               <ul className={styles.infoList}>
-                <li>プラットフォーム手数料: 12%</li>
+                <li>利用手数料: 12%</li>
                 <li>最低振込額: {MIN_PAYOUT_AMOUNT.toLocaleString()}円</li>
                 <li>振込手数料: {TRANSFER_FEE}円（クリエイター負担）</li>
                 <li>振込日: 毎月20日頃（前月末締め・土日祝の場合は翌営業日）</li>

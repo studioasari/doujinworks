@@ -21,7 +21,7 @@ const PROCESSING_TIMEOUT_MINUTES = 5
  *  同じイベントを2回以上処理しないようにする。
  *
  * 処理するイベント:
- *  - checkout.session.completed（仮払い完了）
+ *  - checkout.session.completed（決済完了）
  *
  * 既知の修正:
  *  - signature ヘッダーの null チェック追加（旧: ! assert でクラッシュ）
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
       }
 
-      // 仮払い完了通知(受注者へ)
+      // 決済完了通知(受注者へ)
       // ベストエフォート: 通知失敗でも Webhook 自体は成功扱いにする
       if (contractData?.contractor_id && contractData?.work_request_id) {
         try {
@@ -201,21 +201,21 @@ export async function POST(request: NextRequest) {
             .insert({
               profile_id: contractData.contractor_id,
               type: 'paid',
-              title: '仮払いが完了しました',
-              message: `「${workReq?.title ?? ''}」の仮払いが完了しました。作業を開始してください。`,
+              title: '決済が完了しました',
+              message: `「${workReq?.title ?? ''}」の決済が完了しました。作業を開始してください。`,
               link: `/requests/${contractData.work_request_id}/contracts/${contractData.id}`,
               read: false,
               created_at: new Date().toISOString(),
             })
           if (notifyError) {
-            console.error('[webhook] 仮払い通知の送信に失敗:', notifyError)
+            console.error('[webhook] 決済完了通知の送信に失敗:', notifyError)
           }
         } catch (notifyBlockError) {
-          console.error('[webhook] 仮払い通知処理でエラー:', notifyBlockError)
+          console.error('[webhook] 決済完了通知処理でエラー:', notifyBlockError)
         }
       }
 
-      console.log('[webhook] 仮払い完了 - 契約ID:', contractId)
+      console.log('[webhook] 決済完了 - 契約ID:', contractId)
     }
 
     // ステップ6: 処理完了

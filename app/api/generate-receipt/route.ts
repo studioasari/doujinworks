@@ -116,10 +116,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // ステップ5: 仮払い済みチェック
+    // ステップ5: 決済済みチェック
     if (!contract.paid_at) {
       return NextResponse.json(
-        { error: 'この契約はまだ仮払いされていません' },
+        { error: 'この契約はまだ決済されていません' },
         { status: 400 }
       )
     }

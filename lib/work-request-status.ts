@@ -563,7 +563,7 @@ export async function acceptApplication(params: {
         profile_id: contractorId,
         type: 'accepted',
         title: '応募が採用されました',
-        message: `「${request.title}」の応募が採用されました。仮払いをお待ちください。`,
+        message: `「${request.title}」の応募が採用されました。決済をお待ちください。`,
         link: `/requests/${workRequestId}/contracts/${newContract.id}`,
         read: false,
         created_at: new Date().toISOString(),

@@ -632,7 +632,7 @@ export default function RequestManagePage() {
 
               <div className={styles.modalInfo}>
                 <i className="fas fa-info-circle"></i>
-                <span>契約確定後、仮払いを行うとクリエイターが作業を開始できます。{remainingPositions > 1 && `残り ${remainingPositions - 1} 人まで追加で採用できます。`}</span>
+                <span>契約確定後、決済を行うとクリエイターが作業を開始できます。{remainingPositions > 1 && `残り ${remainingPositions - 1} 人まで追加で採用できます。`}</span>
               </div>
             </div>
 
