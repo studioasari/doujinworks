@@ -13,7 +13,14 @@
       "Bash(mkdir -p \"c:/Users/2to3t/Desktop/doujinworks/app/api/contracts/[id]/reject\")",
       "Bash(mkdir -p \"c:/Users/2to3t/Desktop/doujinworks/app/api/contracts/[id]/cancel\")",
       "Bash(rm \"c:/Users/2to3t/Desktop/doujinworks/app/api/requests/[id]/complete/route.ts\")",
-      "Bash(rmdir \"c:/Users/2to3t/Desktop/doujinworks/app/api/requests/[id]/complete\")"
+      "Bash(rmdir \"c:/Users/2to3t/Desktop/doujinworks/app/api/requests/[id]/complete\")",
+      "Bash(git push *)",
+      "Bash(grep -ohE \"#[0-9A-Fa-f]{3,8}\" app/terms/client.tsx app/privacy/client.tsx app/cookie_policy/client.tsx app/law/client.tsx)",
+      "Bash(grep -nB1 -A3 \"border-left: 4px solid var\\(--accent-primary\\)\" app/cookie_policy/client.tsx)",
+      "Bash(grep -nB3 -A1 \"background: var\\(--bg-sunken\\)\" design-system.html)",
+      "Bash(grep -nB2 -A1 \"bg-hover\" design-system.html)",
+      "Bash(grep -nB3 \"marginTop: '16px', padding: '12px', backgroundColor\" app/cookie_policy/client.tsx)",
+      "Bash(git add *)"
     ]
   }
 }
