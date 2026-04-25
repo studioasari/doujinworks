@@ -12,10 +12,6 @@ export default function TermsClient() {
           <h1 className="section-title" style={{ marginBottom: 'var(--space-12)' }}>利用規約</h1>
 
           <div style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
-            <p style={{ marginBottom: '24px', color: 'var(--text-secondary)' }}>
-              最終更新日: 2026年4月23日
-            </p>
-
             <section style={{ marginBottom: '32px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>第1章 総則</h2>
             </section>
@@ -934,10 +930,11 @@ export default function TermsClient() {
               </p>
             </section>
 
-            <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid var(--border-default)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-              <p>2025年12月8日 制定</p>
-              <p>2025年12月16日 改定</p>
-              <p>2026年4月23日 改定</p>
+            <div style={{ marginTop: '60px', paddingTop: '32px', borderTop: '2px solid var(--border-default)', textAlign: 'right' }}>
+              <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: 'var(--text-primary)' }}>附則</p>
+              <p style={{ margin: '0 0 4px 0', color: 'var(--text-secondary)' }}>2025年12月8日 制定</p>
+              <p style={{ margin: '0 0 4px 0', color: 'var(--text-secondary)' }}>2025年12月16日 改定</p>
+              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>2026年4月23日 改定</p>
             </div>
           </div>
         </div>

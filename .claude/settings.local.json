@@ -20,7 +20,8 @@
       "Bash(grep -nB3 -A1 \"background: var\\(--bg-sunken\\)\" design-system.html)",
       "Bash(grep -nB2 -A1 \"bg-hover\" design-system.html)",
       "Bash(grep -nB3 \"marginTop: '16px', padding: '12px', backgroundColor\" app/cookie_policy/client.tsx)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

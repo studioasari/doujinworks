@@ -332,14 +332,6 @@ export default function PrivacyClient() {
               <p style={{ margin: 0, color: 'var(--text-secondary)' }}>2026年4月23日 改定</p>
             </div>
 
-            {/* 改訂履歴 */}
-            <div style={{ marginTop: '40px', padding: '20px', backgroundColor: 'var(--bg-elevated)', borderRadius: '4px' }}>
-              <p style={{ margin: '0 0 12px 0', fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' }}>改訂履歴</p>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                <li>2025年12月8日 - 制定・施行</li>
-                <li>2026年4月23日 - 改定</li>
-              </ul>
-            </div>
 
           </div>
         </div>
