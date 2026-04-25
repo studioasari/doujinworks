@@ -169,9 +169,10 @@ export default function LawClient() {
                   <td>
                     <div className="subsection">
                       <div className="subsection-title">■ 依頼者</div>
-                      <p>契約確定時（クリエイター採用時）に決済を実行</p>
+                      <p>契約成立後、依頼者の決済手続きにより速やかに決済を実行</p>
                       <div className="note">
-                        ※クリエイター採用時に決済が実行され、当社はクリエイターに代わって代金を受領します（収納代行）<br />
+                        ※契約成立後、依頼者は決済代行サービスを通じて報酬額の支払いを行います。当社はクリエイターに代わって代金を受領します（収納代行）<br />
+                        ※決済完了後、クリエイターは作業を開始します<br />
                         ※クリエイターへは、業務委託契約の履行後、当社から代金の精算が行われます
                       </div>
                     </div>
@@ -203,10 +204,13 @@ export default function LawClient() {
                     <div className="subsection">
                       <div className="subsection-title">■ 依頼者側のキャンセル</div>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>・採用前（決済前）:</strong> 自由にキャンセル可能（請求は発生しません）
+                        <strong>・契約成立前:</strong> 自由にキャンセル可能（請求は発生しません）
                       </p>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>・採用後（決済後）、作業開始前:</strong> 依頼者とクリエイターの協議により決定（成立時は返金処理）
+                        <strong>・契約成立後、決済前:</strong> 依頼者は決済を行わずキャンセル可能（請求は発生しません）
+                      </p>
+                      <p style={{ marginBottom: '8px' }}>
+                        <strong>・決済後、作業開始前:</strong> 依頼者とクリエイターの協議により決定（成立時は返金処理）
                       </p>
                       <p style={{ marginBottom: '8px' }}>
                         <strong>・作業開始後:</strong> 原則としてキャンセル不可
@@ -353,7 +357,7 @@ export default function LawClient() {
               <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'var(--bg-elevated)' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'var(--text-primary)' }}>■ 決済の仕組みについて（収納代行）</h3>
                 <p style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-secondary)' }}>
-                  本サービスでは、依頼者とクリエイター間の業務委託契約に基づく代金の支払を、当社が決済代行サービスを通じて代理で受領する「収納代行」方式を採用しています。具体的には、依頼者は依頼時にお支払い情報を登録のうえ与信を確保し、クリエイター採用時に決済が実行されます。当社は、クリエイターから付与された代理受領権限に基づき代金を受領し、業務委託契約の履行後、利用手数料および振込手数料を控除した金額をクリエイターへ業務委託報酬として精算します。
+                  本サービスでは、依頼者とクリエイター間の業務委託契約に基づく代金の支払を、当社が決済代行サービスを通じて代理で受領する「収納代行」方式を採用しています。具体的には、依頼者とクリエイター間で契約が成立した後、依頼者は決済代行サービスを通じて報酬額の支払いを行います。当社は、クリエイターから付与された代理受領権限に基づき代金を受領し、業務委託契約の履行後、利用手数料および振込手数料を控除した金額をクリエイターへ業務委託報酬として精算します。
                 </p>
               </div>
 
