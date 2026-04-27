@@ -207,7 +207,7 @@ export default function LawClient() {
                         <strong>・契約成立前:</strong> 自由にキャンセル可能（請求は発生しません）
                       </p>
                       <p style={{ marginBottom: '8px' }}>
-                        <strong>・契約成立後、決済前:</strong> 依頼者は決済を行わずキャンセル可能（請求は発生しません）
+                        <strong>・契約成立後、決済前:</strong> 依頼者は決済を行わずキャンセル可能（請求は発生しません）。なお、契約成立後7日を経過しても決済が完了しない場合、契約は自動的にキャンセルされます。
                       </p>
                       <p style={{ marginBottom: '8px' }}>
                         <strong>・決済後、作業開始前:</strong> 依頼者とクリエイターの協議により決定（成立時は返金処理）
