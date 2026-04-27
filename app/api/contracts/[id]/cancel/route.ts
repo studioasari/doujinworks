@@ -111,10 +111,6 @@ export async function POST(
     }
 
     // 申請者以外(承認する側)が操作していることを確認
-    // requested_by を基準にする(既存スキーマで申請者を示すカラム想定)
-    const requestedBy = (cancellationRequest as Record<string, unknown>)[
-      'requested_by'
-    ] as string | undefined
     const isRequester = workRequest.requester_id === myProfile.id
     const isContractor = contract.contractor_id === myProfile.id
     if (!isRequester && !isContractor) {
@@ -123,7 +119,7 @@ export async function POST(
         { status: 403 }
       )
     }
-    if (requestedBy && requestedBy === myProfile.id) {
+    if (cancellationRequest.requester_id === myProfile.id) {
       return NextResponse.json(
         { error: '申請者はキャンセルを承認できません' },
         { status: 403 }
