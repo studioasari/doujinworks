@@ -540,6 +540,40 @@ export async function POST(request: NextRequest) {
             continue
           }
 
+          // contracted_count を減算(失敗してもログに残して続行)
+          try {
+            await decrementContractedCount(workRequest.id)
+          } catch (decrementError) {
+            console.error(`[auto-approve] decrementContractedCount エラー (work_request: ${workRequest.id}):`, decrementError)
+            results.errors.push(`契約数減算失敗: ${workRequest.id}`)
+          }
+
+          // 残り有効契約数をカウント
+          const { count: remainingCount, error: countErr } = await supabase
+            .from('work_contracts')
+            .select('id', { count: 'exact', head: true })
+            .eq('work_request_id', workRequest.id)
+            .neq('status', 'cancelled')
+
+          if (countErr) {
+            console.error(`[auto-approve] 残り契約数取得エラー (work_request: ${workRequest.id}):`, countErr)
+            results.errors.push(`残り契約数取得失敗: ${workRequest.id}`)
+          }
+
+          // 残り1件以上なら recruitment_status='open' に書き戻す(filled のときだけ。冪等)
+          if ((remainingCount ?? 0) > 0) {
+            const { error: reopenErr } = await supabase
+              .from('work_requests')
+              .update({ recruitment_status: 'open' })
+              .eq('id', workRequest.id)
+              .eq('recruitment_status', 'filled')
+
+            if (reopenErr) {
+              console.error(`[auto-approve] recruitment_status 書き戻しエラー (work_request: ${workRequest.id}):`, reopenErr)
+              results.errors.push(`recruitment_status 書き戻し失敗: ${workRequest.id}`)
+            }
+          }
+
           // 親 progress_status 同期（共通関数に委譲）
           try {
             await syncProgressStatus(workRequest.id)

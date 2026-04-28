@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contractsCancelLimiter, safeLimit } from '@/utils/rateLimit'
-import { syncProgressStatus } from '@/lib/work-request-status'
+import {
+  syncProgressStatus,
+  decrementContractedCount,
+} from '@/lib/work-request-status'
 
 /**
  * 契約キャンセル承認API(cancellation_requests を承認して契約を cancelled に)
@@ -167,6 +170,37 @@ export async function POST(
         { error: 'キャンセル処理に失敗しました' },
         { status: 500 }
       )
+    }
+
+    // contracted_count を減算(失敗してもログのみで続行)
+    try {
+      await decrementContractedCount(contract.work_request_id)
+    } catch (decrementError) {
+      console.error('[contracts/cancel] decrementContractedCount error:', decrementError)
+    }
+
+    // 残り有効契約数をカウント
+    const { count: remainingCount, error: countErr } = await admin
+      .from('work_contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('work_request_id', contract.work_request_id)
+      .neq('status', 'cancelled')
+
+    if (countErr) {
+      console.error('[contracts/cancel] 残り契約数取得エラー:', countErr)
+    }
+
+    // 残り1件以上なら recruitment_status='open' に書き戻す(filled のときだけ。冪等)
+    if ((remainingCount ?? 0) > 0) {
+      const { error: reopenErr } = await admin
+        .from('work_requests')
+        .update({ recruitment_status: 'open' })
+        .eq('id', contract.work_request_id)
+        .eq('recruitment_status', 'filled')
+
+      if (reopenErr) {
+        console.error('[contracts/cancel] recruitment_status 書き戻しエラー:', reopenErr)
+      }
     }
 
     // 親 progress_status 同期
