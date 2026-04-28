@@ -14,6 +14,9 @@ export type NotificationType =
   | 'auto_approval_warning'  // 自動承認警告（3日前）
   | 'delivery_file_expiring'         // 納品ファイル削除予告（7日前）
   | 'delivery_file_expiring_urgent'  // 納品ファイル削除予告（1日前）
+  | 'contract_unpaid_reminder'             // 未決済リマインド（5日目、依頼者向け）
+  | 'contract_unpaid_cancelled_requester'  // 未決済自動キャンセル（7日目、依頼者向け）
+  | 'contract_unpaid_cancelled_creator'    // 未決済自動キャンセル（7日目、クリエイター向け）
 
 export async function createNotification(
   profileId: string,

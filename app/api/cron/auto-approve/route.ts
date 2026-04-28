@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { WorkContractRow } from '@/types/supabase-helpers'
-import { syncProgressStatus } from '@/lib/work-request-status'
+import {
+  syncProgressStatus,
+  decrementContractedCount,
+} from '@/lib/work-request-status'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +36,221 @@ async function createNotification(
   }
 }
 
+// 未決済契約処理用の JOIN 付き型
+type UnpaidContractRow = WorkContractRow & {
+  work_request: { id: string; title: string; requester_id: string }
+  contractor: { display_name: string | null } | null
+}
+
+// =====================================
+// 未決済契約の自動キャンセル(7日経過)
+// =====================================
+async function processUnpaidContracts(
+  results: { unpaidCancelled: number; errors: string[] }
+): Promise<void> {
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const { data: targets, error: fetchError } = await supabase
+    .from('work_contracts')
+    .select(`
+      id,
+      work_request_id,
+      contractor_id,
+      contracted_at,
+      status,
+      work_request:work_requests!inner (
+        id,
+        title,
+        requester_id
+      ),
+      contractor:profiles!work_contracts_contractor_id_fkey (
+        display_name
+      )
+    `)
+    .eq('status', 'contracted')
+    .lte('contracted_at', sevenDaysAgo.toISOString())
+
+  if (fetchError) {
+    console.error('未決済契約取得エラー:', fetchError)
+    results.errors.push(`未決済契約取得失敗: ${fetchError.message}`)
+    return
+  }
+  if (!targets || targets.length === 0) return
+
+  for (const row of targets) {
+    const contract = row as unknown as UnpaidContractRow
+    const workRequest = contract.work_request
+    const contractorName = contract.contractor?.display_name || '匿名'
+
+    try {
+      // a. 契約を cancelled に(status='contracted' のときだけ更新)
+      const { data: cancelled, error: cancelErr } = await supabase
+        .from('work_contracts')
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq('id', contract.id)
+        .eq('status', 'contracted')
+        .select('id')
+
+      if (cancelErr) {
+        console.error(`未決済契約キャンセルエラー (contract: ${contract.id}):`, cancelErr)
+        results.errors.push(`未決済契約キャンセル失敗: ${contract.id}`)
+        continue
+      }
+      if (!cancelled || cancelled.length === 0) {
+        console.log(`[auto-approve] スキップ: contract ${contract.id} は既にキャンセル済みまたは別ステータス`)
+        continue
+      }
+
+      // b. contracted_count を減算(失敗してもログに残して続行)
+      try {
+        await decrementContractedCount(workRequest.id)
+      } catch (decrementError) {
+        console.error(`[auto-approve] decrementContractedCount エラー (work_request: ${workRequest.id}):`, decrementError)
+        results.errors.push(`契約数減算失敗: ${workRequest.id}`)
+      }
+
+      // c. 残り有効契約数をカウント
+      const { count: remainingCount, error: countErr } = await supabase
+        .from('work_contracts')
+        .select('id', { count: 'exact', head: true })
+        .eq('work_request_id', workRequest.id)
+        .neq('status', 'cancelled')
+
+      if (countErr) {
+        console.error(`[auto-approve] 残り契約数取得エラー (work_request: ${workRequest.id}):`, countErr)
+        results.errors.push(`残り契約数取得失敗: ${workRequest.id}`)
+      }
+
+      // d. 残り1件以上なら recruitment_status='open' に書き戻す
+      //    (現在 'filled' のときだけ。冪等)
+      if ((remainingCount ?? 0) > 0) {
+        const { error: reopenErr } = await supabase
+          .from('work_requests')
+          .update({ recruitment_status: 'open' })
+          .eq('id', workRequest.id)
+          .eq('recruitment_status', 'filled')
+
+        if (reopenErr) {
+          console.error(`[auto-approve] recruitment_status 書き戻しエラー (work_request: ${workRequest.id}):`, reopenErr)
+          results.errors.push(`recruitment_status 書き戻し失敗: ${workRequest.id}`)
+        }
+      }
+
+      // e. progress_status 同期(共通関数に委譲)
+      try {
+        await syncProgressStatus(workRequest.id)
+      } catch (syncError) {
+        console.error(`[auto-approve] syncProgressStatus エラー (work_request: ${workRequest.id}):`, syncError)
+      }
+
+      // f. 依頼者に通知
+      await createNotification(
+        workRequest.requester_id,
+        'contract_unpaid_cancelled_requester',
+        `「${workRequest.title}」の契約を自動的にキャンセルしました`,
+        `「${workRequest.title}」につきまして、クリエイター${contractorName}様を採用してから7日間決済が行われなかったため、利用規約第10条第1項(2)に基づき、契約を自動的にキャンセルしました。請求は発生しません。`,
+        `/requests/${workRequest.id}`
+      )
+
+      // g. クリエイターに通知
+      await createNotification(
+        contract.contractor_id,
+        'contract_unpaid_cancelled_creator',
+        `「${workRequest.title}」の契約がキャンセルされました`,
+        `ご応募いただいておりました「${workRequest.title}」につきまして、依頼者により決済が行われなかったため、利用規約第10条第1項(2)に基づき、契約はキャンセルされました。ご応募いただきありがとうございました。`,
+        `/requests/${workRequest.id}`
+      )
+
+      results.unpaidCancelled++
+    } catch (error) {
+      console.error(`未決済自動キャンセルエラー (contract: ${contract.id}):`, error)
+      results.errors.push(`未決済自動キャンセル失敗: ${contract.id}`)
+    }
+  }
+}
+
+// =====================================
+// 未決済リマインド送信(5日経過)
+// =====================================
+async function sendUnpaidReminders(
+  results: { unpaidReminded: number; errors: string[] }
+): Promise<void> {
+  const fiveDaysAgo = new Date()
+  fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5)
+
+  const { data: targets, error: fetchError } = await supabase
+    .from('work_contracts')
+    .select(`
+      id,
+      work_request_id,
+      contractor_id,
+      contracted_at,
+      status,
+      work_request:work_requests!inner (
+        id,
+        title,
+        requester_id
+      ),
+      contractor:profiles!work_contracts_contractor_id_fkey (
+        display_name
+      )
+    `)
+    .eq('status', 'contracted')
+    .lte('contracted_at', fiveDaysAgo.toISOString())
+    .is('payment_reminder_sent_at', null)
+
+  if (fetchError) {
+    console.error('未決済リマインド対象取得エラー:', fetchError)
+    results.errors.push(`未決済リマインド取得失敗: ${fetchError.message}`)
+    return
+  }
+  if (!targets || targets.length === 0) return
+
+  for (const row of targets) {
+    const contract = row as unknown as UnpaidContractRow
+    const workRequest = contract.work_request
+    const contractorName = contract.contractor?.display_name || '匿名'
+
+    try {
+      // a. 冪等性確保: 先に payment_reminder_sent_at を立てる
+      const { data: marked, error: markErr } = await supabase
+        .from('work_contracts')
+        .update({ payment_reminder_sent_at: new Date().toISOString() })
+        .eq('id', contract.id)
+        .is('payment_reminder_sent_at', null)
+        .select('id')
+
+      if (markErr) {
+        console.error(`リマインドフラグ更新エラー (contract: ${contract.id}):`, markErr)
+        results.errors.push(`リマインドフラグ更新失敗: ${contract.id}`)
+        continue
+      }
+      if (!marked || marked.length === 0) {
+        console.log(`[auto-approve] スキップ: contract ${contract.id} は既にリマインド送信済み`)
+        continue
+      }
+
+      // b. 依頼者に通知
+      await createNotification(
+        workRequest.requester_id,
+        'contract_unpaid_reminder',
+        `【重要】「${workRequest.title}」の決済期限が近づいています`,
+        `「${workRequest.title}」につきまして、クリエイター${contractorName}様を採用してから5日が経過しました。決済期限まで残り2日です。期限までに決済を完了されない場合、利用規約第10条第1項(2)に基づき、契約は自動的にキャンセルされます。`,
+        `/requests/${workRequest.id}`
+      )
+
+      results.unpaidReminded++
+    } catch (error) {
+      console.error(`未決済リマインド送信エラー (contract: ${contract.id}):`, error)
+      results.errors.push(`未決済リマインド送信失敗: ${contract.id}`)
+    }
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 認証チェック（Cron Secretで保護）
@@ -45,6 +263,8 @@ export async function POST(request: NextRequest) {
       deliveryWarnings: 0,
       deliveryAutoApprovals: 0,
       cancellationAutoApprovals: 0,
+      unpaidCancelled: 0,
+      unpaidReminded: 0,
       errors: [] as string[]
     }
 
@@ -383,7 +603,17 @@ export async function POST(request: NextRequest) {
     }
 
     // =====================================
-    // 4. 結果を返す
+    // 4. 未決済契約の自動キャンセル(7日経過)
+    // =====================================
+    await processUnpaidContracts(results)
+
+    // =====================================
+    // 5. 未決済リマインド送信(5日経過)
+    // =====================================
+    await sendUnpaidReminders(results)
+
+    // =====================================
+    // 6. 結果を返す
     // =====================================
 
     return NextResponse.json({
@@ -393,6 +623,8 @@ export async function POST(request: NextRequest) {
         deliveryWarningsSent: results.deliveryWarnings,
         deliveryAutoApprovalsProcessed: results.deliveryAutoApprovals,
         cancellationAutoApprovalsProcessed: results.cancellationAutoApprovals,
+        unpaidContractsCancelled: results.unpaidCancelled,
+        unpaidRemindersSent: results.unpaidReminded,
         errors: results.errors
       }
     })

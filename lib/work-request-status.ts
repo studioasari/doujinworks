@@ -587,3 +587,66 @@ export async function acceptApplication(params: {
     filled: reachedCapacity,
   }
 }
+
+// ============================================================================
+// decrementContractedCount: 契約数の減算
+// ============================================================================
+
+/**
+ * work_requests.contracted_count を 1 減算する。
+ *
+ * 用途: 並行契約のキャンセル時(未決済自動キャンセル等)に契約数を減らす。
+ *       acceptApplication でインクリメントする処理と対になる。
+ *
+ * 【注意: 競合リスク】
+ * acceptApplication と同様、SELECT + UPDATE のベストエフォート方式。
+ * 同時キャンセル操作で競合する可能性は理論上あるが、運用上は無視できる想定。
+ *
+ * 認可チェック(本人確認等)は呼び出し側の責務。
+ */
+export async function decrementContractedCount(
+  workRequestId: string
+): Promise<number> {
+  const admin = createAdminClient()
+
+  const { data: request, error: fetchError } = await admin
+    .from('work_requests')
+    .select('id, contracted_count')
+    .eq('id', workRequestId)
+    .single()
+
+  if (fetchError || !request) {
+    console.error(
+      `${LOG_PREFIX} decrementContractedCount: work_request not found (id=${workRequestId}):`,
+      fetchError
+    )
+    throw new Error(`依頼が見つかりません: ${workRequestId}`)
+  }
+
+  const currentCount = request.contracted_count ?? 0
+  if (currentCount <= 0) {
+    console.error(
+      `${LOG_PREFIX} decrementContractedCount: invalid contracted_count (id=${workRequestId}, current=${currentCount})`
+    )
+    throw new Error(
+      `契約数の減算ができません(現在値: ${currentCount})`
+    )
+  }
+
+  const newCount = currentCount - 1
+
+  const { error: updateError } = await admin
+    .from('work_requests')
+    .update({ contracted_count: newCount })
+    .eq('id', workRequestId)
+
+  if (updateError) {
+    console.error(
+      `${LOG_PREFIX} decrementContractedCount UPDATE failed (id=${workRequestId}):`,
+      updateError
+    )
+    throw new Error(`契約数の更新に失敗しました: ${updateError.message}`)
+  }
+
+  return newCount
+}
