@@ -164,7 +164,7 @@ export default function RequestManagePage() {
   }
 
   function handleAcceptApplicationClick(applicationId: string, applicantId: string, proposedPrice: number | null) {
-    const alreadyContracted = contracts.some(c => c.contractor_id === applicantId)
+    const alreadyContracted = activeContracts.some(c => c.contractor_id === applicantId)
     if (alreadyContracted) { alert('この応募者とは既に契約済みです'); return }
     setSelectedApplicationId(applicationId)
     setContractPrice(proposedPrice?.toString() || request?.budget_max?.toString() || '')
@@ -254,7 +254,7 @@ export default function RequestManagePage() {
   }
 
   async function handleCancelRequest() {
-    if (contracts.length > 0) { alert('既に契約が存在するため、依頼をキャンセルできません。'); return }
+    if (activeContracts.length > 0) { alert('既に契約が存在するため、依頼をキャンセルできません。'); return }
     if (!confirm('この依頼をキャンセルしますか？')) return
     setProcessing(true)
     try {
@@ -319,8 +319,9 @@ export default function RequestManagePage() {
   const pendingApplications = applications.filter(app => app.status === 'pending')
   const acceptedApplications = applications.filter(app => app.status === 'accepted')
   const rejectedApplications = applications.filter(app => app.status === 'rejected')
+  const activeContracts = contracts.filter(c => c.status !== 'cancelled')
   const maxPositions = request.number_of_positions || 1
-  const remainingPositions = maxPositions - contracts.length
+  const remainingPositions = maxPositions - activeContracts.length
   const statusLabel = getRequestStatusLabel(request.recruitment_status, request.progress_status)
 
   // バッジ色の決定
@@ -347,15 +348,15 @@ export default function RequestManagePage() {
             </div>
             <div className={styles.badges}>
               <span className={`${styles.badge} ${statusBadgeClass}`}>{statusLabel}</span>
-              <span className={`${styles.badge} ${styles.info}`}>{contracts.length} / {maxPositions} 人採用済み</span>
+              <span className={`${styles.badge} ${styles.info}`}>{activeContracts.length} / {maxPositions} 人採用済み</span>
             </div>
           </div>
 
-          {/* 契約一覧 */}
+          {/* 契約履歴 */}
           {contracts.length > 0 && (
             <div className={styles.section}>
               <h2 className={styles.sectionTitle}>
-                <i className="fas fa-file-contract"></i>契約一覧 ({contracts.length}件)
+                <i className="fas fa-file-contract"></i>契約履歴 ({contracts.length}件)
               </h2>
               <div className={styles.list}>
                 {contracts.map((contract) => (
@@ -475,7 +476,7 @@ export default function RequestManagePage() {
                     </h3>
                     <div className={styles.applicationList}>
                       {acceptedApplications.map((app) => {
-                        const contract = contracts.find(c => c.contractor_id === app.applicant_id)
+                        const contract = activeContracts.find(c => c.contractor_id === app.applicant_id)
                         return (
                           <div key={app.id} className={styles.applicationRow} onClick={() => setSelectedApplication(app)}>
                             <div className={styles.applicationMain}>
@@ -568,7 +569,7 @@ export default function RequestManagePage() {
           </div>
 
           {/* 依頼のキャンセル（契約がない時のみ表示） */}
-          {request.recruitment_status === 'open' && contracts.length === 0 && (
+          {request.recruitment_status === 'open' && activeContracts.length === 0 && (
             <div className={styles.dangerSection}>
               <h3 className={styles.dangerTitle}>この依頼をキャンセルする</h3>
               <p className={styles.dangerDescription}>
@@ -582,7 +583,7 @@ export default function RequestManagePage() {
           )}
 
           {/* 募集終了（契約がある時のみ表示） */}
-          {request.recruitment_status === 'open' && contracts.length > 0 && (
+          {request.recruitment_status === 'open' && activeContracts.length > 0 && (
             <div className={styles.dangerSection}>
               <h3 className={styles.dangerTitle}>募集を終了する</h3>
               <p className={styles.dangerDescription}>
