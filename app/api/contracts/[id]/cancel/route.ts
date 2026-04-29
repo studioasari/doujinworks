@@ -5,6 +5,7 @@ import { contractsCancelLimiter, safeLimit } from '@/utils/rateLimit'
 import {
   syncProgressStatus,
   decrementContractedCount,
+  restoreRecruitmentStatusOnCancel,
 } from '@/lib/work-request-status'
 
 /**
@@ -208,6 +209,13 @@ export async function POST(
       await syncProgressStatus(contract.work_request_id)
     } catch (syncError) {
       console.error('[contracts/cancel] syncProgressStatus error:', syncError)
+    }
+
+    // 終端時 recruitment_status を filled に復元(全契約 cancelled の場合のみ作用)
+    try {
+      await restoreRecruitmentStatusOnCancel(contract.work_request_id)
+    } catch (restoreError) {
+      console.error('[contracts/cancel] restoreRecruitmentStatusOnCancel error:', restoreError)
     }
 
     return NextResponse.json({ success: true })

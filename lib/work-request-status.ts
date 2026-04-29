@@ -650,3 +650,68 @@ export async function decrementContractedCount(
 
   return newCount
 }
+
+// ============================================================================
+// restoreRecruitmentStatusOnCancel: 終端時の recruitment_status 復元
+// ============================================================================
+
+/**
+ * 全契約が cancelled になった場合、recruitment_status を 'filled' に復元する。
+ *
+ * 仕様: 全キャンセル時の recruitment_status は filled のまま維持。
+ *       ただし並行契約のキャンセル動線で途中で 'open' に書き戻された後、
+ *       最終的に全契約 cancelled になるケースで、これを復元する責務を持つ。
+ *
+ * 挙動:
+ *   - 残り有効契約数(status != 'cancelled')を SELECT COUNT で取得
+ *   - 0 件なら recruitment_status='filled' に書き戻す
+ *     (現在 'open' のときだけ。eq('recruitment_status', 'open') で原子的・冪等)
+ *   - 1 件以上なら何もしない(再募集中の状態を維持)
+ *
+ * 呼び出し位置: 各キャンセル動線の syncProgressStatus 呼び出し直後。
+ *
+ * 認可チェック(本人確認等)は呼び出し側の責務。
+ */
+export async function restoreRecruitmentStatusOnCancel(
+  workRequestId: string
+): Promise<void> {
+  const admin = createAdminClient()
+
+  const { count: remainingCount, error: countError } = await admin
+    .from('work_contracts')
+    .select('id', { count: 'exact', head: true })
+    .eq('work_request_id', workRequestId)
+    .neq('status', 'cancelled')
+
+  if (countError) {
+    console.error(
+      `${LOG_PREFIX} restoreRecruitmentStatusOnCancel COUNT failed (id=${workRequestId}):`,
+      countError
+    )
+    throw new Error(
+      `残り契約数の取得に失敗しました: ${countError.message}`
+    )
+  }
+
+  // 残り 1 件以上なら何もしない(再募集中の状態を維持)
+  if ((remainingCount ?? 0) > 0) {
+    return
+  }
+
+  // 全契約 cancelled: recruitment_status='open' を 'filled' に復元(冪等)
+  const { error: updateError } = await admin
+    .from('work_requests')
+    .update({ recruitment_status: 'filled' })
+    .eq('id', workRequestId)
+    .eq('recruitment_status', 'open')
+
+  if (updateError) {
+    console.error(
+      `${LOG_PREFIX} restoreRecruitmentStatusOnCancel UPDATE failed (id=${workRequestId}):`,
+      updateError
+    )
+    throw new Error(
+      `recruitment_status 復元に失敗しました: ${updateError.message}`
+    )
+  }
+}

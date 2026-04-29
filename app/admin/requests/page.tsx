@@ -210,6 +210,31 @@ export default function AdminRequests() {
 
     setActionLoading(true)
 
+    // 'cancel' / 'refund' は新規 API 経由で整合性キャンセル
+    // TODO: 'refund' は Stripe 返金処理を別途実装する(KOMOJU 移行時対応)
+    if (modalAction === 'cancel' || modalAction === 'refund') {
+      try {
+        const res = await fetch(`/api/admin/requests/${modalRequest.id}/cancel`, {
+          method: 'POST',
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          alert(data.error || 'エラーが発生しました')
+        } else {
+          if (data.errors && data.errors.length > 0) {
+            alert(`${data.cancelled}件の契約をキャンセルしました(${data.errors.length}件失敗)`)
+          }
+          await loadRequests()
+          closeModal()
+        }
+      } catch (e) {
+        console.error('Error cancelling request:', e)
+        alert('エラーが発生しました')
+      }
+      setActionLoading(false)
+      return
+    }
+
     let updateData: Record<string, unknown> = {}
 
     switch (modalAction) {
@@ -219,21 +244,10 @@ export default function AdminRequests() {
           deleted_at: new Date().toISOString()
         }
         break
-      case 'cancel':
-        updateData = {
-          progress_status: 'cancelled'
-        }
-        break
       case 'complete':
         updateData = {
           progress_status: 'completed',
           completed_at: new Date().toISOString()
-        }
-        break
-      case 'refund':
-        // TODO: Stripe返金処理を実装
-        updateData = {
-          progress_status: 'cancelled'
         }
         break
     }

@@ -4,6 +4,7 @@ import type { WorkContractRow } from '@/types/supabase-helpers'
 import {
   syncProgressStatus,
   decrementContractedCount,
+  restoreRecruitmentStatusOnCancel,
 } from '@/lib/work-request-status'
 
 const supabase = createClient(
@@ -145,6 +146,14 @@ async function processUnpaidContracts(
         await syncProgressStatus(workRequest.id)
       } catch (syncError) {
         console.error(`[auto-approve] syncProgressStatus エラー (work_request: ${workRequest.id}):`, syncError)
+      }
+
+      // e2. 終端時 recruitment_status を filled に復元
+      try {
+        await restoreRecruitmentStatusOnCancel(workRequest.id)
+      } catch (restoreError) {
+        console.error(`[auto-approve] restoreRecruitmentStatusOnCancel エラー (work_request: ${workRequest.id}):`, restoreError)
+        results.errors.push(`recruitment_status 復元失敗: ${workRequest.id}`)
       }
 
       // f. 依頼者に通知
@@ -579,6 +588,14 @@ export async function POST(request: NextRequest) {
             await syncProgressStatus(workRequest.id)
           } catch (syncError) {
             console.error(`[auto-approve] syncProgressStatus エラー (work_request: ${workRequest.id}):`, syncError)
+          }
+
+          // 終端時 recruitment_status を filled に復元
+          try {
+            await restoreRecruitmentStatusOnCancel(workRequest.id)
+          } catch (restoreError) {
+            console.error(`[auto-approve] restoreRecruitmentStatusOnCancel エラー (work_request: ${workRequest.id}):`, restoreError)
+            results.errors.push(`recruitment_status 復元失敗: ${workRequest.id}`)
           }
 
           // 返金処理（payment_intent_idがある場合）
