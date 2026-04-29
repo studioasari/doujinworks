@@ -1,6 +1,6 @@
 # 同人ワークス 引き継ぎドキュメント
 
-最終更新: 2026-04-28
+最終更新: 2026-04-29
 
 このドキュメントは「常に最新の 1 ファイル」として運用する。過去の状態は `git log docs/handoff.md` で追える。
 
@@ -82,7 +82,7 @@
 | `a6f1bfa` | 2026-04-25 | fix: align commercial law page with actual payment flow（特商法ページの整合） |
 | `ba1beac` | 2026-04-27 | feat: restructure cancellation policy with 4 stages and add auto-cancel（キャンセルポリシー4段階化） |
 
-### 2026-04-27〜28（本セッション: 未決済自動キャンセル機能 + 整合性修正）
+### 2026-04-27〜28（未決済自動キャンセル機能 + 整合性修正）
 
 | コミット | 日付 | 内容 |
 |---|---|---|
@@ -91,22 +91,24 @@
 | `166f268` | 2026-04-28 | **fix: ensure consistency in all cancellation flows** — 既存2動線（手動キャンセル承認・キャンセル申請自動承認 cron）に `decrementContractedCount` + `recruitment_status` 書き戻しを追加。3キャンセル動線が統一された動作になった |
 | `03014a5` | 2026-04-28 | **fix: align manage page contract counts with active contracts** — `manage/client.tsx` の `contracts.length` を `activeContracts`（cancelled 除外）に切り替え。残数計算・採用ガード・UI 表示の 6 箇所を統一。「契約一覧」→「契約履歴」リネーム |
 
+### 2026-04-29（本セッション: 管理者キャンセル動線の整合性修正 + Phase 2 構造的バグ解消）
+
+| コミット | 日付 | 内容 |
+|---|---|---|
+| `6286847` | 2026-04-29 | **fix: 管理者キャンセル動線の整合性修正 + Phase 2 構造的バグ解消** — 管理者画面の「キャンセル」「返金」ボタンが `progress_status` のみ更新し `work_contracts.status` を触らない問題を修正。新規 API `app/api/admin/requests/[id]/cancel/route.ts`（認可: `is_admin` 再検証、並行契約の全契約一括キャンセル対応）を作成。さらに `lib/work-request-status.ts` に `restoreRecruitmentStatusOnCancel` ヘルパーを新設し、Phase 2 全 4 動線（個別キャンセル承認・キャンセル申請自動承認 cron・未決済自動キャンセル cron・管理者一括キャンセル）で各 `syncProgressStatus` 直後に呼び出す形に統一（案D 採用）。Phase 2 で確立した「全キャンセル時 `recruitment_status='filled'` のまま」仕様が複数契約の連続キャンセル時に守られていなかった構造的バグを解消。実害: 公開一覧・検索・バッジ・タブ集計で「終了済み案件が募集中表示」される UX バグを解消。既存データの不整合は 0 件（2026-04-29 確認）、後追いマイグレーション不要 |
+
 ---
 
 ## 5. 次にやること（優先度順）
 
 ### 優先度: 中
 
-#### 管理者キャンセル動線の整合性修正
-- 場所: [app/admin/requests/page.tsx:222-237](../app/admin/requests/page.tsx#L222-L237)
-- 問題: `case 'cancel'` / `case 'refund'` で `progress_status` のみ更新し、`work_contracts.status` を触らない
-- 結果: `progress_status='cancelled'` だが個別契約は `contracted/paid/delivered` のまま残る
-- 修正方針: Phase 2 と同じパターンで修正
-  - 対象 work_request の有効契約を全て `cancelled` に
-  - 各契約に対して `decrementContractedCount` を呼ぶ
-  - `recruitment_status` 書き戻し
-  - `syncProgressStatus` 呼び出し
-- 別系統のバグとしてスコープ分離されている（本セッションの contracted_count 整合性とは独立）
+#### `case 'complete'` の整合性問題（管理者強制完了動線）
+- 場所: [app/admin/requests/page.tsx](../app/admin/requests/page.tsx) `case 'complete'`
+- 問題: `progress_status='completed'` のみ更新、`work_contracts.status` と `payments` を触らない別系の整合性問題
+- 修正方針: 新規 API `POST /api/admin/requests/[id]/complete` を作成し、有効契約全てを `completed` にし、`payments` を INSERT、通知を送る
+- 注意点: `payments` 作成ロジックは [/api/payments/create](../app/api/payments/create/route.ts) と重複するため、共通化を検討
+- 別系統のバグ。2026-04-29 完了の管理者キャンセル動線整合性修正タスクと独立
 
 ### 優先度: 低（UX 改善）
 
@@ -131,6 +133,17 @@
 - 並行契約のキャンセル後再募集の挙動説明
 - Step 1.5 で確定した運用ルール（並行契約の 1 名キャンセル時は再募集再開、単一/全キャンセルは案件終了）
 - リリース時に対応
+
+#### キャンセル動線の `cancelled_at` 設定漏れ
+- 場所:
+  - [app/api/contracts/[id]/cancel/route.ts](../app/api/contracts/[id]/cancel/route.ts)（双方合意承認フロー）
+  - [app/api/cron/auto-approve/route.ts](../app/api/cron/auto-approve/route.ts) `processCancellationApproval`（キャンセル申請自動承認 cron）
+- 問題: `work_contracts.status='cancelled'` への UPDATE 時に `cancelled_at` を設定していない
+- 修正方針: 両ファイルの UPDATE ペイロードに `cancelled_at: new Date().toISOString()` を追加するだけの軽微な修正
+- 影響: 既存の cancelled 契約も `cancelled_at` が NULL のままなので、運用上は影響軽微（ただし表示・分析時に困る可能性）
+- 既存 NULL データの後追い更新は別途 SQL で対応する選択肢もあり（`updated_at` から推定するなど）
+- 機能影響なし、データ整合性のみ
+- 補足: 未決済自動キャンセル `processUnpaidContracts` と管理者一括キャンセル動線では既に `cancelled_at` 設定済み
 
 ### リリース前作業
 
@@ -189,12 +202,13 @@ DELETE FROM work_requests WHERE title LIKE '[TEST]%';
 
 ## 6. 本セッションで確立した運用パターン
 
-### キャンセル動線の標準パターン（5 ステップ）
+### キャンセル動線の標準パターン（6 ステップ）
 
 新しいキャンセル動線を追加する場合も、以下の順序を必ず維持すること:
 
 ```
 1. UPDATE work_contracts.status = 'cancelled'
+   (cancelled_at も併せて記録推奨)
         ↓
 2. decrementContractedCount(workRequestId)
         ↓
@@ -205,6 +219,10 @@ DELETE FROM work_requests WHERE title LIKE '[TEST]%';
    (.eq('recruitment_status', 'filled') で原子的・冪等)
         ↓
 5. syncProgressStatus(workRequestId)
+        ↓
+6. restoreRecruitmentStatusOnCancel(workRequestId)
+   (全契約 cancelled かつ recruitment_status='open' のとき
+    'filled' に復元、冪等)
 ```
 
 #### 各ステップの失敗時挙動
@@ -213,11 +231,16 @@ DELETE FROM work_requests WHERE title LIKE '[TEST]%';
 - 3 が失敗 → ログのみで続行（後段は `?? 0` で安全）
 - 4 が失敗 → ログのみで続行
 - 5 が失敗 → ログのみで続行（既存パターン）
+- 6 が失敗 → ログのみで続行（整合性問題は次回キャンセル動線実行時に自然解消）
+
+#### バッチ処理（管理者一括キャンセル）の例外
+1 案件で複数契約を順次キャンセルする場合、ステップ 6 はループ最後に 1 回だけ呼ぶ最適化が可能（ループ内で毎回呼ぶのは冗長）。実装例: [app/api/admin/requests/[id]/cancel/route.ts](../app/api/admin/requests/[id]/cancel/route.ts)
 
 #### 実装済みの動線（参照用）
 - 手動キャンセル承認: [app/api/contracts/[id]/cancel/route.ts](../app/api/contracts/[id]/cancel/route.ts)
 - キャンセル申請自動承認 cron: [app/api/cron/auto-approve/route.ts](../app/api/cron/auto-approve/route.ts) セクション 3
 - 未決済自動キャンセル cron: [app/api/cron/auto-approve/route.ts](../app/api/cron/auto-approve/route.ts) セクション 4
+- 管理者一括キャンセル: [app/api/admin/requests/[id]/cancel/route.ts](../app/api/admin/requests/[id]/cancel/route.ts)（2026-04-29 追加）
 
 ### 整合性検証 SQL
 
@@ -245,6 +268,16 @@ WHERE recruitment_status = 'filled'
   AND COALESCE(contracted_count, 0) < COALESCE(number_of_positions, 1);
 ```
 期待値: 0 行
+
+#### `recruitment_status='open'` だが progress_status が終端状態の不整合検出
+案D 対応前のキャンセル動線で発生していた構造的バグの検出用。
+```sql
+SELECT id, title, recruitment_status, progress_status, contracted_count
+FROM work_requests
+WHERE recruitment_status = 'open'
+  AND progress_status IN ('cancelled', 'completed');
+```
+期待値: 0 行（案D 適用後の新規ケースは発生しない、既存データに不整合無いことを 2026-04-29 確認済み）
 
 #### DB トリガの存在確認
 ```sql
