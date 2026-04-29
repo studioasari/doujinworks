@@ -173,8 +173,9 @@ doujinworks/
 
 ## 7. 未完成・TODO
 
-- `app/admin/requests/page.tsx:217` — `// TODO: Stripe返金処理を実装`
-- **Supabase migrationファイルが存在しない** — DBスキーマがコード管理されていない
+- `app/admin/requests/page.tsx:234` — `// TODO: Stripe返金処理を実装`（管理者画面の「返金」アクションが `progress_status` を変えるだけで Stripe 返金 API を叩いていない）
+- 管理者キャンセル動線（`app/admin/requests/page.tsx:222-237` の `case 'cancel'` / `case 'refund'`）が `work_contracts.status` を触らない問題（`progress_status` のみ更新）。Phase 2 と同パターンの整合性修正が未対応 — 詳細は `docs/handoff.md` を参照
+- Supabase migration は `supabase/migrations/` 配下で管理されている（2026-04-28 現在 4 ファイル）。ただし過去の手動 DDL 分（テーブル新規作成や RLS ポリシー、トリガ等）は migration ファイル化されていないため、新環境セットアップ時は Supabase Studio からスキーマダンプを取る必要がある
 
 ## 8. 開発コマンド
 

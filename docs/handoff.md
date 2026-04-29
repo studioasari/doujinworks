@@ -1,0 +1,402 @@
+# 同人ワークス 引き継ぎドキュメント
+
+最終更新: 2026-04-28
+
+このドキュメントは「常に最新の 1 ファイル」として運用する。過去の状態は `git log docs/handoff.md` で追える。
+
+---
+
+## 1. プロジェクト基本情報
+
+| 項目 | 値 |
+|---|---|
+| サービス名 | 同人ワークス（doujinworks） |
+| 本番 URL | https://doujinworks.jp |
+| GitHub | https://github.com/studioasari/doujinworks.git |
+| Supabase | https://kzpmrmamzgmdwawvgfar.supabase.co |
+| ホスティング | Vercel |
+
+### 技術スタック
+
+| カテゴリ | 技術 |
+|---|---|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| UI | Tailwind CSS v4, Font Awesome, Zen Maru Gothic |
+| 状態管理 | Zustand |
+| 認証・DB | Supabase (Auth + PostgreSQL) |
+| 決済 | Stripe（テストモード運用中、本番は審査却下のため移行予定） |
+| ファイルストレージ | Cloudflare R2 (AWS SDK 互換) |
+| レート制限 | Upstash Redis |
+| メール送信 | Resend（独自送信は今後検討） |
+| アナリティクス | Google Analytics (G-XT2NKCP2N5) |
+
+### 運営会社情報
+
+- 運営会社: 合同会社スタジオアサリ（StudioAsari LLC）
+  - 法人番号: 9180003027064
+  - 代表: 高橋良輔
+  - 所在地: 名古屋市中村区名駅3丁目4-10 アルティメイト名駅1st 2階
+  - メール: info@studioasari.co.jp
+  - 電話: 080-6349-9669
+
+---
+
+## 2. Stripe 状況
+
+| 項目 | 値 |
+|---|---|
+| Stripe アカウント | `acct_1SbiHbLrGlrWu5b9` |
+| 審査結果 | **却下済み**（2026年8月20日まで 100% リザーブ） |
+| 現状 | テストモードでの運用継続 |
+| 移行先候補 | KOMOJU 等の決済代行 |
+| 移行作業 | リリース前作業として優先実施 |
+
+---
+
+## 3. 作業ルール
+
+1. 日本語対応
+2. Claude Code への指示プロンプトは省略せず完全形で
+3. 計画を先に提示、OK 後に実装
+4. git commit/push は手動で実行（指示プロンプトを作る）
+5. SQL は手動実行（マイグレーションファイルを作って指示）
+6. UI は `docs/design-system.html` に準拠
+7. 丁寧に、推測ではなく事実ベースで
+8. 実コードを確認してから判断、適当に言わない
+9. 選択肢を出しすぎない、明白な判断は即実行
+10. ユーザーは Claude Code を使って実装する
+
+---
+
+## 4. 完了済みタスク
+
+### 2026-04-22〜26（法務・運用整備フェーズ）
+
+| コミット | 日付 | 内容 |
+|---|---|---|
+| `aabebad` | 2026-04-23 | feat: Refactor to collection agency model for payment provider review（収納代行スキームへの移行） |
+| `cc2dc4d` | 2026-04-24 | feat: expand legal pages and migrate to design system tokens（法務ページ拡充 + デザインシステム統合） |
+| `e000e83` | 2026-04-25 | style: unify legal page footers and remove duplicated revision history（法務ページのフッター統一） |
+| `2f20189` | 2026-04-25 | feat: 業務委託モデル整合のため利用規約の用語を整理 |
+| `a6f1bfa` | 2026-04-25 | fix: align commercial law page with actual payment flow（特商法ページの整合） |
+| `ba1beac` | 2026-04-27 | feat: restructure cancellation policy with 4 stages and add auto-cancel（キャンセルポリシー4段階化） |
+
+### 2026-04-27〜28（本セッション: 未決済自動キャンセル機能 + 整合性修正）
+
+| コミット | 日付 | 内容 |
+|---|---|---|
+| `bdfef3f` | 2026-04-27 | **fix: correct cancellation request approver guard** — `cancel/route.ts` で存在しないカラム `requested_by` を参照していた論理バグを修正。実 DB のカラム名は `requester_id`。`as Record<string, unknown>` キャストで型エラーが回避されサイレント失敗していた。結果、申請者が自分のキャンセル申請を承認できる状態になっていた（利用規約第10条第3項違反）|
+| `1c7f3fd` | 2026-04-28 | **feat: add auto-cancellation for unpaid contracts after 7 days** — 未決済自動キャンセル機能の実装。5日経過リマインド + 7日経過自動キャンセル。マイグレーション `20260427000001_add_unpaid_cancel_columns.sql`、新通知タイプ3種、`decrementContractedCount` ヘルパー追加。Cron は1日2回（JST 04:00 / 16:00 = UTC 19:00 / 07:00）に変更 |
+| `166f268` | 2026-04-28 | **fix: ensure consistency in all cancellation flows** — 既存2動線（手動キャンセル承認・キャンセル申請自動承認 cron）に `decrementContractedCount` + `recruitment_status` 書き戻しを追加。3キャンセル動線が統一された動作になった |
+| `03014a5` | 2026-04-28 | **fix: align manage page contract counts with active contracts** — `manage/client.tsx` の `contracts.length` を `activeContracts`（cancelled 除外）に切り替え。残数計算・採用ガード・UI 表示の 6 箇所を統一。「契約一覧」→「契約履歴」リネーム |
+
+---
+
+## 5. 次にやること（優先度順）
+
+### 優先度: 中
+
+#### 管理者キャンセル動線の整合性修正
+- 場所: [app/admin/requests/page.tsx:222-237](../app/admin/requests/page.tsx#L222-L237)
+- 問題: `case 'cancel'` / `case 'refund'` で `progress_status` のみ更新し、`work_contracts.status` を触らない
+- 結果: `progress_status='cancelled'` だが個別契約は `contracted/paid/delivered` のまま残る
+- 修正方針: Phase 2 と同じパターンで修正
+  - 対象 work_request の有効契約を全て `cancelled` に
+  - 各契約に対して `decrementContractedCount` を呼ぶ
+  - `recruitment_status` 書き戻し
+  - `syncProgressStatus` 呼び出し
+- 別系統のバグとしてスコープ分離されている（本セッションの contracted_count 整合性とは独立）
+
+### 優先度: 低（UX 改善）
+
+#### 応募一覧 acceptedApplications の整合性
+- 場所: [app/requests/[id]/manage/client.tsx](../app/requests/[id]/manage/client.tsx) 「採用済み」グループ表示
+- 問題: cancelled 契約に紐づく応募が「採用済み」グループに残るが、`activeContracts.find` で `contract = undefined` 表示になる
+- 改善案: 「現在採用中」「過去採用（cancelled）」の 2 グループに分割、または別表記
+
+#### `getNotificationIcon` の改善
+- 場所: [app/components/Header.tsx:622-632](../app/components/Header.tsx#L622-L632)
+- 既存12種中10種 + 新規3種が default `fa-bell` に落ちている
+- 例: `accepted`→`fa-handshake`, `paid`→`fa-credit-card`, `delivered`→`fa-box`, `cancelled`系→`fa-times-circle`, `*reminder`系→`fa-exclamation-circle` 等
+- 数行追加で済む。構造変更不要
+
+#### `Header.module.css` の `messageText` の `white-space` 仕様検討
+- 場所: [app/components/Header.module.css:491-500](../app/components/Header.module.css#L491-L500)
+- 現状: `white-space: normal` + `-webkit-line-clamp: 2`（2行クランプ + ellipsis）
+- 通知ドロップダウンで段落区切り（`\n\n`）が保持されない
+- 専用通知一覧ページが将来できる場合は別途 CSS 分岐検討
+
+#### ヘルプ・FAQ への記載
+- 並行契約のキャンセル後再募集の挙動説明
+- Step 1.5 で確定した運用ルール（並行契約の 1 名キャンセル時は再募集再開、単一/全キャンセルは案件終了）
+- リリース時に対応
+
+### リリース前作業
+
+#### テストデータの一括削除
+- DB に `[TEST]` プレフィックス付きデータ残存（シナリオ 1, 2, 3, A, B 関連）
+- 削除 SQL（実行前に件数確認推奨）:
+
+```sql
+-- 1. cancellation_requests を先に削除（FK 依存）
+DELETE FROM cancellation_requests
+WHERE work_contract_id IN (
+  SELECT wc.id FROM work_contracts wc
+  JOIN work_requests wr ON wr.id = wc.work_request_id
+  WHERE wr.title LIKE '[TEST]%'
+);
+
+-- 2. work_contracts を削除
+DELETE FROM work_contracts
+WHERE work_request_id IN (
+  SELECT id FROM work_requests WHERE title LIKE '[TEST]%'
+);
+
+-- 3. work_request_applications を削除
+DELETE FROM work_request_applications
+WHERE work_request_id IN (
+  SELECT id FROM work_requests WHERE title LIKE '[TEST]%'
+);
+
+-- 4. テスト関連の通知を削除（時刻範囲で限定）
+DELETE FROM notifications
+WHERE created_at >= '2026-04-28 01:00:00'
+  AND type IN (
+    'contract_unpaid_reminder',
+    'contract_unpaid_cancelled_requester',
+    'contract_unpaid_cancelled_creator'
+  );
+
+-- 5. 最後に work_requests を削除
+DELETE FROM work_requests WHERE title LIKE '[TEST]%';
+```
+
+#### 弁護士レビュー依頼
+- 既存項目、変更なし（前セッションからの引き継ぎ）
+
+#### 決済代行申請
+- KOMOJU 等への切り替え（Stripe 本番運用は諦め）
+
+### 任意（時期未定）
+
+- **並行契約時の Checkout 一括化** — 1 案件の複数契約をまとめて 1 回の Checkout で決済できるようにする
+- **アプリ独自メール送信（Resend）** — Supabase Auth のメール以外、運営側からの通知メール導入
+- **Postgres RPC 化による `decrementContractedCount` の原子化** — SELECT + UPDATE のベストエフォート方式から `UPDATE ... SET contracted_count = contracted_count - 1` 方式へ
+- **`useMemo` 化** — `manage/client.tsx` の `activeContracts` 等、配列が大きくなった将来のパフォーマンス対策
+
+---
+
+## 6. 本セッションで確立した運用パターン
+
+### キャンセル動線の標準パターン（5 ステップ）
+
+新しいキャンセル動線を追加する場合も、以下の順序を必ず維持すること:
+
+```
+1. UPDATE work_contracts.status = 'cancelled'
+        ↓
+2. decrementContractedCount(workRequestId)
+        ↓
+3. 残り有効契約数を count
+   (work_contracts WHERE work_request_id=? AND status != 'cancelled')
+        ↓
+4. 残り 1 件以上なら recruitment_status='open' に書き戻し
+   (.eq('recruitment_status', 'filled') で原子的・冪等)
+        ↓
+5. syncProgressStatus(workRequestId)
+```
+
+#### 各ステップの失敗時挙動
+- 1 が失敗 → 続行不可、ロールバック相当（処理中断）
+- 2 が失敗 → ログのみで続行（契約は既に cancelled）
+- 3 が失敗 → ログのみで続行（後段は `?? 0` で安全）
+- 4 が失敗 → ログのみで続行
+- 5 が失敗 → ログのみで続行（既存パターン）
+
+#### 実装済みの動線（参照用）
+- 手動キャンセル承認: [app/api/contracts/[id]/cancel/route.ts](../app/api/contracts/[id]/cancel/route.ts)
+- キャンセル申請自動承認 cron: [app/api/cron/auto-approve/route.ts](../app/api/cron/auto-approve/route.ts) セクション 3
+- 未決済自動キャンセル cron: [app/api/cron/auto-approve/route.ts](../app/api/cron/auto-approve/route.ts) セクション 4
+
+### 整合性検証 SQL
+
+管理者キャンセル動線修正後の確認等で再利用可能。
+
+#### `contracted_count` と実有効契約数の不整合検出
+```sql
+SELECT
+  wr.id, wr.title,
+  wr.contracted_count                                              AS recorded,
+  COUNT(wc.id) FILTER (WHERE wc.status != 'cancelled')             AS actual_active
+FROM work_requests wr
+LEFT JOIN work_contracts wc ON wc.work_request_id = wr.id
+GROUP BY wr.id, wr.title, wr.contracted_count
+HAVING COALESCE(wr.contracted_count, 0)
+       != COUNT(wc.id) FILTER (WHERE wc.status != 'cancelled');
+```
+期待値: 0 行（全件整合）
+
+#### `recruitment_status='filled'` だが空き枠がある案件
+```sql
+SELECT id, title, recruitment_status, number_of_positions, contracted_count
+FROM work_requests
+WHERE recruitment_status = 'filled'
+  AND COALESCE(contracted_count, 0) < COALESCE(number_of_positions, 1);
+```
+期待値: 0 行
+
+#### DB トリガの存在確認
+```sql
+SELECT trigger_name, event_object_table, action_statement
+FROM information_schema.triggers
+WHERE event_object_schema = 'public'
+  AND event_object_table IN ('work_contracts', 'work_requests');
+```
+期待値: `update_work_requests_updated_at`（updated_at 自動更新）のみ
+
+---
+
+## 7. テストデータの管理
+
+### 命名規則
+- テスト用データは **`[TEST]` プレフィックス**を付けて作成
+  - 例: `INSERT INTO work_requests (title, ...) VALUES ('[TEST] 並行契約シナリオ1', ...)`
+- 削除時にプレフィックス検索で一括処理可能（前述の SQL 参照）
+
+### 関連テーブルにわたるテストデータ作成
+複数テーブルに同時にデータを挿入する場合は **`DO $$ ... END $$` ブロック**を使用:
+
+```sql
+DO $$
+DECLARE
+  test_request_id UUID;
+  test_contract_id UUID;
+BEGIN
+  INSERT INTO work_requests (title, ...) VALUES ('[TEST] ...', ...) RETURNING id INTO test_request_id;
+  INSERT INTO work_contracts (work_request_id, ...) VALUES (test_request_id, ...) RETURNING id INTO test_contract_id;
+  -- ...
+END $$;
+```
+
+理由: Supabase Studio の SQL Editor は CTE（`WITH ... AS`）を誤検知してエラーを出すケースがあるため、`DO $$` ブロックで包むと安全。
+
+### ローカルから cron をテストする方法
+
+#### 前提
+- `npm run dev` で dev サーバが `http://localhost:3000` で起動済み
+- `.env.local` に `CRON_SECRET=<値>` が設定済み
+
+#### PowerShell コマンド
+```powershell
+$secret = (Select-String -Path .env.local -Pattern '^CRON_SECRET=' |
+  ForEach-Object { $_.Line.Split('=', 2)[1].Trim('"').Trim("'") })
+
+$response = Invoke-RestMethod -Method Post `
+  -Uri http://localhost:3000/api/cron/auto-approve `
+  -Headers @{ Authorization = "Bearer $secret" } `
+  -ContentType 'application/json'
+
+$response.results | ConvertTo-Json -Depth 10
+```
+
+#### 期待されるレスポンス
+```json
+{
+  "deliveryWarningsSent": 0,
+  "deliveryAutoApprovalsProcessed": 0,
+  "cancellationAutoApprovalsProcessed": 0,
+  "unpaidContractsCancelled": 0,
+  "unpaidRemindersSent": 0,
+  "errors": []
+}
+```
+
+### テスト用に `contracted_at` を遡らせる方法
+未決済自動キャンセルのテストには、特定契約の `contracted_at` を過去にずらす:
+
+```sql
+-- 7日経過のテスト（自動キャンセル対象）
+UPDATE work_contracts
+SET contracted_at = NOW() - INTERVAL '8 days'
+WHERE id = '<test_contract_id>';
+
+-- 5日経過のテスト（リマインド対象、自動キャンセル対象外）
+UPDATE work_contracts
+SET contracted_at = NOW() - INTERVAL '6 days',
+    payment_reminder_sent_at = NULL
+WHERE id = '<test_contract_id>';
+```
+
+`payment_intent_id = NULL` のままにしておけば、Stripe API は呼ばれない（既存の `processCancellationApproval` 内で `if (contract.payment_intent_id)` ガード済み）。
+
+---
+
+## 8. PowerShell での git 操作の注意点
+
+### パスにブラケット（`[id]` 等）を含む場合
+**シングルクォートで囲む**（PowerShell が `[id]` を文字クラス glob として解釈するのを防ぐ）:
+
+```powershell
+# 正しい
+git add 'app/api/contracts/[id]/cancel/route.ts'
+
+# NG（ブラケットが glob 展開されてマッチ失敗）
+git add app/api/contracts/[id]/cancel/route.ts
+```
+
+### 複数行コミットメッセージ
+**here-string `@'...'@` を使用**:
+
+```powershell
+git commit -m @'
+fix: short summary
+
+Detailed description here.
+- Bullet 1
+- Bullet 2
+'@
+```
+
+注意点:
+- **終端 `'@` は行頭から始める**（インデント禁止、パースエラー）
+- メッセージ内の **ダブルクォート（`"`）は避けるか削除する**（PowerShell の解釈で破綻する場合あり）
+- `$variable`、バッククォート、`@` は単一引用 here-string `@'...'@` ならリテラル扱い
+
+### 期待されるステージング状態の確認
+
+`git add` 後の状態確認:
+```powershell
+git status --short
+```
+
+`M ` (M + 半角スペース) はステージ済みの修正、` M` (半角スペース + M) は未ステージの修正。
+
+---
+
+## 9. 重要な学習リソース・参考
+
+- Skeb 利用規約: 同人系のオーソリ+キャプチャ方式の参考
+- クラウドワークス利用規約: 業務委託モデルの規約構造の参考
+- 経産省「電子商取引及び情報財取引等に関する準則」: プラットフォーム事業者の責任範囲
+
+---
+
+## 10. 関連する既存ドキュメント
+
+| ファイル | 内容 |
+|---|---|
+| [docs/current-flow-analysis.md](current-flow-analysis.md) | 依頼〜決済〜検収〜精算フローの現状調査（2026-04-25 時点） |
+| [docs/status-redesign.md](status-redesign.md) | `recruitment_status` / `progress_status` 2軸再設計の設計書 |
+| [docs/audit-report.md](audit-report.md) | 監査レポート |
+| [CLAUDE.md](../CLAUDE.md) | プロジェクト全体の概要・ディレクトリ構成・環境変数・作業ルール |
+
+---
+
+## 11. ユーザーの対話スタイル
+
+- 「適当に言うな」「推測で答えるな」「選択肢出すな」
+- 簡潔指示（「ok」「やれ」「で、どうするの」等）
+- 矛盾・不整合の検出を求める
+- 業界標準・ベストプラクティスを重視
+- ガチガチ方針: 法的論点は全て対応、業界標準を上回るレベルの規約強度を望む
