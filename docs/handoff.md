@@ -91,11 +91,12 @@
 | `166f268` | 2026-04-28 | **fix: ensure consistency in all cancellation flows** — 既存2動線（手動キャンセル承認・キャンセル申請自動承認 cron）に `decrementContractedCount` + `recruitment_status` 書き戻しを追加。3キャンセル動線が統一された動作になった |
 | `03014a5` | 2026-04-28 | **fix: align manage page contract counts with active contracts** — `manage/client.tsx` の `contracts.length` を `activeContracts`（cancelled 除外）に切り替え。残数計算・採用ガード・UI 表示の 6 箇所を統一。「契約一覧」→「契約履歴」リネーム |
 
-### 2026-04-29（本セッション: 管理者キャンセル動線の整合性修正 + Phase 2 構造的バグ解消）
+### 2026-04-29（本セッション: 管理者キャンセル動線の整合性修正 + Phase 2 構造的バグ解消 + 認証保護の構造的バグ修正）
 
 | コミット | 日付 | 内容 |
 |---|---|---|
 | `6286847` | 2026-04-29 | **fix: 管理者キャンセル動線の整合性修正 + Phase 2 構造的バグ解消** — 管理者画面の「キャンセル」「返金」ボタンが `progress_status` のみ更新し `work_contracts.status` を触らない問題を修正。新規 API `app/api/admin/requests/[id]/cancel/route.ts`（認可: `is_admin` 再検証、並行契約の全契約一括キャンセル対応）を作成。さらに `lib/work-request-status.ts` に `restoreRecruitmentStatusOnCancel` ヘルパーを新設し、Phase 2 全 4 動線（個別キャンセル承認・キャンセル申請自動承認 cron・未決済自動キャンセル cron・管理者一括キャンセル）で各 `syncProgressStatus` 直後に呼び出す形に統一（案D 採用）。Phase 2 で確立した「全キャンセル時 `recruitment_status='filled'` のまま」仕様が複数契約の連続キャンセル時に守られていなかった構造的バグを解消。実害: 公開一覧・検索・バッジ・タブ集計で「終了済み案件が募集中表示」される UX バグを解消。既存データの不整合は 0 件（2026-04-29 確認）、後追いマイグレーション不要 |
+| `1bc0b1e` | 2026-04-29 | **fix: 認証保護を AuthContext 経由に統一（content leak バグ修正）** — `ProtectedContent.tsx` の `useState`/`useEffect`/`createClient` による独自認証状態管理を削除し、`useAuth()` ベースに置き換え。**公開→保護の内部遷移時に保護ページの中身が一瞬または完全に見えてしまう content leak バグ**（早期 return `if (authState === 'authenticated') return` が公開パスのデフォルト値で誤発火、`checkAuth` がスキップされる）を解消。あわせて個別 `router.push('/login?redirect=...')` を 3 ファイル（[app/bookmarks/client.tsx](../app/bookmarks/client.tsx), [app/business/page.tsx](../app/business/page.tsx), [app/dashboard/portfolio/drafts/page.tsx](../app/dashboard/portfolio/drafts/page.tsx)）から削除して中央集権化。`/account-deleted` は公開ページ化判断と併せて保留。`publicExactPaths` を整理: 追加=`/law`（特商法）, `/cookie_policy`, `/lp`（ランディング） / 削除=`/about`（デッドリンク、`app/about/page.tsx` 不在）。副次効果として、ログアウト時に即座にモーダル表示されるよう改善（従来は再 mount まで未反映）。設計意図（`AuthRequiredModal standalone={true}`）は維持、自動リダイレクト化はしない |
 
 ---
 
@@ -144,6 +145,23 @@
 - 既存 NULL データの後追い更新は別途 SQL で対応する選択肢もあり（`updated_at` から推定するなど）
 - 機能影響なし、データ整合性のみ
 - 補足: 未決済自動キャンセル `processUnpaidContracts` と管理者一括キャンセル動線では既に `cancelled_at` 設定済み
+
+#### `/account-deleted` の公開ページ化検討
+- 場所: [app/account-deleted/client.tsx](../app/account-deleted/client.tsx)
+- 現状: client.tsx で未ログイン時 `router.push('/login')` するが、ProtectedContent も保護扱い → 二重保護
+- 削除済みユーザーが `/account-deleted` にアクセスする想定（ログインセッション残存中の遷移 vs 未ログインからの直打ち）を整理し、公開ページ化（`publicExactPaths` 追加）するか `router.push` を残すか別タスクで判断
+- 2026-04-29 認証保護タスクでは保留（4ファイル中本ファイルだけ未修正）
+
+#### `ready=false` 時の Skeleton 表示
+- 場所: [app/components/ProtectedContent.tsx](../app/components/ProtectedContent.tsx) の `if (!ready) return null`
+- 現状: `null`（白画面、通常 50-100ms）。Supabase の session キャッシュにより実害は軽微
+- 改善案: Skeleton 表示にすると体感速度が向上する可能性あり
+- UX 改善、優先度低
+
+#### `/about` リンクの確認
+- `publicExactPaths` から `/about` を削除済み（`app/about/page.tsx` 不在のデッドリンク）
+- フッター・ヘッダー等から `/about` へのリンクが残っていないか別途確認が必要
+- 残っているなら（a）ページを作成するか（b）リンクを削除するかの判断
 
 ### リリース前作業
 
@@ -201,6 +219,26 @@ DELETE FROM work_requests WHERE title LIKE '[TEST]%';
 ---
 
 ## 6. 本セッションで確立した運用パターン
+
+### 認証保護の標準パターン（2026-04-29 確立）
+
+ログイン必須ページの認証ガードは [ProtectedContent.tsx](../app/components/ProtectedContent.tsx) に一元化し、[AuthContext](../app/components/AuthContext.tsx) の `userId` / `ready` を真値とする。
+
+- 個別ページの `client.tsx` で `router.push('/login?redirect=...')` を追加しない（ProtectedContent のモーダルが代行）
+- ProtectedContent は `AuthContext.onAuthStateChange` を購読する `AuthProvider` 配下にあるため、ログイン/ログアウトは即座に反映
+- 描画分岐の優先順位:
+  1. `serverProtectedPaths`（`/admin/*`）→ 透過（layout.tsx で redirect 済み）
+  2. `publicExactPaths` / `publicPrefixPaths` / 特殊ルール（`/requests`, `/pricing`）→ 透過
+  3. `ready=false` → `null`（初回 auth check 中、SSR とも一致で hydration mismatch なし）
+  4. `userId=null` → `<AuthRequiredModal standalone={true} />`
+  5. それ以外 → 透過
+
+実装: [app/components/ProtectedContent.tsx](../app/components/ProtectedContent.tsx), [app/components/AuthContext.tsx](../app/components/AuthContext.tsx)
+
+#### 公開パス追加時のチェックリスト
+1. `publicExactPaths` または `publicPrefixPaths` に追加（特殊ルールが必要なら `isPublicPath` 関数内に追加）
+2. `app/<path>/page.tsx` の実在を確認（デッドリンクを残さない）
+3. ログイン済みでも公開ページは閲覧可能なため、過剰保護の解消には積極的に追加して良い
 
 ### キャンセル動線の標準パターン（6 ステップ）
 
