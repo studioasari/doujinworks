@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -44,7 +43,6 @@ const SORT_TABS = [
 ]
 
 export default function BookmarksClient() {
-  const router = useRouter()
   const [items, setItems] = useState<BookmarkedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -59,7 +57,7 @@ export default function BookmarksClient() {
         const { data, error } = await supabase.auth.getUser()
 
         if (error || !data?.user) {
-          router.push('/login?redirect=/bookmarks')
+          // 未ログインは ProtectedContent のモーダルに任せる
           return
         }
 
@@ -67,7 +65,6 @@ export default function BookmarksClient() {
         await fetchBookmarks(data.user.id)
       } catch (error) {
         console.error('認証エラー:', error)
-        router.push('/login?redirect=/bookmarks')
       }
     }
     checkAuthAndFetch()

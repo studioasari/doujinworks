@@ -67,7 +67,7 @@ export default function BusinessPage() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
+        // 未ログインは ProtectedContent のモーダルに任せる
         return
       }
 

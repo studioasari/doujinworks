@@ -89,20 +89,21 @@ export default function DraftsPage() {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`)
-      } else {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', user.id)
-          .single()
+        // 未ログインは ProtectedContent のモーダルに任せる
+        return
+      }
 
-        if (profile) {
-          setCurrentUserId(profile.id)
-        } else {
-          alert('プロフィールが見つかりません')
-          router.push('/profile')
-        }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profile) {
+        setCurrentUserId(profile.id)
+      } else {
+        alert('プロフィールが見つかりません')
+        router.push('/profile')
       }
     }
     checkAuth()

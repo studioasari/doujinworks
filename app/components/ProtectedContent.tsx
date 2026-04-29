@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/app/components/AuthContext'
 import AuthRequiredModal from '@/app/components/AuthRequiredModal'
 
 // 認証不要の公開パス（完全一致）
@@ -11,9 +10,11 @@ const publicExactPaths = [
   '/login',
   '/signup',
   '/reset-password',
-  '/about',
   '/terms',
   '/privacy',
+  '/law',
+  '/cookie_policy',
+  '/lp',
   '/search',
 ]
 
@@ -92,56 +93,24 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * URL直打ちで保護ページにアクセスした場合のフォールバック。
- * ログイン済みユーザーの通常ナビゲーションでは透過的に通過する。
- * 未ログインの場合はページを表示せずモーダルだけ出す。
+ * URL直打ち / 内部遷移を問わず保護ページの認証ガードを行う。
+ *
+ * 認証状態は AuthContext の userId / ready を真値とする。
+ * AuthContext は onAuthStateChange を購読しているため、
+ * ログイン/ログアウトは即座に反映される。
+ *
+ * 描画分岐:
+ *   - サーバー保護パス（/admin/*）: 透過（layout.tsx 側で redirect 済み）
+ *   - 公開パス: 透過
+ *   - ready=false（初回認証チェック中）: null
+ *   - userId=null（未ログイン）: standalone モーダル
+ *   - その他: 透過
  */
 export default function ProtectedContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { userId, ready } = useAuth()
+
   const isServerProtected = isServerProtectedPath(pathname)
-  // サーバー保護ページはクライアント側のチェック対象外
-  const needsAuth = !isServerProtected && !isPublicPath(pathname)
-  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>(
-    needsAuth ? 'checking' : 'authenticated'
-  )
-  const checkedPathRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!needsAuth) {
-      setAuthState('authenticated')
-      checkedPathRef.current = null
-      return
-    }
-
-    // 既に認証済みなら再チェック不要（ダッシュボード内の遷移等）
-    if (authState === 'authenticated') {
-      return
-    }
-
-    if (checkedPathRef.current === pathname) {
-      return
-    }
-
-    setAuthState('checking')
-
-    let cancelled = false
-
-    async function checkAuth() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (cancelled) return
-
-      checkedPathRef.current = pathname
-      setAuthState(user ? 'authenticated' : 'unauthenticated')
-    }
-
-    checkAuth()
-
-    return () => {
-      cancelled = true
-    }
-  }, [pathname, needsAuth])
 
   // サーバー保護ページ → クライアント側は何もせず透過
   // （サーバー側の redirect() に任せる）
@@ -149,18 +118,18 @@ export default function ProtectedContent({ children }: { children: React.ReactNo
     return <>{children}</>
   }
 
-  // 公開パス → そのまま表示
-  if (!needsAuth) {
+  // 公開パス → ready を待たず即透過
+  if (isPublicPath(pathname)) {
     return <>{children}</>
   }
 
-  // チェック中 → 何も表示しない（ちらつき防止）
-  if (authState === 'checking') {
+  // 初回認証チェック中 → 何も表示しない（ちらつき防止）
+  if (!ready) {
     return null
   }
 
   // 未ログイン → standaloneモーダルだけ表示（閉じるボタンなし、ページの中身は見せない）
-  if (authState === 'unauthenticated') {
+  if (userId === null) {
     return <AuthRequiredModal standalone={true} />
   }
 
